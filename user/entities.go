@@ -17,7 +17,7 @@ type Me struct {
 	NewEmail string `json:"newEmail,omitempty"`
 }
 
-type fullUserInfo struct {
+type FullUserInfo struct {
 	Me
 	RegistrationTime         time.Time  `json:"registrationTime"`
 	ActivationCode           string     `json:"activationCode,omitempty"`
@@ -32,11 +32,11 @@ type fullUserInfo struct {
 	ScryptKeyLen             int        `json:"scryptKeyLen"`
 }
 
-func (u *fullUserInfo) isActivated() bool {
+func (u *FullUserInfo) IsActivated() bool {
 	return len(u.ActivationCode) == 0
 }
 
-func (u *fullUserInfo) toMe() *Me {
+func (u *FullUserInfo) ToMe() *Me {
 	return &Me{
 		User: User{
 			Entity: core.Entity{
@@ -50,7 +50,7 @@ func (u *fullUserInfo) toMe() *Me {
 	}
 }
 
-func (u *fullUserInfo) toUser() *User {
+func (u *FullUserInfo) ToUser() *User {
 	return &User{
 		Entity: core.Entity{
 			Id: u.Id,

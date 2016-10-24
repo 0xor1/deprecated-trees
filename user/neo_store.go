@@ -24,7 +24,7 @@ type neoFullUserInfo struct {
 	ScryptKeyLen             int    `json:"scryptKeyLen"`
 }
 
-func newNeoFullUserInfo(u *fullUserInfo) *neoFullUserInfo {
+func newNeoFullUserInfo(u *FullUserInfo) *neoFullUserInfo {
 	return &neoFullUserInfo{
 		Me:                       u.Me,
 		RegistrationTime:         u.RegistrationTime.Unix(),
@@ -41,8 +41,8 @@ func newNeoFullUserInfo(u *fullUserInfo) *neoFullUserInfo {
 	}
 }
 
-func (nu *neoFullUserInfo) toFullUserInfo() *fullUserInfo {
-	return &fullUserInfo{
+func (nu *neoFullUserInfo) toFullUserInfo() *FullUserInfo {
+	return &FullUserInfo{
 		Me:                       nu.Me,
 		RegistrationTime:         time.Unix(nu.RegistrationTime, 0),
 		ActivationCode:           nu.ActivationCode,
@@ -88,8 +88,8 @@ type neoStore struct {
 	log zap.Logger
 }
 
-func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*fullUserInfo, error) {
-	res := []*fullUserInfo{}
+func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*FullUserInfo, error) {
+	res := []*FullUserInfo{}
 	if err := s.db.Cypher(&neo.CypherQuery{
 		Statement:  fmt.Sprintf("MATCH (u:USER {%s:{%s}}) RETURN u", propName, propName),
 		Parameters: neo.Props{propName: propValue},
@@ -107,23 +107,23 @@ func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*fullU
 	return res[0], nil
 }
 
-func (s *neoStore) GetByEmail(email string) (*fullUserInfo, error) {
+func (s *neoStore) GetByEmail(email string) (*FullUserInfo, error) {
 	return s.getByUniqueStringProperty("email", email)
 }
 
-func (s *neoStore) GetById(id string) (*fullUserInfo, error) {
+func (s *neoStore) GetById(id string) (*FullUserInfo, error) {
 	return s.getByUniqueStringProperty("id", id)
 }
 
-func (s *neoStore) GetByActivationCode(activationCode string) (*fullUserInfo, error) {
+func (s *neoStore) GetByActivationCode(activationCode string) (*FullUserInfo, error) {
 	return s.getByUniqueStringProperty("activationCode", activationCode)
 }
 
-func (s *neoStore) GetByNewEmailConfirmationCode(newEmailconfirmationCode string) (*fullUserInfo, error) {
+func (s *neoStore) GetByNewEmailConfirmationCode(newEmailconfirmationCode string) (*FullUserInfo, error) {
 	return s.getByUniqueStringProperty("newEmailconfirmationCode", newEmailconfirmationCode)
 }
 
-func (s *neoStore) GetByResetPwdCode(resetPwdCode string) (*fullUserInfo, error) {
+func (s *neoStore) GetByResetPwdCode(resetPwdCode string) (*FullUserInfo, error) {
 	return s.getByUniqueStringProperty("resetPwdCode", resetPwdCode)
 }
 
@@ -166,11 +166,11 @@ func (s *neoStore) save(nu *neoFullUserInfo) error {
 	})
 }
 
-func (s *neoStore) Create(user *fullUserInfo) error {
+func (s *neoStore) Create(user *FullUserInfo) error {
 	return s.save(newNeoFullUserInfo(user))
 }
 
-func (s *neoStore) Update(user *fullUserInfo) error {
+func (s *neoStore) Update(user *FullUserInfo) error {
 	return s.save(newNeoFullUserInfo(user))
 }
 

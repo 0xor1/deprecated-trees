@@ -11,17 +11,17 @@ type CoreApi interface {
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 	ChangePwd(id, oldPwd, newPwd string) error
-	Get(id string) (*User, error)
+	GetMe(id string) (*Me, error)
 }
 
 type Store interface {
-	GetByEmail(email string) (*fullUserInfo, error)
-	GetById(id string) (*fullUserInfo, error)
-	GetByActivationCode(activationCode string) (*fullUserInfo, error)
-	GetByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error)
-	GetByResetPwdCode(resetPwdCode string) (*fullUserInfo, error)
-	Create(user *fullUserInfo) error
-	Update(user *fullUserInfo) error
+	GetByEmail(email string) (*FullUserInfo, error)
+	GetById(id string) (*FullUserInfo, error)
+	GetByActivationCode(activationCode string) (*FullUserInfo, error)
+	GetByNewEmailConfirmationCode(confirmationCode string) (*FullUserInfo, error)
+	GetByResetPwdCode(resetPwdCode string) (*FullUserInfo, error)
+	Create(user *FullUserInfo) error
+	Update(user *FullUserInfo) error
 	Delete(id string) error
 }
 

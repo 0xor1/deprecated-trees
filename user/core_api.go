@@ -25,7 +25,7 @@ const (
 	resetPwdFnLogMsg                        = "user.api.ResetPwd"
 	setNewPwdFromPwdResetFnLogMsg           = "user.api.SetNewPwdFromPwdReset"
 	changePwdFnLogMsg                       = "user.api.ChangePwd"
-	getFnLogMsg                             = "user.api.Get"
+	getMeFnLogMsg                           = "user.api.GetMe"
 	subcall                                 = "subcall"
 )
 
@@ -120,7 +120,7 @@ func (a *coreApi) Register(email, firstName, lastName, pwd string) error {
 		return err
 	}
 
-	err = a.store.Create(&fullUserInfo{
+	err = a.store.Create(&FullUserInfo{
 		Me: Me{
 			User: User{
 				Entity: core.Entity{
@@ -163,7 +163,7 @@ func (a *coreApi) ResendActivationEmail(email string) error {
 		return err
 	}
 
-	if user.isActivated() {
+	if user.IsActivated() {
 		a.log.Info(resendActivationEmailFnLogMsg, zap.Error(UserAlreadyActivatedErr))
 		return UserAlreadyActivatedErr
 	}
@@ -185,7 +185,7 @@ func (a *coreApi) Activate(activationCode string) (string, error) {
 		return "", err
 	}
 
-	if user.isActivated() {
+	if user.IsActivated() {
 		a.log.Error(activateFnLogMsg, zap.Error(UserAlreadyActivatedErr))
 		return "", UserAlreadyActivatedErr
 	}
@@ -220,7 +220,7 @@ func (a *coreApi) Authenticate(email, pwdTry string) (string, error) {
 		return "", IncorrectPwdErr
 	}
 
-	if !user.isActivated() {
+	if !user.IsActivated() {
 		a.log.Info(authenticateFnLogMsg, zap.Error(UserNotActivated))
 		return "", UserNotActivated
 	}
@@ -456,16 +456,16 @@ func (a *coreApi) ChangePwd(id, oldPwd, newPwd string) error {
 	return nil
 }
 
-func (a *coreApi) Get(id string) (*User, error) {
-	a.log.Debug(getFnLogMsg)
+func (a *coreApi) GetMe(id string) (*Me, error) {
+	a.log.Debug(getMeFnLogMsg)
 
 	user, err := a.store.GetById(id)
 	if err != nil {
-		a.log.Error(getFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
+		a.log.Error(getMeFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return nil, err
 	}
 
-	return user.toUser(), nil
+	return user.ToMe(), nil
 }
 
 //helpers
