@@ -1,6 +1,6 @@
 package user
 
-type Api interface {
+type CoreApi interface {
 	Register(email, firstName, lastName, pwd string) error
 	ResendActivationEmail(email string) error
 	Activate(activationCode string) (id string, err error)
@@ -11,17 +11,17 @@ type Api interface {
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 	ChangePwd(id, oldPwd, newPwd string) error
-	Get(id string) (*Entity, error)
+	Get(id string) (*User, error)
 }
 
 type Store interface {
-	GetByEmail(email string) (*User, error)
-	GetById(id string) (*User, error)
-	GetByActivationCode(activationCode string) (*User, error)
-	GetByNewEmailConfirmationCode(confirmationCode string) (*User, error)
-	GetByResetPwdCode(resetPwdCode string) (*User, error)
-	Create(user *User) error
-	Update(user *User) error
+	GetByEmail(email string) (*fullUserInfo, error)
+	GetById(id string) (*fullUserInfo, error)
+	GetByActivationCode(activationCode string) (*fullUserInfo, error)
+	GetByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error)
+	GetByResetPwdCode(resetPwdCode string) (*fullUserInfo, error)
+	Create(user *fullUserInfo) error
+	Update(user *fullUserInfo) error
 	Delete(id string) error
 }
 

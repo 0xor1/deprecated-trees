@@ -29,8 +29,8 @@ const (
 	subcall                                 = "subcall"
 )
 
-func NewCoreApi(store Store, linkMailer LinkMailer, pwdRegexMatchers []string, cryptoCodeLen, pwdMinRuneCount, pwdMaxRuneCount, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) Api {
-	return &api{
+func NewCoreApi(store Store, linkMailer LinkMailer, pwdRegexMatchers []string, cryptoCodeLen, pwdMinRuneCount, pwdMaxRuneCount, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) CoreApi {
+	return &coreApi{
 		store:            store,
 		linkMailer:       linkMailer,
 		cryptoCodeLen:    cryptoCodeLen,
@@ -46,7 +46,7 @@ func NewCoreApi(store Store, linkMailer LinkMailer, pwdRegexMatchers []string, c
 	}
 }
 
-type api struct {
+type coreApi struct {
 	store            Store
 	linkMailer       LinkMailer
 	cryptoCodeLen    int
@@ -61,7 +61,7 @@ type api struct {
 	log              zap.Logger
 }
 
-func (a *api) Register(email, firstName, lastName, pwd string) error {
+func (a *coreApi) Register(email, firstName, lastName, pwd string) error {
 	a.log.Debug(registerFnLogMsg, zap.String("email", email), zap.String("firstName", firstName), zap.String("lastName", lastName), zap.String("pwd", "******"))
 
 	if err := validateEmail(email); err != nil {
@@ -120,9 +120,9 @@ func (a *api) Register(email, firstName, lastName, pwd string) error {
 		return err
 	}
 
-	err = a.store.Create(&User{
+	err = a.store.Create(&fullUserInfo{
 		Me: Me{
-			Entity: Entity{
+			User: User{
 				Entity: core.Entity{
 					Id: id,
 				},
@@ -154,7 +154,7 @@ func (a *api) Register(email, firstName, lastName, pwd string) error {
 	return nil
 }
 
-func (a *api) ResendActivationEmail(email string) error {
+func (a *coreApi) ResendActivationEmail(email string) error {
 	a.log.Debug(resendActivationEmailFnLogMsg, zap.String("email", email))
 
 	user, err := a.store.GetByEmail(email)
@@ -176,7 +176,7 @@ func (a *api) ResendActivationEmail(email string) error {
 	return nil
 }
 
-func (a *api) Activate(activationCode string) (string, error) {
+func (a *coreApi) Activate(activationCode string) (string, error) {
 	a.log.Debug(activateFnLogMsg, zap.String("activationCode", "******"))
 
 	user, err := a.store.GetByActivationCode(activationCode)
@@ -200,7 +200,7 @@ func (a *api) Activate(activationCode string) (string, error) {
 	return user.Id, nil
 }
 
-func (a *api) Authenticate(email, pwdTry string) (string, error) {
+func (a *coreApi) Authenticate(email, pwdTry string) (string, error) {
 	a.log.Debug(authenticateFnLogMsg, zap.String("email", email), zap.String("pwdTry", "******"))
 
 	user, err := a.store.GetByEmail(email)
@@ -259,7 +259,7 @@ func (a *api) Authenticate(email, pwdTry string) (string, error) {
 	return user.Id, nil
 }
 
-func (a *api) ChangeEmail(id, newEmail string) error {
+func (a *coreApi) ChangeEmail(id, newEmail string) error {
 	a.log.Debug(changeEmailFnLogMsg, zap.String("id", id), zap.String("newEmail", newEmail))
 
 	if err := validateEmail(newEmail); err != nil {
@@ -294,7 +294,7 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 	return nil
 }
 
-func (a *api) ResendNewEmailConfirmationEmail(id string) error {
+func (a *coreApi) ResendNewEmailConfirmationEmail(id string) error {
 	a.log.Debug(resendNewEmailConfirmationEmailFnLogMsg, zap.String("id", id))
 
 	user, err := a.store.GetById(id)
@@ -318,7 +318,7 @@ func (a *api) ResendNewEmailConfirmationEmail(id string) error {
 	return nil
 }
 
-func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) error {
+func (a *coreApi) ConfirmNewEmail(newEmail string, confirmationCode string) error {
 	a.log.Debug(ConfirmNewEmailFnLogMsg, zap.String("newConfirmationCode", confirmationCode))
 
 	user, err := a.store.GetByNewEmailConfirmationCode(confirmationCode)
@@ -343,7 +343,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) error {
 	return nil
 }
 
-func (a *api) ResetPwd(email string) error {
+func (a *coreApi) ResetPwd(email string) error {
 	a.log.Debug(resetPwdFnLogMsg, zap.String("email", email))
 
 	user, err := a.store.GetByEmail(email)
@@ -367,7 +367,7 @@ func (a *api) ResetPwd(email string) error {
 	return nil
 }
 
-func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error) {
+func (a *coreApi) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error) {
 	a.log.Debug(setNewPwdFromPwdResetFnLogMsg, zap.String("newPwd", "******"), zap.String("resetPwdCode", "******"))
 
 	if err := validatePwd(newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
@@ -409,7 +409,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 	return user.Id, nil
 }
 
-func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
+func (a *coreApi) ChangePwd(id, oldPwd, newPwd string) error {
 	a.log.Debug(changePwdFnLogMsg, zap.String("id", id), zap.String("oldPwd", "******"), zap.String("newPwd", "******"))
 
 	if err := validatePwd(newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
@@ -456,7 +456,7 @@ func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
 	return nil
 }
 
-func (a *api) Get(id string) (*Entity, error) {
+func (a *coreApi) Get(id string) (*User, error) {
 	a.log.Debug(getFnLogMsg)
 
 	user, err := a.store.GetById(id)
@@ -465,7 +465,7 @@ func (a *api) Get(id string) (*Entity, error) {
 		return nil, err
 	}
 
-	return user.toEntity(), nil
+	return user.toUser(), nil
 }
 
 //helpers

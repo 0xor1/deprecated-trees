@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type neoUser struct {
+type neoFullUserInfo struct {
 	Me
 	RegistrationTime         int64  `json:"registrationTime"`
 	ActivationCode           string `json:"activationCode,omitempty"`
@@ -24,8 +24,8 @@ type neoUser struct {
 	ScryptKeyLen             int    `json:"scryptKeyLen"`
 }
 
-func newNeoUser(u *User) *neoUser {
-	return &neoUser{
+func newNeoFullUserInfo(u *fullUserInfo) *neoFullUserInfo {
+	return &neoFullUserInfo{
 		Me:                       u.Me,
 		RegistrationTime:         u.RegistrationTime.Unix(),
 		ActivationCode:           u.ActivationCode,
@@ -41,8 +41,8 @@ func newNeoUser(u *User) *neoUser {
 	}
 }
 
-func (nu *neoUser) toUser() *User {
-	return &User{
+func (nu *neoFullUserInfo) toFullUserInfo() *fullUserInfo {
+	return &fullUserInfo{
 		Me:                       nu.Me,
 		RegistrationTime:         time.Unix(nu.RegistrationTime, 0),
 		ActivationCode:           nu.ActivationCode,
@@ -88,8 +88,8 @@ type neoStore struct {
 	log zap.Logger
 }
 
-func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*User, error) {
-	res := []*User{}
+func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*fullUserInfo, error) {
+	res := []*fullUserInfo{}
 	if err := s.db.Cypher(&neo.CypherQuery{
 		Statement:  fmt.Sprintf("MATCH (u:USER {%s:{%s}}) RETURN u", propName, propName),
 		Parameters: neo.Props{propName: propValue},
@@ -107,27 +107,27 @@ func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*User,
 	return res[0], nil
 }
 
-func (s *neoStore) GetByEmail(email string) (*User, error) {
+func (s *neoStore) GetByEmail(email string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("email", email)
 }
 
-func (s *neoStore) GetById(id string) (*User, error) {
+func (s *neoStore) GetById(id string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("id", id)
 }
 
-func (s *neoStore) GetByActivationCode(activationCode string) (*User, error) {
+func (s *neoStore) GetByActivationCode(activationCode string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("activationCode", activationCode)
 }
 
-func (s *neoStore) GetByNewEmailConfirmationCode(newEmailconfirmationCode string) (*User, error) {
+func (s *neoStore) GetByNewEmailConfirmationCode(newEmailconfirmationCode string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("newEmailconfirmationCode", newEmailconfirmationCode)
 }
 
-func (s *neoStore) GetByResetPwdCode(resetPwdCode string) (*User, error) {
+func (s *neoStore) GetByResetPwdCode(resetPwdCode string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("resetPwdCode", resetPwdCode)
 }
 
-func (s *neoStore) save(nu *neoUser) error {
+func (s *neoStore) save(nu *neoFullUserInfo) error {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("MERGE (:USER {id:%q,firstName:%q,lastName:%q,email:%q,registrationTime:%d", nu.Id, nu.FirstName, nu.LastName, nu.Email, nu.RegistrationTime))
 	if len(nu.NewEmail) > 0 {
@@ -166,12 +166,12 @@ func (s *neoStore) save(nu *neoUser) error {
 	})
 }
 
-func (s *neoStore) Create(user *User) error {
-	return s.save(newNeoUser(user))
+func (s *neoStore) Create(user *fullUserInfo) error {
+	return s.save(newNeoFullUserInfo(user))
 }
 
-func (s *neoStore) Update(user *User) error {
-	return s.save(newNeoUser(user))
+func (s *neoStore) Update(user *fullUserInfo) error {
+	return s.save(newNeoFullUserInfo(user))
 }
 
 func (s *neoStore) Delete(id string) error {

@@ -5,19 +5,19 @@ import (
 	"time"
 )
 
-type Entity struct {
+type User struct {
 	core.Entity
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 }
 
 type Me struct {
-	Entity
+	User
 	Email    string `json:"email"`
 	NewEmail string `json:"newEmail,omitempty"`
 }
 
-type User struct {
+type fullUserInfo struct {
 	Me
 	RegistrationTime         time.Time  `json:"registrationTime"`
 	ActivationCode           string     `json:"activationCode,omitempty"`
@@ -32,13 +32,13 @@ type User struct {
 	ScryptKeyLen             int        `json:"scryptKeyLen"`
 }
 
-func (u *User) isActivated() bool {
+func (u *fullUserInfo) isActivated() bool {
 	return len(u.ActivationCode) == 0
 }
 
-func (u *User) toMe() *Me {
+func (u *fullUserInfo) toMe() *Me {
 	return &Me{
-		Entity: Entity{
+		User: User{
 			Entity: core.Entity{
 				Id: u.Id,
 			},
@@ -50,8 +50,8 @@ func (u *User) toMe() *Me {
 	}
 }
 
-func (u *User) toEntity() *Entity {
-	return &Entity{
+func (u *fullUserInfo) toUser() *User {
+	return &User{
 		Entity: core.Entity{
 			Id: u.Id,
 		},
