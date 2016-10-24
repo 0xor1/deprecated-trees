@@ -7,11 +7,11 @@ import (
 	"github.com/uber-go/zap"
 	"golang.org/x/crypto/scrypt"
 	"io"
+	"math/big"
 	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"math/big"
 )
 
 const (
@@ -29,64 +29,10 @@ const (
 	subcall                                 = "subcall"
 )
 
-type user struct {
-	Me
-	RegistrationTime         time.Time  `json:"registrationTime"`
-	ActivationCode           string     `json:"activationCode,omitempty"`
-	ActivationTime           *time.Time `json:"activationTime,omitempty"`
-	NewEmailConfirmationCode string     `json:"newEmailConfirmationCode,omitempty"`
-	ResetPwdCode             string     `json:"resetPwdCode,omitempty"`
-	ScryptSalt               []byte     `json:"scryptPwdSalt"`
-	ScryptPwd                []byte     `json:"ScryptPwd"`
-	ScryptN                  int        `json:"scryptN"`
-	ScryptR                  int        `json:"scryptR"`
-	ScryptP                  int        `json:"scryptP"`
-	ScryptKeyLen             int        `json:"scryptKeyLen"`
-}
-
-func (u *user) isActivated() bool {
-	return len(u.ActivationCode) == 0
-}
-
-func (u *user) toMe() *Me {
-	return &Me{
-		Entity: Entity{
-			Entity: core.Entity{
-				Id:        u.Id,
-			},
-			FirstName: u.FirstName,
-			LastName:  u.LastName,
-		},
-		Email:            u.Email,
-		NewEmail:         u.NewEmail,
-	}
-}
-
-func (u *user) toEntity() *Entity {
-	return &Entity{
-		Entity: core.Entity{
-			Id:        u.Id,
-		},
-		FirstName: u.FirstName,
-		LastName:  u.LastName,
-	}
-}
-
-type store interface {
-	getByEmail(email string) (*user, error)
-	getById(id string) (*user, error)
-	getByActivationCode(activationCode string) (*user, error)
-	getByNewEmailConfirmationCode(confirmationCode string) (*user, error)
-	getByResetPwdCode(resetPwdCode string) (*user, error)
-	create(user *user) error
-	update(user *user) error
-	delete(id string) error
-}
-
-func newApi(store store, codeMailer LinkMailer, pwdRegexMatchers []string, cryptoCodeLen, pwdMinRuneCount, pwdMaxRuneCount, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) Api {
+func NewCoreApi(store Store, linkMailer LinkMailer, pwdRegexMatchers []string, cryptoCodeLen, pwdMinRuneCount, pwdMaxRuneCount, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) Api {
 	return &api{
 		store:            store,
-		linkMailer:       codeMailer,
+		linkMailer:       linkMailer,
 		cryptoCodeLen:    cryptoCodeLen,
 		pwdMinRuneCount:  pwdMinRuneCount,
 		pwdMaxRuneCount:  pwdMaxRuneCount,
@@ -101,7 +47,7 @@ func newApi(store store, codeMailer LinkMailer, pwdRegexMatchers []string, crypt
 }
 
 type api struct {
-	store            store
+	store            Store
 	linkMailer       LinkMailer
 	cryptoCodeLen    int
 	pwdMinRuneCount  int
@@ -140,7 +86,7 @@ func (a *api) Register(email, firstName, lastName, pwd string) error {
 		return LastNameErr
 	}
 
-	if user, err := a.store.getByEmail(email); user != nil || err != nil {
+	if user, err := a.store.GetByEmail(email); user != nil || err != nil {
 		if err != nil {
 			a.log.Error(registerFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 			return err
@@ -174,25 +120,25 @@ func (a *api) Register(email, firstName, lastName, pwd string) error {
 		return err
 	}
 
-	err = a.store.create(&user{
+	err = a.store.Create(&User{
 		Me: Me{
 			Entity: Entity{
 				Entity: core.Entity{
-					Id:        id,
+					Id: id,
 				},
 				FirstName: firstName,
 				LastName:  lastName,
 			},
-			Email:            email,
+			Email: email,
 		},
-		RegistrationTime:    time.Now().UTC(),
-		ActivationCode:      activationCode,
-		ScryptSalt:          scryptSalt,
-		ScryptPwd:           scryptPwd,
-		ScryptN:             a.scryptN,
-		ScryptR:             a.scryptR,
-		ScryptP:             a.scryptP,
-		ScryptKeyLen:        a.scryptKeyLen,
+		RegistrationTime: time.Now().UTC(),
+		ActivationCode:   activationCode,
+		ScryptSalt:       scryptSalt,
+		ScryptPwd:        scryptPwd,
+		ScryptN:          a.scryptN,
+		ScryptR:          a.scryptR,
+		ScryptP:          a.scryptP,
+		ScryptKeyLen:     a.scryptKeyLen,
 	})
 	if err != nil {
 		a.log.Error(registerFnLogMsg, zap.String(subcall, "store.create"), zap.Error(err))
@@ -211,7 +157,7 @@ func (a *api) Register(email, firstName, lastName, pwd string) error {
 func (a *api) ResendActivationEmail(email string) error {
 	a.log.Debug(resendActivationEmailFnLogMsg, zap.String("email", email))
 
-	user, err := a.store.getByEmail(email)
+	user, err := a.store.GetByEmail(email)
 	if err != nil {
 		a.log.Error(resendActivationEmailFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 		return err
@@ -233,7 +179,7 @@ func (a *api) ResendActivationEmail(email string) error {
 func (a *api) Activate(activationCode string) (string, error) {
 	a.log.Debug(activateFnLogMsg, zap.String("activationCode", "******"))
 
-	user, err := a.store.getByActivationCode(activationCode)
+	user, err := a.store.GetByActivationCode(activationCode)
 	if err != nil {
 		a.log.Error(activateFnLogMsg, zap.String(subcall, "store.getByActivationCode"), zap.Error(err))
 		return "", err
@@ -245,7 +191,7 @@ func (a *api) Activate(activationCode string) (string, error) {
 	}
 
 	user.ActivationCode = ""
-	err = a.store.update(user)
+	err = a.store.Update(user)
 	if err != nil {
 		a.log.Error(activateFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
 		return "", err
@@ -257,7 +203,7 @@ func (a *api) Activate(activationCode string) (string, error) {
 func (a *api) Authenticate(email, pwdTry string) (string, error) {
 	a.log.Debug(authenticateFnLogMsg, zap.String("email", email), zap.String("pwdTry", "******"))
 
-	user, err := a.store.getByEmail(email)
+	user, err := a.store.GetByEmail(email)
 	if err != nil {
 		a.log.Error(authenticateFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 		return "", err
@@ -304,7 +250,7 @@ func (a *api) Authenticate(email, pwdTry string) (string, error) {
 		userUpdated = true
 	}
 	if userUpdated {
-		if err = a.store.update(user); err != nil {
+		if err = a.store.Update(user); err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
 			return "", err
 		}
@@ -321,7 +267,7 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 		return err
 	}
 
-	user, err := a.store.getByEmail(newEmail)
+	user, err := a.store.GetByEmail(newEmail)
 	if err != nil {
 		a.log.Error(changeEmailFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 		return err
@@ -335,7 +281,7 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 
 	user.NewEmail = newEmail
 	user.NewEmailConfirmationCode = confirmationCode
-	if err = a.store.update(user); err != nil {
+	if err = a.store.Update(user); err != nil {
 		a.log.Error(changeEmailFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
 		return err
 	}
@@ -351,7 +297,7 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 func (a *api) ResendNewEmailConfirmationEmail(id string) error {
 	a.log.Debug(resendNewEmailConfirmationEmailFnLogMsg, zap.String("id", id))
 
-	user, err := a.store.getById(id)
+	user, err := a.store.GetById(id)
 	if err != nil {
 		a.log.Error(resendNewEmailConfirmationEmailFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return err
@@ -375,7 +321,7 @@ func (a *api) ResendNewEmailConfirmationEmail(id string) error {
 func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) error {
 	a.log.Debug(ConfirmNewEmailFnLogMsg, zap.String("newConfirmationCode", confirmationCode))
 
-	user, err := a.store.getByNewEmailConfirmationCode(confirmationCode)
+	user, err := a.store.GetByNewEmailConfirmationCode(confirmationCode)
 	if err != nil {
 		a.log.Error(ConfirmNewEmailFnLogMsg, zap.String(subcall, "store.getByNewEmailConfirmationCode"), zap.Error(err))
 		return err
@@ -389,7 +335,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) error {
 	user.Email = newEmail
 	user.NewEmail = ""
 	user.NewEmailConfirmationCode = ""
-	if err = a.store.update(user); err != nil {
+	if err = a.store.Update(user); err != nil {
 		a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(err))
 		return err
 	}
@@ -400,7 +346,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) error {
 func (a *api) ResetPwd(email string) error {
 	a.log.Debug(resetPwdFnLogMsg, zap.String("email", email))
 
-	user, err := a.store.getByEmail(email)
+	user, err := a.store.GetByEmail(email)
 	if err != nil {
 		a.log.Error(resetPwdFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 		return err
@@ -413,7 +359,7 @@ func (a *api) ResetPwd(email string) error {
 	}
 
 	user.ResetPwdCode = resetPwdCode
-	if err = a.store.update(user); err != nil {
+	if err = a.store.Update(user); err != nil {
 		a.log.Info(resetPwdFnLogMsg, zap.Error(err))
 		return err
 	}
@@ -429,7 +375,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 		return "", err
 	}
 
-	user, err := a.store.getByResetPwdCode(resetPwdCode)
+	user, err := a.store.GetByResetPwdCode(resetPwdCode)
 	if err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, "store.getByResetPwdCode"), zap.Error(err))
 		return "", err
@@ -455,7 +401,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 	user.ScryptKeyLen = a.scryptKeyLen
 	user.ActivationCode = ""
 	user.ResetPwdCode = ""
-	if err = a.store.update(user); err != nil {
+	if err = a.store.Update(user); err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
 		return "", err
 	}
@@ -471,7 +417,7 @@ func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
 		return err
 	}
 
-	user, err := a.store.getById(id)
+	user, err := a.store.GetById(id)
 	if err != nil {
 		a.log.Error(changePwdFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return err
@@ -502,7 +448,7 @@ func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
 		a.log.Error(changePwdFnLogMsg, zap.String(subcall, "scrypt.Key"), zap.Error(err))
 		return err
 	}
-	if err = a.store.update(user); err != nil {
+	if err = a.store.Update(user); err != nil {
 		a.log.Error(changePwdFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
 		return err
 	}
@@ -513,7 +459,7 @@ func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
 func (a *api) Get(id string) (*Entity, error) {
 	a.log.Debug(getFnLogMsg)
 
-	user, err := a.store.getById(id)
+	user, err := a.store.GetById(id)
 	if err != nil {
 		a.log.Error(getFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return nil, err
