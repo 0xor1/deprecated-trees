@@ -2,6 +2,7 @@ package user
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	neo "github.com/jmcvetta/neoism"
@@ -16,61 +17,92 @@ type neoFullUserInfo struct {
 	ActivationTime           int64  `json:"activationTime,omitempty"`
 	NewEmailConfirmationCode string `json:"newEmailConfirmationCode,omitempty"`
 	ResetPwdCode             string `json:"resetPwdCode,omitempty"`
-	ScryptSalt               []byte `json:"scryptSalt"`
-	ScryptPwd                []byte `json:"scryptPwd"`
+	ScryptSalt               string `json:"scryptSalt"`
+	ScryptPwd                string `json:"scryptPwd"`
 	ScryptN                  int    `json:"scryptN"`
 	ScryptR                  int    `json:"scryptR"`
 	ScryptP                  int    `json:"scryptP"`
 	ScryptKeyLen             int    `json:"scryptKeyLen"`
+	PersonalStoreId          int    `json:"personalStoreId"`
 }
 
-func newNeoFullUserInfo(u *FullUserInfo) *neoFullUserInfo {
+func newNeoFullUserInfo(u *fullUserInfo) *neoFullUserInfo {
 	return &neoFullUserInfo{
 		Me:                       u.Me,
 		RegistrationTime:         u.RegistrationTime.Unix(),
 		ActivationCode:           u.ActivationCode,
 		ActivationTime:           u.ActivationTime.Unix(),
-		NewEmailConfirmationCode: u.NewEmailConfirmationCode(),
+		NewEmailConfirmationCode: u.NewEmailConfirmationCode,
 		ResetPwdCode:             u.ResetPwdCode,
-		ScryptSalt:               u.ScryptSalt,
-		ScryptPwd:                u.ScryptPwd,
+		ScryptSalt:               hex.EncodeToString(u.ScryptSalt),
+		ScryptPwd:                hex.EncodeToString(u.ScryptPwd),
 		ScryptN:                  u.ScryptN,
 		ScryptR:                  u.ScryptR,
 		ScryptP:                  u.ScryptP,
 		ScryptKeyLen:             u.ScryptKeyLen,
+		PersonalStoreId:          u.PersonalStoreId,
 	}
 }
 
-func (nu *neoFullUserInfo) toFullUserInfo() *FullUserInfo {
-	return &FullUserInfo{
+func (nu *neoFullUserInfo) toFullUserInfo() (*fullUserInfo, error) {
+	saltBytes, err := hex.DecodeString(nu.ScryptSalt)
+	if err != nil {
+		return nil, errors.New("failed to decode salt hex string to byte slice")
+	}
+	pwdBytes, err := hex.DecodeString(nu.ScryptPwd)
+	if err != nil {
+		return nil, errors.New("failed to decode password hex string to byte slice")
+	}
+	var activationTime *time.Time
+	if nu.ActivationTime > 0 {
+		tmpTime := time.Unix(nu.ActivationTime, 0).UTC()
+		activationTime = &tmpTime
+	}
+	return &fullUserInfo{
 		Me:                       nu.Me,
-		RegistrationTime:         time.Unix(nu.RegistrationTime, 0),
+		RegistrationTime:         time.Unix(nu.RegistrationTime, 0).UTC(),
 		ActivationCode:           nu.ActivationCode,
-		ActivationTime:           time.Unix(nu.ActivationTime, 0),
-		NewEmailConfirmationCode: nu.NewEmailConfirmationCode(),
+		ActivationTime:           activationTime,
+		NewEmailConfirmationCode: nu.NewEmailConfirmationCode,
 		ResetPwdCode:             nu.ResetPwdCode,
-		ScryptSalt:               nu.ScryptSalt,
-		ScryptPwd:                nu.ScryptPwd,
+		ScryptSalt:               saltBytes,
+		ScryptPwd:                pwdBytes,
 		ScryptN:                  nu.ScryptN,
 		ScryptR:                  nu.ScryptR,
 		ScryptP:                  nu.ScryptP,
 		ScryptKeyLen:             nu.ScryptKeyLen,
-	}
+	}, nil
 }
 
-func NewNeoStore(db *neo.Database, log zap.Logger) (*Store, error) {
+func NewNeoApi(db *neo.Database, linkMailer LinkMailer, usernameRegexMatchers, pwdRegexMatchers []string, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
+	if db == nil {
+		return nil, NilNeoDbErr
+	}
+
+	store, err := newNeoStore(db, log)
+	if err != nil {
+		return nil, err
+	}
+
+	return newApi(store, linkMailer, usernameRegexMatchers, pwdRegexMatchers, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+}
+
+func newNeoStore(db *neo.Database, log zap.Logger) (store, error) {
 	log.Debug("user.NewNeoApi initializing database indexes and constraints")
 
 	err := db.Cypher(&neo.CypherQuery{
 		Statement: `
 CREATE CONSTRAINT ON (u:USER) ASSERT u.id IS UNIQUE
 CREATE CONSTRAINT ON (u:USER) ASSERT exists(u.id)
+CREATE CONSTRAINT ON (u:USER) ASSERT u.username IS UNIQUE
+CREATE CONSTRAINT ON (u:USER) ASSERT exists(u.username)
 CREATE CONSTRAINT ON (u:USER) ASSERT u.email IS UNIQUE
 CREATE CONSTRAINT ON (u:USER) ASSERT exists(u.email)
 CREATE CONSTRAINT ON (u:USER) ASSERT u.activationCode IS UNIQUE
 CREATE CONSTRAINT ON (u:USER) ASSERT u.newEmailConfirmationCode IS UNIQUE
 CREATE CONSTRAINT ON (u:USER) ASSERT u.activationCode IS UNIQUE
 CREATE CONSTRAINT ON (u:USER) ASSERT u.resetPwdCode IS UNIQUE
+CREATE CONSTRAINT ON (o:ORG_REF) ASSERT o.id IS UNIQUE
 `,
 	})
 	if err != nil {
@@ -88,8 +120,8 @@ type neoStore struct {
 	log zap.Logger
 }
 
-func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*FullUserInfo, error) {
-	res := []*FullUserInfo{}
+func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*fullUserInfo, error) {
+	res := []*neoFullUserInfo{}
 	if err := s.db.Cypher(&neo.CypherQuery{
 		Statement:  fmt.Sprintf("MATCH (u:USER {%s:{%s}}) RETURN u", propName, propName),
 		Parameters: neo.Props{propName: propValue},
@@ -104,32 +136,44 @@ func (s *neoStore) getByUniqueStringProperty(propName, propValue string) (*FullU
 		}
 		return nil, err
 	}
-	return res[0], nil
+	return res[0].toFullUserInfo()
 }
 
-func (s *neoStore) GetByEmail(email string) (*FullUserInfo, error) {
+func (s *neoStore) getByUsername(username string) (*fullUserInfo, error) {
+	return s.getByUniqueStringProperty("username", username)
+}
+
+func (s *neoStore) getByEmail(email string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("email", email)
 }
 
-func (s *neoStore) GetById(id string) (*FullUserInfo, error) {
+func (s *neoStore) getById(id string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("id", id)
 }
 
-func (s *neoStore) GetByActivationCode(activationCode string) (*FullUserInfo, error) {
+func (s *neoStore) getByActivationCode(activationCode string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("activationCode", activationCode)
 }
 
-func (s *neoStore) GetByNewEmailConfirmationCode(newEmailconfirmationCode string) (*FullUserInfo, error) {
+func (s *neoStore) getByNewEmailConfirmationCode(newEmailconfirmationCode string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("newEmailconfirmationCode", newEmailconfirmationCode)
 }
 
-func (s *neoStore) GetByResetPwdCode(resetPwdCode string) (*FullUserInfo, error) {
+func (s *neoStore) getByResetPwdCode(resetPwdCode string) (*fullUserInfo, error) {
 	return s.getByUniqueStringProperty("resetPwdCode", resetPwdCode)
+}
+
+func (s *neoStore) getByIds(ids []string) ([]*User, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (s *neoStore) search(search string, limit int) ([]*User, error) {
+	return nil, errors.New("not implemented")
 }
 
 func (s *neoStore) save(nu *neoFullUserInfo) error {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("MERGE (:USER {id:%q,firstName:%q,lastName:%q,email:%q,registrationTime:%d", nu.Id, nu.FirstName, nu.LastName, nu.Email, nu.RegistrationTime))
+	buf.WriteString(fmt.Sprintf("MERGE (:USER {id:%q,username:%q,email:%q,registrationTime:%d", nu.Id, nu.Username, nu.Email, nu.RegistrationTime))
 	if len(nu.NewEmail) > 0 {
 		buf.WriteString(fmt.Sprintf(",newEmail:%q", nu.NewEmail))
 	} else {
@@ -155,27 +199,23 @@ func (s *neoStore) save(nu *neoFullUserInfo) error {
 	} else {
 		buf.WriteString(",resetPwdCode:null")
 	}
-	buf.WriteString(fmt.Sprintf(",scryptSalt:{scryptSalt},scryptPwd:{scryptPwd},scryptN:%d,scryptR:%d,scryptP:%d,scryptKeyLen:%d})", nu.ScryptN, nu.ScryptR, nu.ScryptP, nu.ScryptKeyLen))
-	props := neo.Props{
-		"scryptSalt": nu.ScryptSalt,
-		"scryptPwd":  nu.ScryptPwd,
-	}
+	buf.WriteString(fmt.Sprintf(",scryptSalt:%q,scryptPwd:%q,scryptN:%d,scryptR:%d,scryptP:%d,scryptKeyLen:%d})", nu.ScryptSalt, nu.ScryptPwd, nu.ScryptN, nu.ScryptR, nu.ScryptP, nu.ScryptKeyLen))
 	return s.db.Cypher(&neo.CypherQuery{
-		Statement:  buf.String(),
-		Parameters: props,
+		Statement: buf.String(),
 	})
 }
 
-func (s *neoStore) Create(user *FullUserInfo) error {
+func (s *neoStore) create(user *fullUserInfo) error {
 	return s.save(newNeoFullUserInfo(user))
 }
 
-func (s *neoStore) Update(user *FullUserInfo) error {
+func (s *neoStore) update(user *fullUserInfo) error {
 	return s.save(newNeoFullUserInfo(user))
 }
 
-func (s *neoStore) Delete(id string) error {
+func (s *neoStore) delete(id string) error {
 	return s.db.Cypher(&neo.CypherQuery{
-		Statement: fmt.Sprintf("MATCH (u:USER {id:%q}) DETACH DELETE u", id),
+		Statement:  "MATCH (u:USER {id:{id}}) DETACH DELETE u",
+		Parameters: neo.Props{"id": id},
 	})
 }

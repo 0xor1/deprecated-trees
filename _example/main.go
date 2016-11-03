@@ -7,7 +7,7 @@ import(
 
 func main(){
 	log := zap.New(zap.NewTextEncoder())
-	api := user.NewNeoApi()
+	api, _ := user.NewNeoApi(nil, nil, nil, nil, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, nil)
 	api.Activate("")
 	log.Info("some shit")
 }
