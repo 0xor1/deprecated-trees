@@ -1,7 +1,7 @@
 package user
 
 import (
-	"bitbucket.org/robsix/core"
+	"bitbucket.org/robsix/core/helper"
 	"bytes"
 	"crypto/rand"
 	"fmt"
@@ -34,7 +34,7 @@ const (
 	subcall                                 = "subcall"
 )
 
-func newApi(store store, linkMailer LinkMailer, usernameRegexMatchers, pwdRegexMatchers []string, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
+func newApi(store store, linkMailer helper.LinkMailer, usernameRegexMatchers, pwdRegexMatchers []string, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
 	if linkMailer == nil {
 		return nil, NilLinkMailerErr
 	}
@@ -42,42 +42,44 @@ func newApi(store store, linkMailer LinkMailer, usernameRegexMatchers, pwdRegexM
 		return nil, NilLogErr
 	}
 	return &api{
-		store:                 store,
-		linkMailer:            linkMailer,
-		usernameRegexMatchers: append(make([]string, 0, len(usernameRegexMatchers)), usernameRegexMatchers...),
-		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
-		maxSearchLimitResults: maxSearchLimitResults,
-		usernameMinRuneCount:  usernameMinRuneCount,
-		usernameMaxRuneCount:  usernameMaxRuneCount,
-		pwdMinRuneCount:       pwdMinRuneCount,
-		pwdMaxRuneCount:       pwdMaxRuneCount,
-		cryptoCodeLen:         cryptoCodeLen,
-		saltLen:               saltLen,
-		scryptN:               scryptN,
-		scryptR:               scryptR,
-		scryptP:               scryptP,
-		scryptKeyLen:          scryptKeyLen,
-		log:                   log,
+		store:                  store,
+		linkMailer:             linkMailer,
+		usernameRegexMatchers:  append(make([]string, 0, len(usernameRegexMatchers)), usernameRegexMatchers...),
+		pwdRegexMatchers:       append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		minSearchTermRuneCount: minSearchTermRuneCount,
+		maxSearchLimitResults:  maxSearchLimitResults,
+		usernameMinRuneCount:   usernameMinRuneCount,
+		usernameMaxRuneCount:   usernameMaxRuneCount,
+		pwdMinRuneCount:        pwdMinRuneCount,
+		pwdMaxRuneCount:        pwdMaxRuneCount,
+		cryptoCodeLen:          cryptoCodeLen,
+		saltLen:                saltLen,
+		scryptN:                scryptN,
+		scryptR:                scryptR,
+		scryptP:                scryptP,
+		scryptKeyLen:           scryptKeyLen,
+		log:                    log,
 	}, nil
 }
 
 type api struct {
-	store                 store
-	linkMailer            LinkMailer
-	usernameRegexMatchers []string
-	pwdRegexMatchers      []string
-	maxSearchLimitResults int
-	usernameMinRuneCount  int
-	usernameMaxRuneCount  int
-	pwdMinRuneCount       int
-	pwdMaxRuneCount       int
-	cryptoCodeLen         int
-	saltLen               int
-	scryptN               int
-	scryptR               int
-	scryptP               int
-	scryptKeyLen          int
-	log                   zap.Logger
+	store                  store
+	linkMailer             helper.LinkMailer
+	usernameRegexMatchers  []string
+	pwdRegexMatchers       []string
+	minSearchTermRuneCount int
+	maxSearchLimitResults  int
+	usernameMinRuneCount   int
+	usernameMaxRuneCount   int
+	pwdMinRuneCount        int
+	pwdMaxRuneCount        int
+	cryptoCodeLen          int
+	saltLen                int
+	scryptN                int
+	scryptR                int
+	scryptP                int
+	scryptKeyLen           int
+	log                    zap.Logger
 }
 
 func (a *api) Register(username, email, pwd string) error {
@@ -138,7 +140,7 @@ func (a *api) Register(username, email, pwd string) error {
 		return err
 	}
 
-	id, err := core.NewId()
+	id, err := helper.NewId()
 	if err != nil {
 		a.log.Error(registerFnLogMsg, zap.Error(err))
 		return err
@@ -147,7 +149,7 @@ func (a *api) Register(username, email, pwd string) error {
 	err = a.store.create(&fullUserInfo{
 		Me: Me{
 			User: User{
-				Entity: core.Entity{
+				Entity: helper.Entity{
 					Id: id,
 				},
 				Username: username,
@@ -551,7 +553,7 @@ func (a *api) GetMe(id string) (*Me, error) {
 		return nil, err
 	}
 
-	return user.toMe(), nil
+	return &user.Me, nil
 }
 
 func (a *api) Delete(id string) error {
@@ -582,6 +584,14 @@ func (a *api) Search(search string, limit int) ([]*User, error) {
 	if limit < 1 || limit > a.maxSearchLimitResults {
 		limit = a.maxSearchLimitResults
 	}
+
+	search = strings.Trim(search, " ")
+	if utf8.RuneCountInString(search) < a.minSearchTermRuneCount {
+		return nil, &SearchTermTooShortErr{
+			MinRuneCount: a.minSearchTermRuneCount,
+		}
+	}
+
 	users, err := a.store.search(search, limit)
 	if err != nil {
 		a.log.Error(searchFnLogMsg, zap.String(subcall, "store.search"), zap.Error(err))
@@ -610,28 +620,6 @@ func (u *fullUserInfo) isActivated() bool {
 	return len(u.ActivationCode) == 0
 }
 
-func (u *fullUserInfo) toMe() *Me {
-	return &Me{
-		User: User{
-			Entity: core.Entity{
-				Id: u.Id,
-			},
-			Username: u.Username,
-		},
-		Email:    u.Email,
-		NewEmail: u.NewEmail,
-	}
-}
-
-func (u *fullUserInfo) toUser() *User {
-	return &User{
-		Entity: core.Entity{
-			Id: u.Id,
-		},
-		Username: u.Username,
-	}
-}
-
 //helpers
 
 type store interface {
@@ -657,13 +645,13 @@ func newInvalidStringParamErr(paramPurpose string, minRuneCount, maxRuneCount in
 	}
 }
 
-func validateStringParam(paramPurpose, val string, minRuneCount, maxRuneCount int, regexMatchers []string) error {
-	valRuneCount := utf8.RuneCountInString(val)
+func validateStringParam(paramPurpose, param string, minRuneCount, maxRuneCount int, regexMatchers []string) error {
+	valRuneCount := utf8.RuneCountInString(param)
 	if valRuneCount < minRuneCount || valRuneCount > maxRuneCount {
 		return newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers)
 	}
 	for _, regex := range regexMatchers {
-		if matches, err := regexp.MatchString(regex, val); !matches || err != nil {
+		if matches, err := regexp.MatchString(regex, param); !matches || err != nil {
 			if err != nil {
 				return err
 			}

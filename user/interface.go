@@ -1,15 +1,15 @@
 package user
 
 import (
-	"bitbucket.org/robsix/core"
+	"bitbucket.org/robsix/core/helper"
 	"errors"
 	"fmt"
+	"github.com/uber-go/zap"
 )
 
 var (
 	NilLinkMailerErr         = errors.New("nil linkMailer passed to Api")
 	NilLogErr                = errors.New("nil log passed to Api")
-	NilNeoDbErr              = errors.New("nil Neo Db passed to NeoApi")
 	IncorrectPwdErr          = errors.New("password incorrect")
 	UserNotActivated         = errors.New("user not activated")
 	InvalidEmailErr          = errors.New("invalid email")
@@ -32,8 +32,16 @@ func (e *InvalidStringParamErr) Error() string {
 	return fmt.Sprintf(fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.ParamPurpose, e.MinRuneCount, e.MaxRuneCount, e.RegexMatchers))
 }
 
+type SearchTermTooShortErr struct {
+	MinRuneCount int
+}
+
+func (e *SearchTermTooShortErr) Error() string {
+	return fmt.Sprintf(fmt.Sprintf("search term must be at least %d characters long", e.MinRuneCount))
+}
+
 type User struct {
-	core.Entity
+	helper.Entity
 	Username string `json:"username"`
 }
 
@@ -61,8 +69,6 @@ type Api interface {
 	Search(search string, limit int) ([]*User, error)
 }
 
-type LinkMailer interface {
-	SendActivationLink(address, activationCode string) error
-	SendPwdResetLink(address, resetCode string) error
-	SendNewEmailConfirmationLink(address, confirmationCode string) error
+func NewMemApi(linkMailer helper.LinkMailer, usernameRegexMatchers, pwdRegexMatchers []string, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
+	return newApi(newMemStore(), linkMailer, usernameRegexMatchers, pwdRegexMatchers, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
 }
