@@ -188,6 +188,10 @@ func (a *api) ResendActivationEmail(email string) error {
 		a.log.Error(resendActivationEmailFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 		return err
 	}
+	if user == nil {
+		a.log.Info(resendActivationEmailFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
+	}
 
 	if user.isActivated() {
 		a.log.Info(resendActivationEmailFnLogMsg, zap.Error(UserAlreadyActivatedErr))
@@ -211,10 +215,9 @@ func (a *api) Activate(activationCode string) (string, error) {
 		a.log.Error(activateFnLogMsg, zap.String(subcall, "store.getByActivationCode"), zap.Error(err))
 		return "", err
 	}
-
-	if user.isActivated() {
-		a.log.Error(activateFnLogMsg, zap.Error(UserAlreadyActivatedErr))
-		return "", UserAlreadyActivatedErr
+	if user == nil {
+		a.log.Info(activateFnLogMsg, zap.Error(NoSuchUserErr))
+		return "", NoSuchUserErr
 	}
 
 	user.ActivationCode = ""
@@ -235,6 +238,10 @@ func (a *api) Authenticate(username, pwdTry string) (string, error) {
 	if err != nil {
 		a.log.Error(authenticateFnLogMsg, zap.String(subcall, "store.getByUsername"), zap.Error(err))
 		return "", err
+	}
+	if user == nil {
+		a.log.Info(authenticateFnLogMsg, zap.Error(NoSuchUserErr))
+		return "", NoSuchUserErr
 	}
 
 	scryptPwdTry, err := scrypt.Key([]byte(pwdTry), user.ScryptSalt, user.ScryptN, user.ScryptR, user.ScryptP, user.ScryptKeyLen)
@@ -296,8 +303,7 @@ func (a *api) ChangeUsername(id, newUsername string) error {
 		return err
 	}
 
-	user, err := a.store.getByUsername(newUsername)
-	if user != nil || err != nil {
+	if user, err := a.store.getByUsername(newUsername); user != nil || err != nil {
 		if err != nil {
 			a.log.Error(changeUsernameFnLogMsg, zap.String(subcall, "store.getByUsername"), zap.Error(err))
 			return err
@@ -305,6 +311,16 @@ func (a *api) ChangeUsername(id, newUsername string) error {
 			a.log.Info(changeUsernameFnLogMsg, zap.Error(UsernameAlreadyInUseErr))
 			return UsernameAlreadyInUseErr
 		}
+	}
+
+	user, err := a.store.getById(id)
+	if err != nil {
+		a.log.Error(changeUsernameFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
+		return err
+	}
+	if user == nil {
+		a.log.Info(changeUsernameFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
 	}
 
 	user.Username = newUsername
@@ -325,8 +341,7 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 		return err
 	}
 
-	user, err := a.store.getByEmail(newEmail)
-	if user != nil || err != nil {
+	if user, err := a.store.getByEmail(newEmail); user != nil || err != nil {
 		if err != nil {
 			a.log.Error(changeEmailFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 			return err
@@ -334,6 +349,16 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 			a.log.Info(changeEmailFnLogMsg, zap.Error(EmailAlreadyInUseErr))
 			return EmailAlreadyInUseErr
 		}
+	}
+
+	user, err := a.store.getById(id)
+	if err != nil {
+		a.log.Error(changeEmailFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
+		return err
+	}
+	if user == nil {
+		a.log.Info(changeEmailFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
 	}
 
 	confirmationCode, err := generateCryptoString(a.cryptoCodeLen)
@@ -365,6 +390,10 @@ func (a *api) ResendNewEmailConfirmationEmail(id string) error {
 		a.log.Error(resendNewEmailConfirmationEmailFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return err
 	}
+	if user == nil {
+		a.log.Info(resendNewEmailConfirmationEmailFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
+	}
 
 	// check the user has actually registered a new email
 	if len(user.NewEmail) == 0 {
@@ -393,6 +422,10 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) error {
 	if err != nil {
 		a.log.Error(ConfirmNewEmailFnLogMsg, zap.String(subcall, "store.getByNewEmailConfirmationCode"), zap.Error(err))
 		return err
+	}
+	if user == nil {
+		a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
 	}
 
 	if user.NewEmail != newEmail || user.NewEmailConfirmationCode != confirmationCode {
@@ -429,6 +462,10 @@ func (a *api) ResetPwd(email string) error {
 		a.log.Error(resetPwdFnLogMsg, zap.String(subcall, "store.getByEmail"), zap.Error(err))
 		return err
 	}
+	if user == nil {
+		a.log.Info(resetPwdFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
+	}
 
 	resetPwdCode, err := generateCryptoString(a.cryptoCodeLen)
 	if err != nil {
@@ -463,6 +500,10 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 	if err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, "store.getByResetPwdCode"), zap.Error(err))
 		return "", err
+	}
+	if user == nil {
+		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(NoSuchUserErr))
+		return "", NoSuchUserErr
 	}
 
 	scryptSalt, err := generateCryptoBytes(a.saltLen)
@@ -505,6 +546,10 @@ func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
 	if err != nil {
 		a.log.Error(changePwdFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return err
+	}
+	if user == nil {
+		a.log.Info(changePwdFnLogMsg, zap.Error(NoSuchUserErr))
+		return NoSuchUserErr
 	}
 
 	scryptPwdTry, err := scrypt.Key([]byte(oldPwd), user.ScryptSalt, user.ScryptN, user.ScryptR, user.ScryptP, user.ScryptKeyLen)
@@ -551,6 +596,10 @@ func (a *api) GetMe(id string) (*Me, error) {
 	if err != nil {
 		a.log.Error(getMeFnLogMsg, zap.String(subcall, "store.getById"), zap.Error(err))
 		return nil, err
+	}
+	if user == nil {
+		a.log.Info(getMeFnLogMsg, zap.Error(NoSuchUserErr))
+		return nil, NoSuchUserErr
 	}
 
 	return &user.Me, nil

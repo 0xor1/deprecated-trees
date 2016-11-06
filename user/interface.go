@@ -10,6 +10,7 @@ import (
 var (
 	NilLinkMailerErr         = errors.New("nil linkMailer passed to Api")
 	NilLogErr                = errors.New("nil log passed to Api")
+	NoSuchUserErr	         = errors.New("no such user")
 	IncorrectPwdErr          = errors.New("password incorrect")
 	UserNotActivated         = errors.New("user not activated")
 	InvalidEmailErr          = errors.New("invalid email")
