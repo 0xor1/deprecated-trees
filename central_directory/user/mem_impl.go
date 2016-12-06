@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	. "github.com/pborman/uuid"
 )
 
 func newMemStore() store {
@@ -43,10 +44,10 @@ func (s *memStore) getByEmail(email string) (*fullUserInfo, error) {
 	}), nil
 }
 
-func (s *memStore) getById(id string) (*fullUserInfo, error) {
+func (s *memStore) getById(id UUID) (*fullUserInfo, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
-	u := s.data[id]
+	u := s.data[id.String()]
 	return cloneFullUserInfoStruct(u), nil
 }
 
@@ -68,12 +69,12 @@ func (s *memStore) getByResetPwdCode(resetPwdCode string) (*fullUserInfo, error)
 	}), nil
 }
 
-func (s *memStore) getByIds(ids []string) ([]*User, error) {
+func (s *memStore) getByIds(ids []UUID) ([]*User, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	res := make([]*User, 0, len(ids))
 	for _, id := range ids {
-		u := s.data[id]
+		u := s.data[id.String()]
 		if u != nil {
 			clone := u.User
 			res = append(res, &clone)
@@ -108,11 +109,11 @@ func (s *memStore) create(user *fullUserInfo) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	if _, exists := s.data[user.Id]; exists {
+	if _, exists := s.data[user.Id.String()]; exists {
 		return errors.New("user already exists")
 	}
 
-	s.data[user.Id] = cloneFullUserInfoStruct(user)
+	s.data[user.Id.String()] = cloneFullUserInfoStruct(user)
 
 	return nil
 }
@@ -125,34 +126,37 @@ func (s *memStore) update(user *fullUserInfo) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	if _, exists := s.data[user.Id]; !exists {
+	if _, exists := s.data[user.Id.String()]; !exists {
 		return errors.New("user does not exists")
 	}
 
-	s.data[user.Id] = cloneFullUserInfoStruct(user)
+	s.data[user.Id.String()] = cloneFullUserInfoStruct(user)
 
 	return nil
 }
 
-func (s *memStore) delete(id string) error {
+func (s *memStore) delete(id UUID) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	if _, exists := s.data[id]; !exists {
+	if _, exists := s.data[id.String()]; !exists {
 		return errors.New("user does not exists")
 	}
 
-	delete(s.data, id)
+	delete(s.data, id.String())
 
 	return nil
 }
 
 //helper
 func cloneFullUserInfoStruct(u *fullUserInfo) *fullUserInfo {
-	if u == nil {
+	if u.Id == nil {
 		return nil
 	}
 	clone := *u
+	if u.Id != nil {
+		clone.Id = append(make([]byte, 0, len(u.Id)), u.Id...)
+	}
 	if u.ActivationTime != nil {
 		activationTimeClone := *u.ActivationTime
 		clone.ActivationTime = &activationTimeClone

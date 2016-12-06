@@ -1,7 +1,7 @@
 package user
 
 import (
-	"bitbucket.org/robsix/core/helper"
+	"bitbucket.org/robsix/task_center/helper"
 	"bytes"
 	"crypto/rand"
 	"fmt"
@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	. "github.com/pborman/uuid"
 )
 
 const (
@@ -206,58 +207,60 @@ func (a *api) ResendActivationEmail(email string) error {
 	return nil
 }
 
-func (a *api) Activate(activationCode string) (string, error) {
+func (a *api) Activate(activationCode string) (UUID, error) {
 	a.log.Debug(activateFnLogMsg, zap.String("activationCode", "******"))
 
 	activationCode = strings.Trim(activationCode, " ")
 	user, err := a.store.getByActivationCode(activationCode)
 	if err != nil {
 		a.log.Error(activateFnLogMsg, zap.String(subcall, "store.getByActivationCode"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 	if user == nil {
 		a.log.Info(activateFnLogMsg, zap.Error(NoSuchUserErr))
-		return "", NoSuchUserErr
+		return nil, NoSuchUserErr
 	}
 
 	user.ActivationCode = ""
+	activationTime := time.Now().UTC()
+	user.ActivationTime = &activationTime
 	err = a.store.update(user)
 	if err != nil {
 		a.log.Error(activateFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	return user.Id, nil
 }
 
-func (a *api) Authenticate(username, pwdTry string) (string, error) {
+func (a *api) Authenticate(username, pwdTry string) (UUID, error) {
 	a.log.Debug(authenticateFnLogMsg, zap.String("username", username), zap.String("pwdTry", "******"))
 
 	username = strings.Trim(username, " ")
 	user, err := a.store.getByUsername(username)
 	if err != nil {
 		a.log.Error(authenticateFnLogMsg, zap.String(subcall, "store.getByUsername"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 	if user == nil {
 		a.log.Info(authenticateFnLogMsg, zap.Error(NoSuchUserErr))
-		return "", NoSuchUserErr
+		return nil, NoSuchUserErr
 	}
 
 	scryptPwdTry, err := scrypt.Key([]byte(pwdTry), user.ScryptSalt, user.ScryptN, user.ScryptR, user.ScryptP, user.ScryptKeyLen)
 	if err != nil {
 		a.log.Error(authenticateFnLogMsg, zap.String(subcall, "scrypt.Key"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	if !pwdsMatch(user.ScryptPwd, scryptPwdTry) {
 		a.log.Info(authenticateFnLogMsg, zap.Error(IncorrectPwdErr))
-		return "", IncorrectPwdErr
+		return nil, IncorrectPwdErr
 	}
 
 	if !user.isActivated() {
 		a.log.Info(authenticateFnLogMsg, zap.Error(UserNotActivated))
-		return "", UserNotActivated
+		return nil, UserNotActivated
 	}
 
 	userUpdated := false
@@ -271,7 +274,7 @@ func (a *api) Authenticate(username, pwdTry string) (string, error) {
 		user.ScryptSalt, err = generateCryptoBytes(a.saltLen)
 		if err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.Error(err))
-			return "", err
+			return nil, err
 		}
 		user.ScryptN = a.scryptN
 		user.ScryptR = a.scryptR
@@ -280,22 +283,22 @@ func (a *api) Authenticate(username, pwdTry string) (string, error) {
 		user.ScryptPwd, err = scrypt.Key([]byte(pwdTry), user.ScryptSalt, user.ScryptN, user.ScryptR, user.ScryptP, user.ScryptKeyLen)
 		if err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.String(subcall, "scrypt.Key"), zap.Error(err))
-			return "", err
+			return nil, err
 		}
 		userUpdated = true
 	}
 	if userUpdated {
 		if err = a.store.update(user); err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
-			return "", err
+			return nil, err
 		}
 	}
 
 	return user.Id, nil
 }
 
-func (a *api) ChangeUsername(id, newUsername string) error {
-	a.log.Debug(changeUsernameFnLogMsg, zap.String("id", id), zap.String("newUsername", newUsername))
+func (a *api) ChangeUsername(id UUID, newUsername string) error {
+	a.log.Debug(changeUsernameFnLogMsg, zap.Base64("id", id), zap.String("newUsername", newUsername))
 
 	newUsername = strings.Trim(newUsername, " ")
 	if err := validateStringParam("username", newUsername, a.usernameMinRuneCount, a.usernameMaxRuneCount, a.usernameRegexMatchers); err != nil {
@@ -332,8 +335,8 @@ func (a *api) ChangeUsername(id, newUsername string) error {
 	return nil
 }
 
-func (a *api) ChangeEmail(id, newEmail string) error {
-	a.log.Debug(changeEmailFnLogMsg, zap.String("id", id), zap.String("newEmail", newEmail))
+func (a *api) ChangeEmail(id UUID, newEmail string) error {
+	a.log.Debug(changeEmailFnLogMsg, zap.Base64("id", id), zap.String("newEmail", newEmail))
 
 	newEmail = strings.Trim(newEmail, " ")
 	if err := validateEmail(newEmail); err != nil {
@@ -382,8 +385,8 @@ func (a *api) ChangeEmail(id, newEmail string) error {
 	return nil
 }
 
-func (a *api) ResendNewEmailConfirmationEmail(id string) error {
-	a.log.Debug(resendNewEmailConfirmationEmailFnLogMsg, zap.String("id", id))
+func (a *api) ResendNewEmailConfirmationEmail(id UUID) error {
+	a.log.Debug(resendNewEmailConfirmationEmailFnLogMsg, zap.Base64("id", id))
 
 	user, err := a.store.getById(id)
 	if err != nil {
@@ -488,34 +491,34 @@ func (a *api) ResetPwd(email string) error {
 	return nil
 }
 
-func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error) {
+func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
 	a.log.Debug(setNewPwdFromPwdResetFnLogMsg, zap.String("newPwd", "******"), zap.String("resetPwdCode", "******"))
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
 		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	user, err := a.store.getByResetPwdCode(resetPwdCode)
 	if err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, "store.getByResetPwdCode"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 	if user == nil {
 		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(NoSuchUserErr))
-		return "", NoSuchUserErr
+		return nil, NoSuchUserErr
 	}
 
 	scryptSalt, err := generateCryptoBytes(a.saltLen)
 	if err != nil {
 		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	scryptPwd, err := scrypt.Key([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, "scrypt.Key"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	user.ScryptPwd = scryptPwd
@@ -528,14 +531,14 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
 	user.ResetPwdCode = ""
 	if err = a.store.update(user); err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, "store.update"), zap.Error(err))
-		return "", err
+		return nil, err
 	}
 
 	return user.Id, nil
 }
 
-func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
-	a.log.Debug(changePwdFnLogMsg, zap.String("id", id), zap.String("oldPwd", "******"), zap.String("newPwd", "******"))
+func (a *api) ChangePwd(id UUID, oldPwd, newPwd string) error {
+	a.log.Debug(changePwdFnLogMsg, zap.Base64("id", id), zap.String("oldPwd", "******"), zap.String("newPwd", "******"))
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
 		a.log.Info(changePwdFnLogMsg, zap.Error(err))
@@ -589,8 +592,8 @@ func (a *api) ChangePwd(id, oldPwd, newPwd string) error {
 	return nil
 }
 
-func (a *api) GetMe(id string) (*Me, error) {
-	a.log.Debug(getMeFnLogMsg, zap.String("id", id))
+func (a *api) GetMe(id UUID) (*Me, error) {
+	a.log.Debug(getMeFnLogMsg, zap.Base64("id", id))
 
 	user, err := a.store.getById(id)
 	if err != nil {
@@ -605,8 +608,8 @@ func (a *api) GetMe(id string) (*Me, error) {
 	return &user.Me, nil
 }
 
-func (a *api) Delete(id string) error {
-	a.log.Debug(deleteFnLogMsg, zap.String("id", id))
+func (a *api) Delete(id UUID) error {
+	a.log.Debug(deleteFnLogMsg, zap.Base64("id", id))
 
 	err := a.store.delete(id)
 	if err != nil {
@@ -616,7 +619,7 @@ func (a *api) Delete(id string) error {
 	return err
 }
 
-func (a *api) Get(ids []string) ([]*User, error) {
+func (a *api) Get(ids []UUID) ([]*User, error) {
 	a.log.Debug(getFnLogMsg, zap.String("ids", fmt.Sprintf("%v", ids)))
 
 	users, err := a.store.getByIds(ids)
@@ -674,15 +677,15 @@ func (u *fullUserInfo) isActivated() bool {
 type store interface {
 	getByUsername(username string) (*fullUserInfo, error)
 	getByEmail(email string) (*fullUserInfo, error)
-	getById(id string) (*fullUserInfo, error)
+	getById(id UUID) (*fullUserInfo, error)
 	getByActivationCode(activationCode string) (*fullUserInfo, error)
 	getByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error)
 	getByResetPwdCode(resetPwdCode string) (*fullUserInfo, error)
-	getByIds(ids []string) ([]*User, error)
+	getByIds(ids []UUID) ([]*User, error)
 	search(search string, limit int) ([]*User, error)
 	create(user *fullUserInfo) error
 	update(user *fullUserInfo) error
-	delete(id string) error
+	delete(id UUID) error
 }
 
 func newInvalidStringParamErr(paramPurpose string, minRuneCount, maxRuneCount int, regexMatchers []string) *InvalidStringParamErr {

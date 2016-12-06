@@ -1,10 +1,11 @@
 package user
 
 import (
-	"bitbucket.org/robsix/core/helper"
+	"bitbucket.org/robsix/task_center/helper"
 	"errors"
 	"fmt"
 	"github.com/uber-go/zap"
+	. "github.com/pborman/uuid"
 )
 
 var (
@@ -55,21 +56,25 @@ type Me struct {
 type Api interface {
 	Register(username, email, pwd string) error
 	ResendActivationEmail(email string) error
-	Activate(activationCode string) (id string, err error)
-	Authenticate(username, pwd string) (id string, err error)
-	ChangeUsername(id, newUsername string) error
-	ChangeEmail(id, newEmail string) error
-	ResendNewEmailConfirmationEmail(id string) error
+	Activate(activationCode string) (id UUID, err error)
+	Authenticate(username, pwd string) (id UUID, err error)
+	ChangeUsername(id UUID, newUsername string) error
+	ChangeEmail(id UUID, newEmail string) error
+	ResendNewEmailConfirmationEmail(id UUID) error
 	ConfirmNewEmail(email, confirmationCode string) error
 	ResetPwd(email string) error
-	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (string, error)
-	ChangePwd(id, oldPwd, newPwd string) error
-	GetMe(id string) (*Me, error)
-	Delete(id string) error
-	Get(ids []string) ([]*User, error)
+	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error)
+	ChangePwd(id UUID, oldPwd, newPwd string) error
+	GetMe(id UUID) (*Me, error)
+	Delete(id UUID) error
+	Get(ids []UUID) ([]*User, error)
 	Search(search string, limit int) ([]*User, error)
 }
 
-func NewMemApi(linkMailer helper.LinkMailer, usernameRegexMatchers, pwdRegexMatchers []string, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
-	return newApi(newMemStore(), linkMailer, usernameRegexMatchers, pwdRegexMatchers, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+func NewMemApi(usernameRegexMatchers, pwdRegexMatchers []string, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
+	if mailer, err := helper.NewLogLinkMailer(log); err != nil {
+		return nil, err
+	} else {
+		return newApi(newMemStore(), mailer, usernameRegexMatchers, pwdRegexMatchers, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+	}
 }
