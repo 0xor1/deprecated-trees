@@ -3,25 +3,25 @@ package user
 import (
 	"errors"
 	"fmt"
+	. "github.com/pborman/uuid"
 	"strings"
 	"sync"
-	. "github.com/pborman/uuid"
 )
 
-func newMemStore() store {
+func newMemStore() UserStore {
 	return &memStore{
-		data: map[string]*fullUserInfo{},
+		data: map[string]*FullUserInfo{},
 		mtx:  &sync.RWMutex{},
 	}
 }
 
 type memStore struct {
-	data         map[string]*fullUserInfo
+	data         map[string]*FullUserInfo
 	growthFactor int
 	mtx          *sync.RWMutex
 }
 
-func (s *memStore) firstWith(predicate func(u *fullUserInfo) bool) *fullUserInfo {
+func (s *memStore) firstWith(predicate func(u *FullUserInfo) bool) *FullUserInfo {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	for _, u := range s.data {
@@ -32,39 +32,39 @@ func (s *memStore) firstWith(predicate func(u *fullUserInfo) bool) *fullUserInfo
 	return nil
 }
 
-func (s *memStore) getByUsername(username string) (*fullUserInfo, error) {
-	return s.firstWith(func(u *fullUserInfo) bool {
+func (s *memStore) getByUsername(username string) (*FullUserInfo, error) {
+	return s.firstWith(func(u *FullUserInfo) bool {
 		return u.Username == username
 	}), nil
 }
 
-func (s *memStore) getByEmail(email string) (*fullUserInfo, error) {
-	return s.firstWith(func(u *fullUserInfo) bool {
+func (s *memStore) getByEmail(email string) (*FullUserInfo, error) {
+	return s.firstWith(func(u *FullUserInfo) bool {
 		return u.Email == email
 	}), nil
 }
 
-func (s *memStore) getById(id UUID) (*fullUserInfo, error) {
+func (s *memStore) getById(id UUID) (*FullUserInfo, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	u := s.data[id.String()]
 	return cloneFullUserInfoStruct(u), nil
 }
 
-func (s *memStore) getByActivationCode(activationCode string) (*fullUserInfo, error) {
-	return s.firstWith(func(u *fullUserInfo) bool {
+func (s *memStore) getByActivationCode(activationCode string) (*FullUserInfo, error) {
+	return s.firstWith(func(u *FullUserInfo) bool {
 		return u.ActivationCode == activationCode
 	}), nil
 }
 
-func (s *memStore) getByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error) {
-	return s.firstWith(func(u *fullUserInfo) bool {
+func (s *memStore) getByNewEmailConfirmationCode(confirmationCode string) (*FullUserInfo, error) {
+	return s.firstWith(func(u *FullUserInfo) bool {
 		return u.NewEmailConfirmationCode == confirmationCode
 	}), nil
 }
 
-func (s *memStore) getByResetPwdCode(resetPwdCode string) (*fullUserInfo, error) {
-	return s.firstWith(func(u *fullUserInfo) bool {
+func (s *memStore) getByResetPwdCode(resetPwdCode string) (*FullUserInfo, error) {
+	return s.firstWith(func(u *FullUserInfo) bool {
 		return u.ResetPwdCode == resetPwdCode
 	}), nil
 }
@@ -101,7 +101,7 @@ func (s *memStore) search(search string, limit int) ([]*User, error) {
 	return res, nil
 }
 
-func (s *memStore) create(user *fullUserInfo) error {
+func (s *memStore) create(user *FullUserInfo) error {
 	if user == nil {
 		return nil
 	}
@@ -118,7 +118,7 @@ func (s *memStore) create(user *fullUserInfo) error {
 	return nil
 }
 
-func (s *memStore) update(user *fullUserInfo) error {
+func (s *memStore) update(user *FullUserInfo) error {
 	if user == nil {
 		return nil
 	}
@@ -149,7 +149,7 @@ func (s *memStore) delete(id UUID) error {
 }
 
 //helper
-func cloneFullUserInfoStruct(u *fullUserInfo) *fullUserInfo {
+func cloneFullUserInfoStruct(u *FullUserInfo) *FullUserInfo {
 	if u.Id == nil {
 		return nil
 	}

@@ -1,17 +1,19 @@
 package user
 
 import (
-	"bitbucket.org/robsix/task_center/helper"
+	"bitbucket.org/robsix/task_center/misc"
 	"errors"
 	"fmt"
-	"github.com/uber-go/zap"
 	. "github.com/pborman/uuid"
+	"time"
 )
 
 var (
+	NilUserStoreErr          = errors.New("nil userStore passed to Api")
+	NilPwdStoreErr           = errors.New("nil pwdStore passed to Api")
 	NilLinkMailerErr         = errors.New("nil linkMailer passed to Api")
 	NilLogErr                = errors.New("nil log passed to Api")
-	NoSuchUserErr	         = errors.New("no such user")
+	NoSuchUserErr            = errors.New("no such user")
 	IncorrectPwdErr          = errors.New("password incorrect")
 	UserNotActivated         = errors.New("user not activated")
 	InvalidEmailErr          = errors.New("invalid email")
@@ -42,8 +44,14 @@ func (e *SearchTermTooShortErr) Error() string {
 	return fmt.Sprintf(fmt.Sprintf("search term must be at least %d characters long", e.MinRuneCount))
 }
 
+type LinkMailer interface {
+	SendActivationLink(address, activationCode string) error
+	SendPwdResetLink(address, resetCode string) error
+	SendNewEmailConfirmationLink(address, confirmationCode string) error
+}
+
 type User struct {
-	helper.Entity
+	misc.CentralEntity
 	Username string `json:"username"`
 }
 
@@ -71,10 +79,45 @@ type Api interface {
 	Search(search string, limit int) ([]*User, error)
 }
 
-func NewMemApi(usernameRegexMatchers, pwdRegexMatchers []string, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
-	if mailer, err := helper.NewLogLinkMailer(log); err != nil {
-		return nil, err
-	} else {
-		return newApi(newMemStore(), mailer, usernameRegexMatchers, pwdRegexMatchers, minSearchTermRuneCount, maxSearchLimitResults, usernameMinRuneCount, usernameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
-	}
+type FullUserInfo struct {
+	Me
+	RegistrationTime         time.Time
+	ActivationCode           *string
+	ActivationTime           *time.Time
+	NewEmailConfirmationCode *string
+	ResetPwdCode             *string
+}
+
+func (u *FullUserInfo) isActivated() bool {
+	return u.ActivationCode == nil
+}
+
+type PwdInfo struct {
+	ScryptSalt   []byte
+	ScryptPwd    []byte
+	ScryptN      int
+	ScryptR      int
+	ScryptP      int
+	ScryptKeyLen int
+}
+
+type UserStore interface {
+	Create(user *FullUserInfo) error
+	GetByUsername(username string) (*FullUserInfo, error)
+	GetByEmail(email string) (*FullUserInfo, error)
+	GetById(id UUID) (*FullUserInfo, error)
+	GetByActivationCode(activationCode string) (*FullUserInfo, error)
+	GetByNewEmailConfirmationCode(confirmationCode string) (*FullUserInfo, error)
+	GetByResetPwdCode(resetPwdCode string) (*FullUserInfo, error)
+	GetByIds(ids []UUID) ([]*User, error)
+	Search(search string, limit int) ([]*User, error)
+	Update(user *FullUserInfo) error
+	Delete(id UUID) error
+}
+
+type PwdStore interface {
+	Create(pwdInfo *PwdInfo) error
+	Get(userId UUID) (*PwdInfo, error)
+	Update(userId UUID, pwdInfo *PwdInfo) error
+	Delete(userId UUID) error
 }
