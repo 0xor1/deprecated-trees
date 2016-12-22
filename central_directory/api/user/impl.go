@@ -201,12 +201,12 @@ func (a *api) Register(username, region, email, pwd string) error {
 	err = a.pwdStore.Create(
 		userId,
 		&PwdInfo{
-			ScryptSalt:   scryptSalt,
-			ScryptPwd:    scryptPwd,
-			ScryptN:      a.scryptN,
-			ScryptR:      a.scryptR,
-			ScryptP:      a.scryptP,
-			ScryptKeyLen: a.scryptKeyLen,
+			Salt:   scryptSalt,
+			Pwd:    scryptPwd,
+			N:      a.scryptN,
+			R:      a.scryptR,
+			P:      a.scryptP,
+			KeyLen: a.scryptKeyLen,
 		},
 	)
 	if err != nil {
@@ -300,13 +300,13 @@ func (a *api) Authenticate(username, pwdTry string) (UUID, error) {
 		return nil, err
 	}
 
-	scryptPwdTry, err := scrypt.Key([]byte(pwdTry), pwdInfo.ScryptSalt, pwdInfo.ScryptN, pwdInfo.ScryptR, pwdInfo.ScryptP, pwdInfo.ScryptKeyLen)
+	scryptPwdTry, err := scrypt.Key([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		a.log.Error(authenticateFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
 		return nil, err
 	}
 
-	if !pwdsMatch(pwdInfo.ScryptPwd, scryptPwdTry) {
+	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
 		a.log.Info(authenticateFnLogMsg, zap.Error(IncorrectPwdErr))
 		return nil, IncorrectPwdErr
 	}
@@ -320,17 +320,17 @@ func (a *api) Authenticate(username, pwdTry string) (UUID, error) {
 		}
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
-	if pwdInfo.ScryptN != a.scryptN || pwdInfo.ScryptR != a.scryptR || pwdInfo.ScryptP != a.scryptP || pwdInfo.ScryptKeyLen != a.scryptKeyLen || len(pwdInfo.ScryptSalt) < a.saltLen {
-		pwdInfo.ScryptSalt, err = misc.GenerateCryptoBytes(a.saltLen)
+	if pwdInfo.N != a.scryptN || pwdInfo.R != a.scryptR || pwdInfo.P != a.scryptP || pwdInfo.KeyLen != a.scryptKeyLen || len(pwdInfo.Salt) < a.saltLen {
+		pwdInfo.Salt, err = misc.GenerateCryptoBytes(a.saltLen)
 		if err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.String(subcall, miscGenerateCryptoBytes), zap.Error(err))
 			return nil, err
 		}
-		pwdInfo.ScryptN = a.scryptN
-		pwdInfo.ScryptR = a.scryptR
-		pwdInfo.ScryptP = a.scryptP
-		pwdInfo.ScryptKeyLen = a.scryptKeyLen
-		pwdInfo.ScryptPwd, err = scrypt.Key([]byte(pwdTry), pwdInfo.ScryptSalt, pwdInfo.ScryptN, pwdInfo.ScryptR, pwdInfo.ScryptP, pwdInfo.ScryptKeyLen)
+		pwdInfo.N = a.scryptN
+		pwdInfo.R = a.scryptR
+		pwdInfo.P = a.scryptP
+		pwdInfo.KeyLen = a.scryptKeyLen
+		pwdInfo.Pwd, err = scrypt.Key([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 		if err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
 			return nil, err
@@ -579,12 +579,12 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
 	if err = a.pwdStore.Update(
 		user.Id,
 		&PwdInfo{
-			ScryptPwd:    scryptPwd,
-			ScryptSalt:   scryptSalt,
-			ScryptN:      a.scryptN,
-			ScryptR:      a.scryptR,
-			ScryptP:      a.scryptP,
-			ScryptKeyLen: a.scryptKeyLen,
+			Pwd:    scryptPwd,
+			Salt:   scryptSalt,
+			N:      a.scryptN,
+			R:      a.scryptR,
+			P:      a.scryptP,
+			KeyLen: a.scryptKeyLen,
 		},
 	); err != nil {
 		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, pwdStoreUpdate), zap.Error(err))
@@ -612,13 +612,13 @@ func (a *api) ChangePwd(id UUID, oldPwd, newPwd string) error {
 		return NoSuchUserErr
 	}
 
-	scryptPwdTry, err := scrypt.Key([]byte(oldPwd), pwdInfo.ScryptSalt, pwdInfo.ScryptN, pwdInfo.ScryptR, pwdInfo.ScryptP, pwdInfo.ScryptKeyLen)
+	scryptPwdTry, err := scrypt.Key([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		a.log.Error(changePwdFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
 		return err
 	}
 
-	if !pwdsMatch(pwdInfo.ScryptPwd, scryptPwdTry) {
+	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
 		a.log.Info(changePwdFnLogMsg, zap.Error(IncorrectPwdErr))
 		return IncorrectPwdErr
 	}
@@ -635,12 +635,12 @@ func (a *api) ChangePwd(id UUID, oldPwd, newPwd string) error {
 		return err
 	}
 
-	pwdInfo.ScryptPwd = scryptPwd
-	pwdInfo.ScryptSalt = scryptSalt
-	pwdInfo.ScryptN = a.scryptN
-	pwdInfo.ScryptR = a.scryptR
-	pwdInfo.ScryptP = a.scryptP
-	pwdInfo.ScryptKeyLen = a.scryptKeyLen
+	pwdInfo.Pwd = scryptPwd
+	pwdInfo.Salt = scryptSalt
+	pwdInfo.N = a.scryptN
+	pwdInfo.R = a.scryptR
+	pwdInfo.P = a.scryptP
+	pwdInfo.KeyLen = a.scryptKeyLen
 	if err = a.pwdStore.Update(id, pwdInfo); err != nil {
 		a.log.Error(changePwdFnLogMsg, zap.String(subcall, pwdStoreUpdate), zap.Error(err))
 		return err

@@ -93,12 +93,12 @@ func (u *FullUserInfo) isActivated() bool {
 }
 
 type PwdInfo struct {
-	ScryptSalt   []byte
-	ScryptPwd    []byte
-	ScryptN      int
-	ScryptR      int
-	ScryptP      int
-	ScryptKeyLen int
+	Salt   []byte
+	Pwd    []byte
+	N      int
+	R      int
+	P      int
+	KeyLen int
 }
 
 type UserStore interface {
