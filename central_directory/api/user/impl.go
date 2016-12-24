@@ -312,7 +312,7 @@ func (a *api) Authenticate(username, pwdTry string) (UUID, error) {
 	}
 
 	//if there was an outstanding password reset on this user, remove it, they have since remembered their password
-	if len(user.ResetPwdCode) > 0 {
+	if len(*user.ResetPwdCode) > 0 {
 		user.ResetPwdCode = nil
 		if err = a.userStore.Update(user); err != nil {
 			a.log.Error(authenticateFnLogMsg, zap.String(subcall, userStoreUpdate), zap.Error(err))
@@ -457,7 +457,7 @@ func (a *api) ResendNewEmailConfirmationEmail(id UUID) error {
 		return EmailConfirmationCodeErr
 	}
 
-	err = a.linkMailer.SendNewEmailConfirmationLink(user.NewEmail, user.NewEmailConfirmationCode)
+	err = a.linkMailer.SendNewEmailConfirmationLink(*user.NewEmail, *user.NewEmailConfirmationCode)
 	if err != nil {
 		a.log.Error(resendNewEmailConfirmationEmailFnLogMsg, zap.String(subcall, linkMailerSendNewEmailConfirmationLink), zap.Error(err))
 		return err
@@ -472,25 +472,25 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, e
 	user, err := a.userStore.GetByNewEmailConfirmationCode(confirmationCode)
 	if err != nil {
 		a.log.Error(ConfirmNewEmailFnLogMsg, zap.String(subcall, userStoreGetByNewEmailConfirmationCode), zap.Error(err))
-		return err
+		return nil, err
 	}
 	if user == nil {
 		a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(NoSuchUserErr))
-		return NoSuchUserErr
+		return nil, NoSuchUserErr
 	}
 
 	if *user.NewEmail != newEmail || *user.NewEmailConfirmationCode != confirmationCode {
 		a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(NewEmailConfirmationErr))
-		return NewEmailConfirmationErr
+		return nil, NewEmailConfirmationErr
 	}
 
 	if user, err := a.userStore.GetByEmail(newEmail); user != nil || err != nil {
 		if err != nil {
 			a.log.Error(ConfirmNewEmailFnLogMsg, zap.String(subcall, userStoreGetByEmail), zap.Error(err))
-			return err
+			return nil, err
 		} else {
 			a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(EmailAlreadyInUseErr))
-			return EmailAlreadyInUseErr
+			return nil, EmailAlreadyInUseErr
 		}
 	}
 
@@ -499,7 +499,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, e
 	user.NewEmailConfirmationCode = nil
 	if err = a.userStore.Update(user); err != nil {
 		a.log.Info(ConfirmNewEmailFnLogMsg, zap.String(subcall, userStoreUpdate), zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	return user.Id, nil
@@ -524,7 +524,7 @@ func (a *api) ResetPwd(email string) error {
 		return err
 	}
 
-	user.ResetPwdCode = resetPwdCode
+	user.ResetPwdCode = &resetPwdCode
 	if err = a.userStore.Update(user); err != nil {
 		a.log.Info(resetPwdFnLogMsg, zap.Error(err))
 		return err

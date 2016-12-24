@@ -44,12 +44,6 @@ func (e *SearchTermTooShortErr) Error() string {
 	return fmt.Sprintf(fmt.Sprintf("search term must be at least %d characters long", e.MinRuneCount))
 }
 
-type LinkMailer interface {
-	SendActivationLink(address, activationCode string) error
-	SendPwdResetLink(address, resetCode string) error
-	SendNewEmailConfirmationLink(address, confirmationCode string) error
-}
-
 type User struct {
 	misc.CentralEntity
 	Username string `json:"username"`
@@ -57,19 +51,19 @@ type User struct {
 
 type Me struct {
 	User
-	Email    string `json:"email"`
-	NewEmail string `json:"newEmail,omitempty"`
+	Email    string  `json:"email"`
+	NewEmail *string `json:"newEmail,omitempty"`
 }
 
 type Api interface {
-	Register(username, email, pwd string) error
+	Register(username, region, email, pwd string) error
 	ResendActivationEmail(email string) error
 	Activate(activationCode string) (id UUID, err error)
 	Authenticate(username, pwd string) (id UUID, err error)
 	ChangeUsername(id UUID, newUsername string) error
 	ChangeEmail(id UUID, newEmail string) error
 	ResendNewEmailConfirmationEmail(id UUID) error
-	ConfirmNewEmail(email, confirmationCode string) error
+	ConfirmNewEmail(email, confirmationCode string) (UUID, error)
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error)
 	ChangePwd(id UUID, oldPwd, newPwd string) error
@@ -116,8 +110,14 @@ type UserStore interface {
 }
 
 type PwdStore interface {
-	Create(pwdInfo *PwdInfo) error
+	Create(userId UUID, pwdInfo *PwdInfo) error
 	Get(userId UUID) (*PwdInfo, error)
 	Update(userId UUID, pwdInfo *PwdInfo) error
 	Delete(userId UUID) error
+}
+
+type LinkMailer interface {
+	SendActivationLink(address, activationCode string) error
+	SendPwdResetLink(address, resetCode string) error
+	SendNewEmailConfirmationLink(address, confirmationCode string) error
 }
