@@ -2,8 +2,7 @@ package misc
 
 import (
 	"errors"
-	"github.com/pborman/uuid"
-	"github.com/uber-go/zap"
+	. "github.com/pborman/uuid"
 )
 
 var (
@@ -11,7 +10,7 @@ var (
 )
 
 type Entity struct {
-	Id uuid.UUID `json:"id"`
+	Id UUID `json:"id"`
 }
 
 type CentralEntity struct {
@@ -21,8 +20,8 @@ type CentralEntity struct {
 }
 
 //returns version 1 uuid as a byte slice
-func NewId() (uuid.UUID, error) {
-	id := uuid.NewUUID()
+func NewId() (UUID, error) {
+	id := NewUUID()
 	if id == nil {
 		return nil, IdGenerationErr
 	}

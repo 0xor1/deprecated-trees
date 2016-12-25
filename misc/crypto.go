@@ -16,7 +16,7 @@ func GenerateCryptoBytes(length int) ([]byte, error) {
 
 var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func GenerateCryptoString(length int) (string, error) {
+func GenerateCryptoUrlSafeString(length int) (string, error) {
 	buf := make([]rune, length)
 	urlSafeRunesLength := len(urlSafeRunes)
 	for i := range buf {

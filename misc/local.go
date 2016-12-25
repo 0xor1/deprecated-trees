@@ -1,8 +1,8 @@
 package misc
 
 import (
-	"errors"
 	"github.com/uber-go/zap"
+	"errors"
 )
 
 func NewLogLinkMailer(log zap.Logger) (*logLinkMailer, error) {
@@ -10,25 +10,35 @@ func NewLogLinkMailer(log zap.Logger) (*logLinkMailer, error) {
 		return nil, errors.New("nil log error")
 	}
 	return &logLinkMailer{
-		log: log,
+		sendActivationLinkFn: func(a, c string){
+			log.Info("logLinkMailer.SendActivationLink", zap.String("address", a), zap.String("activationCode", c))
+		},
+		sendPwdResetLinkFn: func(a, c string){
+			log.Info("logLinkMailer.SendPwdResetLink", zap.String("address", a), zap.String("resetCode", c))
+		},
+		sendNewEmailConfirmationLinkFn: func(a, c string){
+			log.Info("logLinkMailer.SendNewEmailConfirmationLink", zap.String("address", a), zap.String("confirmationCode", c))
+		},
 	}, nil
 }
 
 type logLinkMailer struct {
-	log zap.Logger
+	sendActivationLinkFn           func(a, c string)
+	sendPwdResetLinkFn             func(a, c string)
+	sendNewEmailConfirmationLinkFn func(a, c string)
 }
 
 func (l *logLinkMailer) SendActivationLink(address, activationCode string) error {
-	l.log.Info("logLinkMailer.SendActivationLink", zap.String("address", address), zap.String("activationCode", activationCode))
+	l.sendActivationLinkFn(address, activationCode)
 	return nil
 }
 
 func (l *logLinkMailer) SendPwdResetLink(address, resetCode string) error {
-	l.log.Info("logLinkMailer.SendPwdResetLink", zap.String("address", address), zap.String("resetCode", resetCode))
+	l.sendPwdResetLinkFn(address, resetCode)
 	return nil
 }
 
 func (l *logLinkMailer) SendNewEmailConfirmationLink(address, confirmationCode string) error {
-	l.log.Info("logLinkMailer.SendNewEmailConfirmationLink", zap.String("address", address), zap.String("confirmationCode", confirmationCode))
+	l.sendNewEmailConfirmationLinkFn(address, confirmationCode)
 	return nil
 }

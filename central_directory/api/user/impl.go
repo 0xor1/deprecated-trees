@@ -162,7 +162,7 @@ func (a *api) Register(username, region, email, pwd string) error {
 		return err
 	}
 
-	activationCode, err := misc.GenerateCryptoString(a.cryptoCodeLen)
+	activationCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		a.log.Error(registerFnLogMsg, zap.String(subcall, miscGenerateCryptoString), zap.Error(err))
 		return err
@@ -412,7 +412,7 @@ func (a *api) ChangeEmail(id UUID, newEmail string) error {
 		return NoSuchUserErr
 	}
 
-	confirmationCode, err := misc.GenerateCryptoString(a.cryptoCodeLen)
+	confirmationCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		a.log.Error(changeEmailFnLogMsg, zap.String(subcall, miscGenerateCryptoString), zap.Error(err))
 		return err
@@ -518,7 +518,7 @@ func (a *api) ResetPwd(email string) error {
 		return NoSuchUserErr
 	}
 
-	resetPwdCode, err := misc.GenerateCryptoString(a.cryptoCodeLen)
+	resetPwdCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		a.log.Info(resetPwdFnLogMsg, zap.String(subcall, miscGenerateCryptoString), zap.Error(err))
 		return err

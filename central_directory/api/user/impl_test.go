@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
+	"github.com/uber-go/zap"
 )
 
 func Test_NewApi_NilUserStoreErr(t *testing.T) {
@@ -23,6 +24,18 @@ func Test_NewApi_NilLinkMailerErr(t *testing.T) {
 	api, err := NewApi(&mockUserStore{}, &mockPwdStore{}, nil, nil, nil, 3, 20, 3, 20, 3, 100, 40, 128, 16384, 8, 1, 32, nil)
 	assert.Nil(t, api)
 	assert.Equal(t, err, NilLinkMailerErr)
+}
+
+func Test_NewApi_NilLogErr(t *testing.T) {
+	api, err := NewApi(&mockUserStore{}, &mockPwdStore{}, &mockLinkMailer{}, nil, nil, 3, 20, 3, 20, 3, 100, 40, 128, 16384, 8, 1, 32, nil)
+	assert.Nil(t, api)
+	assert.Equal(t, err, NilLogErr)
+}
+
+func Test_NewApi_Success(t *testing.T) {
+	api, err := NewApi(&mockUserStore{}, &mockPwdStore{}, &mockLinkMailer{}, nil, nil, 3, 20, 3, 20, 3, 100, 40, 128, 16384, 8, 1, 32, zap.New(zap.NewTextEncoder()))
+	assert.NotNil(t, api)
+	assert.Nil(t, err)
 }
 
 //helpers
