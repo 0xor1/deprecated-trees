@@ -38,6 +38,12 @@ func Test_NewApi_Success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_Api_Register(t *testing.T) {
+	userStore, pwdStore, linkMailer := &mockUserStore{}, &mockPwdStore{}, &mockLinkMailer{}
+	api, _ := NewApi(userStore, pwdStore, linkMailer, nil, nil, 3, 20, 3, 20, 3, 100, 40, 128, 16384, 8, 1, 32, zap.New(zap.NewTextEncoder()))
+	api.Register()
+}
+
 //helpers
 
 type mockUserStore struct {

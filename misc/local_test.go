@@ -19,43 +19,19 @@ func Test_NewLogLinkMailer_Success(t *testing.T) {
 }
 
 func Test_LogLinkMailer_SendActivationLink(t *testing.T) {
-	var address, code string
-	linkMailer := &logLinkMailer{
-		sendActivationLinkFn: func(a, c string){
-			address = a
-			code = c
-		},
-	}
+	linkMailer, _ := NewLogLinkMailer(zap.New(zap.NewTextEncoder()))
 	err := linkMailer.SendActivationLink("test_address", "test_code")
-	assert.Equal(t, "test_address", address)
-	assert.Equal(t, "test_code", code)
 	assert.Nil(t, err)
 }
 
 func Test_LogLinkMailer_SendNewEmailConfirmationLink(t *testing.T) {
-	var address, code string
-	linkMailer := &logLinkMailer{
-		sendPwdResetLinkFn: func(a, c string){
-			address = a
-			code = c
-		},
-	}
-	err := linkMailer.SendPwdResetLink("test_address", "test_code")
-	assert.Equal(t, "test_address", address)
-	assert.Equal(t, "test_code", code)
+	linkMailer, _ := NewLogLinkMailer(zap.New(zap.NewTextEncoder()))
+	err := linkMailer.SendNewEmailConfirmationLink("test_address", "test_code")
 	assert.Nil(t, err)
 }
 
 func Test_LogLinkMailer_SendPwdResetLink(t *testing.T) {
-	var address, code string
-	linkMailer := &logLinkMailer{
-		sendNewEmailConfirmationLinkFn: func(a, c string){
-			address = a
-			code = c
-		},
-	}
-	err := linkMailer.SendNewEmailConfirmationLink("test_address", "test_code")
-	assert.Equal(t, "test_address", address)
-	assert.Equal(t, "test_code", code)
+	linkMailer, _ := NewLogLinkMailer(zap.New(zap.NewTextEncoder()))
+	err := linkMailer.SendPwdResetLink("test_address", "test_code")
 	assert.Nil(t, err)
 }
