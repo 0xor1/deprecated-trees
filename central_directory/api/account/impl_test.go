@@ -85,14 +85,14 @@ func (m *mockUserStore) GetByResetPwdCode(resetPwdCode string) (*FullUserInfo, e
 	return args.Get(0).(*FullUserInfo), args.Error(1)
 }
 
-func (m *mockUserStore) GetByIds(ids []UUID) ([]*User, error) {
+func (m *mockUserStore) GetByIds(ids []UUID) ([]*Account, error) {
 	args := m.Called(ids)
-	return args.Get(0).([]*User), args.Error(1)
+	return args.Get(0).([]*Account), args.Error(1)
 }
 
-func (m *mockUserStore) Search(search string, limit int) ([]*User, error) {
+func (m *mockUserStore) Search(search string, limit int) ([]*Account, error) {
 	args := m.Called(search)
-	return args.Get(0).([]*User), args.Error(1)
+	return args.Get(0).([]*Account), args.Error(1)
 }
 
 func (m *mockUserStore) Update(user *FullUserInfo) error {

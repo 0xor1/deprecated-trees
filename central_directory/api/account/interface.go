@@ -44,13 +44,13 @@ func (e *SearchTermTooShortErr) Error() string {
 	return fmt.Sprintf(fmt.Sprintf("search term must be at least %d characters long", e.MinRuneCount))
 }
 
-type User struct {
+type Account struct {
 	misc.CentralEntity
-	Username string `json:"username"`
+	Name string `json:"name"`
 }
 
 type Me struct {
-	User
+	Account
 	Email    string  `json:"email"`
 	NewEmail *string `json:"newEmail,omitempty"`
 }
@@ -69,8 +69,8 @@ type Api interface {
 	ChangePwd(id UUID, oldPwd, newPwd string) error
 	GetMe(id UUID) (*Me, error)
 	Delete(id UUID) error
-	Get(ids []UUID) ([]*User, error)
-	Search(search string, limit int) ([]*User, error)
+	Get(ids []UUID) ([]*Account, error)
+	Search(search string, limit int) ([]*Account, error)
 }
 
 type FullUserInfo struct {
@@ -103,8 +103,8 @@ type UserStore interface {
 	GetByActivationCode(activationCode string) (*FullUserInfo, error)
 	GetByNewEmailConfirmationCode(confirmationCode string) (*FullUserInfo, error)
 	GetByResetPwdCode(resetPwdCode string) (*FullUserInfo, error)
-	GetByIds(ids []UUID) ([]*User, error)
-	Search(search string, limit int) ([]*User, error)
+	GetByIds(ids []UUID) ([]*Account, error)
+	Search(search string, limit int) ([]*Account, error)
 	Update(user *FullUserInfo) error
 	Delete(id UUID) error
 }

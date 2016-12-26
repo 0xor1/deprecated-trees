@@ -177,7 +177,7 @@ func (a *api) Register(username, region, email, pwd string) error {
 	err = a.userStore.Create(
 		&FullUserInfo{
 			Me: Me{
-				User: User{
+				Account: Account{
 					CentralEntity: misc.CentralEntity{
 						Entity: misc.Entity{
 							Id: userId,
@@ -185,7 +185,7 @@ func (a *api) Register(username, region, email, pwd string) error {
 						Region: region,
 						Shard:  -1,
 					},
-					Username: username,
+					Name: username,
 				},
 				Email: email,
 			},
@@ -374,7 +374,7 @@ func (a *api) ChangeUsername(id UUID, newUsername string) error {
 		return NoSuchUserErr
 	}
 
-	user.Username = newUsername
+	user.Name = newUsername
 	if err = a.userStore.Update(user); err != nil {
 		a.log.Error(changeUsernameFnLogMsg, zap.String(subcall, userStoreUpdate), zap.Error(err))
 		return err
@@ -681,7 +681,7 @@ func (a *api) Delete(id UUID) error {
 	return nil
 }
 
-func (a *api) Get(ids []UUID) ([]*User, error) {
+func (a *api) Get(ids []UUID) ([]*Account, error) {
 	a.log.Debug(getFnLogMsg, zap.String("ids", fmt.Sprintf("%v", ids)))
 
 	users, err := a.userStore.GetByIds(ids)
@@ -692,7 +692,7 @@ func (a *api) Get(ids []UUID) ([]*User, error) {
 	return users, err
 }
 
-func (a *api) Search(search string, limit int) ([]*User, error) {
+func (a *api) Search(search string, limit int) ([]*Account, error) {
 	a.log.Debug(searchFnLogMsg, zap.String("search", search), zap.Int("limit", limit))
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
