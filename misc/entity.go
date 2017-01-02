@@ -13,12 +13,6 @@ type Entity struct {
 	Id UUID `json:"id"`
 }
 
-type CentralEntity struct {
-	Entity
-	Region string `json:"region"`
-	Shard  int    `json:"shard"`
-}
-
 //returns version 1 uuid as a byte slice
 func NewId() (UUID, error) {
 	id := NewUUID()

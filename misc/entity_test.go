@@ -1,9 +1,9 @@
 package misc
 
 import (
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/pborman/uuid"
 )
 
 func Test_NewId(t *testing.T) {

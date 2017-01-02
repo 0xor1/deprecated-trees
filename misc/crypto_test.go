@@ -22,7 +22,7 @@ func Test_GenerateCryptoUrlSafeString(t *testing.T) {
 	assert.Equal(t, l, len(bs))
 	assert.Nil(t, err)
 	l = 5
-	bs, err = GenerateCryptoUrlSafeString( l)
+	bs, err = GenerateCryptoUrlSafeString(l)
 	assert.Equal(t, l, len(bs))
 	assert.Nil(t, err)
 }
