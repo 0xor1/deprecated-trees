@@ -1,19 +1,9 @@
-package user
+package account
 
 import (
 	. "github.com/pborman/uuid"
 	"github.com/uber-go/zap"
 )
-
-type Org account
-
-type User account
-
-type Me struct {
-	User
-	Email    string  `json:"email"`
-	NewEmail *string `json:"newEmail,omitempty"`
-}
 
 type Api interface {
 	//accessible outside of active session
@@ -24,10 +14,10 @@ type Api interface {
 	ConfirmNewEmail(email, confirmationCode string) (UUID, error)
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error)
-	GetUsers(ids []UUID) ([]*User, error)
-	SearchUsers(search string, limit int) ([]*User, error)
-	GetOrgs(ids []UUID) ([]*Org, error)
-	SearchOrgs(search string, limit int) ([]*Org, error)
+	GetUsers(ids []UUID) ([]*user, error)
+	SearchUsers(search string, limit int) ([]*user, error)
+	GetOrgs(ids []UUID) ([]*org, error)
+	SearchOrgs(search string, limit int) ([]*org, error)
 	//requires active session to access
 	//user centric
 	ChangeMyName(myId UUID, newUsername string) error
@@ -35,13 +25,13 @@ type Api interface {
 	ResendMyNewEmailConfirmationEmail(myId UUID) error
 	ChangeMyPwd(myId UUID, oldPwd, newPwd string) error
 	MigrateMe(myId UUID, newRegion string) error
-	GetMe(myId UUID) (*Me, error)
+	GetMe(myId UUID) (*me, error)
 	DeleteMe(myId UUID) error
 	//org centric - must be an owner member
-	CreateOrg(myId UUID, name, region string) (*Org, error)
+	CreateOrg(myId UUID, name, region string) (*org, error)
 	RenameOrg(myId, orgId UUID, newName string) error
 	MigrateOrg(myId, orgId UUID, newRegion string) error
-	GetMyOrgs(myId UUID, limit int) ([]*Org, error)
+	GetMyOrgs(myId UUID, limit int) ([]*org, error)
 	DeleteOrg(myId, orgId UUID) error
 	//member centric - must be an owner or admin
 	AddMembers(myId, orgId UUID, newMembers []UUID) error
@@ -49,8 +39,8 @@ type Api interface {
 }
 
 type InternalRegionalApiProvider interface {
-	Exists(string) bool
-	Get(string) (InternalRegionalApi, error)
+	Exists(region string) bool
+	Get(region string) (InternalRegionalApi, error)
 }
 
 type InternalRegionalApi interface {

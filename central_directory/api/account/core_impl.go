@@ -1,4 +1,4 @@
-package user
+package account
 
 import (
 	"bitbucket.org/robsix/task_center/misc"
@@ -77,6 +77,7 @@ const (
 
 var (
 	nilStoreErr                = errors.New("nil store")
+	nilInternalRegionalApiProviderErr           = errors.New("nil internalRegionalApiProvider")
 	nilLinkMailerErr           = errors.New("nil linkMailer")
 	nilLogErr                  = errors.New("nil log")
 	noSuchRegionErr            = errors.New("no such region")
@@ -105,6 +106,9 @@ func (e *invalidStringParamErr) Error() string {
 func newApi(store store, internalRegionalApiProvider InternalRegionalApiProvider, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
+	}
+	if internalRegionalApiProvider == nil {
+		return nil, nilInternalRegionalApiProviderErr
 	}
 	if linkMailer == nil {
 		return nil, nilLinkMailerErr
@@ -224,8 +228,8 @@ func (a *api) Register(name, region, email, pwd string) error {
 
 	err = a.store.createUser(
 		&fullUserInfo{
-			Me: Me{
-				User: User{
+			me: me{
+				user: user{
 					Entity: misc.Entity{
 						Id: userId,
 					},
@@ -524,7 +528,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
 	return user.Id, nil
 }
 
-func (a *api) GetUsers(ids []UUID) ([]*User, error) {
+func (a *api) GetUsers(ids []UUID) ([]*user, error) {
 	a.log.Debug(getUsersFnLogMsg, zap.String("ids", fmt.Sprintf("%v", ids)))
 
 	users, err := a.store.getUsers(ids)
@@ -535,7 +539,7 @@ func (a *api) GetUsers(ids []UUID) ([]*User, error) {
 	return users, err
 }
 
-func (a *api) SearchUsers(search string, limit int) ([]*User, error) {
+func (a *api) SearchUsers(search string, limit int) ([]*user, error) {
 	a.log.Debug(searchUsersFnLogMsg, zap.String("search", search), zap.Int("limit", limit))
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
@@ -545,7 +549,7 @@ func (a *api) SearchUsers(search string, limit int) ([]*User, error) {
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		a.log.Info(searchUsersFnLogMsg, zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	users, err := a.store.searchUsers(search, limit)
@@ -556,7 +560,7 @@ func (a *api) SearchUsers(search string, limit int) ([]*User, error) {
 	return users, err
 }
 
-func (a *api) GetOrgs(ids []UUID) ([]*Org, error) {
+func (a *api) GetOrgs(ids []UUID) ([]*org, error) {
 	a.log.Debug(getOrgsFnLogMsg, zap.String("ids", fmt.Sprintf("%v", ids)))
 
 	orgs, err := a.store.getOrgs(ids)
@@ -567,7 +571,7 @@ func (a *api) GetOrgs(ids []UUID) ([]*Org, error) {
 	return orgs, err
 }
 
-func (a *api) SearchOrgs(search string, limit int) ([]*Org, error) {
+func (a *api) SearchOrgs(search string, limit int) ([]*org, error) {
 	a.log.Debug(searchOrgsFnLogMsg, zap.String("search", search), zap.Int("limit", limit))
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
@@ -577,7 +581,7 @@ func (a *api) SearchOrgs(search string, limit int) ([]*Org, error) {
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		a.log.Info(searchOrgsFnLogMsg, zap.Error(err))
-		return err
+		return nil, err
 	}
 
 	orgs, err := a.store.searchOrgs(search, limit)
@@ -690,12 +694,12 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId UUID) error {
 	}
 
 	// check the user has actually registered a new email
-	if len(user.NewEmail) == 0 {
+	if len(*user.NewEmail) == 0 {
 		a.log.Error(resendMyNewEmailConfirmationEmailFnLogMsg, zap.Error(newEmailErr))
 		return newEmailErr
 	}
 	// just in case something has gone crazy wrong
-	if len(user.NewEmailConfirmationCode) == 0 {
+	if len(*user.NewEmailConfirmationCode) == 0 {
 		a.log.Error(resendMyNewEmailConfirmationEmailFnLogMsg, zap.Error(emailConfirmationCodeErr))
 		return emailConfirmationCodeErr
 	}
@@ -772,7 +776,7 @@ func (a *api) MigrateMe(myId UUID, newRegion string) error {
 	return nil
 }
 
-func (a *api) GetMe(myId UUID) (*Me, error) {
+func (a *api) GetMe(myId UUID) (*me, error) {
 	a.log.Debug(getMeFnLogMsg, zap.Base64("myId", myId))
 
 	user, err := a.store.getUserById(myId)
@@ -785,7 +789,7 @@ func (a *api) GetMe(myId UUID) (*Me, error) {
 		return nil, noSuchUserErr
 	}
 
-	return &user.Me, nil
+	return &user.me, nil
 }
 
 func (a *api) DeleteMe(id UUID) error {
@@ -799,7 +803,7 @@ func (a *api) DeleteMe(id UUID) error {
 	return nil
 }
 
-func (a *api) CreateOrg(myId UUID, name, region string) (*Org, error) {
+func (a *api) CreateOrg(myId UUID, name, region string) (*org, error) {
 	a.log.Debug(createOrgFnLogMsg, zap.Base64("myId", myId), zap.String("name", name), zap.String("region", region))
 
 	//TODO
@@ -823,7 +827,7 @@ func (a *api) MigrateOrg(myId, orgId UUID, newRegion string) error {
 	return nil
 }
 
-func (a *api) GetMyOrgs(myId UUID, limit int) ([]*Org, error) {
+func (a *api) GetMyOrgs(myId UUID, limit int) ([]*org, error) {
 	a.log.Debug(getMyOrgsFnLogMsg, zap.Base64("myId", myId), zap.Int("limit", limit))
 
 	//TODO
@@ -872,17 +876,17 @@ type store interface {
 	updateUser(user *fullUserInfo) error
 	updatePwdInfo(id UUID, pwdInfo *pwdInfo) error
 	deleteUser(id UUID) error
-	getUsers(ids []UUID) ([]*User, error)
-	searchUsers(search string, limit int) ([]*User, error)
+	getUsers(ids []UUID) ([]*user, error)
+	searchUsers(search string, limit int) ([]*user, error)
 	//org
-	createOrg(org *Org) error
-	getOrgById(id UUID) (*Org, error)
-	getOrgByName(name string) (*Org, error)
-	updateOrg(org *Org) error
+	createOrg(org *org) error
+	getOrgById(id UUID) (*org, error)
+	getOrgByName(name string) (*org, error)
+	updateOrg(org *org) error
 	deleteOrg(id UUID) error
-	getOrgs(ids []UUID) ([]*Org, error)
-	searchOrgs(search string, limit int) ([]*Org, error)
-	getUsersOrgs(userId UUID, limit int) ([]*Org, error)
+	getOrgs(ids []UUID) ([]*org, error)
+	searchOrgs(search string, limit int) ([]*org, error)
+	getUsersOrgs(userId UUID, limit int) ([]*org, error)
 }
 
 type linkMailer interface {
@@ -901,12 +905,22 @@ type account struct {
 	IsUser    bool      `json:"isUser"`
 }
 
+type org account
+
+type user account
+
+type me struct {
+	user
+	Email    string  `json:"email"`
+	NewEmail *string `json:"newEmail,omitempty"`
+}
+
 func (a *account) isMigrating() bool {
 	return len(a.NewRegion) != 0
 }
 
 type fullUserInfo struct {
-	Me
+	me
 	ActivationCode           *string
 	Activated                *time.Time
 	NewEmailConfirmationCode *string
@@ -930,18 +944,18 @@ type logLinkMailer struct {
 	log zap.Logger
 }
 
-func (l *logLinkMailer) SendActivationLink(address, activationCode string) error {
-	l.log.Info("logLinkMailer.SendActivationLink", zap.String("address", address), zap.String("activationCode", activationCode))
+func (l *logLinkMailer) sendActivationLink(address, activationCode string) error {
+	l.log.Info("logLinkMailer.sendActivationLink", zap.String("address", address), zap.String("activationCode", activationCode))
 	return nil
 }
 
-func (l *logLinkMailer) SendPwdResetLink(address, resetCode string) error {
-	l.log.Info("logLinkMailer.SendPwdResetLink", zap.String("address", address), zap.String("resetCode", resetCode))
+func (l *logLinkMailer) sendPwdResetLink(address, resetCode string) error {
+	l.log.Info("logLinkMailer.sendPwdResetLink", zap.String("address", address), zap.String("resetCode", resetCode))
 	return nil
 }
 
-func (l *logLinkMailer) SendNewEmailConfirmationLink(address, confirmationCode string) error {
-	l.log.Info("logLinkMailer.SendNewEmailConfirmationLink", zap.String("address", address), zap.String("confirmationCode", confirmationCode))
+func (l *logLinkMailer) sendNewEmailConfirmationLink(address, confirmationCode string) error {
+	l.log.Info("logLinkMailer.sendNewEmailConfirmationLink", zap.String("address", address), zap.String("confirmationCode", confirmationCode))
 	return nil
 }
 
