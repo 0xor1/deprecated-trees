@@ -36,7 +36,7 @@ func Test_newApi_nilLogErr(t *testing.T) {
 }
 
 func Test_newApi_success(t *testing.T) {
-	store, internalRegionalApiProvider, linkMailer, log := &mockStore{}, &mockInternalRegionalApiProvider{}, &mockLinkMailer{}, zap.New(zap.NewTextEncoder())
+	store, internalRegionalApiProvider, linkMailer, log := &mockStore{}, &mockInternalRegionalApiProvider{}, &mockLinkMailer{}, &mockLogger{}
 	api, err := newApi(store, internalRegionalApiProvider, linkMailer, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 	assert.NotNil(t, api)
 	assert.Nil(t, err)
@@ -192,3 +192,59 @@ func (m *mockLinkMailer) sendNewEmailConfirmationLink(address, confirmationCode 
 	args := m.Called(address, confirmationCode)
 	return args.Error(0)
 }
+
+type mockLogger struct{
+	mock.Mock
+}
+
+func (m *mockLogger) Level() zap.Level {
+	args := m.Called()
+	return args.Get(0).(zap.Level)
+}
+
+func (m *mockLogger) SetLevel(level zap.Level) {
+	m.Called(level)
+}
+
+func (m *mockLogger) With(fields ...zap.Field) zap.Logger {
+	args := m.Called(fields)
+	return args.Get(0).(zap.Logger)
+}
+
+func (m *mockLogger) Check(level zap.Level, msg string) *zap.CheckedMessage {
+	args := m.Called(level, msg)
+	return args.Get(0).(*zap.CheckedMessage)
+}
+
+func (m *mockLogger) Log(level zap.Level, msg string, fields ...zap.Field) {
+	m.Called(level, msg, fields)
+}
+
+func (m *mockLogger) Debug(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
+func (m *mockLogger) Info(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
+func (m *mockLogger) Warn(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
+func (m *mockLogger) Error(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
+func (m *mockLogger) Panic(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
+func (m *mockLogger) Fatal(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
+func (m *mockLogger) DFatal(msg string, fields ...zap.Field) {
+	m.Called(msg, fields)
+}
+
