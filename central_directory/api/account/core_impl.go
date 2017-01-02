@@ -544,7 +544,7 @@ func (a *api) SearchUsers(search string, limit int) ([]*User, error) {
 
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		a.log.Info(registerFnLogMsg, zap.Error(err))
+		a.log.Info(searchUsersFnLogMsg, zap.Error(err))
 		return err
 	}
 
