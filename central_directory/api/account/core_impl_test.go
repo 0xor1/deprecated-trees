@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
+	"github.com/uber-go/zap"
 )
 
 func Test_newApi_nilStoreErr(t *testing.T) {
@@ -32,6 +33,13 @@ func Test_newApi_nilLogErr(t *testing.T) {
 	api, err := newApi(store, internalRegionalApiProvider, linkMailer, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
 	assert.Nil(t, api)
 	assert.Equal(t, err, nilLogErr)
+}
+
+func Test_newApi_success(t *testing.T) {
+	store, internalRegionalApiProvider, linkMailer, log := &mockStore{}, &mockInternalRegionalApiProvider{}, &mockLinkMailer{}, zap.New(zap.NewTextEncoder())
+	api, err := newApi(store, internalRegionalApiProvider, linkMailer, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	assert.NotNil(t, api)
+	assert.Nil(t, err)
 }
 
 //helpers
