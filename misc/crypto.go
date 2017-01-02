@@ -18,9 +18,9 @@ var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 
 func GenerateCryptoUrlSafeString(length int) (string, error) {
 	buf := make([]rune, length)
-	urlSafeRunesLength := len(urlSafeRunes)
+	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
 	for i := range buf {
-		randomIdx, err := rand.Int(rand.Reader, big.NewInt(int64(urlSafeRunesLength)))
+		randomIdx, err := rand.Int(rand.Reader, urlSafeRunesLength)
 		if err != nil {
 			return "", err
 		}
