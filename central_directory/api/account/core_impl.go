@@ -16,7 +16,7 @@ import (
 
 var (
 	nilStoreErr                = errors.New("nil store")
-	nilInternalRegionalApisErr = errors.New("nil internalRegionalApiProvider")
+	nilInternalRegionalApisErr = errors.New("nil internalRegionalApis")
 	nilLinkMailerErr           = errors.New("nil linkMailer")
 	nilLogErr                  = errors.New("nil log")
 	noSuchRegionErr            = errors.New("no such region")
