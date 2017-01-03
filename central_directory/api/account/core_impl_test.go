@@ -54,6 +54,7 @@ func Test_api_Register_invalidNameParam(t *testing.T) {
 
 	err := api.Register("a", "email@email.email", "P@ss-W0rd", "us").(*invalidStringParamErr)
 	assert.IsType(t, "name", err.paramPurpose)
+	assert.Equal(t, "name must be between 3 and 20 utf8 characters long and match all regexs []", err.Error())
 }
 
 func Test_api_Register_invalidEmailParam(t *testing.T) {
