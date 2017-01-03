@@ -2,7 +2,7 @@ package account
 
 import (
 	. "github.com/pborman/uuid"
-	"github.com/uber-go/zap"
+	"bitbucket.org/robsix/task_center/misc"
 )
 
 type Api interface {
@@ -38,7 +38,7 @@ type Api interface {
 	RemoveMembers(myId, orgId UUID, existingMembers []UUID) error
 }
 
-func NewLogLinkMailer(log zap.Logger) (linkMailer, error) {
+func NewLogLinkMailer(log misc.Log) (linkMailer, error) {
 	if log == nil {
 		return nil, nilLogErr
 	}

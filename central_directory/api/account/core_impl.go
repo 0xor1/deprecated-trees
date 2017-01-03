@@ -14,67 +14,6 @@ import (
 	"unicode/utf8"
 )
 
-const (
-	redactedInfo                                = "******"
-	registerFnLogMsg                            = "account.api.Register"
-	resendActivationEmailFnLogMsg               = "account.api.ResendActivationEmail"
-	activateFnLogMsg                            = "account.api.Activate"
-	authenticateFnLogMsg                        = "account.api.Authenticate"
-	ConfirmNewEmailFnLogMsg                     = "account.api.ConfirmNewEmail"
-	resetPwdFnLogMsg                            = "account.api.ResetPwd"
-	setNewPwdFromPwdResetFnLogMsg               = "account.api.SetNewPwdFromPwdReset"
-	getUsersFnLogMsg                            = "account.api.GetUsers"
-	searchUsersFnLogMsg                         = "account.api.SearchUsers"
-	getOrgsFnLogMsg                             = "account.api.GetOrgs"
-	searchOrgsFnLogMsg                          = "account.api.SearchOrgs"
-	changeMyNameFnLogMsg                        = "account.api.ChangeMyName"
-	changeMyEmailFnLogMsg                       = "account.api.ChangeMyEmail"
-	resendMyNewEmailConfirmationEmailFnLogMsg   = "account.api.ResendMyNewEmailConfirmationEmail"
-	changeMyPwdFnLogMsg                         = "account.api.ChangeMyPwd"
-	migrateMeFnLogMsg                           = "account.api.MigrateMe"
-	getMeFnLogMsg                               = "account.api.GetMe"
-	deleteMeFnLogMsg                            = "account.api.DeleteMe"
-	createOrgFnLogMsg                           = "account.api.CreateOrg"
-	renameOrgFnLogMsg                           = "account.api.RenameOrg"
-	migrateOrgFnLogMsg                          = "account.api.MigrateOrg"
-	getMyOrgsFnLogMsg                           = "account.api.GetMyOrgs"
-	deleteOrgFnLogMsg                           = "account.api.DeleteOrg"
-	addMembersFnLogMsg                          = "account.api.AddMembers"
-	removeMembersFnLogMsg                       = "account.api.RemoveMembers"
-	subcall                                     = "subcall"
-	storeGetAccountByName                       = "store.getAccountByName"
-	storeCreateUser                             = "store.createUser"
-	storeGetUserByName                          = "store.getUserByName"
-	storeGetUserByEmail                         = "store.getUserByEmail"
-	storeGetUserById                            = "store.getUserById"
-	storeGetUserByActivationCode                = "store.getUserByActivationCode"
-	storeGetUserByNewEmailConfirmationCode      = "store.getUserByNewEmailConfirmationCode"
-	storeGetUserByResetPwdCode                  = "store.getUserByResetPwdCode"
-	storeGetPwdInfo                             = "store.getPwdInfo"
-	storeUpdateUser                             = "store.updateUser"
-	storeUpdatePwdInfo                          = "store.updatePwdInfo"
-	storeDeleteUser                             = "store.deleteUser"
-	storeGetUsers                               = "store.getUsers"
-	storeSearchUsers                            = "store.searchUsers"
-	storeCreateOrg                              = "store.createOrg"
-	storeGetOrgById                             = "store.getOrgById"
-	storeGetOrgByName                           = "store.getOrgByName"
-	storeUpdateOrg                              = "store.updateOrg"
-	storeDeleteOrg                              = "store.deleteOrg"
-	storeGetOrgs                                = "store.getOrgs"
-	storeSearchOrgs                             = "store.searchOrgs"
-	storeGetUsersOrgs                           = "store.getUsersOrgs"
-	internalRegionalApiProviderGet              = "internalRegionalApiProvider.Get"
-	internalRegionalApiCreatePersonalTaskCenter = "internalRegionalApi.CreatePersonalTaskCenter"
-	internalRegionalApiCreateOrgTaskCenter      = "internalRegionalApi.CreateOrgTaskCenter"
-	linkMailerSendActivationLink                = "linkMailer.sendActivationLink"
-	linkMailerSendPwdResetLink                  = "linkMailer.sendPwdResetLink"
-	linkMailerSendNewEmailConfirmationLink      = "linkMailer.sendNewEmailConfirmationLink"
-	miscGenerateCryptoBytes                     = "misc.GenerateCryptoBytes"
-	miscGenerateCryptoUrlSafeString             = "misc.GenerateCryptoUrlSafeString"
-	scryptKey                                   = "scrypt.Key"
-)
-
 var (
 	nilStoreErr                = errors.New("nil store")
 	nilInternalRegionalApisErr = errors.New("nil internalRegionalApiProvider")
@@ -103,7 +42,7 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf(fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers))
 }
 
-func newApi(store store, internalRegionalApis map[string]internalRegionalApi, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
+func newApi(store store, internalRegionalApis map[string]internalRegionalApi, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log misc.Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
@@ -154,76 +93,64 @@ type api struct {
 	scryptR               int
 	scryptP               int
 	scryptKeyLen          int
-	log                   zap.Logger
+	log                   misc.Log
 }
 
 func (a *api) Register(name, email, pwd, region string) error {
-	a.log.Debug(registerFnLogMsg, zap.String("name", name), zap.String("email", redactedInfo), zap.String("region", region), zap.String("pwd", redactedInfo))
+	a.log.Location()
 
 	name = strings.Trim(name, " ")
 	if err := validateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		a.log.Info(registerFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	email = strings.Trim(email, " ")
 	if err := validateEmail(email); err != nil {
-		a.log.Info(registerFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	if err := validateStringParam("password", pwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
-		a.log.Info(registerFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	if _, exists := a.internalRegionalApis[region]; !exists {
-		a.log.Info(registerFnLogMsg, zap.Error(noSuchRegionErr))
-		return noSuchRegionErr
+		return a.log.InfoErr(noSuchRegionErr)
 	}
 
 	if account, err := a.store.getAccountByName(name); account != nil || err != nil {
 		if err != nil {
-			a.log.Error(registerFnLogMsg, zap.String(subcall, storeGetAccountByName), zap.Error(err))
-			return err
+			return a.log.ErrorErr(err)
 		} else {
-			a.log.Info(registerFnLogMsg, zap.Error(accountNameAlreadyInUseErr))
-			return accountNameAlreadyInUseErr
+			return a.log.InfoErr(accountNameAlreadyInUseErr)
 		}
 	}
 
 	if user, err := a.store.getUserByEmail(email); user != nil || err != nil {
 		if err != nil {
-			a.log.Error(registerFnLogMsg, zap.String(subcall, storeGetUserByEmail), zap.Error(err))
-			return err
+			return a.log.ErrorErr(err)
 		} else {
-			a.log.Info(registerFnLogMsg, zap.Error(emailAlreadyInUseErr))
-			return emailAlreadyInUseErr
+			return a.log.InfoErr(emailAlreadyInUseErr)
 		}
 	}
 
 	scryptSalt, err := misc.GenerateCryptoBytes(a.saltLen)
 	if err != nil {
-		a.log.Error(registerFnLogMsg, zap.String(subcall, miscGenerateCryptoBytes), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	scryptPwd, err := scrypt.Key([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
-		a.log.Error(registerFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	activationCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
-		a.log.Error(registerFnLogMsg, zap.String(subcall, miscGenerateCryptoUrlSafeString), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	userId, err := misc.NewId()
 	if err != nil {
-		a.log.Error(registerFnLogMsg, zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	err = a.store.createUser(
@@ -252,70 +179,60 @@ func (a *api) Register(name, email, pwd, region string) error {
 		},
 	)
 	if err != nil {
-		a.log.Error(registerFnLogMsg, zap.String(subcall, storeCreateUser), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	err = a.linkMailer.sendActivationLink(email, activationCode)
 	if err != nil {
-		a.log.Error(registerFnLogMsg, zap.String(subcall, linkMailerSendActivationLink), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) ResendActivationEmail(email string) error {
-	a.log.Debug(resendActivationEmailFnLogMsg, zap.String("email", redactedInfo))
+	a.log.Location()
 
 	email = strings.Trim(email, " ")
 	user, err := a.store.getUserByEmail(email)
 	if err != nil {
-		a.log.Error(resendActivationEmailFnLogMsg, zap.String(subcall, storeGetUserByEmail), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(resendActivationEmailFnLogMsg, zap.Error(noSuchUserErr))
-		return noSuchUserErr
+		return a.log.InfoErr(noSuchUserErr)
 	}
 
 	if user.isActivated() {
-		a.log.Info(resendActivationEmailFnLogMsg, zap.Error(userAlreadyActivatedErr))
-		return userAlreadyActivatedErr
+		return a.log.InfoErr(userAlreadyActivatedErr)
 	}
 
 	if err = a.linkMailer.sendActivationLink(email, *user.ActivationCode); err != nil {
-		a.log.Error(resendActivationEmailFnLogMsg, zap.String(subcall, linkMailerSendActivationLink), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) Activate(activationCode string) (UUID, error) {
-	a.log.Debug(activateFnLogMsg, zap.String("activationCode", redactedInfo))
+	a.log.Location()
 
 	activationCode = strings.Trim(activationCode, " ")
 	user, err := a.store.getUserByActivationCode(activationCode)
 	if err != nil {
-		a.log.Error(activateFnLogMsg, zap.String(subcall, storeGetUserByActivationCode), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(activateFnLogMsg, zap.Error(noSuchUserErr))
-		return nil, noSuchUserErr
+		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 
 	internalRegionalApi, exists := a.internalRegionalApis[user.Region]
 	if !exists {
-		a.log.Info(activateFnLogMsg, zap.Error(noSuchRegionErr))
-		return nil, noSuchRegionErr
+		return nil, a.log.InfoErr(noSuchRegionErr)
 	}
 
 	shard, err := internalRegionalApi.CreatePersonalTaskCenter(user.Id)
 	if err != nil {
-		a.log.Error(activateFnLogMsg, zap.String(subcall, internalRegionalApiCreatePersonalTaskCenter), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	user.Shard = shard
@@ -324,62 +241,53 @@ func (a *api) Activate(activationCode string) (UUID, error) {
 	user.Activated = &activationTime
 	err = a.store.updateUser(user)
 	if err != nil {
-		a.log.Error(activateFnLogMsg, zap.String(subcall, storeUpdateUser), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	return user.Id, nil
 }
 
 func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
-	a.log.Debug(authenticateFnLogMsg, zap.String("name", name), zap.String("pwdTry", redactedInfo))
+	a.log.Location()
 
 	name = strings.Trim(name, " ")
 	user, err := a.store.getUserByName(name)
 	if err != nil {
-		a.log.Error(authenticateFnLogMsg, zap.String(subcall, storeGetUserByName), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(authenticateFnLogMsg, zap.Error(noSuchUserErr))
-		return nil, noSuchUserErr
+		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 	if !user.isActivated() {
-		a.log.Info(authenticateFnLogMsg, zap.Error(userNotActivated))
-		return nil, userNotActivated
+		return nil, a.log.InfoErr(userNotActivated)
 	}
 
 	pwdInfo, err := a.store.getPwdInfo(user.Id)
 	if err != nil {
-		a.log.Error(authenticateFnLogMsg, zap.String(subcall, storeGetPwdInfo), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	scryptPwdTry, err := scrypt.Key([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
-		a.log.Error(authenticateFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
-		a.log.Info(authenticateFnLogMsg, zap.Error(incorrectPwdErr))
-		return nil, incorrectPwdErr
+		return nil, a.log.InfoErr(incorrectPwdErr)
 	}
 
 	//if there was an outstanding password reset on this user, remove it, they have since remembered their password
 	if len(*user.ResetPwdCode) > 0 {
 		user.ResetPwdCode = nil
 		if err = a.store.updateUser(user); err != nil {
-			a.log.Error(authenticateFnLogMsg, zap.String(subcall, storeUpdateUser), zap.Error(err))
-			return nil, err
+			return nil, a.log.ErrorErr(err)
 		}
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 	if pwdInfo.N != a.scryptN || pwdInfo.R != a.scryptR || pwdInfo.P != a.scryptP || pwdInfo.KeyLen != a.scryptKeyLen || len(pwdInfo.Salt) < a.saltLen {
 		pwdInfo.Salt, err = misc.GenerateCryptoBytes(a.saltLen)
 		if err != nil {
-			a.log.Error(authenticateFnLogMsg, zap.String(subcall, miscGenerateCryptoBytes), zap.Error(err))
-			return nil, err
+			return nil, a.log.ErrorErr(err)
 		}
 		pwdInfo.N = a.scryptN
 		pwdInfo.R = a.scryptR
@@ -387,12 +295,10 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 		pwdInfo.KeyLen = a.scryptKeyLen
 		pwdInfo.Pwd, err = scrypt.Key([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 		if err != nil {
-			a.log.Error(authenticateFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
-			return nil, err
+			return nil, a.log.ErrorErr(err)
 		}
 		if err = a.store.updatePwdInfo(user.Id, pwdInfo); err != nil {
-			a.log.Error(authenticateFnLogMsg, zap.String(subcall, storeUpdatePwdInfo), zap.Error(err))
-			return nil, err
+			return nil, a.log.ErrorErr(err)
 		}
 
 	}
@@ -401,30 +307,25 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 }
 
 func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, error) {
-	a.log.Debug(ConfirmNewEmailFnLogMsg, zap.String("newEmail", redactedInfo), zap.String("newConfirmationCode", redactedInfo))
+	a.log.Location()
 
 	user, err := a.store.getUserByNewEmailConfirmationCode(confirmationCode)
 	if err != nil {
-		a.log.Error(ConfirmNewEmailFnLogMsg, zap.String(subcall, storeGetUserByNewEmailConfirmationCode), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(noSuchUserErr))
-		return nil, noSuchUserErr
+		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 
 	if *user.NewEmail != newEmail || *user.NewEmailConfirmationCode != confirmationCode {
-		a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(newEmailConfirmationErr))
-		return nil, newEmailConfirmationErr
+		return nil, a.log.InfoErr(newEmailConfirmationErr)
 	}
 
 	if user, err := a.store.getUserByEmail(newEmail); user != nil || err != nil {
 		if err != nil {
-			a.log.Error(ConfirmNewEmailFnLogMsg, zap.String(subcall, storeGetUserByEmail), zap.Error(err))
-			return nil, err
+			return nil, a.log.ErrorErr(err)
 		} else {
-			a.log.Info(ConfirmNewEmailFnLogMsg, zap.Error(emailAlreadyInUseErr))
-			return nil, emailAlreadyInUseErr
+			return nil, a.log.InfoErr(emailAlreadyInUseErr)
 		}
 	}
 
@@ -432,82 +333,70 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, e
 	user.NewEmail = nil
 	user.NewEmailConfirmationCode = nil
 	if err = a.store.updateUser(user); err != nil {
-		a.log.Info(ConfirmNewEmailFnLogMsg, zap.String(subcall, storeUpdateUser), zap.Error(err))
-		return nil, err
+		return nil, a.log.InfoErr(err)
 	}
 
 	return user.Id, nil
 }
 
 func (a *api) ResetPwd(email string) error {
-	a.log.Debug(resetPwdFnLogMsg, zap.String("email", redactedInfo))
+	a.log.Location()
 
 	user, err := a.store.getUserByEmail(email)
 	if err != nil {
-		a.log.Error(resetPwdFnLogMsg, zap.String(subcall, storeGetUserByEmail), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(resetPwdFnLogMsg, zap.Error(noSuchUserErr))
-		return noSuchUserErr
+		return a.log.InfoErr(noSuchUserErr)
 	}
 
 	resetPwdCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
-		a.log.Info(resetPwdFnLogMsg, zap.String(subcall, miscGenerateCryptoUrlSafeString), zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	user.ResetPwdCode = &resetPwdCode
 	if err = a.store.updateUser(user); err != nil {
-		a.log.Info(resetPwdFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	err = a.linkMailer.sendPwdResetLink(email, resetPwdCode)
 	if err != nil {
-		a.log.Error(resetPwdFnLogMsg, zap.String(subcall, linkMailerSendPwdResetLink), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
-	a.log.Debug(setNewPwdFromPwdResetFnLogMsg, zap.String("newPwd", redactedInfo), zap.String("resetPwdCode", redactedInfo))
+	a.log.Location()
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
-		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(err))
-		return nil, err
+		return nil, a.log.InfoErr(err)
 	}
 
 	user, err := a.store.getUserByResetPwdCode(resetPwdCode)
 	if err != nil {
-		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, storeGetUserByResetPwdCode), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(noSuchUserErr))
-		return nil, noSuchUserErr
+		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 
 	scryptSalt, err := misc.GenerateCryptoBytes(a.saltLen)
 	if err != nil {
-		a.log.Info(setNewPwdFromPwdResetFnLogMsg, zap.Error(err))
-		return nil, err
+		return nil, a.log.InfoErr(err)
 	}
 
 	scryptPwd, err := scrypt.Key([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
-		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	user.ActivationCode = nil
 	user.ResetPwdCode = nil
 	if err = a.store.updateUser(user); err != nil {
-		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, storeUpdateUser), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	if err = a.store.updatePwdInfo(
@@ -521,26 +410,25 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
 			KeyLen: a.scryptKeyLen,
 		},
 	); err != nil {
-		a.log.Error(setNewPwdFromPwdResetFnLogMsg, zap.String(subcall, storeGetPwdInfo), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 
 	return user.Id, nil
 }
 
 func (a *api) GetUsers(ids []UUID) ([]*user, error) {
-	a.log.Debug(getUsersFnLogMsg, zap.String("ids", fmt.Sprintf("%v", ids)))
+	a.log.Location()
 
 	users, err := a.store.getUsers(ids)
 	if err != nil {
-		a.log.Error(getUsersFnLogMsg, zap.String(subcall, storeGetUsers), zap.Error(err))
+		return nil, a.log.ErrorErr(err)
 	}
 
 	return users, err
 }
 
 func (a *api) SearchUsers(search string, limit int) ([]*user, error) {
-	a.log.Debug(searchUsersFnLogMsg, zap.String("search", search), zap.Int("limit", limit))
+	a.log.Location()
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
 		limit = a.maxSearchLimitResults
@@ -548,31 +436,30 @@ func (a *api) SearchUsers(search string, limit int) ([]*user, error) {
 
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		a.log.Info(searchUsersFnLogMsg, zap.Error(err))
-		return nil, err
+		return nil, a.log.InfoErr(err)
 	}
 
 	users, err := a.store.searchUsers(search, limit)
 	if err != nil {
-		a.log.Error(searchUsersFnLogMsg, zap.String(subcall, storeSearchUsers), zap.Error(err))
+		return nil, a.log.ErrorErr(err)
 	}
 
-	return users, err
+	return users, nil
 }
 
 func (a *api) GetOrgs(ids []UUID) ([]*org, error) {
-	a.log.Debug(getOrgsFnLogMsg, zap.String("ids", fmt.Sprintf("%v", ids)))
+	a.log.Location()
 
 	orgs, err := a.store.getOrgs(ids)
 	if err != nil {
-		a.log.Error(getOrgsFnLogMsg, zap.String(subcall, storeGetOrgs), zap.Error(err))
+		return nil, a.log.ErrorErr(err)
 	}
 
-	return orgs, err
+	return orgs, nil
 }
 
 func (a *api) SearchOrgs(search string, limit int) ([]*org, error) {
-	a.log.Debug(searchOrgsFnLogMsg, zap.String("search", search), zap.Int("limit", limit))
+	a.log.Location()
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
 		limit = a.maxSearchLimitResults
@@ -580,178 +467,151 @@ func (a *api) SearchOrgs(search string, limit int) ([]*org, error) {
 
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		a.log.Info(searchOrgsFnLogMsg, zap.Error(err))
-		return nil, err
+		return nil, a.log.InfoErr(err)
 	}
 
 	orgs, err := a.store.searchOrgs(search, limit)
 	if err != nil {
-		a.log.Error(searchOrgsFnLogMsg, zap.String(subcall, storeSearchOrgs), zap.Error(err))
+		return nil, a.log.ErrorErr(err)
 	}
 
-	return orgs, err
+	return orgs, nil
 }
 
 func (a *api) ChangeMyName(myId UUID, newUsername string) error {
-	a.log.Debug(changeMyNameFnLogMsg, zap.Base64("myId", myId), zap.String("newUsername", newUsername))
+	a.log.Location()
 
 	newUsername = strings.Trim(newUsername, " ")
 	if err := validateStringParam("username", newUsername, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		a.log.Info(changeMyNameFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	if user, err := a.store.getUserByName(newUsername); user != nil || err != nil {
 		if err != nil {
-			a.log.Error(changeMyNameFnLogMsg, zap.String(subcall, storeGetUserByName), zap.Error(err))
-			return err
+			return a.log.ErrorErr(err)
 		} else {
-			a.log.Info(changeMyNameFnLogMsg, zap.Error(accountNameAlreadyInUseErr))
-			return accountNameAlreadyInUseErr
+			return a.log.InfoErr(accountNameAlreadyInUseErr)
 		}
 	}
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		a.log.Error(changeMyNameFnLogMsg, zap.String(subcall, storeGetUserById), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(changeMyNameFnLogMsg, zap.Error(noSuchUserErr))
-		return noSuchUserErr
+		return a.log.InfoErr(noSuchUserErr)
 	}
 
 	user.Name = newUsername
 	if err = a.store.updateUser(user); err != nil {
-		a.log.Error(changeMyNameFnLogMsg, zap.String(subcall, storeUpdateUser), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
-	a.log.Debug(changeMyEmailFnLogMsg, zap.Base64("myId", myId), zap.String("newEmail", redactedInfo))
+	a.log.Location()
 
 	newEmail = strings.Trim(newEmail, " ")
 	if err := validateEmail(newEmail); err != nil {
-		a.log.Info(changeMyEmailFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	if user, err := a.store.getUserByEmail(newEmail); user != nil || err != nil {
 		if err != nil {
-			a.log.Error(changeMyEmailFnLogMsg, zap.String(subcall, storeGetUserByEmail), zap.Error(err))
-			return err
+			return a.log.ErrorErr(err)
 		} else {
-			a.log.Info(changeMyEmailFnLogMsg, zap.Error(emailAlreadyInUseErr))
-			return emailAlreadyInUseErr
+			return a.log.InfoErr(emailAlreadyInUseErr)
 		}
 	}
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		a.log.Error(changeMyEmailFnLogMsg, zap.String(subcall, storeGetUserById), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(changeMyEmailFnLogMsg, zap.Error(noSuchUserErr))
-		return noSuchUserErr
+		return a.log.InfoErr(noSuchUserErr)
 	}
 
 	confirmationCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
-		a.log.Error(changeMyEmailFnLogMsg, zap.String(subcall, miscGenerateCryptoUrlSafeString), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	user.NewEmail = &newEmail
 	user.NewEmailConfirmationCode = &confirmationCode
 	if err = a.store.updateUser(user); err != nil {
-		a.log.Error(changeMyEmailFnLogMsg, zap.String(subcall, storeUpdateUser), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	if err = a.linkMailer.sendNewEmailConfirmationLink(newEmail, confirmationCode); err != nil {
-		a.log.Error(changeMyEmailFnLogMsg, zap.String(subcall, linkMailerSendNewEmailConfirmationLink), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) ResendMyNewEmailConfirmationEmail(myId UUID) error {
-	a.log.Debug(resendMyNewEmailConfirmationEmailFnLogMsg, zap.Base64("myId", myId))
+	a.log.Location()
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		a.log.Error(resendMyNewEmailConfirmationEmailFnLogMsg, zap.String(subcall, storeGetUserById), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(resendMyNewEmailConfirmationEmailFnLogMsg, zap.Error(noSuchUserErr))
-		return noSuchUserErr
+		return a.log.InfoErr(noSuchUserErr)
 	}
 
 	// check the user has actually registered a new email
 	if len(*user.NewEmail) == 0 {
-		a.log.Error(resendMyNewEmailConfirmationEmailFnLogMsg, zap.Error(newEmailErr))
-		return newEmailErr
+		return a.log.ErrorErr(newEmailErr)
 	}
 	// just in case something has gone crazy wrong
 	if len(*user.NewEmailConfirmationCode) == 0 {
-		a.log.Error(resendMyNewEmailConfirmationEmailFnLogMsg, zap.Error(emailConfirmationCodeErr))
-		return emailConfirmationCodeErr
+		return a.log.ErrorErr(emailConfirmationCodeErr)
 	}
 
 	err = a.linkMailer.sendNewEmailConfirmationLink(*user.NewEmail, *user.NewEmailConfirmationCode)
 	if err != nil {
-		a.log.Error(resendMyNewEmailConfirmationEmailFnLogMsg, zap.String(subcall, linkMailerSendNewEmailConfirmationLink), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
-	a.log.Debug(changeMyPwdFnLogMsg, zap.Base64("myId", myId), zap.String("oldPwd", redactedInfo), zap.String("newPwd", redactedInfo))
+	a.log.Location()
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
-		a.log.Info(changeMyPwdFnLogMsg, zap.Error(err))
-		return err
+		return a.log.InfoErr(err)
 	}
 
 	pwdInfo, err := a.store.getPwdInfo(myId)
 	if err != nil {
-		a.log.Error(changeMyPwdFnLogMsg, zap.String(subcall, storeGetPwdInfo), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 	if pwdInfo == nil {
-		a.log.Info(changeMyPwdFnLogMsg, zap.Error(noSuchUserErr))
-		return noSuchUserErr
+		return a.log.InfoErr(noSuchUserErr)
 	}
 
 	scryptPwdTry, err := scrypt.Key([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
-		a.log.Error(changeMyPwdFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
-		a.log.Info(changeMyPwdFnLogMsg, zap.Error(incorrectPwdErr))
-		return incorrectPwdErr
+		return a.log.InfoErr(incorrectPwdErr)
 	}
 
 	scryptSalt, err := misc.GenerateCryptoBytes(a.saltLen)
 	if err != nil {
-		a.log.Error(changeMyPwdFnLogMsg, zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	scryptPwd, err := scrypt.Key([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
-		a.log.Error(changeMyPwdFnLogMsg, zap.String(subcall, scryptKey), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	pwdInfo.Pwd = scryptPwd
@@ -761,15 +621,14 @@ func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
 	pwdInfo.P = a.scryptP
 	pwdInfo.KeyLen = a.scryptKeyLen
 	if err = a.store.updatePwdInfo(myId, pwdInfo); err != nil {
-		a.log.Error(changeMyPwdFnLogMsg, zap.String(subcall, storeUpdatePwdInfo), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) MigrateMe(myId UUID, newRegion string) error {
-	a.log.Debug(migrateMeFnLogMsg, zap.Base64("myId", myId))
+	a.log.Location()
 
 	//TODO
 
@@ -777,34 +636,31 @@ func (a *api) MigrateMe(myId UUID, newRegion string) error {
 }
 
 func (a *api) GetMe(myId UUID) (*me, error) {
-	a.log.Debug(getMeFnLogMsg, zap.Base64("myId", myId))
+	a.log.Location()
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		a.log.Error(getMeFnLogMsg, zap.String(subcall, storeGetUserById), zap.Error(err))
-		return nil, err
+		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		a.log.Info(getMeFnLogMsg, zap.Error(noSuchUserErr))
-		return nil, noSuchUserErr
+		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 
 	return &user.me, nil
 }
 
 func (a *api) DeleteMe(id UUID) error {
-	a.log.Debug(deleteMeFnLogMsg, zap.Base64("id", id))
+	a.log.Location()
 
 	if err := a.store.deleteUser(id); err != nil {
-		a.log.Error(deleteMeFnLogMsg, zap.String(subcall, storeDeleteUser), zap.Error(err))
-		return err
+		return a.log.ErrorErr(err)
 	}
 
 	return nil
 }
 
 func (a *api) CreateOrg(myId UUID, name, region string) (*org, error) {
-	a.log.Debug(createOrgFnLogMsg, zap.Base64("myId", myId), zap.String("name", name), zap.String("region", region))
+	a.log.Location()
 
 	//TODO
 
@@ -812,7 +668,7 @@ func (a *api) CreateOrg(myId UUID, name, region string) (*org, error) {
 }
 
 func (a *api) RenameOrg(myId, orgId UUID, newName string) error {
-	a.log.Debug(renameOrgFnLogMsg, zap.Base64("myId", myId), zap.Base64("orgId", orgId), zap.String("newName", newName))
+	a.log.Location()
 
 	//TODO
 
@@ -820,7 +676,7 @@ func (a *api) RenameOrg(myId, orgId UUID, newName string) error {
 }
 
 func (a *api) MigrateOrg(myId, orgId UUID, newRegion string) error {
-	a.log.Debug(migrateOrgFnLogMsg, zap.Base64("myId", myId), zap.Base64("orgId", orgId), zap.String("newRegion", newRegion))
+	a.log.Location()
 
 	//TODO
 
@@ -828,7 +684,7 @@ func (a *api) MigrateOrg(myId, orgId UUID, newRegion string) error {
 }
 
 func (a *api) GetMyOrgs(myId UUID, limit int) ([]*org, error) {
-	a.log.Debug(getMyOrgsFnLogMsg, zap.Base64("myId", myId), zap.Int("limit", limit))
+	a.log.Location()
 
 	//TODO
 
@@ -836,7 +692,7 @@ func (a *api) GetMyOrgs(myId UUID, limit int) ([]*org, error) {
 }
 
 func (a *api) DeleteOrg(myId, orgId UUID) error {
-	a.log.Debug(deleteOrgFnLogMsg, zap.Base64("myId", myId), zap.Base64("orgId", orgId))
+	a.log.Location()
 
 	//TODO
 
@@ -844,7 +700,7 @@ func (a *api) DeleteOrg(myId, orgId UUID) error {
 }
 
 func (a *api) AddMembers(myId, orgId UUID, newMembers []UUID) error {
-	a.log.Debug(addMembersFnLogMsg, zap.Base64("myId", myId), zap.Base64("orgId", orgId), zap.String("newMembers", fmt.Sprintf("%v", newMembers)))
+	a.log.Location()
 
 	//TODO
 
@@ -852,7 +708,7 @@ func (a *api) AddMembers(myId, orgId UUID, newMembers []UUID) error {
 }
 
 func (a *api) RemoveMembers(myId, orgId UUID, existingMembers []UUID) error {
-	a.log.Debug(removeMembersFnLogMsg, zap.Base64("myId", myId), zap.Base64("orgId", orgId), zap.String("existingMembers", fmt.Sprintf("%v", existingMembers)))
+	a.log.Location()
 
 	//TODO
 
@@ -947,21 +803,21 @@ type pwdInfo struct {
 }
 
 type logLinkMailer struct {
-	log zap.Logger
+	log misc.Log
 }
 
 func (l *logLinkMailer) sendActivationLink(address, activationCode string) error {
-	l.log.Info("logLinkMailer.sendActivationLink", zap.String("address", address), zap.String("activationCode", activationCode))
+	l.log.Info(zap.String("address", address), zap.String("activationCode", activationCode))
 	return nil
 }
 
 func (l *logLinkMailer) sendPwdResetLink(address, resetCode string) error {
-	l.log.Info("logLinkMailer.sendPwdResetLink", zap.String("address", address), zap.String("resetCode", resetCode))
+	l.log.Info(zap.String("address", address), zap.String("resetCode", resetCode))
 	return nil
 }
 
 func (l *logLinkMailer) sendNewEmailConfirmationLink(address, confirmationCode string) error {
-	l.log.Info("logLinkMailer.sendNewEmailConfirmationLink", zap.String("address", address), zap.String("confirmationCode", confirmationCode))
+	l.log.Info(zap.String("address", address), zap.String("confirmationCode", confirmationCode))
 	return nil
 }
 
