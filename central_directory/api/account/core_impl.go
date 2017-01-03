@@ -77,7 +77,7 @@ const (
 
 var (
 	nilStoreErr                = errors.New("nil store")
-	nilInternalRegionalApiProviderErr           = errors.New("nil internalRegionalApiProvider")
+	nilInternalRegionalApisErr = errors.New("nil internalRegionalApiProvider")
 	nilLinkMailerErr           = errors.New("nil linkMailer")
 	nilLogErr                  = errors.New("nil log")
 	noSuchRegionErr            = errors.New("no such region")
@@ -103,12 +103,12 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf(fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers))
 }
 
-func newApi(store store, internalRegionalApiProvider InternalRegionalApiProvider, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
+func newApi(store store, internalRegionalApis map[string]internalRegionalApi, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log zap.Logger) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
-	if internalRegionalApiProvider == nil {
-		return nil, nilInternalRegionalApiProviderErr
+	if internalRegionalApis == nil {
+		return nil, nilInternalRegionalApisErr
 	}
 	if linkMailer == nil {
 		return nil, nilLinkMailerErr
@@ -117,48 +117,48 @@ func newApi(store store, internalRegionalApiProvider InternalRegionalApiProvider
 		return nil, nilLogErr
 	}
 	return &api{
-		store: store,
-		internalRegionalApiProvider: internalRegionalApiProvider,
-		linkMailer:                  linkMailer,
-		nameRegexMatchers:           append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
-		pwdRegexMatchers:            append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
-		nameMinRuneCount:            nameMinRuneCount,
-		nameMaxRuneCount:            nameMaxRuneCount,
-		pwdMinRuneCount:             pwdMinRuneCount,
-		pwdMaxRuneCount:             pwdMaxRuneCount,
-		maxSearchLimitResults:       maxSearchLimitResults,
-		cryptoCodeLen:               cryptoCodeLen,
-		saltLen:                     saltLen,
-		scryptN:                     scryptN,
-		scryptR:                     scryptR,
-		scryptP:                     scryptP,
-		scryptKeyLen:                scryptKeyLen,
-		log:                         log,
+		store:                 store,
+		internalRegionalApis:  internalRegionalApis,
+		linkMailer:            linkMailer,
+		nameRegexMatchers:     append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
+		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		nameMinRuneCount:      nameMinRuneCount,
+		nameMaxRuneCount:      nameMaxRuneCount,
+		pwdMinRuneCount:       pwdMinRuneCount,
+		pwdMaxRuneCount:       pwdMaxRuneCount,
+		maxSearchLimitResults: maxSearchLimitResults,
+		cryptoCodeLen:         cryptoCodeLen,
+		saltLen:               saltLen,
+		scryptN:               scryptN,
+		scryptR:               scryptR,
+		scryptP:               scryptP,
+		scryptKeyLen:          scryptKeyLen,
+		log:                   log,
 	}, nil
 }
 
 type api struct {
-	store                       store
-	internalRegionalApiProvider InternalRegionalApiProvider
-	linkMailer                  linkMailer
-	nameRegexMatchers           []string
-	pwdRegexMatchers            []string
-	nameMinRuneCount            int
-	nameMaxRuneCount            int
-	pwdMinRuneCount             int
-	pwdMaxRuneCount             int
-	maxSearchLimitResults       int
-	cryptoCodeLen               int
-	saltLen                     int
-	scryptN                     int
-	scryptR                     int
-	scryptP                     int
-	scryptKeyLen                int
-	log                         zap.Logger
+	store                 store
+	internalRegionalApis  map[string]internalRegionalApi
+	linkMailer            linkMailer
+	nameRegexMatchers     []string
+	pwdRegexMatchers      []string
+	nameMinRuneCount      int
+	nameMaxRuneCount      int
+	pwdMinRuneCount       int
+	pwdMaxRuneCount       int
+	maxSearchLimitResults int
+	cryptoCodeLen         int
+	saltLen               int
+	scryptN               int
+	scryptR               int
+	scryptP               int
+	scryptKeyLen          int
+	log                   zap.Logger
 }
 
-func (a *api) Register(name, region, email, pwd string) error {
-	a.log.Debug(registerFnLogMsg, zap.String("name", name), zap.String("region", region), zap.String("email", redactedInfo), zap.String("pwd", redactedInfo))
+func (a *api) Register(name, email, pwd, region string) error {
+	a.log.Debug(registerFnLogMsg, zap.String("name", name), zap.String("email", redactedInfo), zap.String("region", region), zap.String("pwd", redactedInfo))
 
 	name = strings.Trim(name, " ")
 	if err := validateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
@@ -177,7 +177,7 @@ func (a *api) Register(name, region, email, pwd string) error {
 		return err
 	}
 
-	if !a.internalRegionalApiProvider.Exists(region) {
+	if _, exists := a.internalRegionalApis[region]; !exists {
 		a.log.Info(registerFnLogMsg, zap.Error(noSuchRegionErr))
 		return noSuchRegionErr
 	}
@@ -306,10 +306,10 @@ func (a *api) Activate(activationCode string) (UUID, error) {
 		return nil, noSuchUserErr
 	}
 
-	internalRegionalApi, err := a.internalRegionalApiProvider.Get(user.Region)
-	if err != nil {
-		a.log.Error(activateFnLogMsg, zap.String(subcall, internalRegionalApiProviderGet), zap.Error(err))
-		return nil, err
+	internalRegionalApi, exists := a.internalRegionalApis[user.Region]
+	if !exists {
+		a.log.Info(activateFnLogMsg, zap.Error(noSuchRegionErr))
+		return nil, noSuchRegionErr
 	}
 
 	shard, err := internalRegionalApi.CreatePersonalTaskCenter(user.Id)
@@ -887,6 +887,12 @@ type store interface {
 	getOrgs(ids []UUID) ([]*org, error)
 	searchOrgs(search string, limit int) ([]*org, error)
 	getUsersOrgs(userId UUID, limit int) ([]*org, error)
+}
+
+type internalRegionalApi interface {
+	CreatePersonalTaskCenter(userId UUID) (int, error)
+	CreateOrgTaskCenter(ownerId, orgId UUID) (int, error)
+	RenameMember(memberId, orgId UUID, newName string) error
 }
 
 type linkMailer interface {

@@ -7,7 +7,7 @@ import (
 
 type Api interface {
 	//accessible outside of active session
-	Register(name, region, email, pwd string) error
+	Register(name, email, pwd, region string) error
 	ResendActivationEmail(email string) error
 	Activate(activationCode string) (UUID, error)
 	Authenticate(username, pwd string) (UUID, error)
@@ -36,17 +36,6 @@ type Api interface {
 	//member centric - must be an owner or admin
 	AddMembers(myId, orgId UUID, newMembers []UUID) error
 	RemoveMembers(myId, orgId UUID, existingMembers []UUID) error
-}
-
-type InternalRegionalApiProvider interface {
-	Exists(region string) bool
-	Get(region string) (InternalRegionalApi, error)
-}
-
-type InternalRegionalApi interface {
-	CreatePersonalTaskCenter(userId UUID) (int, error)
-	CreateOrgTaskCenter(ownerId, orgId UUID) (int, error)
-	RenameMember(memberId, orgId UUID, newName string) error
 }
 
 func NewLogLinkMailer(log zap.Logger) (linkMailer, error) {
