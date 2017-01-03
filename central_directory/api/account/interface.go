@@ -1,8 +1,8 @@
 package account
 
 import (
-	. "github.com/pborman/uuid"
 	"bitbucket.org/robsix/task_center/misc"
+	. "github.com/pborman/uuid"
 )
 
 type Api interface {

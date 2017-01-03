@@ -21,14 +21,18 @@ type Log interface {
 	FatalErr(error) error
 }
 
-func NewLog(logger zap.Logger) Log {
+type zapLogger interface {
+	Log(zap.Level, string, ...zap.Field)
+}
+
+func NewLog(logger zapLogger) Log {
 	return &log{
 		logger: logger,
 	}
 }
 
 type log struct {
-	logger zap.Logger
+	logger zapLogger
 }
 
 func (l *log) log(level zap.Level, fields ...zap.Field) {
