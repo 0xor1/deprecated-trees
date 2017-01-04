@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
+	"time"
 )
 
 func Test_newApi_nilStoreErr(t *testing.T) {
@@ -197,9 +198,161 @@ func Test_api_Register_genCryptoUrlSafeStringErr(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 }
 
+func Test_api_Register_genNewIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getAccountByName", "ali").Return(nil, nil)
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
+	salt := []byte("salt")
+	pwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
+	miscFuncs.On("GenCryptoUrlSafeString", 40).Return("test", nil)
+	miscFuncs.On("GenNewId").Return(nil, expectedErr)
+
+	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
+	assert.Equal(t, expectedErr, err)
+}
+
+func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getAccountByName", "ali").Return(nil, nil)
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
+	salt := []byte("salt")
+	pwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
+	activationCode := "test"
+	miscFuncs.On("GenCryptoUrlSafeString", 40).Return(activationCode, nil)
+	id := NewUUID()
+	miscFuncs.On("GenNewId").Return(id, nil)
+	store.On(
+		"createUser",
+		&fullUserInfo{
+			me: me{
+				user: user{
+					Entity: misc.Entity{
+						Id: id,
+					},
+					Name:    "ali",
+					Region:  "us",
+					Shard:   -1,
+					Created: timeNowReplacement,
+				},
+				Email: "email@email.com",
+			},
+			ActivationCode: &activationCode,
+		},
+		&pwdInfo{
+			Salt:   salt,
+			Pwd:    pwd,
+			N:      16384,
+			R:      8,
+			P:      1,
+			KeyLen: 32,
+		}).Return(expectedErr)
+
+	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
+	assert.Equal(t, expectedErr, err)
+}
+
+func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getAccountByName", "ali").Return(nil, nil)
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
+	salt := []byte("salt")
+	pwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
+	activationCode := "test"
+	miscFuncs.On("GenCryptoUrlSafeString", 40).Return(activationCode, nil)
+	id := NewUUID()
+	miscFuncs.On("GenNewId").Return(id, nil)
+	store.On(
+		"createUser",
+		&fullUserInfo{
+			me: me{
+				user: user{
+					Entity: misc.Entity{
+						Id: id,
+					},
+					Name:    "ali",
+					Region:  "us",
+					Shard:   -1,
+					Created: timeNowReplacement,
+				},
+				Email: "email@email.com",
+			},
+			ActivationCode: &activationCode,
+		},
+		&pwdInfo{
+			Salt:   salt,
+			Pwd:    pwd,
+			N:      16384,
+			R:      8,
+			P:      1,
+			KeyLen: 32,
+		}).Return(nil)
+	linkMailer.On("sendActivationLink", "email@email.com", activationCode).Return(expectedErr)
+
+	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
+	assert.Equal(t, expectedErr, err)
+}
+
+func Test_api_Register_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getAccountByName", "ali").Return(nil, nil)
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
+	salt := []byte("salt")
+	pwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
+	activationCode := "test"
+	miscFuncs.On("GenCryptoUrlSafeString", 40).Return(activationCode, nil)
+	id := NewUUID()
+	miscFuncs.On("GenNewId").Return(id, nil)
+	store.On(
+		"createUser",
+		&fullUserInfo{
+			me: me{
+				user: user{
+					Entity: misc.Entity{
+						Id: id,
+					},
+					Name:    "ali",
+					Region:  "us",
+					Shard:   -1,
+					Created: timeNowReplacement,
+				},
+				Email: "email@email.com",
+			},
+			ActivationCode: &activationCode,
+		},
+		&pwdInfo{
+			Salt:   salt,
+			Pwd:    pwd,
+			N:      16384,
+			R:      8,
+			P:      1,
+			KeyLen: 32,
+		}).Return(nil)
+	linkMailer.On("sendActivationLink", "email@email.com", activationCode).Return(nil)
+
+	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
-	expectedErr = errors.New("test")
+	expectedErr        = errors.New("test")
+	timeNowReplacement = time.Now().UTC()
 )
 
 type mockStore struct {
@@ -215,6 +368,7 @@ func (m *mockStore) getAccountByName(name string) (*account, error) {
 }
 
 func (m *mockStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
+	user.Created = timeNowReplacement
 	args := m.Called(user, pwdInfo)
 	return args.Error(0)
 }
@@ -389,7 +543,7 @@ func (m *mockMiscFuncs) GenNewId() (UUID, error) {
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]byte), args.Error(1)
+	return args.Get(0).(UUID), args.Error(1)
 }
 
 func (m *mockMiscFuncs) GenCryptoBytes(length int) ([]byte, error) {
