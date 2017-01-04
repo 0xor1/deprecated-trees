@@ -7,7 +7,6 @@ import (
 	"fmt"
 	. "github.com/pborman/uuid"
 	"github.com/uber-go/zap"
-	"golang.org/x/crypto/scrypt"
 	"regexp"
 	"strings"
 	"time"
@@ -15,20 +14,23 @@ import (
 )
 
 var (
-	nilStoreErr                = errors.New("nil store")
-	nilInternalRegionalApisErr = errors.New("nil internalRegionalApis")
-	nilLinkMailerErr           = errors.New("nil linkMailer")
-	nilLogErr                  = errors.New("nil log")
-	noSuchRegionErr            = errors.New("no such region")
-	noSuchUserErr              = errors.New("no such user")
-	incorrectPwdErr            = errors.New("password incorrect")
-	userNotActivated           = errors.New("user not activated")
-	emailAlreadyInUseErr       = errors.New("email already in use")
-	accountNameAlreadyInUseErr = errors.New("account already in use")
-	userAlreadyActivatedErr    = errors.New("user already activated")
-	emailConfirmationCodeErr   = errors.New("email confirmation code is of zero length")
-	newEmailErr                = errors.New("newEmail is of zero length")
-	newEmailConfirmationErr    = errors.New("new email and confirmation code do not match those recorded")
+	nilStoreErr                  = errors.New("nil store")
+	nilInternalRegionApisErr     = errors.New("nil internalRegionApis")
+	nilLinkMailerErr             = errors.New("nil linkMailer")
+	nilGenCryptoBytesErr         = errors.New("nil genCryptoBytes")
+	nilGenCryptoUrlSafeStringErr = errors.New("nil nilGenCryptoUrlSafeString")
+	nilGenScryptKeyErr           = errors.New("nil nilGenScryptKey")
+	nilLogErr                    = errors.New("nil log")
+	noSuchRegionErr              = errors.New("no such region")
+	noSuchUserErr                = errors.New("no such user")
+	incorrectPwdErr              = errors.New("password incorrect")
+	userNotActivated             = errors.New("user not activated")
+	emailAlreadyInUseErr         = errors.New("email already in use")
+	accountNameAlreadyInUseErr   = errors.New("account already in use")
+	userAlreadyActivatedErr      = errors.New("user already activated")
+	emailConfirmationCodeErr     = errors.New("email confirmation code is of zero length")
+	newEmailErr                  = errors.New("newEmail is of zero length")
+	newEmailConfirmationErr      = errors.New("new email and confirmation code do not match those recorded")
 )
 
 type invalidStringParamErr struct {
@@ -42,58 +44,73 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers)
 }
 
-func newApi(store store, internalRegionalApis map[string]internalRegionalApi, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log misc.Log) (Api, error) {
+func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, genCryptoBytes misc.GenCryptoBytes, genCryptoUrlSafeString misc.GenCryptoUrlSafeString, genScryptKey misc.GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log misc.Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
-	if internalRegionalApis == nil {
-		return nil, nilInternalRegionalApisErr
+	if internalRegionApis == nil {
+		return nil, nilInternalRegionApisErr
 	}
 	if linkMailer == nil {
 		return nil, nilLinkMailerErr
+	}
+	if genCryptoBytes == nil {
+		return nil, nilGenCryptoBytesErr
+	}
+	if genCryptoUrlSafeString == nil {
+		return nil, nilGenCryptoUrlSafeStringErr
+	}
+	if genScryptKey == nil {
+		return nil, nilGenScryptKeyErr
 	}
 	if log == nil {
 		return nil, nilLogErr
 	}
 	return &api{
-		store:                 store,
-		internalRegionalApis:  internalRegionalApis,
-		linkMailer:            linkMailer,
-		nameRegexMatchers:     append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
-		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
-		nameMinRuneCount:      nameMinRuneCount,
-		nameMaxRuneCount:      nameMaxRuneCount,
-		pwdMinRuneCount:       pwdMinRuneCount,
-		pwdMaxRuneCount:       pwdMaxRuneCount,
-		maxSearchLimitResults: maxSearchLimitResults,
-		cryptoCodeLen:         cryptoCodeLen,
-		saltLen:               saltLen,
-		scryptN:               scryptN,
-		scryptR:               scryptR,
-		scryptP:               scryptP,
-		scryptKeyLen:          scryptKeyLen,
-		log:                   log,
+		store:                  store,
+		internalRegionApis:     internalRegionApis,
+		linkMailer:             linkMailer,
+		genCryptoBytes:         genCryptoBytes,
+		genCryptoUrlSafeString: genCryptoUrlSafeString,
+		genScryptKey:           genScryptKey,
+		nameRegexMatchers:      append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
+		pwdRegexMatchers:       append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		nameMinRuneCount:       nameMinRuneCount,
+		nameMaxRuneCount:       nameMaxRuneCount,
+		pwdMinRuneCount:        pwdMinRuneCount,
+		pwdMaxRuneCount:        pwdMaxRuneCount,
+		maxSearchLimitResults:  maxSearchLimitResults,
+		cryptoCodeLen:          cryptoCodeLen,
+		saltLen:                saltLen,
+		scryptN:                scryptN,
+		scryptR:                scryptR,
+		scryptP:                scryptP,
+		scryptKeyLen:           scryptKeyLen,
+		log:                    log,
 	}, nil
 }
 
 type api struct {
-	store                 store
-	internalRegionalApis  map[string]internalRegionalApi
-	linkMailer            linkMailer
-	nameRegexMatchers     []string
-	pwdRegexMatchers      []string
-	nameMinRuneCount      int
-	nameMaxRuneCount      int
-	pwdMinRuneCount       int
-	pwdMaxRuneCount       int
-	maxSearchLimitResults int
-	cryptoCodeLen         int
-	saltLen               int
-	scryptN               int
-	scryptR               int
-	scryptP               int
-	scryptKeyLen          int
-	log                   misc.Log
+	store                  store
+	internalRegionApis     map[string]internalRegionApi
+	linkMailer             linkMailer
+	genCryptoBytes         misc.GenCryptoBytes
+	genCryptoUrlSafeString misc.GenCryptoUrlSafeString
+	genScryptKey           misc.GenScryptKey
+	nameRegexMatchers      []string
+	pwdRegexMatchers       []string
+	nameMinRuneCount       int
+	nameMaxRuneCount       int
+	pwdMinRuneCount        int
+	pwdMaxRuneCount        int
+	maxSearchLimitResults  int
+	cryptoCodeLen          int
+	saltLen                int
+	scryptN                int
+	scryptR                int
+	scryptP                int
+	scryptKeyLen           int
+	log                    misc.Log
 }
 
 func (a *api) Register(name, email, pwd, region string) error {
@@ -113,7 +130,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.InfoErr(err)
 	}
 
-	if _, exists := a.internalRegionalApis[region]; !exists {
+	if _, exists := a.internalRegionApis[region]; !exists {
 		return a.log.InfoErr(noSuchRegionErr)
 	}
 
@@ -133,17 +150,17 @@ func (a *api) Register(name, email, pwd, region string) error {
 		}
 	}
 
-	scryptSalt, err := misc.GenerateCryptoBytes(a.saltLen)
+	scryptSalt, err := a.genCryptoBytes(a.saltLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := scrypt.Key([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.genScryptKey([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	activationCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
+	activationCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -225,7 +242,7 @@ func (a *api) Activate(activationCode string) (UUID, error) {
 		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 
-	internalRegionalApi, exists := a.internalRegionalApis[user.Region]
+	internalRegionalApi, exists := a.internalRegionApis[user.Region]
 	if !exists {
 		return nil, a.log.InfoErr(noSuchRegionErr)
 	}
@@ -267,7 +284,7 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	scryptPwdTry, err := scrypt.Key([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.genScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -285,7 +302,7 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 	if pwdInfo.N != a.scryptN || pwdInfo.R != a.scryptR || pwdInfo.P != a.scryptP || pwdInfo.KeyLen != a.scryptKeyLen || len(pwdInfo.Salt) < a.saltLen {
-		pwdInfo.Salt, err = misc.GenerateCryptoBytes(a.saltLen)
+		pwdInfo.Salt, err = a.genCryptoBytes(a.saltLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -293,7 +310,7 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 		pwdInfo.R = a.scryptR
 		pwdInfo.P = a.scryptP
 		pwdInfo.KeyLen = a.scryptKeyLen
-		pwdInfo.Pwd, err = scrypt.Key([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+		pwdInfo.Pwd, err = a.genScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -350,7 +367,7 @@ func (a *api) ResetPwd(email string) error {
 		return a.log.InfoErr(noSuchUserErr)
 	}
 
-	resetPwdCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
+	resetPwdCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.InfoErr(err)
 	}
@@ -383,12 +400,12 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
 		return nil, a.log.InfoErr(noSuchUserErr)
 	}
 
-	scryptSalt, err := misc.GenerateCryptoBytes(a.saltLen)
+	scryptSalt, err := a.genCryptoBytes(a.saltLen)
 	if err != nil {
 		return nil, a.log.InfoErr(err)
 	}
 
-	scryptPwd, err := scrypt.Key([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -534,7 +551,7 @@ func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
 		return a.log.InfoErr(noSuchUserErr)
 	}
 
-	confirmationCode, err := misc.GenerateCryptoUrlSafeString(a.cryptoCodeLen)
+	confirmationCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -595,7 +612,7 @@ func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
 		return a.log.InfoErr(noSuchUserErr)
 	}
 
-	scryptPwdTry, err := scrypt.Key([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.genScryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -604,12 +621,12 @@ func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
 		return a.log.InfoErr(incorrectPwdErr)
 	}
 
-	scryptSalt, err := misc.GenerateCryptoBytes(a.saltLen)
+	scryptSalt, err := a.genCryptoBytes(a.saltLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := scrypt.Key([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -745,7 +762,7 @@ type store interface {
 	getUsersOrgs(userId UUID, limit int) ([]*org, error)
 }
 
-type internalRegionalApi interface {
+type internalRegionApi interface {
 	CreatePersonalTaskCenter(userId UUID) (int, error)
 	CreateOrgTaskCenter(ownerId, orgId UUID) (int, error)
 	RenameMember(memberId, orgId UUID, newName string) error
