@@ -145,15 +145,28 @@ func Test_api_Register_storeGetUserByEmailErr(t *testing.T) {
 	assert.Equal(t, expectedErr, err)
 }
 
-func Test_api_Register_storeGetUserByEmailNoneNilUser(t *testing.T) {
+func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAccountPolicyEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getAccountByName", "ali").Return(nil, nil)
-	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{}, nil)
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{me: me{Email: "email@email.com"}}, nil)
+	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, emailAlreadyInUseErr, err)
+	assert.Equal(t, expectedErr, err)
+}
+
+func Test_api_Register_storeGetUserByEmailNoneNilUser_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getAccountByName", "ali").Return(nil, nil)
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{me: me{Email: "email@email.com"}}, nil)
+	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(nil)
+
+	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
+	assert.Nil(t, err)
 }
 
 func Test_api_Register_genCryptoBytesErr(t *testing.T) {
@@ -349,6 +362,61 @@ func Test_api_Register_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_ResendActivationEmail_storeGetUseByEmailErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
+
+	err := api.ResendActivationEmail("email@email.com")
+	assert.Equal(t, expectedErr, err)
+}
+
+func Test_api_ResendActivationEmail_storeGetUseByEmailNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
+
+	err := api.ResendActivationEmail("email@email.com")
+	assert.Nil(t, err)
+}
+
+func Test_api_ResendActivationEmail_storeGetUseByEmailActivatedUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activated := time.Now().UTC()
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{Activated: &activated}, nil)
+
+	err := api.ResendActivationEmail("email@email.com")
+	assert.Nil(t, err)
+}
+
+func Test_api_ResendActivationEmail_linkMailerSendActivationLinkErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	code := "test"
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode: &code}, nil)
+	linkMailer.On("sendActivationLink", "email@email.com", code).Return(expectedErr)
+
+	err := api.ResendActivationEmail("email@email.com")
+	assert.Equal(t, expectedErr, err)
+}
+
+func Test_api_ResendActivationEmail_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	code := "test"
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode: &code}, nil)
+	linkMailer.On("sendActivationLink", "email@email.com", code).Return(nil)
+
+	err := api.ResendActivationEmail("email@email.com")
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
 	expectedErr        = errors.New("test")
@@ -517,6 +585,11 @@ func (m *mockStore) getUsersOrgs(userId UUID, limit int) ([]*org, error) {
 
 type mockLinkMailer struct {
 	mock.Mock
+}
+
+func (m *mockLinkMailer) sendMultipleAccountPolicyEmail(address string) error {
+	args := m.Called(address)
+	return args.Error(0)
 }
 
 func (m *mockLinkMailer) sendActivationLink(address, activationCode string) error {

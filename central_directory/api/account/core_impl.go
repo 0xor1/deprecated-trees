@@ -28,7 +28,6 @@ var (
 	userNotActivated             = errors.New("user not activated")
 	emailAlreadyInUseErr         = errors.New("email already in use")
 	accountNameAlreadyInUseErr   = errors.New("account already in use")
-	userAlreadyActivatedErr      = errors.New("user already activated")
 	emailConfirmationCodeErr     = errors.New("email confirmation code is of zero length")
 	newEmailErr                  = errors.New("newEmail is of zero length")
 	newEmailConfirmationErr      = errors.New("new email and confirmation code do not match those recorded")
@@ -151,9 +150,10 @@ func (a *api) Register(name, email, pwd, region string) error {
 	if user, err := a.store.getUserByEmail(email); user != nil || err != nil {
 		if err != nil {
 			return a.log.ErrorErr(err)
-		} else {
-			return a.log.InfoErr(emailAlreadyInUseErr)
+		} else if err = a.linkMailer.sendMultipleAccountPolicyEmail(user.Email); err != nil {
+			return a.log.ErrorErr(err)
 		}
+		return nil
 	}
 
 	scryptSalt, err := a.genCryptoBytes(a.saltLen)
@@ -205,8 +205,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.ErrorErr(err)
 	}
 
-	err = a.linkMailer.sendActivationLink(email, activationCode)
-	if err != nil {
+	if err = a.linkMailer.sendActivationLink(email, activationCode); err != nil {
 		return a.log.ErrorErr(err)
 	}
 
@@ -221,12 +220,8 @@ func (a *api) ResendActivationEmail(email string) error {
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
-	if user == nil {
-		return a.log.InfoErr(noSuchUserErr)
-	}
-
-	if user.isActivated() {
-		return a.log.InfoErr(userAlreadyActivatedErr)
+	if user == nil || user.isActivated() {
+		return nil
 	}
 
 	if err = a.linkMailer.sendActivationLink(email, *user.ActivationCode); err != nil {
@@ -775,6 +770,7 @@ type internalRegionApi interface {
 }
 
 type linkMailer interface {
+	sendMultipleAccountPolicyEmail(address string) error
 	sendActivationLink(address, activationCode string) error
 	sendPwdResetLink(address, resetCode string) error
 	sendNewEmailConfirmationLink(address, confirmationCode string) error
@@ -813,7 +809,7 @@ type fullUserInfo struct {
 }
 
 func (u *fullUserInfo) isActivated() bool {
-	return u.Activated == nil
+	return u.Activated != nil
 }
 
 type pwdInfo struct {
@@ -827,6 +823,11 @@ type pwdInfo struct {
 
 type logLinkMailer struct {
 	log misc.Log
+}
+
+func (l *logLinkMailer) sendMultipleAccountPolicyEmail(address string) error {
+	l.log.Info(zap.String("address", address))
+	return nil
 }
 
 func (l *logLinkMailer) sendActivationLink(address, activationCode string) error {
