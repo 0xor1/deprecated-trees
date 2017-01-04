@@ -17,6 +17,7 @@ var (
 	nilStoreErr                  = errors.New("nil store")
 	nilInternalRegionApisErr     = errors.New("nil internalRegionApis")
 	nilLinkMailerErr             = errors.New("nil linkMailer")
+	nilGenNewIdErr               = errors.New("nil genNewId")
 	nilGenCryptoBytesErr         = errors.New("nil genCryptoBytes")
 	nilGenCryptoUrlSafeStringErr = errors.New("nil nilGenCryptoUrlSafeString")
 	nilGenScryptKeyErr           = errors.New("nil nilGenScryptKey")
@@ -44,7 +45,7 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers)
 }
 
-func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, genCryptoBytes misc.GenCryptoBytes, genCryptoUrlSafeString misc.GenCryptoUrlSafeString, genScryptKey misc.GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log misc.Log) (Api, error) {
+func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, genNewId misc.GenNewId, genCryptoBytes misc.GenCryptoBytes, genCryptoUrlSafeString misc.GenCryptoUrlSafeString, genScryptKey misc.GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log misc.Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
@@ -53,6 +54,9 @@ func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMa
 	}
 	if linkMailer == nil {
 		return nil, nilLinkMailerErr
+	}
+	if genNewId == nil {
+		return nil, nilGenNewIdErr
 	}
 	if genCryptoBytes == nil {
 		return nil, nilGenCryptoBytesErr
@@ -70,6 +74,7 @@ func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMa
 		store:                  store,
 		internalRegionApis:     internalRegionApis,
 		linkMailer:             linkMailer,
+		genNewId:               genNewId,
 		genCryptoBytes:         genCryptoBytes,
 		genCryptoUrlSafeString: genCryptoUrlSafeString,
 		genScryptKey:           genScryptKey,
@@ -94,6 +99,7 @@ type api struct {
 	store                  store
 	internalRegionApis     map[string]internalRegionApi
 	linkMailer             linkMailer
+	genNewId               misc.GenNewId
 	genCryptoBytes         misc.GenCryptoBytes
 	genCryptoUrlSafeString misc.GenCryptoUrlSafeString
 	genScryptKey           misc.GenScryptKey
@@ -165,7 +171,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.ErrorErr(err)
 	}
 
-	userId, err := misc.NewId()
+	userId, err := a.genNewId()
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}

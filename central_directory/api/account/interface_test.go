@@ -1,9 +1,9 @@
 package account
 
 import (
+	"bitbucket.org/robsix/task_center/misc"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"bitbucket.org/robsix/task_center/misc"
 )
 
 func Test_NewLogLinkMailer_nilLogErr(t *testing.T) {
