@@ -23,7 +23,9 @@ var (
 	nilGenScryptKeyErr           = errors.New("nil nilGenScryptKey")
 	nilLogErr                    = errors.New("nil log")
 	noSuchRegionErr              = errors.New("no such region")
+	userRegionGoneErr            = errors.New("user registered region no longer exists at activation time")
 	noSuchUserErr                = errors.New("no such user")
+	noSuchActivationCodeErr      = errors.New("no such activation code")
 	incorrectPwdErr              = errors.New("password incorrect")
 	userNotActivated             = errors.New("user not activated")
 	emailAlreadyInUseErr         = errors.New("email already in use")
@@ -240,15 +242,15 @@ func (a *api) Activate(activationCode string) (UUID, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		return nil, a.log.InfoErr(noSuchUserErr)
+		return nil, a.log.InfoErr(noSuchActivationCodeErr)
 	}
 
-	internalRegionalApi, exists := a.internalRegionApis[user.Region]
+	internalRegionApi, exists := a.internalRegionApis[user.Region]
 	if !exists {
-		return nil, a.log.InfoErr(noSuchRegionErr)
+		return nil, a.log.ErrorErr(userRegionGoneErr)
 	}
 
-	shard, err := internalRegionalApi.CreatePersonalTaskCenter(user.Id)
+	shard, err := internalRegionApi.CreatePersonalTaskCenter(user.Id)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
