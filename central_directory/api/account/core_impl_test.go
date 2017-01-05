@@ -86,7 +86,7 @@ func Test_api_Register_invalidNameParam(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	err := api.Register("a", "email@email.email", "P@ss-W0rd", "us").(*invalidStringParamErr)
-	assert.IsType(t, "name", err.paramPurpose)
+	assert.Equal(t, "name", err.paramPurpose)
 	assert.Equal(t, "name must be between 3 and 20 utf8 characters long and match all regexs []", err.Error())
 }
 
@@ -121,7 +121,7 @@ func Test_api_Register_storeGetAccountByNameErr(t *testing.T) {
 	store.On("getAccountByName", "ali").Return(nil, expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_storeGetAccountByNameNoneNilAccount(t *testing.T) {
@@ -142,7 +142,7 @@ func Test_api_Register_storeGetUserByEmailErr(t *testing.T) {
 	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAccountPolicyEmailErr(t *testing.T) {
@@ -154,7 +154,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAcco
 	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_storeGetUserByEmailNoneNilUser_success(t *testing.T) {
@@ -178,7 +178,7 @@ func Test_api_Register_genCryptoBytesErr(t *testing.T) {
 	miscFuncs.On("GenCryptoBytes", 128).Return(nil, expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_genScryptKeyErr(t *testing.T) {
@@ -192,7 +192,7 @@ func Test_api_Register_genScryptKeyErr(t *testing.T) {
 	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), salt, 16384, 8, 1, 32).Return(nil, expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_genCryptoUrlSafeStringErr(t *testing.T) {
@@ -208,7 +208,7 @@ func Test_api_Register_genCryptoUrlSafeStringErr(t *testing.T) {
 	miscFuncs.On("GenCryptoUrlSafeString", 40).Return("", expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_genNewIdErr(t *testing.T) {
@@ -225,7 +225,7 @@ func Test_api_Register_genNewIdErr(t *testing.T) {
 	miscFuncs.On("GenNewId").Return(nil, expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
@@ -269,7 +269,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 		}).Return(expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
@@ -314,7 +314,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 	linkMailer.On("sendActivationLink", "email@email.com", activationCode).Return(expectedErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_Register_success(t *testing.T) {
@@ -369,7 +369,7 @@ func Test_api_ResendActivationEmail_storeGetUseByEmailErr(t *testing.T) {
 	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
 
 	err := api.ResendActivationEmail("email@email.com")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_ResendActivationEmail_storeGetUseByEmailNilUser(t *testing.T) {
@@ -402,7 +402,7 @@ func Test_api_ResendActivationEmail_linkMailerSendActivationLinkErr(t *testing.T
 	linkMailer.On("sendActivationLink", "email@email.com", code).Return(expectedErr)
 
 	err := api.ResendActivationEmail("email@email.com")
-	assert.Equal(t, expectedErr, err)
+	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
 func Test_api_ResendActivationEmail_success(t *testing.T) {

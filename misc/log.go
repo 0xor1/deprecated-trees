@@ -1,9 +1,20 @@
 package misc
 
 import (
+	"encoding/hex"
+	"fmt"
+	"github.com/pborman/uuid"
 	"github.com/uber-go/zap"
 	"runtime"
 )
+
+type ErrorRef struct {
+	Id uuid.UUID `json:"id"`
+}
+
+func (e *ErrorRef) Error() string {
+	return fmt.Sprintf("errorRef: %s", hex.EncodeToString(e.Id))
+}
 
 type Log interface {
 	Location()
@@ -26,18 +37,24 @@ type zapLogger interface {
 }
 
 func NewLog(logger zapLogger) Log {
+	return newLog(logger, NewId)
+}
+
+func newLog(logger zapLogger, genNewId GenNewId) Log {
 	return &log{
-		logger: logger,
+		logger:   logger,
+		genNewId: genNewId,
 	}
 }
 
 type log struct {
-	logger zapLogger
+	logger   zapLogger
+	genNewId GenNewId
 }
 
-func (l *log) log(level zap.Level, fields ...zap.Field) {
+func (l *log) log(callerDepth int, level zap.Level, fields ...zap.Field) {
 	if l.logger != nil {
-		pc, file, line, _ := runtime.Caller(2)
+		pc, file, line, _ := runtime.Caller(callerDepth)
 		f := runtime.FuncForPC(pc)
 		extendedFields := make([]zap.Field, 0, len(fields)+3)
 		extendedFields = append(extendedFields, zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line))
@@ -46,60 +63,65 @@ func (l *log) log(level zap.Level, fields ...zap.Field) {
 	}
 }
 
+func (l *log) logErr(level zap.Level, err error) error {
+	if level == zap.DebugLevel || level == zap.InfoLevel {
+		l.log(3, level, zap.Error(err))
+		return err
+	} else {
+		id, _ := l.genNewId()
+		l.log(3, level, zap.String("errorRef", hex.EncodeToString(id)), zap.Error(err))
+		return &ErrorRef{Id: id}
+	}
+}
+
 func (l *log) Location() {
-	l.log(zap.DebugLevel)
+	l.log(2, zap.DebugLevel)
 }
 
 func (l *log) Debug(fields ...zap.Field) {
-	l.log(zap.DebugLevel, fields...)
+	l.log(2, zap.DebugLevel, fields...)
 }
 
 func (l *log) DebugErr(err error) error {
-	l.log(zap.DebugLevel, zap.Error(err))
-	return err
+	return l.logErr(zap.DebugLevel, err)
 }
 
 func (l *log) Info(fields ...zap.Field) {
-	l.log(zap.InfoLevel, fields...)
+	l.log(2, zap.InfoLevel, fields...)
 }
 
 func (l *log) InfoErr(err error) error {
-	l.log(zap.InfoLevel, zap.Error(err))
-	return err
+	return l.logErr(zap.InfoLevel, err)
 }
 
 func (l *log) Warn(fields ...zap.Field) {
-	l.log(zap.WarnLevel, fields...)
+	l.log(2, zap.WarnLevel, fields...)
 }
 
 func (l *log) WarnErr(err error) error {
-	l.log(zap.WarnLevel, zap.Error(err))
-	return err
+	return l.logErr(zap.WarnLevel, err)
 }
 
 func (l *log) Error(fields ...zap.Field) {
-	l.log(zap.ErrorLevel, fields...)
+	l.log(2, zap.ErrorLevel, fields...)
 }
 
 func (l *log) ErrorErr(err error) error {
-	l.log(zap.ErrorLevel, zap.Error(err))
-	return err
+	return l.logErr(zap.ErrorLevel, err)
 }
 
 func (l *log) Panic(fields ...zap.Field) {
-	l.log(zap.PanicLevel, fields...)
+	l.log(2, zap.PanicLevel, fields...)
 }
 
 func (l *log) PanicErr(err error) error {
-	l.log(zap.PanicLevel, zap.Error(err))
-	return err
+	return l.logErr(zap.PanicLevel, err)
 }
 
 func (l *log) Fatal(fields ...zap.Field) {
-	l.log(zap.FatalLevel, fields...)
+	l.log(2, zap.FatalLevel, fields...)
 }
 
 func (l *log) FatalErr(err error) error {
-	l.log(zap.FatalLevel, zap.Error(err))
-	return err
+	return l.logErr(zap.FatalLevel, err)
 }

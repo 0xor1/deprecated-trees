@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	IdGenerationErr = errors.New("Failed to generate id")
+	idGenerationErr = errors.New("Failed to generate id")
 )
 
 type Entity struct {
@@ -19,7 +19,7 @@ type GenNewId func() (UUID, error)
 func NewId() (UUID, error) {
 	id := NewUUID()
 	if id == nil {
-		return nil, IdGenerationErr
+		return nil, idGenerationErr
 	}
 	return id, nil
 }
