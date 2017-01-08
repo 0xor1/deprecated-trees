@@ -14,25 +14,26 @@ import (
 )
 
 var (
-	nilStoreErr                  = errors.New("nil store")
-	nilInternalRegionApisErr     = errors.New("nil internalRegionApis")
-	nilLinkMailerErr             = errors.New("nil linkMailer")
-	nilGenNewIdErr               = errors.New("nil genNewId")
-	nilGenCryptoBytesErr         = errors.New("nil genCryptoBytes")
-	nilGenCryptoUrlSafeStringErr = errors.New("nil nilGenCryptoUrlSafeString")
-	nilGenScryptKeyErr           = errors.New("nil nilGenScryptKey")
-	nilLogErr                    = errors.New("nil log")
-	noSuchRegionErr              = errors.New("no such region")
-	userRegionGoneErr            = errors.New("user registered region no longer exists at activation time")
-	noSuchUserErr                = errors.New("no such user")
-	noSuchActivationCodeErr      = errors.New("no such activation code")
-	incorrectPwdErr              = errors.New("password incorrect")
-	userNotActivated             = errors.New("user not activated")
-	emailAlreadyInUseErr         = errors.New("email already in use")
-	accountNameAlreadyInUseErr   = errors.New("account already in use")
-	emailConfirmationCodeErr     = errors.New("email confirmation code is of zero length")
-	newEmailErr                  = errors.New("newEmail is of zero length")
-	newEmailConfirmationErr      = errors.New("new email and confirmation code do not match those recorded")
+	nilStoreErr                       = errors.New("nil store")
+	nilInternalRegionApisErr          = errors.New("nil internalRegionApis")
+	nilLinkMailerErr                  = errors.New("nil linkMailer")
+	nilGenNewIdErr                    = errors.New("nil genNewId")
+	nilGenCryptoBytesErr              = errors.New("nil genCryptoBytes")
+	nilGenCryptoUrlSafeStringErr      = errors.New("nil nilGenCryptoUrlSafeString")
+	nilGenScryptKeyErr                = errors.New("nil nilGenScryptKey")
+	nilLogErr                         = errors.New("nil log")
+	noSuchRegionErr                   = errors.New("no such region")
+	userRegionGoneErr                 = errors.New("user registered region no longer exists at activation time")
+	noSuchUserErr                     = errors.New("no such user")
+	noSuchActivationCodeErr           = errors.New("no such activation code")
+	noSuchNewEmailConfirmationCodeErr = errors.New("no such new email confirmation code")
+	incorrectPwdErr                   = errors.New("password incorrect")
+	userNotActivated                  = errors.New("user not activated")
+	emailAlreadyInUseErr              = errors.New("email already in use")
+	accountNameAlreadyInUseErr        = errors.New("account already in use")
+	emailConfirmationCodeErr          = errors.New("email confirmation code is of zero length")
+	newEmailErr                       = errors.New("newEmail is of zero length")
+	newEmailConfirmationErr           = errors.New("new email and confirmation code do not match those recorded")
 )
 
 type invalidStringParamErr struct {
@@ -334,7 +335,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, e
 		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		return nil, a.log.InfoErr(noSuchUserErr)
+		return nil, a.log.InfoErr(noSuchNewEmailConfirmationCodeErr)
 	}
 
 	if *user.NewEmail != newEmail || *user.NewEmailConfirmationCode != confirmationCode {
@@ -353,7 +354,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, e
 	user.NewEmail = nil
 	user.NewEmailConfirmationCode = nil
 	if err = a.store.updateUser(user); err != nil {
-		return nil, a.log.InfoErr(err)
+		return nil, a.log.ErrorErr(err)
 	}
 
 	return user.Id, nil
@@ -541,9 +542,10 @@ func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
 	if user, err := a.store.getUserByEmail(newEmail); user != nil || err != nil {
 		if err != nil {
 			return a.log.ErrorErr(err)
-		} else {
-			return a.log.InfoErr(emailAlreadyInUseErr)
+		} else if err = a.linkMailer.sendMultipleAccountPolicyEmail(user.Email); err != nil {
+			return a.log.ErrorErr(err)
 		}
+		return nil
 	}
 
 	user, err := a.store.getUserById(myId)
