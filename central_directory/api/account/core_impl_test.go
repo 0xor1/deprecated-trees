@@ -533,6 +533,181 @@ func Test_api_Activate_success(t *testing.T) {
 	assert.Equal(t, user.Shard, 3)
 }
 
+func Test_api_Authenticate_storeGetUserByNameErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByName", "name").Return(nil, expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_storeGetUserByNameNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByName", "name").Return(nil, nil)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.Equal(t, noSuchUserErr, err)
+}
+
+func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	user := &fullUserInfo{}
+	store.On("getUserByName", "name").Return(user, nil)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.Equal(t, userNotActivated, err)
+}
+
+func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	user := &fullUserInfo{Activated: &activationTime}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(nil, expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_genScryptKeyErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	user := &fullUserInfo{Activated: &activationTime}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(&pwdInfo{}, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return(nil, expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_incorrectPwdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	user := &fullUserInfo{Activated: &activationTime}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("N0t-P@ss-W0rd"), nil)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.Equal(t, incorrectPwdErr, err)
+}
+
+func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	resetPwdCode := "resetPwdCode"
+	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updateUser", user).Return(expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_genCryptoBytesErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	resetPwdCode := "resetPwdCode"
+	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updateUser", user).Return(nil)
+	miscFuncs.On("GenCryptoBytes", 128).Return(nil, expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_genScryptKey2Err(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	resetPwdCode := "resetPwdCode"
+	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updateUser", user).Return(nil)
+	miscFuncs.On("GenCryptoBytes", 128).Return([]byte("test"), nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte("test"), 16384, 8, 1, 32).Return(nil, expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_storeUpdatePwdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	resetPwdCode := "resetPwdCode"
+	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
+	store.On("getUserByName", "name").Return(user, nil)
+	pwdInfo := &pwdInfo{Pwd: []byte("P@ss-W0rd")}
+	store.On("getPwdInfo", UUID(nil)).Return(pwdInfo, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updateUser", user).Return(nil)
+	miscFuncs.On("GenCryptoBytes", 128).Return([]byte("test"), nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte("test"), 16384, 8, 1, 32).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updatePwdInfo", UUID(nil), pwdInfo).Return(expectedErr)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_Authenticate_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationTime := time.Now().UTC()
+	resetPwdCode := "resetPwdCode"
+	id, _ := misc.NewId()
+	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode, me: me{user: user{Entity: misc.Entity{Id: id}}}}
+	store.On("getUserByName", "name").Return(user, nil)
+	pwdInfo := &pwdInfo{Pwd: []byte("P@ss-W0rd")}
+	store.On("getPwdInfo", id).Return(pwdInfo, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updateUser", user).Return(nil)
+	miscFuncs.On("GenCryptoBytes", 128).Return([]byte("test"), nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte("test"), 16384, 8, 1, 32).Return([]byte("P@ss-W0rd"), nil)
+	store.On("updatePwdInfo", id, pwdInfo).Return(nil)
+
+	resultId, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Equal(t, id, resultId)
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
 	expectedErr        = errors.New("test")
