@@ -365,6 +365,7 @@ func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, e
 func (a *api) ResetPwd(email string) error {
 	a.log.Location()
 
+	email = strings.Trim(email, " ")
 	user, err := a.store.getUserByEmail(email)
 	if err != nil {
 		return a.log.ErrorErr(err)
@@ -375,12 +376,12 @@ func (a *api) ResetPwd(email string) error {
 
 	resetPwdCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
-		return a.log.InfoErr(err)
+		return a.log.ErrorErr(err)
 	}
 
 	user.ResetPwdCode = &resetPwdCode
 	if err = a.store.updateUser(user); err != nil {
-		return a.log.InfoErr(err)
+		return a.log.ErrorErr(err)
 	}
 
 	err = a.linkMailer.sendPwdResetLink(email, resetPwdCode)
