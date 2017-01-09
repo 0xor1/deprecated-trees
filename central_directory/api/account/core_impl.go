@@ -27,6 +27,7 @@ var (
 	noSuchUserErr                     = errors.New("no such user")
 	noSuchActivationCodeErr           = errors.New("no such activation code")
 	noSuchNewEmailConfirmationCodeErr = errors.New("no such new email confirmation code")
+	nameOrPwdIncorrectErr             = errors.New("Name or password incorrect")
 	incorrectPwdErr                   = errors.New("password incorrect")
 	userNotActivated                  = errors.New("user not activated")
 	emailAlreadyInUseErr              = errors.New("email already in use")
@@ -277,10 +278,7 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		return nil, a.log.InfoErr(noSuchUserErr)
-	}
-	if !user.isActivated() {
-		return nil, a.log.InfoErr(userNotActivated)
+		return nil, a.log.InfoErr(nameOrPwdIncorrectErr)
 	}
 
 	pwdInfo, err := a.store.getPwdInfo(user.Id)
@@ -294,7 +292,11 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 	}
 
 	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
-		return nil, a.log.InfoErr(incorrectPwdErr)
+		return nil, a.log.InfoErr(nameOrPwdIncorrectErr)
+	}
+
+	if !user.isActivated() {
+		return nil, a.log.InfoErr(userNotActivated)
 	}
 
 	//if there was an outstanding password reset on this user, remove it, they have since remembered their password
@@ -368,7 +370,7 @@ func (a *api) ResetPwd(email string) error {
 		return a.log.ErrorErr(err)
 	}
 	if user == nil {
-		return a.log.InfoErr(noSuchUserErr)
+		return nil
 	}
 
 	resetPwdCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)

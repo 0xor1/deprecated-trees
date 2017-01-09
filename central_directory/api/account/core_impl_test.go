@@ -552,19 +552,7 @@ func Test_api_Authenticate_storeGetUserByNameNilUser(t *testing.T) {
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
-	assert.Equal(t, noSuchUserErr, err)
-}
-
-func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) {
-	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
-	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	user := &fullUserInfo{}
-	store.On("getUserByName", "name").Return(user, nil)
-
-	id, err := api.Authenticate("name", "P@ss-W0rd")
-	assert.Nil(t, id)
-	assert.Equal(t, userNotActivated, err)
+	assert.Equal(t, nameOrPwdIncorrectErr, err)
 }
 
 func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
@@ -608,7 +596,21 @@ func Test_api_Authenticate_incorrectPwdErr(t *testing.T) {
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
-	assert.Equal(t, incorrectPwdErr, err)
+	assert.Equal(t, nameOrPwdIncorrectErr, err)
+}
+
+func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	user := &fullUserInfo{}
+	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getPwdInfo", UUID(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
+	miscFuncs.On("GenScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
+
+	id, err := api.Authenticate("name", "P@ss-W0rd")
+	assert.Nil(t, id)
+	assert.Equal(t, userNotActivated, err)
 }
 
 func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
@@ -809,6 +811,23 @@ func Test_api_ConfirmNewEmail_success(t *testing.T) {
 	assert.Nil(t, user.NewEmail)
 	assert.Nil(t, user.NewEmailConfirmationCode)
 }
+
+//func Test_api_ResetPwd_storeGetUserByEmailErr(t *testing.T) {
+//	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+//	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+//
+//	id, _ := misc.NewId()
+//	user := &fullUserInfo{me: me{user: user{Entity: misc.Entity{Id: id}}}}
+//	store.On("getUserByEmail", newEmail).Return(nil, nil)
+//	store.On("updateUser", user).Return(nil)
+//
+//	resultId, err := api.ConfirmNewEmail(newEmail, confirmationCode)
+//	assert.Equal(t, id, resultId)
+//	assert.Nil(t, err)
+//	assert.Equal(t, newEmail, user.Email)
+//	assert.Nil(t, user.NewEmail)
+//	assert.Nil(t, user.NewEmailConfirmationCode)
+//}
 
 //helpers
 var (
