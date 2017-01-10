@@ -2,6 +2,6 @@ task_center
 ===========
 
 ```
-go test -coverprofile=coverage.out
-go tool cover -html=coverage.out -o=index.html
+go install github.com/robsix/go_cover_all
+go_cover_all
 ```
