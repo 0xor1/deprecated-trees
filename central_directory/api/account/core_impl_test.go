@@ -417,13 +417,13 @@ func Test_api_ResendActivationEmail_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_api_Activate_storeGetUserByActivationCodeErr(t *testing.T) {
+func Test_api_Activate_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByActivationCode", "test").Return(nil, expectedErr)
+	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
 
-	id, err := api.Activate("test")
+	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
 	assert.IsType(t, &misc.ErrorRef{}, err)
 }
@@ -432,20 +432,33 @@ func Test_api_Activate_storeGetUserByActivationCodeNilUser(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByActivationCode", "test").Return(nil, nil)
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 
-	id, err := api.Activate("test")
+	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
-	assert.Equal(t, noSuchActivationCodeErr, err)
+	assert.Equal(t, invalidActivationAttemptErr, err)
+}
+
+func Test_api_Activate_storeGetUserByActivationCode_activationCodeMismatch(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	activationCode := "not-the-activation-code"
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode:&activationCode}, nil)
+
+	id, err := api.Activate("email@email.com", "test")
+	assert.Nil(t, id)
+	assert.Equal(t, invalidActivationAttemptErr, err)
 }
 
 func Test_api_Activate_invalidUserRegion(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByActivationCode", "test").Return(&fullUserInfo{me: me{user: user{Region: "us"}}}, nil)
+	activationCode := "activationCode"
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode: &activationCode, me: me{user: user{Region: "us"}}}, nil)
 
-	id, err := api.Activate("test")
+	id, err := api.Activate("email@email.com", activationCode)
 	assert.Nil(t, id)
 	assert.IsType(t, &misc.ErrorRef{}, err)
 }
@@ -468,10 +481,10 @@ func Test_api_Activate_internalRegionalApiCreatePersonalTaskCenterErr(t *testing
 		},
 		ActivationCode: &activationCode,
 	}
-	store.On("getUserByActivationCode", activationCode).Return(user, nil)
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", userId).Return(-1, expectedErr)
 
-	id, err := api.Activate("test")
+	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
 	assert.IsType(t, &misc.ErrorRef{}, err)
 }
@@ -494,11 +507,11 @@ func Test_api_Activate_storeUpdateUserErr(t *testing.T) {
 		},
 		ActivationCode: &activationCode,
 	}
-	store.On("getUserByActivationCode", activationCode).Return(user, nil)
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", userId).Return(3, nil)
 	store.On("updateUser", user).Return(expectedErr)
 
-	id, err := api.Activate("test")
+	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
 	assert.IsType(t, &misc.ErrorRef{}, err)
 }
@@ -521,11 +534,11 @@ func Test_api_Activate_success(t *testing.T) {
 		},
 		ActivationCode: &activationCode,
 	}
-	store.On("getUserByActivationCode", activationCode).Return(user, nil)
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", userId).Return(3, nil)
 	store.On("updateUser", user).Return(nil)
 
-	id, err := api.Activate("test")
+	id, err := api.Activate("email@email.com", "test")
 	assert.Equal(t, userId, id)
 	assert.Nil(t, err)
 	assert.Nil(t, user.ActivationCode)
@@ -1074,24 +1087,8 @@ func (m *mockStore) getUserById(id UUID) (*fullUserInfo, error) {
 	return args.Get(0).(*fullUserInfo), args.Error(1)
 }
 
-func (m *mockStore) getUserByActivationCode(activationCode string) (*fullUserInfo, error) {
-	args := m.Called(activationCode)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*fullUserInfo), args.Error(1)
-}
-
 func (m *mockStore) getUserByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error) {
 	args := m.Called(confirmationCode)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*fullUserInfo), args.Error(1)
-}
-
-func (m *mockStore) getUserByResetPwdCode(resetPwdCode string) (*fullUserInfo, error) {
-	args := m.Called(resetPwdCode)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}

@@ -25,7 +25,7 @@ var (
 	noSuchRegionErr                   = errors.New("no such region")
 	userRegionGoneErr                 = errors.New("user registered region no longer exists at activation time")
 	noSuchUserErr                     = errors.New("no such user")
-	noSuchActivationCodeErr           = errors.New("no such activation code")
+	invalidActivationAttemptErr	  = errors.New("invalid activation attempt")
 	invalidResetPwdAttemptErr         = errors.New("invalid reset password attempt")
 	noSuchNewEmailConfirmationCodeErr = errors.New("no such new email confirmation code")
 	nameOrPwdIncorrectErr             = errors.New("Name or password incorrect")
@@ -236,16 +236,16 @@ func (a *api) ResendActivationEmail(email string) error {
 	return nil
 }
 
-func (a *api) Activate(activationCode string) (UUID, error) {
+func (a *api) Activate(email, activationCode string) (UUID, error) {
 	a.log.Location()
 
 	activationCode = strings.Trim(activationCode, " ")
-	user, err := a.store.getUserByActivationCode(activationCode)
+	user, err := a.store.getUserByEmail(email)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil {
-		return nil, a.log.InfoErr(noSuchActivationCodeErr)
+	if user == nil || user.ActivationCode == nil || activationCode != *user.ActivationCode {
+		return nil, a.log.InfoErr(invalidActivationAttemptErr)
 	}
 
 	internalRegionApi, exists := a.internalRegionApis[user.Region]
@@ -404,7 +404,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (UUID, e
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil || resetPwdCode != *user.ResetPwdCode {
+	if user == nil || user.ResetPwdCode == nil || resetPwdCode != *user.ResetPwdCode {
 		return nil, a.log.InfoErr(invalidResetPwdAttemptErr)
 	}
 
@@ -751,7 +751,6 @@ type store interface {
 	getUserByName(name string) (*fullUserInfo, error)
 	getUserByEmail(email string) (*fullUserInfo, error)
 	getUserById(id UUID) (*fullUserInfo, error)
-	getUserByActivationCode(activationCode string) (*fullUserInfo, error)
 	getUserByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error)
 	getPwdInfo(id UUID) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error

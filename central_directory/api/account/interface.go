@@ -9,7 +9,7 @@ type Api interface {
 	//accessible outside of active session
 	Register(name, email, pwd, region string) error
 	ResendActivationEmail(email string) error
-	Activate(activationCode string) (UUID, error)
+	Activate(email, activationCode string) (UUID, error)
 	Authenticate(username, pwd string) (UUID, error)
 	ConfirmNewEmail(email, confirmationCode string) (UUID, error)
 	ResetPwd(email string) error
