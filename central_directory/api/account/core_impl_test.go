@@ -1181,6 +1181,91 @@ func Test_api_SearchOrgs_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_ChangeMyName_invalidStringParamErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+
+	err := api.ChangeMyName(id, "yo")
+	assert.IsType(t, &invalidStringParamErr{}, err)
+}
+
+func Test_api_ChangeMyName_storeGetUserByNameErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+	store.On("getUserByName", "test").Return(nil, expectedErr)
+
+	err := api.ChangeMyName(id, "test")
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_ChangeMyName_storeGetUserByNameNoneNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+	store.On("getUserByName", "test").Return(&fullUserInfo{}, nil)
+
+	err := api.ChangeMyName(id, "test")
+	assert.Equal(t, accountNameAlreadyInUseErr, err)
+}
+
+func Test_api_ChangeMyName_storeGetUserByIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserById", id).Return(nil, expectedErr)
+
+	err := api.ChangeMyName(id, "test")
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_ChangeMyName_storeGetUserByIdNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserById", id).Return(nil, nil)
+
+	err := api.ChangeMyName(id, "test")
+	assert.Equal(t, noSuchUserErr, err)
+}
+
+func Test_api_ChangeMyName_storeUpdateUserErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+	user := &fullUserInfo{}
+	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserById", id).Return(user, nil)
+	store.On("updateUser", user).Return(expectedErr)
+
+	err := api.ChangeMyName(id, "test")
+	assert.IsType(t, &misc.ErrorRef{}, err)
+	assert.Equal(t, "test", user.Name)
+}
+
+func Test_api_ChangeMyName_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, _ := misc.NewId()
+	user := &fullUserInfo{}
+	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserById", id).Return(user, nil)
+	store.On("updateUser", user).Return(nil)
+
+	err := api.ChangeMyName(id, "test")
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
 	expectedErr        = errors.New("test")

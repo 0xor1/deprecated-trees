@@ -509,23 +509,23 @@ func (a *api) ChangeMyName(myId UUID, newUsername string) error {
 
 	if user, err := a.store.getUserByName(newUsername); user != nil || err != nil {
 		if err != nil {
-			return a.log.ErrorErr(err)
+			return a.log.ErrorUserErr(myId, err)
 		} else {
-			return a.log.InfoErr(accountNameAlreadyInUseErr)
+			return a.log.InfoUserErr(myId, accountNameAlreadyInUseErr)
 		}
 	}
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return a.log.InfoErr(noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
 	user.Name = newUsername
 	if err = a.store.updateUser(user); err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
