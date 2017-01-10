@@ -1059,6 +1059,35 @@ func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 	assert.Nil(t, user.ActivationCode)
 }
 
+func Test_api_GetUsers_storeGetUsersErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id1, _ := misc.NewId()
+	id2, _ := misc.NewId()
+	ids := []UUID{id1, id2}
+	store.On("getUsers", ids).Return(nil, expectedErr)
+
+	users, err := api.GetUsers(ids)
+	assert.Nil(t, users)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_GetUsers_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id1, _ := misc.NewId()
+	id2, _ := misc.NewId()
+	ids := []UUID{id1, id2}
+	res := []*user{}
+	store.On("getUsers", ids).Return(res, nil)
+
+	users, err := api.GetUsers(ids)
+	assert.Equal(t, res, users)
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
 	expectedErr        = errors.New("test")

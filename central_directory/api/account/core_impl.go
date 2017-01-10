@@ -445,7 +445,7 @@ func (a *api) GetUsers(ids []UUID) ([]*user, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	return users, err
+	return users, nil
 }
 
 func (a *api) SearchUsers(search string, limit int) ([]*user, error) {
