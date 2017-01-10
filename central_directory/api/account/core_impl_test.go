@@ -1088,6 +1088,67 @@ func Test_api_GetUsers_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_SearchUsers_invalidStringParam(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	users, err := api.SearchUsers("yo", 5)
+	assert.Nil(t, users)
+	assert.IsType(t, &invalidStringParamErr{}, err)
+}
+
+func Test_api_SearchUsers_storeSearchUsersErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("searchUsers", "test", 5).Return(nil, expectedErr)
+
+	users, err := api.SearchUsers("test", 5)
+	assert.Nil(t, users)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_SearchUsers_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	res := []*user{}
+	store.On("searchUsers", "test", 100).Return(res, nil)
+
+	users, err := api.SearchUsers("test", -1)
+	assert.Equal(t, res, users)
+	assert.Nil(t, err)
+}
+
+func Test_api_GetOrgs_storeGetOrgsErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id1, _ := misc.NewId()
+	id2, _ := misc.NewId()
+	ids := []UUID{id1, id2}
+	store.On("getOrgs", ids).Return(nil, expectedErr)
+
+	orgs, err := api.GetOrgs(ids)
+	assert.Nil(t, orgs)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_GetOrgs_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id1, _ := misc.NewId()
+	id2, _ := misc.NewId()
+	ids := []UUID{id1, id2}
+	res := []*org{}
+	store.On("getOrgs", ids).Return(res, nil)
+
+	orgs, err := api.GetOrgs(ids)
+	assert.Equal(t, res, orgs)
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
 	expectedErr        = errors.New("test")
