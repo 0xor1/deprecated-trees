@@ -21,9 +21,9 @@ type Api interface {
 	//requires active session to access
 	//user centric
 	ChangeMyName(myId UUID, newUsername string) error
+	ChangeMyPwd(myId UUID, oldPwd, newPwd string) error
 	ChangeMyEmail(myId UUID, newEmail string) error
 	ResendMyNewEmailConfirmationEmail(myId UUID) error
-	ChangeMyPwd(myId UUID, oldPwd, newPwd string) error
 	MigrateMe(myId UUID, newRegion string) error
 	GetMe(myId UUID) (*me, error)
 	DeleteMe(myId UUID) error

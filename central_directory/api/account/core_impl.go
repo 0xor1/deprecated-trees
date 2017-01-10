@@ -530,6 +530,53 @@ func (a *api) ChangeMyName(myId UUID, newUsername string) error {
 	return nil
 }
 
+func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
+	a.log.Location()
+
+	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
+		return a.log.InfoErr(err)
+	}
+
+	pwdInfo, err := a.store.getPwdInfo(myId)
+	if err != nil {
+		return a.log.ErrorErr(err)
+	}
+	if pwdInfo == nil {
+		return a.log.InfoErr(noSuchUserErr)
+	}
+
+	scryptPwdTry, err := a.genScryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	if err != nil {
+		return a.log.ErrorErr(err)
+	}
+
+	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
+		return a.log.InfoErr(incorrectPwdErr)
+	}
+
+	scryptSalt, err := a.genCryptoBytes(a.saltLen)
+	if err != nil {
+		return a.log.ErrorErr(err)
+	}
+
+	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	if err != nil {
+		return a.log.ErrorErr(err)
+	}
+
+	pwdInfo.Pwd = scryptPwd
+	pwdInfo.Salt = scryptSalt
+	pwdInfo.N = a.scryptN
+	pwdInfo.R = a.scryptR
+	pwdInfo.P = a.scryptP
+	pwdInfo.KeyLen = a.scryptKeyLen
+	if err = a.store.updatePwdInfo(myId, pwdInfo); err != nil {
+		return a.log.ErrorErr(err)
+	}
+
+	return nil
+}
+
 func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
 	a.log.Location()
 
@@ -595,53 +642,6 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId UUID) error {
 
 	err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, *user.NewEmail, *user.NewEmailConfirmationCode)
 	if err != nil {
-		return a.log.ErrorErr(err)
-	}
-
-	return nil
-}
-
-func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
-	a.log.Location()
-
-	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
-		return a.log.InfoErr(err)
-	}
-
-	pwdInfo, err := a.store.getPwdInfo(myId)
-	if err != nil {
-		return a.log.ErrorErr(err)
-	}
-	if pwdInfo == nil {
-		return a.log.InfoErr(noSuchUserErr)
-	}
-
-	scryptPwdTry, err := a.genScryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
-	if err != nil {
-		return a.log.ErrorErr(err)
-	}
-
-	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
-		return a.log.InfoErr(incorrectPwdErr)
-	}
-
-	scryptSalt, err := a.genCryptoBytes(a.saltLen)
-	if err != nil {
-		return a.log.ErrorErr(err)
-	}
-
-	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
-	if err != nil {
-		return a.log.ErrorErr(err)
-	}
-
-	pwdInfo.Pwd = scryptPwd
-	pwdInfo.Salt = scryptSalt
-	pwdInfo.N = a.scryptN
-	pwdInfo.R = a.scryptR
-	pwdInfo.P = a.scryptP
-	pwdInfo.KeyLen = a.scryptKeyLen
-	if err = a.store.updatePwdInfo(myId, pwdInfo); err != nil {
 		return a.log.ErrorErr(err)
 	}
 
