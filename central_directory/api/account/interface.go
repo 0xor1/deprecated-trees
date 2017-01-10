@@ -13,7 +13,7 @@ type Api interface {
 	Authenticate(username, pwd string) (UUID, error)
 	ConfirmNewEmail(email, confirmationCode string) (UUID, error)
 	ResetPwd(email string) error
-	SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error)
+	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (UUID, error)
 	GetUsers(ids []UUID) ([]*user, error)
 	SearchUsers(search string, limit int) ([]*user, error)
 	GetOrgs(ids []UUID) ([]*org, error)

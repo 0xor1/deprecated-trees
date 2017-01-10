@@ -26,6 +26,7 @@ var (
 	userRegionGoneErr                 = errors.New("user registered region no longer exists at activation time")
 	noSuchUserErr                     = errors.New("no such user")
 	noSuchActivationCodeErr           = errors.New("no such activation code")
+	invalidResetPwdAttemptErr         = errors.New("invalid reset password attempt")
 	noSuchNewEmailConfirmationCodeErr = errors.New("no such new email confirmation code")
 	nameOrPwdIncorrectErr             = errors.New("Name or password incorrect")
 	incorrectPwdErr                   = errors.New("password incorrect")
@@ -392,24 +393,24 @@ func (a *api) ResetPwd(email string) error {
 	return nil
 }
 
-func (a *api) SetNewPwdFromPwdReset(newPwd, resetPwdCode string) (UUID, error) {
+func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (UUID, error) {
 	a.log.Location()
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
 		return nil, a.log.InfoErr(err)
 	}
 
-	user, err := a.store.getUserByResetPwdCode(resetPwdCode)
+	user, err := a.store.getUserByEmail(email)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil {
-		return nil, a.log.InfoErr(noSuchUserErr)
+	if user == nil || resetPwdCode != *user.ResetPwdCode {
+		return nil, a.log.InfoErr(invalidResetPwdAttemptErr)
 	}
 
 	scryptSalt, err := a.genCryptoBytes(a.saltLen)
 	if err != nil {
-		return nil, a.log.InfoErr(err)
+		return nil, a.log.ErrorErr(err)
 	}
 
 	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
@@ -752,7 +753,6 @@ type store interface {
 	getUserById(id UUID) (*fullUserInfo, error)
 	getUserByActivationCode(activationCode string) (*fullUserInfo, error)
 	getUserByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error)
-	getUserByResetPwdCode(resetPwdCode string) (*fullUserInfo, error)
 	getPwdInfo(id UUID) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
 	updatePwdInfo(id UUID, pwdInfo *pwdInfo) error

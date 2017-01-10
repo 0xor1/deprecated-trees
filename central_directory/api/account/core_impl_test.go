@@ -890,6 +890,142 @@ func Test_api_ResetPwd_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_SetNewPwdFromPwdReset_invalidNewPwd(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	id, err := api.SetNewPwdFromPwdReset("yo", "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &invalidStringParamErr{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
+
+	id, err := api.SetNewPwdFromPwdReset("P@ss-W0rd", "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
+
+	id, err := api.SetNewPwdFromPwdReset("P@ss-W0rd", "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.Equal(t, invalidResetPwdAttemptErr, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmail_resetPwdCodeMismatch(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "not-the-correct-code"
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ResetPwdCode: &resetCode}, nil)
+
+	id, err := api.SetNewPwdFromPwdReset("P@ss-W0rd", "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.Equal(t, invalidResetPwdAttemptErr, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_genCryptoBytesErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	user := &fullUserInfo{ResetPwdCode: &resetCode}
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	miscFuncs.On("GenCryptoBytes", 128).Return(nil, expectedErr)
+
+	id, err := api.SetNewPwdFromPwdReset("P@ss-W0rd", "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_genScryptKeyErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	user := &fullUserInfo{ResetPwdCode: &resetCode}
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	salt := []byte("salt")
+	newPwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(nil, expectedErr)
+
+	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode}
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	salt := []byte("salt")
+	newPwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	store.On("updateUser", user).Return(expectedErr)
+
+	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+	assert.Nil(t, user.ResetPwdCode)
+	assert.Nil(t, user.ActivationCode)
+}
+
+func Test_api_SetNewPwdFromPwdReset_storeUpdatePwdInfoErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode}
+	user.Id, _ = misc.NewId()
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	salt := []byte("salt")
+	newPwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	store.On("updateUser", user).Return(nil)
+	store.On("updatePwdInfo", user.Id, &pwdInfo{Pwd: newPwd, Salt: salt, N: 16384, R: 8, P: 1, KeyLen: 32}).Return(expectedErr)
+
+	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode}
+	user.Id, _ = misc.NewId()
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	salt := []byte("salt")
+	newPwd := []byte("P@ss-W0rd")
+	miscFuncs.On("GenCryptoBytes", 128).Return(salt, nil)
+	miscFuncs.On("GenScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	store.On("updateUser", user).Return(nil)
+	store.On("updatePwdInfo", user.Id, &pwdInfo{Pwd: newPwd, Salt: salt, N: 16384, R: 8, P: 1, KeyLen: 32}).Return(nil)
+
+	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
+	assert.NotNil(t, id)
+	assert.Nil(t, err)
+	assert.Nil(t, user.ResetPwdCode)
+	assert.Nil(t, user.ActivationCode)
+}
+
 //helpers
 var (
 	expectedErr        = errors.New("test")
