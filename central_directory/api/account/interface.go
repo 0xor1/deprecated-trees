@@ -11,7 +11,7 @@ type Api interface {
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) (UUID, error)
 	Authenticate(username, pwd string) (UUID, error)
-	ConfirmNewEmail(email, confirmationCode string) (UUID, error)
+	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (UUID, error)
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (UUID, error)
 	GetUsers(ids []UUID) ([]*user, error)

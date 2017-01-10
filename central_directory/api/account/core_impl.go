@@ -14,28 +14,28 @@ import (
 )
 
 var (
-	nilStoreErr                       = errors.New("nil store")
-	nilInternalRegionApisErr          = errors.New("nil internalRegionApis")
-	nilLinkMailerErr                  = errors.New("nil linkMailer")
-	nilGenNewIdErr                    = errors.New("nil genNewId")
-	nilGenCryptoBytesErr              = errors.New("nil genCryptoBytes")
-	nilGenCryptoUrlSafeStringErr      = errors.New("nil nilGenCryptoUrlSafeString")
-	nilGenScryptKeyErr                = errors.New("nil nilGenScryptKey")
-	nilLogErr                         = errors.New("nil log")
-	noSuchRegionErr                   = errors.New("no such region")
-	userRegionGoneErr                 = errors.New("user registered region no longer exists at activation time")
-	noSuchUserErr                     = errors.New("no such user")
-	invalidActivationAttemptErr	  = errors.New("invalid activation attempt")
-	invalidResetPwdAttemptErr         = errors.New("invalid reset password attempt")
-	noSuchNewEmailConfirmationCodeErr = errors.New("no such new email confirmation code")
-	nameOrPwdIncorrectErr             = errors.New("Name or password incorrect")
-	incorrectPwdErr                   = errors.New("password incorrect")
-	userNotActivated                  = errors.New("user not activated")
-	emailAlreadyInUseErr              = errors.New("email already in use")
-	accountNameAlreadyInUseErr        = errors.New("account already in use")
-	emailConfirmationCodeErr          = errors.New("email confirmation code is of zero length")
-	newEmailErr                       = errors.New("newEmail is of zero length")
-	newEmailConfirmationErr           = errors.New("new email and confirmation code do not match those recorded")
+	nilStoreErr                           = errors.New("nil store")
+	nilInternalRegionApisErr              = errors.New("nil internalRegionApis")
+	nilLinkMailerErr                      = errors.New("nil linkMailer")
+	nilGenNewIdErr                        = errors.New("nil genNewId")
+	nilGenCryptoBytesErr                  = errors.New("nil genCryptoBytes")
+	nilGenCryptoUrlSafeStringErr          = errors.New("nil nilGenCryptoUrlSafeString")
+	nilGenScryptKeyErr                    = errors.New("nil nilGenScryptKey")
+	nilLogErr                             = errors.New("nil log")
+	noSuchRegionErr                       = errors.New("no such region")
+	userRegionGoneErr                     = errors.New("user registered region no longer exists at activation time")
+	noSuchUserErr                         = errors.New("no such user")
+	invalidActivationAttemptErr           = errors.New("invalid activation attempt")
+	invalidResetPwdAttemptErr             = errors.New("invalid reset password attempt")
+	invalidNewEmailConfirmationAttemptErr = errors.New("invalid new email confirmation attempt")
+	nameOrPwdIncorrectErr                 = errors.New("Name or password incorrect")
+	incorrectPwdErr                       = errors.New("password incorrect")
+	userNotActivated                      = errors.New("user not activated")
+	emailAlreadyInUseErr                  = errors.New("email already in use")
+	accountNameAlreadyInUseErr            = errors.New("account already in use")
+	emailConfirmationCodeErr              = errors.New("email confirmation code is of zero length")
+	newEmailErr                           = errors.New("newEmail is of zero length")
+	newEmailConfirmationErr               = errors.New("new email and confirmation code do not match those recorded")
 )
 
 type invalidStringParamErr struct {
@@ -330,19 +330,15 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 	return user.Id, nil
 }
 
-func (a *api) ConfirmNewEmail(newEmail string, confirmationCode string) (UUID, error) {
+func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (UUID, error) {
 	a.log.Location()
 
-	user, err := a.store.getUserByNewEmailConfirmationCode(confirmationCode)
+	user, err := a.store.getUserByEmail(currentEmail)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil {
-		return nil, a.log.InfoErr(noSuchNewEmailConfirmationCodeErr)
-	}
-
-	if *user.NewEmail != newEmail || *user.NewEmailConfirmationCode != confirmationCode {
-		return nil, a.log.InfoErr(newEmailConfirmationErr)
+	if user == nil || user.NewEmail == nil || newEmail != *user.NewEmail || user.NewEmailConfirmationCode == nil || confirmationCode != *user.NewEmailConfirmationCode {
+		return nil, a.log.InfoErr(invalidNewEmailConfirmationAttemptErr)
 	}
 
 	if user, err := a.store.getUserByEmail(newEmail); user != nil || err != nil {
@@ -571,7 +567,7 @@ func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
 		return a.log.ErrorErr(err)
 	}
 
-	if err = a.linkMailer.sendNewEmailConfirmationLink(newEmail, confirmationCode); err != nil {
+	if err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, newEmail, confirmationCode); err != nil {
 		return a.log.ErrorErr(err)
 	}
 
@@ -598,7 +594,7 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId UUID) error {
 		return a.log.ErrorErr(emailConfirmationCodeErr)
 	}
 
-	err = a.linkMailer.sendNewEmailConfirmationLink(*user.NewEmail, *user.NewEmailConfirmationCode)
+	err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, *user.NewEmail, *user.NewEmailConfirmationCode)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -751,7 +747,6 @@ type store interface {
 	getUserByName(name string) (*fullUserInfo, error)
 	getUserByEmail(email string) (*fullUserInfo, error)
 	getUserById(id UUID) (*fullUserInfo, error)
-	getUserByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error)
 	getPwdInfo(id UUID) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
 	updatePwdInfo(id UUID, pwdInfo *pwdInfo) error
@@ -779,7 +774,7 @@ type linkMailer interface {
 	sendMultipleAccountPolicyEmail(address string) error
 	sendActivationLink(address, activationCode string) error
 	sendPwdResetLink(address, resetCode string) error
-	sendNewEmailConfirmationLink(address, confirmationCode string) error
+	sendNewEmailConfirmationLink(currentEmail, newEmail, confirmationCode string) error
 }
 
 type account struct {
@@ -846,8 +841,8 @@ func (l *logLinkMailer) sendPwdResetLink(address, resetCode string) error {
 	return nil
 }
 
-func (l *logLinkMailer) sendNewEmailConfirmationLink(address, confirmationCode string) error {
-	l.log.Info(zap.String("address", address), zap.String("confirmationCode", confirmationCode))
+func (l *logLinkMailer) sendNewEmailConfirmationLink(currentAddress, newAddress, confirmationCode string) error {
+	l.log.Info(zap.String("currentAddress", currentAddress), zap.String("newAddress", newAddress), zap.String("confirmationCode", confirmationCode))
 	return nil
 }
 

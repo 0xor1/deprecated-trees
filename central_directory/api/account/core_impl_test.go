@@ -444,7 +444,7 @@ func Test_api_Activate_storeGetUserByActivationCode_activationCodeMismatch(t *te
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationCode := "not-the-activation-code"
-	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode:&activationCode}, nil)
+	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode: &activationCode}, nil)
 
 	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
@@ -723,68 +723,86 @@ func Test_api_Authenticate_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_api_ConfirmNewEmail_storeGetUserByNewEmailConfirmationCodeErr(t *testing.T) {
-	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
-	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	store.On("getUserByNewEmailConfirmationCode", "confirmationCode").Return(nil, expectedErr)
-
-	resultId, err := api.ConfirmNewEmail("email@email.com", "confirmationCode")
-	assert.Nil(t, resultId)
-	assert.IsType(t, &misc.ErrorRef{}, err)
-}
-
-func Test_api_ConfirmNewEmail_storeGetUserByNewEmailConfirmationCodeNilUser(t *testing.T) {
-	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
-	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	store.On("getUserByNewEmailConfirmationCode", "confirmationCode").Return(nil, nil)
-
-	resultId, err := api.ConfirmNewEmail("email@email.com", "confirmationCode")
-	assert.Nil(t, resultId)
-	assert.Equal(t, noSuchNewEmailConfirmationCodeErr, err)
-}
-
-func Test_api_ConfirmNewEmail_mismatchInputs(t *testing.T) {
-	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
-	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	confirmationCode := "confirmationCode"
-	newEmail := "new@email.com"
-	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail}}
-	store.On("getUserByNewEmailConfirmationCode", "not-confirmationCode").Return(user, nil)
-
-	resultId, err := api.ConfirmNewEmail("not-new@email.com", "not-confirmationCode")
-	assert.Nil(t, resultId)
-	assert.Equal(t, newEmailConfirmationErr, err)
-}
-
 func Test_api_ConfirmNewEmail_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	confirmationCode := "confirmationCode"
-	newEmail := "new@email.com"
-	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail}}
-	store.On("getUserByNewEmailConfirmationCode", confirmationCode).Return(user, nil)
-	store.On("getUserByEmail", newEmail).Return(nil, expectedErr)
+	store.On("getUserByEmail", "currentEmail@currentEmail.com").Return(nil, expectedErr)
 
-	resultId, err := api.ConfirmNewEmail(newEmail, confirmationCode)
+	resultId, err := api.ConfirmNewEmail("currentEmail@currentEmail.com", "email@email.com", "confirmationCode")
 	assert.Nil(t, resultId)
 	assert.IsType(t, &misc.ErrorRef{}, err)
 }
 
-func Test_api_ConfirmNewEmail_storeGetUserByEmailNoneNilUser(t *testing.T) {
+func Test_api_ConfirmNewEmail_storeGetUserByEmaiNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getUserByEmail", "currentEmail@currentEmail.com").Return(nil, nil)
+
+	resultId, err := api.ConfirmNewEmail("currentEmail@currentEmail.com", "email@email.com", "confirmationCode")
+	assert.Nil(t, resultId)
+	assert.Equal(t, invalidNewEmailConfirmationAttemptErr, err)
+}
+
+func Test_api_ConfirmNewEmail_mismatchNewEmail(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
-	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail}}
-	store.On("getUserByNewEmailConfirmationCode", confirmationCode).Return(user, nil)
+	currentEmail := "currentEmail@currentEmail.com"
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
+	store.On("getUserByEmail", currentEmail).Return(user, nil)
+
+	resultId, err := api.ConfirmNewEmail(currentEmail, "not-new@email.com", confirmationCode)
+	assert.Nil(t, resultId)
+	assert.Equal(t, invalidNewEmailConfirmationAttemptErr, err)
+}
+
+func Test_api_ConfirmNewEmail_mismatchConfirmationCode(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	confirmationCode := "confirmationCode"
+	newEmail := "new@email.com"
+	currentEmail := "currentEmail@currentEmail.com"
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
+	store.On("getUserByEmail", currentEmail).Return(user, nil)
+
+	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, "not-confirmation-code")
+	assert.Nil(t, resultId)
+	assert.Equal(t, invalidNewEmailConfirmationAttemptErr, err)
+}
+
+func Test_api_ConfirmNewEmail_storeGetUserByEmail2Err(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	confirmationCode := "confirmationCode"
+	newEmail := "new@email.com"
+	currentEmail := "currentEmail@currentEmail.com"
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
+	store.On("getUserByEmail", currentEmail).Return(user, nil)
+	store.On("getUserByEmail", newEmail).Return(nil, expectedErr)
+
+	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, confirmationCode)
+	assert.Nil(t, resultId)
+	assert.IsType(t, &misc.ErrorRef{}, err)
+}
+
+func Test_api_ConfirmNewEmail_storeGetUserByEmail2NoneNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, misc.NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.GenNewId, miscFuncs.GenCryptoBytes, miscFuncs.GenCryptoUrlSafeString, miscFuncs.GenScryptKey, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	confirmationCode := "confirmationCode"
+	newEmail := "new@email.com"
+	currentEmail := "currentEmail@currentEmail.com"
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
+	store.On("getUserByEmail", currentEmail).Return(user, nil)
 	store.On("getUserByEmail", newEmail).Return(&fullUserInfo{}, nil)
 
-	resultId, err := api.ConfirmNewEmail(newEmail, confirmationCode)
+	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, confirmationCode)
 	assert.Nil(t, resultId)
 	assert.Equal(t, emailAlreadyInUseErr, err)
 }
@@ -795,12 +813,13 @@ func Test_api_ConfirmNewEmail_storeUpdateUserErr(t *testing.T) {
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
-	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail}}
-	store.On("getUserByNewEmailConfirmationCode", confirmationCode).Return(user, nil)
+	currentEmail := "currentEmail@currentEmail.com"
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
+	store.On("getUserByEmail", currentEmail).Return(user, nil)
 	store.On("getUserByEmail", newEmail).Return(nil, nil)
 	store.On("updateUser", user).Return(expectedErr)
 
-	resultId, err := api.ConfirmNewEmail(newEmail, confirmationCode)
+	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, confirmationCode)
 	assert.Nil(t, resultId)
 	assert.IsType(t, &misc.ErrorRef{}, err)
 }
@@ -811,13 +830,14 @@ func Test_api_ConfirmNewEmail_success(t *testing.T) {
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
+	currentEmail := "currentEmail@currentEmail.com"
 	id, _ := misc.NewId()
-	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, user: user{Entity: misc.Entity{Id: id}}}}
-	store.On("getUserByNewEmailConfirmationCode", confirmationCode).Return(user, nil)
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail, user: user{Entity: misc.Entity{Id: id}}}}
+	store.On("getUserByEmail", currentEmail).Return(user, nil)
 	store.On("getUserByEmail", newEmail).Return(nil, nil)
 	store.On("updateUser", user).Return(nil)
 
-	resultId, err := api.ConfirmNewEmail(newEmail, confirmationCode)
+	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, confirmationCode)
 	assert.Equal(t, id, resultId)
 	assert.Nil(t, err)
 	assert.Equal(t, newEmail, user.Email)
@@ -1087,14 +1107,6 @@ func (m *mockStore) getUserById(id UUID) (*fullUserInfo, error) {
 	return args.Get(0).(*fullUserInfo), args.Error(1)
 }
 
-func (m *mockStore) getUserByNewEmailConfirmationCode(confirmationCode string) (*fullUserInfo, error) {
-	args := m.Called(confirmationCode)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*fullUserInfo), args.Error(1)
-}
-
 func (m *mockStore) getPwdInfo(id UUID) (*pwdInfo, error) {
 	args := m.Called(id)
 	if args.Get(0) == nil {
@@ -1208,8 +1220,8 @@ func (m *mockLinkMailer) sendPwdResetLink(address, resetCode string) error {
 	return args.Error(0)
 }
 
-func (m *mockLinkMailer) sendNewEmailConfirmationLink(address, confirmationCode string) error {
-	args := m.Called(address, confirmationCode)
+func (m *mockLinkMailer) sendNewEmailConfirmationLink(currentEmail, newEmail, confirmationCode string) error {
+	args := m.Called(currentEmail, newEmail, confirmationCode)
 	return args.Error(0)
 }
 
