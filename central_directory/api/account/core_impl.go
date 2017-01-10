@@ -35,7 +35,6 @@ var (
 	accountNameAlreadyInUseErr            = errors.New("account already in use")
 	emailConfirmationCodeErr              = errors.New("email confirmation code is of zero length")
 	newEmailErr                           = errors.New("newEmail is of zero length")
-	newEmailConfirmationErr               = errors.New("new email and confirmation code do not match those recorded")
 )
 
 type invalidStringParamErr struct {
