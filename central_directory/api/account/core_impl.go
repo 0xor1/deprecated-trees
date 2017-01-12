@@ -30,7 +30,7 @@ var (
 	emailAlreadyInUseErr                  = errors.New("email already in use")
 	accountNameAlreadyInUseErr            = errors.New("account already in use")
 	emailConfirmationCodeErr              = errors.New("email confirmation code is of zero length")
-	newEmailErr                           = errors.New("newEmail is of zero length")
+	noNewEmailRegisteredErr               = errors.New("no new email registered")
 )
 
 type invalidStringParamErr struct {
@@ -568,39 +568,39 @@ func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
 
 	newEmail = strings.Trim(newEmail, " ")
 	if err := validateEmail(newEmail); err != nil {
-		return a.log.InfoErr(err)
+		return a.log.InfoUserErr(myId, err)
 	}
 
 	if user, err := a.store.getUserByEmail(newEmail); user != nil || err != nil {
 		if err != nil {
-			return a.log.ErrorErr(err)
+			return a.log.ErrorUserErr(myId, err)
 		} else if err = a.linkMailer.sendMultipleAccountPolicyEmail(user.Email); err != nil {
-			return a.log.ErrorErr(err)
+			return a.log.ErrorUserErr(myId, err)
 		}
 		return nil
 	}
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return a.log.InfoErr(noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
 	confirmationCode, err := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	user.NewEmail = &newEmail
 	user.NewEmailConfirmationCode = &confirmationCode
 	if err = a.store.updateUser(user); err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	if err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, newEmail, confirmationCode); err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
@@ -611,24 +611,24 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return a.log.InfoErr(noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
 	// check the user has actually registered a new email
-	if len(*user.NewEmail) == 0 {
-		return a.log.ErrorErr(newEmailErr)
+	if user.NewEmail == nil {
+		return a.log.InfoUserErr(myId, noNewEmailRegisteredErr)
 	}
 	// just in case something has gone crazy wrong
-	if len(*user.NewEmailConfirmationCode) == 0 {
-		return a.log.ErrorErr(emailConfirmationCodeErr)
+	if user.NewEmailConfirmationCode == nil {
+		return a.log.ErrorUserErr(myId, emailConfirmationCodeErr)
 	}
 
 	err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, *user.NewEmail, *user.NewEmailConfirmationCode)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
