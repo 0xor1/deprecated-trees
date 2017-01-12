@@ -26,7 +26,7 @@ var (
 	invalidNewEmailConfirmationAttemptErr = errors.New("invalid new email confirmation attempt")
 	nameOrPwdIncorrectErr                 = errors.New("Name or password incorrect")
 	incorrectPwdErr                       = errors.New("password incorrect")
-	userNotActivated                      = errors.New("user not activated")
+	userNotActivatedErr                   = errors.New("user not activated")
 	emailAlreadyInUseErr                  = errors.New("email already in use")
 	accountNameAlreadyInUseErr            = errors.New("account already in use")
 	emailConfirmationCodeErr              = errors.New("email confirmation code is of zero length")
@@ -282,7 +282,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	}
 
 	if !user.isActivated() {
-		return nil, a.log.InfoErr(userNotActivated)
+		return nil, a.log.InfoErr(userNotActivatedErr)
 	}
 
 	//if there was an outstanding password reset on this user, remove it, they have since remembered their password
@@ -433,24 +433,27 @@ func (a *api) GetUsers(ids []Id) ([]*user, error) {
 	return users, nil
 }
 
-func (a *api) SearchUsers(search string, limit int) ([]*user, error) {
+func (a *api) SearchUsers(search string, offset, limit int) ([]*user, int, error) {
 	a.log.Location()
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
 		limit = a.maxSearchLimitResults
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		return nil, a.log.InfoErr(err)
+		return nil, 0, a.log.InfoErr(err)
 	}
 
-	users, err := a.store.searchUsers(search, limit)
+	users, total, err := a.store.searchUsers(search, offset, limit)
 	if err != nil {
-		return nil, a.log.ErrorErr(err)
+		return nil, 0, a.log.ErrorErr(err)
 	}
 
-	return users, nil
+	return users, total, nil
 }
 
 func (a *api) GetOrgs(ids []Id) ([]*org, error) {
@@ -464,24 +467,27 @@ func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 	return orgs, nil
 }
 
-func (a *api) SearchOrgs(search string, limit int) ([]*org, error) {
+func (a *api) SearchOrgs(search string, offset, limit int) ([]*org, int, error) {
 	a.log.Location()
 
 	if limit < 1 || limit > a.maxSearchLimitResults {
 		limit = a.maxSearchLimitResults
 	}
+	if offset < 0 {
+		offset = 0
+	}
 
 	search = strings.Trim(search, " ")
 	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		return nil, a.log.InfoErr(err)
+		return nil, 0, a.log.InfoErr(err)
 	}
 
-	orgs, err := a.store.searchOrgs(search, limit)
+	orgs, total, err := a.store.searchOrgs(search, offset, limit)
 	if err != nil {
-		return nil, a.log.ErrorErr(err)
+		return nil, 0, a.log.ErrorErr(err)
 	}
 
-	return orgs, nil
+	return orgs, total, nil
 }
 
 func (a *api) ChangeMyName(myId Id, newUsername string) error {
@@ -654,11 +660,11 @@ func (a *api) GetMe(myId Id) (*me, error) {
 	return &user.me, nil
 }
 
-func (a *api) DeleteMe(id Id) error {
+func (a *api) DeleteMe(myId Id) error {
 	a.log.Location()
 
-	if err := a.store.deleteUser(id); err != nil {
-		return a.log.ErrorErr(err)
+	if err := a.store.deleteUser(myId); err != nil {
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
@@ -682,10 +688,10 @@ func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
 	return NotImplementedErr
 }
 
-func (a *api) GetMyOrgs(myId Id, limit int) ([]*org, error) {
+func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
 	a.log.Location()
 
-	return nil, NotImplementedErr
+	return nil, 0, NotImplementedErr
 }
 
 func (a *api) DeleteOrg(myId, orgId Id) error {
@@ -721,7 +727,7 @@ type store interface {
 	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
 	deleteUser(id Id) error
 	getUsers(ids []Id) ([]*user, error)
-	searchUsers(search string, limit int) ([]*user, error)
+	searchUsers(search string, offset, limit int) ([]*user, int, error)
 	//org
 	createOrg(org *org) error
 	getOrgById(id Id) (*org, error)
@@ -729,8 +735,8 @@ type store interface {
 	updateOrg(org *org) error
 	deleteOrg(id Id) error
 	getOrgs(ids []Id) ([]*org, error)
-	searchOrgs(search string, limit int) ([]*org, error)
-	getUsersOrgs(userId Id, limit int) ([]*org, error)
+	searchOrgs(search string, offset, limit int) ([]*org, int, error)
+	getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error)
 }
 
 type internalRegionApi interface {
@@ -751,7 +757,7 @@ type account struct {
 	Created   time.Time `json:"created"`
 	Name      string    `json:"name"`
 	Region    string    `json:"region"`
-	NewRegion string    `json:"newRegion"`
+	NewRegion *string   `json:"newRegion"`
 	Shard     int       `json:"shard"`
 	IsUser    bool      `json:"isUser"`
 }
@@ -767,7 +773,7 @@ type me struct {
 }
 
 func (a *account) isMigrating() bool {
-	return len(a.NewRegion) != 0
+	return a.NewRegion != nil
 }
 
 type fullUserInfo struct {

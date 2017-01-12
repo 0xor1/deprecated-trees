@@ -14,9 +14,9 @@ type Api interface {
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, error)
 	GetUsers(ids []Id) ([]*user, error)
-	SearchUsers(search string, limit int) ([]*user, error)
+	SearchUsers(search string, offset, limit int) ([]*user, int, error)
 	GetOrgs(ids []Id) ([]*org, error)
-	SearchOrgs(search string, limit int) ([]*org, error)
+	SearchOrgs(search string, offset, limit int) ([]*org, int, error)
 	//requires active session to access
 	//user centric
 	ChangeMyName(myId Id, newUsername string) error
@@ -30,7 +30,7 @@ type Api interface {
 	CreateOrg(myId Id, name, region string) (*org, error)
 	RenameOrg(myId, orgId Id, newName string) error
 	MigrateOrg(myId, orgId Id, newRegion string) error
-	GetMyOrgs(myId Id, limit int) ([]*org, error)
+	GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error)
 	DeleteOrg(myId, orgId Id) error
 	//member centric - must be an owner or admin
 	AddMembers(myId, orgId Id, newMembers []Id) error
