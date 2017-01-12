@@ -1,9 +1,7 @@
 package misc
 
 import (
-	"encoding/hex"
 	"errors"
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/uber-go/zap"
@@ -59,7 +57,7 @@ func Test_log_DebugUserErr(t *testing.T) {
 	pc, file, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.String("user", hex.EncodeToString(id)), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.String("user", id.String()), zap.Error(expectedErr)).Return()
 
 	err := l.DebugUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -98,7 +96,7 @@ func Test_log_InfoUserErr(t *testing.T) {
 	pc, file, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.String("user", hex.EncodeToString(id)), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.String("user", id.String()), zap.Error(expectedErr)).Return()
 
 	err := l.InfoUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -125,12 +123,12 @@ func Test_log_WarnErr(t *testing.T) {
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", hex.EncodeToString(id)), zap.Error(inErr)).Return()
+	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.WarnErr(inErr)
 	logger.AssertExpectations(t)
 	assert.Equal(t, &ErrorRef{Id: id}, err)
-	assert.Equal(t, "errorRef: "+hex.EncodeToString(id), err.Error())
+	assert.Equal(t, "errorRef: "+id.String(), err.Error())
 }
 
 func Test_log_WarnUserErr(t *testing.T) {
@@ -142,12 +140,12 @@ func Test_log_WarnUserErr(t *testing.T) {
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", hex.EncodeToString(id)), zap.String("errorRef", hex.EncodeToString(errId)), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.WarnUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
 	assert.Equal(t, &ErrorRef{Id: errId}, err)
-	assert.Equal(t, "errorRef: "+hex.EncodeToString(errId), err.Error())
+	assert.Equal(t, "errorRef: "+errId.String(), err.Error())
 }
 
 func Test_log_Error(t *testing.T) {
@@ -170,7 +168,7 @@ func Test_log_ErrorErr(t *testing.T) {
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", hex.EncodeToString(id)), zap.Error(inErr)).Return()
+	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.ErrorErr(inErr)
 	logger.AssertExpectations(t)
@@ -186,12 +184,12 @@ func Test_log_ErrorUserErr(t *testing.T) {
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", hex.EncodeToString(id)), zap.String("errorRef", hex.EncodeToString(errId)), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.ErrorUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
 	assert.Equal(t, &ErrorRef{Id: errId}, err)
-	assert.Equal(t, "errorRef: "+hex.EncodeToString(errId), err.Error())
+	assert.Equal(t, "errorRef: "+errId.String(), err.Error())
 }
 
 func Test_log_Panic(t *testing.T) {
@@ -214,7 +212,7 @@ func Test_log_PanicErr(t *testing.T) {
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", hex.EncodeToString(id)), zap.Error(inErr)).Return()
+	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.PanicErr(inErr)
 	logger.AssertExpectations(t)
@@ -230,12 +228,12 @@ func Test_log_PanicUserErr(t *testing.T) {
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", hex.EncodeToString(id)), zap.String("errorRef", hex.EncodeToString(errId)), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.PanicUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
 	assert.Equal(t, &ErrorRef{Id: errId}, err)
-	assert.Equal(t, "errorRef: "+hex.EncodeToString(errId), err.Error())
+	assert.Equal(t, "errorRef: "+errId.String(), err.Error())
 }
 
 func Test_log_Fatal(t *testing.T) {
@@ -258,7 +256,7 @@ func Test_log_FatalErr(t *testing.T) {
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", hex.EncodeToString(id)), zap.Error(inErr)).Return()
+	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.FatalErr(inErr)
 	logger.AssertExpectations(t)
@@ -274,12 +272,12 @@ func Test_log_FatalUserErr(t *testing.T) {
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", hex.EncodeToString(id)), zap.String("errorRef", hex.EncodeToString(errId)), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.FatalUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
 	assert.Equal(t, &ErrorRef{Id: errId}, err)
-	assert.Equal(t, "errorRef: "+hex.EncodeToString(errId), err.Error())
+	assert.Equal(t, "errorRef: "+errId.String(), err.Error())
 }
 
 //mocks
@@ -301,7 +299,7 @@ type mockMiscFuncs struct {
 	mock.Mock
 }
 
-func (m *mockMiscFuncs) GenNewId() (uuid.UUID, error) {
+func (m *mockMiscFuncs) GenNewId() (Id, error) {
 	args := m.Called()
-	return args.Get(0).(uuid.UUID), args.Error(1)
+	return args.Get(0).(Id), args.Error(1)
 }

@@ -3,23 +3,30 @@ package misc
 import (
 	"errors"
 	. "github.com/pborman/uuid"
+	"encoding/hex"
 )
 
 var (
 	idGenerationErr = errors.New("Failed to generate id")
 )
 
-type Entity struct {
-	Id UUID `json:"id"`
+type Id UUID
+
+func (id Id) String() string {
+	return hex.EncodeToString(id)
 }
 
-type GenNewId func() (UUID, error)
+type Entity struct {
+	Id Id `json:"id"`
+}
+
+type GenNewId func() (Id, error)
 
 //returns version 1 uuid as a byte slice
-func NewId() (UUID, error) {
+func NewId() (Id, error) {
 	id := NewUUID()
 	if id == nil {
 		return nil, idGenerationErr
 	}
-	return id, nil
+	return Id(id), nil
 }

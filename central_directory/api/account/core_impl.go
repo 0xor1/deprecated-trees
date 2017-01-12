@@ -1,11 +1,10 @@
 package account
 
 import (
-	"bitbucket.org/robsix/task_center/misc"
+	. "bitbucket.org/robsix/task_center/misc"
 	"bytes"
 	"errors"
 	"fmt"
-	. "github.com/pborman/uuid"
 	"github.com/uber-go/zap"
 	"regexp"
 	"strings"
@@ -48,7 +47,7 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers)
 }
 
-func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, genNewId misc.GenNewId, genCryptoBytes misc.GenCryptoBytes, genCryptoUrlSafeString misc.GenCryptoUrlSafeString, genScryptKey misc.GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log misc.Log) (Api, error) {
+func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, genNewId GenNewId, genCryptoBytes GenCryptoBytes, genCryptoUrlSafeString GenCryptoUrlSafeString, genScryptKey GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
@@ -102,10 +101,10 @@ type api struct {
 	store                  store
 	internalRegionApis     map[string]internalRegionApi
 	linkMailer             linkMailer
-	genNewId               misc.GenNewId
-	genCryptoBytes         misc.GenCryptoBytes
-	genCryptoUrlSafeString misc.GenCryptoUrlSafeString
-	genScryptKey           misc.GenScryptKey
+	genNewId               GenNewId
+	genCryptoBytes         GenCryptoBytes
+	genCryptoUrlSafeString GenCryptoUrlSafeString
+	genScryptKey           GenScryptKey
 	nameRegexMatchers      []string
 	pwdRegexMatchers       []string
 	nameMinRuneCount       int
@@ -119,7 +118,7 @@ type api struct {
 	scryptR                int
 	scryptP                int
 	scryptKeyLen           int
-	log                    misc.Log
+	log                    Log
 }
 
 func (a *api) Register(name, email, pwd, region string) error {
@@ -184,7 +183,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		&fullUserInfo{
 			me: me{
 				user: user{
-					Entity: misc.Entity{
+					Entity: Entity{
 						Id: userId,
 					},
 					Name:    name,
@@ -235,7 +234,7 @@ func (a *api) ResendActivationEmail(email string) error {
 	return nil
 }
 
-func (a *api) Activate(email, activationCode string) (UUID, error) {
+func (a *api) Activate(email, activationCode string) (Id, error) {
 	a.log.Location()
 
 	activationCode = strings.Trim(activationCode, " ")
@@ -269,7 +268,7 @@ func (a *api) Activate(email, activationCode string) (UUID, error) {
 	return user.Id, nil
 }
 
-func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
+func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	a.log.Location()
 
 	name = strings.Trim(name, " ")
@@ -329,7 +328,7 @@ func (a *api) Authenticate(name, pwdTry string) (UUID, error) {
 	return user.Id, nil
 }
 
-func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (UUID, error) {
+func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (Id, error) {
 	a.log.Location()
 
 	user, err := a.store.getUserByEmail(currentEmail)
@@ -388,7 +387,7 @@ func (a *api) ResetPwd(email string) error {
 	return nil
 }
 
-func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (UUID, error) {
+func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, error) {
 	a.log.Location()
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
@@ -436,7 +435,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (UUID, e
 	return user.Id, nil
 }
 
-func (a *api) GetUsers(ids []UUID) ([]*user, error) {
+func (a *api) GetUsers(ids []Id) ([]*user, error) {
 	a.log.Location()
 
 	users, err := a.store.getUsers(ids)
@@ -467,7 +466,7 @@ func (a *api) SearchUsers(search string, limit int) ([]*user, error) {
 	return users, nil
 }
 
-func (a *api) GetOrgs(ids []UUID) ([]*org, error) {
+func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 	a.log.Location()
 
 	orgs, err := a.store.getOrgs(ids)
@@ -498,7 +497,7 @@ func (a *api) SearchOrgs(search string, limit int) ([]*org, error) {
 	return orgs, nil
 }
 
-func (a *api) ChangeMyName(myId UUID, newUsername string) error {
+func (a *api) ChangeMyName(myId Id, newUsername string) error {
 	a.log.Location()
 
 	newUsername = strings.Trim(newUsername, " ")
@@ -530,7 +529,7 @@ func (a *api) ChangeMyName(myId UUID, newUsername string) error {
 	return nil
 }
 
-func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
+func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 	a.log.Location()
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
@@ -577,7 +576,7 @@ func (a *api) ChangeMyPwd(myId UUID, oldPwd, newPwd string) error {
 	return nil
 }
 
-func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
+func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
 	a.log.Location()
 
 	newEmail = strings.Trim(newEmail, " ")
@@ -620,7 +619,7 @@ func (a *api) ChangeMyEmail(myId UUID, newEmail string) error {
 	return nil
 }
 
-func (a *api) ResendMyNewEmailConfirmationEmail(myId UUID) error {
+func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 	a.log.Location()
 
 	user, err := a.store.getUserById(myId)
@@ -648,7 +647,7 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId UUID) error {
 	return nil
 }
 
-func (a *api) MigrateMe(myId UUID, newRegion string) error {
+func (a *api) MigrateMe(myId Id, newRegion string) error {
 	a.log.Location()
 
 	//TODO
@@ -656,7 +655,7 @@ func (a *api) MigrateMe(myId UUID, newRegion string) error {
 	return nil
 }
 
-func (a *api) GetMe(myId UUID) (*me, error) {
+func (a *api) GetMe(myId Id) (*me, error) {
 	a.log.Location()
 
 	user, err := a.store.getUserById(myId)
@@ -670,7 +669,7 @@ func (a *api) GetMe(myId UUID) (*me, error) {
 	return &user.me, nil
 }
 
-func (a *api) DeleteMe(id UUID) error {
+func (a *api) DeleteMe(id Id) error {
 	a.log.Location()
 
 	if err := a.store.deleteUser(id); err != nil {
@@ -680,7 +679,7 @@ func (a *api) DeleteMe(id UUID) error {
 	return nil
 }
 
-func (a *api) CreateOrg(myId UUID, name, region string) (*org, error) {
+func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 	a.log.Location()
 
 	//TODO
@@ -688,7 +687,7 @@ func (a *api) CreateOrg(myId UUID, name, region string) (*org, error) {
 	return nil, nil
 }
 
-func (a *api) RenameOrg(myId, orgId UUID, newName string) error {
+func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
 
 	//TODO
@@ -696,7 +695,7 @@ func (a *api) RenameOrg(myId, orgId UUID, newName string) error {
 	return nil
 }
 
-func (a *api) MigrateOrg(myId, orgId UUID, newRegion string) error {
+func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
 	a.log.Location()
 
 	//TODO
@@ -704,7 +703,7 @@ func (a *api) MigrateOrg(myId, orgId UUID, newRegion string) error {
 	return nil
 }
 
-func (a *api) GetMyOrgs(myId UUID, limit int) ([]*org, error) {
+func (a *api) GetMyOrgs(myId Id, limit int) ([]*org, error) {
 	a.log.Location()
 
 	//TODO
@@ -712,7 +711,7 @@ func (a *api) GetMyOrgs(myId UUID, limit int) ([]*org, error) {
 	return nil, nil
 }
 
-func (a *api) DeleteOrg(myId, orgId UUID) error {
+func (a *api) DeleteOrg(myId, orgId Id) error {
 	a.log.Location()
 
 	//TODO
@@ -720,7 +719,7 @@ func (a *api) DeleteOrg(myId, orgId UUID) error {
 	return nil
 }
 
-func (a *api) AddMembers(myId, orgId UUID, newMembers []UUID) error {
+func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 	a.log.Location()
 
 	//TODO
@@ -728,7 +727,7 @@ func (a *api) AddMembers(myId, orgId UUID, newMembers []UUID) error {
 	return nil
 }
 
-func (a *api) RemoveMembers(myId, orgId UUID, existingMembers []UUID) error {
+func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 	a.log.Location()
 
 	//TODO
@@ -745,28 +744,28 @@ type store interface {
 	createUser(user *fullUserInfo, pwdInfo *pwdInfo) error
 	getUserByName(name string) (*fullUserInfo, error)
 	getUserByEmail(email string) (*fullUserInfo, error)
-	getUserById(id UUID) (*fullUserInfo, error)
-	getPwdInfo(id UUID) (*pwdInfo, error)
+	getUserById(id Id) (*fullUserInfo, error)
+	getPwdInfo(id Id) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
-	updatePwdInfo(id UUID, pwdInfo *pwdInfo) error
-	deleteUser(id UUID) error
-	getUsers(ids []UUID) ([]*user, error)
+	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
+	deleteUser(id Id) error
+	getUsers(ids []Id) ([]*user, error)
 	searchUsers(search string, limit int) ([]*user, error)
 	//org
 	createOrg(org *org) error
-	getOrgById(id UUID) (*org, error)
+	getOrgById(id Id) (*org, error)
 	getOrgByName(name string) (*org, error)
 	updateOrg(org *org) error
-	deleteOrg(id UUID) error
-	getOrgs(ids []UUID) ([]*org, error)
+	deleteOrg(id Id) error
+	getOrgs(ids []Id) ([]*org, error)
 	searchOrgs(search string, limit int) ([]*org, error)
-	getUsersOrgs(userId UUID, limit int) ([]*org, error)
+	getUsersOrgs(userId Id, limit int) ([]*org, error)
 }
 
 type internalRegionApi interface {
-	CreatePersonalTaskCenter(userId UUID) (int, error)
-	CreateOrgTaskCenter(ownerId, orgId UUID) (int, error)
-	RenameMember(memberId, orgId UUID, newName string) error
+	CreatePersonalTaskCenter(userId Id) (int, error)
+	CreateOrgTaskCenter(ownerId, orgId Id) (int, error)
+	RenameMember(memberId, orgId Id, newName string) error
 }
 
 type linkMailer interface {
@@ -777,7 +776,7 @@ type linkMailer interface {
 }
 
 type account struct {
-	misc.Entity
+	Entity
 	Created   time.Time `json:"created"`
 	Name      string    `json:"name"`
 	Region    string    `json:"region"`
@@ -822,7 +821,7 @@ type pwdInfo struct {
 }
 
 type logLinkMailer struct {
-	log misc.Log
+	log Log
 }
 
 func (l *logLinkMailer) sendMultipleAccountPolicyEmail(address string) error {
