@@ -7,9 +7,22 @@ import (
 	"math/big"
 )
 
-type GenCryptoBytes func(int) ([]byte, error)
+var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func CryptoBytes(length int) ([]byte, error) {
+type CryptoHelper interface {
+	Bytes(length int) ([]byte, error)
+	UrlSafeString(length int) (string, error)
+	ScryptKey(password, salt []byte, N, r, p, keyLen int) ([]byte, error)
+}
+
+func NewCryptoHelper() CryptoHelper {
+	return &cryptoHelper{}
+}
+
+type cryptoHelper struct {
+}
+
+func (c *cryptoHelper) Bytes(length int) ([]byte, error) {
 	k := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, k); err != nil {
 		return nil, err
@@ -17,11 +30,7 @@ func CryptoBytes(length int) ([]byte, error) {
 	return k, nil
 }
 
-var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-type GenCryptoUrlSafeString func(int) (string, error)
-
-func CryptoUrlSafeString(length int) (string, error) {
+func (c *cryptoHelper) UrlSafeString(length int) (string, error) {
 	buf := make([]rune, length)
 	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
 	for i := range buf {
@@ -34,8 +43,6 @@ func CryptoUrlSafeString(length int) (string, error) {
 	return string(buf), nil
 }
 
-type GenScryptKey func(password, salt []byte, N, r, p, keyLen int) ([]byte, error)
-
-func ScryptKey(password, salt []byte, N, r, p, keyLen int) ([]byte, error) {
+func (c *cryptoHelper) ScryptKey(password, salt []byte, N, r, p, keyLen int) ([]byte, error) {
 	return scrypt.Key(password, salt, N, r, p, keyLen)
 }

@@ -17,9 +17,7 @@ var (
 	nilInternalRegionApisErr              = errors.New("nil internalRegionApis")
 	nilLinkMailerErr                      = errors.New("nil linkMailer")
 	nilNewIdErr                           = errors.New("nil new id")
-	nilCryptoBytesErr                     = errors.New("nil CryptoBytes")
-	nilCryptoUrlSafeStringErr             = errors.New("nil CryptoUrlSafeString")
-	nilScryptKeyErr                       = errors.New("nil ScryptKey")
+	nilCryptoHelperErr                    = errors.New("nil CryptoHelper")
 	nilLogErr                             = errors.New("nil log")
 	noSuchRegionErr                       = errors.New("no such region")
 	userRegionGoneErr                     = errors.New("user registered region no longer exists at activation time")
@@ -47,7 +45,7 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers)
 }
 
-func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoBytes GenCryptoBytes, cryptoUrlSafeString GenCryptoUrlSafeString, scryptKey GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
+func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
@@ -60,14 +58,8 @@ func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMa
 	if newId == nil {
 		return nil, nilNewIdErr
 	}
-	if cryptoBytes == nil {
-		return nil, nilCryptoBytesErr
-	}
-	if cryptoUrlSafeString == nil {
-		return nil, nilCryptoUrlSafeStringErr
-	}
-	if scryptKey == nil {
-		return nil, nilScryptKeyErr
+	if cryptoHelper == nil {
+		return nil, nilCryptoHelperErr
 	}
 	if log == nil {
 		return nil, nilLogErr
@@ -77,9 +69,7 @@ func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMa
 		internalRegionApis:    internalRegionApis,
 		linkMailer:            linkMailer,
 		newId:                 newId,
-		cryptoBytes:           cryptoBytes,
-		cryptoUrlSafeString:   cryptoUrlSafeString,
-		scryptKey:             scryptKey,
+		cryptoHelper:          cryptoHelper,
 		nameRegexMatchers:     append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
 		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
 		nameMinRuneCount:      nameMinRuneCount,
@@ -102,9 +92,7 @@ type api struct {
 	internalRegionApis    map[string]internalRegionApi
 	linkMailer            linkMailer
 	newId                 GenNewId
-	cryptoBytes           GenCryptoBytes
-	cryptoUrlSafeString   GenCryptoUrlSafeString
-	scryptKey             GenScryptKey
+	cryptoHelper          CryptoHelper
 	nameRegexMatchers     []string
 	pwdRegexMatchers      []string
 	nameMinRuneCount      int
@@ -159,17 +147,17 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return nil
 	}
 
-	scryptSalt, err := a.cryptoBytes(a.saltLen)
+	scryptSalt, err := a.cryptoHelper.Bytes(a.saltLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := a.scryptKey([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.cryptoHelper.ScryptKey([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	activationCode, err := a.cryptoUrlSafeString(a.cryptoCodeLen)
+	activationCode, err := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -285,7 +273,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	scryptPwdTry, err := a.scryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -307,7 +295,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 	if pwdInfo.N != a.scryptN || pwdInfo.R != a.scryptR || pwdInfo.P != a.scryptP || pwdInfo.KeyLen != a.scryptKeyLen || len(pwdInfo.Salt) < a.saltLen {
-		pwdInfo.Salt, err = a.cryptoBytes(a.saltLen)
+		pwdInfo.Salt, err = a.cryptoHelper.Bytes(a.saltLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -315,7 +303,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 		pwdInfo.R = a.scryptR
 		pwdInfo.P = a.scryptP
 		pwdInfo.KeyLen = a.scryptKeyLen
-		pwdInfo.Pwd, err = a.scryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+		pwdInfo.Pwd, err = a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -369,7 +357,7 @@ func (a *api) ResetPwd(email string) error {
 		return nil
 	}
 
-	resetPwdCode, err := a.cryptoUrlSafeString(a.cryptoCodeLen)
+	resetPwdCode, err := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -402,12 +390,12 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 		return nil, a.log.InfoErr(invalidResetPwdAttemptErr)
 	}
 
-	scryptSalt, err := a.cryptoBytes(a.saltLen)
+	scryptSalt, err := a.cryptoHelper.Bytes(a.saltLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := a.scryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.cryptoHelper.ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -533,34 +521,34 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 	a.log.Location()
 
 	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
-		return a.log.InfoErr(err)
+		return a.log.InfoUserErr(myId, err)
 	}
 
 	pwdInfo, err := a.store.getPwdInfo(myId)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 	if pwdInfo == nil {
-		return a.log.InfoErr(noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
-	scryptPwdTry, err := a.scryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
-		return a.log.InfoErr(incorrectPwdErr)
+		return a.log.InfoUserErr(myId, incorrectPwdErr)
 	}
 
-	scryptSalt, err := a.cryptoBytes(a.saltLen)
+	scryptSalt, err := a.cryptoHelper.Bytes(a.saltLen)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
-	scryptPwd, err := a.scryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.cryptoHelper.ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	pwdInfo.Pwd = scryptPwd
@@ -570,7 +558,7 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 	pwdInfo.P = a.scryptP
 	pwdInfo.KeyLen = a.scryptKeyLen
 	if err = a.store.updatePwdInfo(myId, pwdInfo); err != nil {
-		return a.log.ErrorErr(err)
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
@@ -601,7 +589,7 @@ func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
 		return a.log.InfoErr(noSuchUserErr)
 	}
 
-	confirmationCode, err := a.cryptoUrlSafeString(a.cryptoCodeLen)
+	confirmationCode, err := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
