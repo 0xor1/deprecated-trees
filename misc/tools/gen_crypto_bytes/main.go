@@ -15,7 +15,7 @@ func main() {
 	n := int(nTmp)
 	l := int(lTmp)
 	for i := 0; i < n; i++ {
-		bs, _ := misc.GenerateCryptoBytes(l)
+		bs, _ := misc.CryptoBytes(l)
 		fmt.Println(fmt.Sprintf("%x", bs))
 	}
 }

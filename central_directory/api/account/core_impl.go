@@ -16,10 +16,10 @@ var (
 	nilStoreErr                           = errors.New("nil store")
 	nilInternalRegionApisErr              = errors.New("nil internalRegionApis")
 	nilLinkMailerErr                      = errors.New("nil linkMailer")
-	nilGenNewIdErr                        = errors.New("nil genNewId")
-	nilGenCryptoBytesErr                  = errors.New("nil genCryptoBytes")
-	nilGenCryptoUrlSafeStringErr          = errors.New("nil nilGenCryptoUrlSafeString")
-	nilGenScryptKeyErr                    = errors.New("nil nilGenScryptKey")
+	nilNewIdErr                           = errors.New("nil new id")
+	nilCryptoBytesErr                     = errors.New("nil CryptoBytes")
+	nilCryptoUrlSafeStringErr             = errors.New("nil CryptoUrlSafeString")
+	nilScryptKeyErr                       = errors.New("nil ScryptKey")
 	nilLogErr                             = errors.New("nil log")
 	noSuchRegionErr                       = errors.New("no such region")
 	userRegionGoneErr                     = errors.New("user registered region no longer exists at activation time")
@@ -47,7 +47,7 @@ func (e *invalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers)
 }
 
-func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, genNewId GenNewId, genCryptoBytes GenCryptoBytes, genCryptoUrlSafeString GenCryptoUrlSafeString, genScryptKey GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
+func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoBytes GenCryptoBytes, cryptoUrlSafeString GenCryptoUrlSafeString, scryptKey GenScryptKey, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
@@ -57,68 +57,68 @@ func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMa
 	if linkMailer == nil {
 		return nil, nilLinkMailerErr
 	}
-	if genNewId == nil {
-		return nil, nilGenNewIdErr
+	if newId == nil {
+		return nil, nilNewIdErr
 	}
-	if genCryptoBytes == nil {
-		return nil, nilGenCryptoBytesErr
+	if cryptoBytes == nil {
+		return nil, nilCryptoBytesErr
 	}
-	if genCryptoUrlSafeString == nil {
-		return nil, nilGenCryptoUrlSafeStringErr
+	if cryptoUrlSafeString == nil {
+		return nil, nilCryptoUrlSafeStringErr
 	}
-	if genScryptKey == nil {
-		return nil, nilGenScryptKeyErr
+	if scryptKey == nil {
+		return nil, nilScryptKeyErr
 	}
 	if log == nil {
 		return nil, nilLogErr
 	}
 	return &api{
-		store:                  store,
-		internalRegionApis:     internalRegionApis,
-		linkMailer:             linkMailer,
-		genNewId:               genNewId,
-		genCryptoBytes:         genCryptoBytes,
-		genCryptoUrlSafeString: genCryptoUrlSafeString,
-		genScryptKey:           genScryptKey,
-		nameRegexMatchers:      append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
-		pwdRegexMatchers:       append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
-		nameMinRuneCount:       nameMinRuneCount,
-		nameMaxRuneCount:       nameMaxRuneCount,
-		pwdMinRuneCount:        pwdMinRuneCount,
-		pwdMaxRuneCount:        pwdMaxRuneCount,
-		maxSearchLimitResults:  maxSearchLimitResults,
-		cryptoCodeLen:          cryptoCodeLen,
-		saltLen:                saltLen,
-		scryptN:                scryptN,
-		scryptR:                scryptR,
-		scryptP:                scryptP,
-		scryptKeyLen:           scryptKeyLen,
-		log:                    log,
+		store:                 store,
+		internalRegionApis:    internalRegionApis,
+		linkMailer:            linkMailer,
+		newId:                 newId,
+		cryptoBytes:           cryptoBytes,
+		cryptoUrlSafeString:   cryptoUrlSafeString,
+		scryptKey:             scryptKey,
+		nameRegexMatchers:     append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
+		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		nameMinRuneCount:      nameMinRuneCount,
+		nameMaxRuneCount:      nameMaxRuneCount,
+		pwdMinRuneCount:       pwdMinRuneCount,
+		pwdMaxRuneCount:       pwdMaxRuneCount,
+		maxSearchLimitResults: maxSearchLimitResults,
+		cryptoCodeLen:         cryptoCodeLen,
+		saltLen:               saltLen,
+		scryptN:               scryptN,
+		scryptR:               scryptR,
+		scryptP:               scryptP,
+		scryptKeyLen:          scryptKeyLen,
+		log:                   log,
 	}, nil
 }
 
 type api struct {
-	store                  store
-	internalRegionApis     map[string]internalRegionApi
-	linkMailer             linkMailer
-	genNewId               GenNewId
-	genCryptoBytes         GenCryptoBytes
-	genCryptoUrlSafeString GenCryptoUrlSafeString
-	genScryptKey           GenScryptKey
-	nameRegexMatchers      []string
-	pwdRegexMatchers       []string
-	nameMinRuneCount       int
-	nameMaxRuneCount       int
-	pwdMinRuneCount        int
-	pwdMaxRuneCount        int
-	maxSearchLimitResults  int
-	cryptoCodeLen          int
-	saltLen                int
-	scryptN                int
-	scryptR                int
-	scryptP                int
-	scryptKeyLen           int
-	log                    Log
+	store                 store
+	internalRegionApis    map[string]internalRegionApi
+	linkMailer            linkMailer
+	newId                 GenNewId
+	cryptoBytes           GenCryptoBytes
+	cryptoUrlSafeString   GenCryptoUrlSafeString
+	scryptKey             GenScryptKey
+	nameRegexMatchers     []string
+	pwdRegexMatchers      []string
+	nameMinRuneCount      int
+	nameMaxRuneCount      int
+	pwdMinRuneCount       int
+	pwdMaxRuneCount       int
+	maxSearchLimitResults int
+	cryptoCodeLen         int
+	saltLen               int
+	scryptN               int
+	scryptR               int
+	scryptP               int
+	scryptKeyLen          int
+	log                   Log
 }
 
 func (a *api) Register(name, email, pwd, region string) error {
@@ -159,22 +159,22 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return nil
 	}
 
-	scryptSalt, err := a.genCryptoBytes(a.saltLen)
+	scryptSalt, err := a.cryptoBytes(a.saltLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := a.genScryptKey([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.scryptKey([]byte(pwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	activationCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
+	activationCode, err := a.cryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	userId, err := a.genNewId()
+	userId, err := a.newId()
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -285,7 +285,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	scryptPwdTry, err := a.genScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.scryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -307,7 +307,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 	if pwdInfo.N != a.scryptN || pwdInfo.R != a.scryptR || pwdInfo.P != a.scryptP || pwdInfo.KeyLen != a.scryptKeyLen || len(pwdInfo.Salt) < a.saltLen {
-		pwdInfo.Salt, err = a.genCryptoBytes(a.saltLen)
+		pwdInfo.Salt, err = a.cryptoBytes(a.saltLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -315,7 +315,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 		pwdInfo.R = a.scryptR
 		pwdInfo.P = a.scryptP
 		pwdInfo.KeyLen = a.scryptKeyLen
-		pwdInfo.Pwd, err = a.genScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+		pwdInfo.Pwd, err = a.scryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -369,7 +369,7 @@ func (a *api) ResetPwd(email string) error {
 		return nil
 	}
 
-	resetPwdCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
+	resetPwdCode, err := a.cryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -402,12 +402,12 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 		return nil, a.log.InfoErr(invalidResetPwdAttemptErr)
 	}
 
-	scryptSalt, err := a.genCryptoBytes(a.saltLen)
+	scryptSalt, err := a.cryptoBytes(a.saltLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.scryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -544,7 +544,7 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 		return a.log.InfoErr(noSuchUserErr)
 	}
 
-	scryptPwdTry, err := a.genScryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.scryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -553,12 +553,12 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 		return a.log.InfoErr(incorrectPwdErr)
 	}
 
-	scryptSalt, err := a.genCryptoBytes(a.saltLen)
+	scryptSalt, err := a.cryptoBytes(a.saltLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
 
-	scryptPwd, err := a.genScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptPwd, err := a.scryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -601,7 +601,7 @@ func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
 		return a.log.InfoErr(noSuchUserErr)
 	}
 
-	confirmationCode, err := a.genCryptoUrlSafeString(a.cryptoCodeLen)
+	confirmationCode, err := a.cryptoUrlSafeString(a.cryptoCodeLen)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}

@@ -1,9 +1,9 @@
 package misc
 
 import (
+	"encoding/hex"
 	"errors"
 	. "github.com/pborman/uuid"
-	"encoding/hex"
 )
 
 var (

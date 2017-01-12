@@ -15,7 +15,7 @@ func main() {
 	n := int(nTmp)
 	l := int(lTmp)
 	for i := 0; i < n; i++ {
-		str, _ := misc.GenerateCryptoUrlSafeString(l)
+		str, _ := misc.CryptoUrlSafeString(l)
 		fmt.Println(str)
 	}
 }

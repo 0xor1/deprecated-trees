@@ -9,7 +9,7 @@ import (
 
 type GenCryptoBytes func(int) ([]byte, error)
 
-func GenerateCryptoBytes(length int) ([]byte, error) {
+func CryptoBytes(length int) ([]byte, error) {
 	k := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, k); err != nil {
 		return nil, err
@@ -21,7 +21,7 @@ var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 
 type GenCryptoUrlSafeString func(int) (string, error)
 
-func GenerateCryptoUrlSafeString(length int) (string, error) {
+func CryptoUrlSafeString(length int) (string, error) {
 	buf := make([]rune, length)
 	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
 	for i := range buf {
