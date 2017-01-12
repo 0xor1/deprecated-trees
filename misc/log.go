@@ -1,9 +1,14 @@
 package misc
 
 import (
+	"errors"
 	"fmt"
 	"github.com/uber-go/zap"
 	"runtime"
+)
+
+var (
+	NotImplementedErr = errors.New("not implemented")
 )
 
 type ErrorRef struct {

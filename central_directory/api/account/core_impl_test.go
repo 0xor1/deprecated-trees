@@ -152,7 +152,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_api_Register_genCryptoBytesErr(t *testing.T) {
+func Test_api_Register_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -164,7 +164,7 @@ func Test_api_Register_genCryptoBytesErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_Register_genScryptKeyErr(t *testing.T) {
+func Test_api_Register_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -178,7 +178,7 @@ func Test_api_Register_genScryptKeyErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_Register_genCryptoUrlSafeStringErr(t *testing.T) {
+func Test_api_Register_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -565,7 +565,7 @@ func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_Authenticate_genScryptKeyErr(t *testing.T) {
+func Test_api_Authenticate_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -626,7 +626,7 @@ func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_Authenticate_genCryptoBytesErr(t *testing.T) {
+func Test_api_Authenticate_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -850,7 +850,7 @@ func Test_api_ResetPwd_storeGetUserByEmailNilUser(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_api_ResetPwd_genCryptoUrlSafeStringErr(t *testing.T) {
+func Test_api_ResetPwd_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -949,7 +949,7 @@ func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmail_resetPwdCodeMismatch(t *
 	assert.Equal(t, invalidResetPwdAttemptErr, err)
 }
 
-func Test_api_SetNewPwdFromPwdReset_genCryptoBytesErr(t *testing.T) {
+func Test_api_SetNewPwdFromPwdReset_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -963,7 +963,7 @@ func Test_api_SetNewPwdFromPwdReset_genCryptoBytesErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_SetNewPwdFromPwdReset_genScryptKeyErr(t *testing.T) {
+func Test_api_SetNewPwdFromPwdReset_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -1275,10 +1275,123 @@ func Test_api_ChangeMyPwd_storeGetPwdInfoNilPwdInfo(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("getPwdInfo", myId).Return(nil, expectedErr)
+	store.On("getPwdInfo", myId).Return(nil, nil)
+
+	err := api.ChangeMyPwd(myId, "0ld-P@ss-W0rd", "P@ss-W0rd")
+	assert.Equal(t, noSuchUserErr, err)
+}
+
+func Test_api_ChangeMyPwd_cryptoHelperScryptKeyErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	pwdInfo := &pwdInfo{}
+	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
+	cryptoHelper.On("ScryptKey", []byte("0ld-P@ss-W0rd"), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(nil, expectedErr)
 
 	err := api.ChangeMyPwd(myId, "0ld-P@ss-W0rd", "P@ss-W0rd")
 	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_ChangeMyPwd_incorrectPwdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	pwdInfo := &pwdInfo{}
+	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
+	cryptoHelper.On("ScryptKey", []byte("N0t-0ld-P@ss-W0rd"), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return([]byte("0ld-P@ss-W0rd"), nil)
+
+	err := api.ChangeMyPwd(myId, "N0t-0ld-P@ss-W0rd", "P@ss-W0rd")
+	assert.Equal(t, incorrectPwdErr, err)
+}
+
+func Test_api_ChangeMyPwd_cryptoHelperBytesErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	oldPwd := []byte("0ld-P@ss-W0rd")
+	pwdInfo := &pwdInfo{Pwd: oldPwd}
+	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
+	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
+	cryptoHelper.On("Bytes", 128).Return(nil, expectedErr)
+
+	err := api.ChangeMyPwd(myId, string(oldPwd), "P@ss-W0rd")
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_ChangeMyPwd_cryptoHelperScryptKey2Err(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	oldPwd := []byte("0ld-P@ss-W0rd")
+	newPwd := []byte("P@ss-W0rd")
+	salt := []byte("salt")
+	pwdInfo := &pwdInfo{Pwd: oldPwd}
+	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
+	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
+	cryptoHelper.On("Bytes", 128).Return(salt, nil)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(nil, expectedErr)
+
+	err := api.ChangeMyPwd(myId, string(oldPwd), string(newPwd))
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_ChangeMyPwd_storeUpdatePwdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	oldPwd := []byte("0ld-P@ss-W0rd")
+	newPwd := []byte("P@ss-W0rd")
+	salt := []byte("salt")
+	pwdInfo := &pwdInfo{Pwd: oldPwd}
+	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
+	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
+	cryptoHelper.On("Bytes", 128).Return(salt, nil)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	store.On("updatePwdInfo", myId, pwdInfo).Return(expectedErr)
+
+	err := api.ChangeMyPwd(myId, string(oldPwd), string(newPwd))
+	assert.IsType(t, &ErrorRef{}, err)
+	assert.Equal(t, newPwd, pwdInfo.Pwd)
+	assert.Equal(t, salt, pwdInfo.Salt)
+	assert.Equal(t, 16384, pwdInfo.N)
+	assert.Equal(t, 8, pwdInfo.R)
+	assert.Equal(t, 1, pwdInfo.P)
+	assert.Equal(t, 32, pwdInfo.KeyLen)
+}
+
+func Test_api_ChangeMyPwd_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	oldPwd := []byte("0ld-P@ss-W0rd")
+	newPwd := []byte("P@ss-W0rd")
+	salt := []byte("salt")
+	pwdInfo := &pwdInfo{Pwd: oldPwd}
+	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
+	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
+	cryptoHelper.On("Bytes", 128).Return(salt, nil)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	store.On("updatePwdInfo", myId, pwdInfo).Return(nil)
+
+	err := api.ChangeMyPwd(myId, string(oldPwd), string(newPwd))
+	assert.Nil(t, err)
+}
+
+func Test_api_ChangeMyEmail_invalidStringParamErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+
+	err := api.ChangeMyEmail(myId, "new-invalid-email")
+	assert.IsType(t, &invalidStringParamErr{}, err)
 }
 
 //helpers

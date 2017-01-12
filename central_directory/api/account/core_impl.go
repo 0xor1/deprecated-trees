@@ -638,9 +638,7 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 func (a *api) MigrateMe(myId Id, newRegion string) error {
 	a.log.Location()
 
-	//TODO
-
-	return nil
+	return NotImplementedErr
 }
 
 func (a *api) GetMe(myId Id) (*me, error) {
@@ -670,57 +668,43 @@ func (a *api) DeleteMe(id Id) error {
 func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 	a.log.Location()
 
-	//TODO
-
-	return nil, nil
+	return nil, NotImplementedErr
 }
 
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
 
-	//TODO
-
-	return nil
+	return NotImplementedErr
 }
 
 func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
 	a.log.Location()
 
-	//TODO
-
-	return nil
+	return NotImplementedErr
 }
 
 func (a *api) GetMyOrgs(myId Id, limit int) ([]*org, error) {
 	a.log.Location()
 
-	//TODO
-
-	return nil, nil
+	return nil, NotImplementedErr
 }
 
 func (a *api) DeleteOrg(myId, orgId Id) error {
 	a.log.Location()
 
-	//TODO
-
-	return nil
+	return NotImplementedErr
 }
 
 func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 	a.log.Location()
 
-	//TODO
-
-	return nil
+	return NotImplementedErr
 }
 
 func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 	a.log.Location()
 
-	//TODO
-
-	return nil
+	return NotImplementedErr
 }
 
 //internal helpers
