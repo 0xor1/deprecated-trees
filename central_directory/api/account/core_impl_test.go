@@ -1943,6 +1943,99 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	assert.Equal(t, false, org.IsUser)
 }
 
+func Test_api_RenameOrg_storeGetOrgByIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(nil, testErr)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RenameOrg_storeGetOrgByIdNilOrg(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(nil, nil)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.Equal(t, noSuchOrgErr, err)
+}
+
+func Test_api_RenameOrg_regionGoneErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "sw"}, nil)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RenameOrg_internalRegionApiUserCanRenameOrgErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", myId, orgId).Return(false, testErr)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RenameOrg_insufficientPermissionsErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", myId, orgId).Return(false, nil)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.Equal(t, insufficientPermissionsErr, err)
+}
+
+func Test_api_RenameOrg_storeUpdateOrgErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	org := &org{Region: "us"}
+	store.On("getOrgById", orgId).Return(org, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", myId, orgId).Return(true, nil)
+	store.On("updateOrg", org).Return(testErr)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RenameOrg_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	org := &org{Region: "us"}
+	store.On("getOrgById", orgId).Return(org, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", myId, orgId).Return(true, nil)
+	store.On("updateOrg", org).Return(nil)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.Nil(t, err)
+	assert.Equal(t, "newOrg", org.Name)
+}
+
 //helpers
 var (
 	testErr            = errors.New("test")
@@ -2142,6 +2235,26 @@ func (m *mockInternalRegionApi) CreateOrgTaskCenter(ownerId, orgId Id, ownerName
 func (m *mockInternalRegionApi) RenameMember(memberId, orgId Id, newName string) error {
 	args := m.Called(memberId, orgId, newName)
 	return args.Error(0)
+}
+
+func (m *mockInternalRegionApi) UserCanRenameOrg(user, org Id) (bool, error) {
+	args := m.Called(user, org)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockInternalRegionApi) UserCanMigrateOrg(user, org Id) (bool, error) {
+	args := m.Called(user, org)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockInternalRegionApi) UserCanDeleteOrg(user, org Id) (bool, error) {
+	args := m.Called(user, org)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockInternalRegionApi) UserCanAddMembers(user, org Id) (bool, error) {
+	args := m.Called(user, org)
+	return args.Bool(0), args.Error(1)
 }
 
 type mockMiscFuncs struct {

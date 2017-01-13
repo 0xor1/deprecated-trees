@@ -19,8 +19,9 @@ var (
 	nilCryptoHelperErr                    = errors.New("nil CryptoHelper")
 	nilLogErr                             = errors.New("nil log")
 	noSuchRegionErr                       = errors.New("no such region")
-	userRegionGoneErr                     = errors.New("user registered region no longer exists at activation time")
+	regionGoneErr                         = errors.New("region no longer exists")
 	noSuchUserErr                         = errors.New("no such user")
+	noSuchOrgErr                          = errors.New("no such org")
 	invalidActivationAttemptErr           = errors.New("invalid activation attempt")
 	invalidResetPwdAttemptErr             = errors.New("invalid reset password attempt")
 	invalidNewEmailConfirmationAttemptErr = errors.New("invalid new email confirmation attempt")
@@ -31,6 +32,7 @@ var (
 	accountNameAlreadyInUseErr            = errors.New("account already in use")
 	emailConfirmationCodeErr              = errors.New("email confirmation code is of zero length")
 	noNewEmailRegisteredErr               = errors.New("no new email registered")
+	insufficientPermissionsErr            = errors.New("insufficient permissions")
 )
 
 type invalidStringParamErr struct {
@@ -236,7 +238,7 @@ func (a *api) Activate(email, activationCode string) (Id, error) {
 
 	internalRegionApi, exists := a.internalRegionApis[user.Region]
 	if !exists {
-		return nil, a.log.ErrorErr(userRegionGoneErr)
+		return nil, a.log.ErrorErr(regionGoneErr)
 	}
 
 	shard, err := internalRegionApi.CreatePersonalTaskCenter(user.Id)
@@ -742,7 +744,33 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
 
-	return a.log.InfoUserErr(myId, NotImplementedErr)
+	org, err := a.store.getOrgById(orgId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if org == nil {
+		return a.log.InfoUserErr(myId, noSuchOrgErr)
+	}
+
+	internalRegionApi, exists := a.internalRegionApis[org.Region]
+	if !exists {
+		return a.log.ErrorUserErr(myId, regionGoneErr)
+	}
+
+	can, err := internalRegionApi.UserCanRenameOrg(myId, orgId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, regionGoneErr)
+	}
+	if !can {
+		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+	}
+
+	org.Name = newName
+	if err := a.store.updateOrg(org); err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+
+	return nil
 }
 
 func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
@@ -814,6 +842,10 @@ type internalRegionApi interface {
 	CreatePersonalTaskCenter(userId Id) (int, error)
 	CreateOrgTaskCenter(ownerId, orgId Id, ownerName string) (int, error)
 	RenameMember(memberId, orgId Id, newName string) error
+	UserCanRenameOrg(user, org Id) (bool, error)
+	UserCanMigrateOrg(user, org Id) (bool, error)
+	UserCanDeleteOrg(user, org Id) (bool, error)
+	UserCanAddMembers(user, org Id) (bool, error)
 }
 
 type linkMailer interface {
