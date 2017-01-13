@@ -237,6 +237,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
+					IsUser: true,
 				},
 				Email: "email@email.com",
 			},
@@ -281,6 +282,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
+					IsUser: true,
 				},
 				Email: "email@email.com",
 			},
@@ -326,6 +328,7 @@ func Test_api_Register_success(t *testing.T) {
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
+					IsUser: true,
 				},
 				Email: "email@email.com",
 			},
@@ -1664,6 +1667,282 @@ func Test_api_DeleteMe_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_CreateOrg_invalidStringParamErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+
+	org, err := api.CreateOrg(myId, "yo", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &invalidStringParamErr{}, err)
+}
+
+func Test_api_CreateOrg_noSuchRegionErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+
+	org, err := api.CreateOrg(myId, "newOrg", "not-a-region")
+	assert.Nil(t, org)
+	assert.Equal(t, noSuchRegionErr, err)
+}
+
+func Test_api_CreateOrg_getAccountByNameErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, testErr)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_getAccountByNameNoneNilAccount(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(&account{}, nil)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.Equal(t, accountNameAlreadyInUseErr, err)
+}
+
+func Test_api_CreateOrg_newIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(nil, testErr)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(testErr)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+	store.On("getUserById", myId).Return(nil, testErr)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+	store.On("getUserById", myId).Return(nil, nil)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.Equal(t, noSuchUserErr, err)
+}
+
+func Test_api_CreateOrg_internalRegionApiCreateOrgTaskCenterErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+	user := &fullUserInfo{}
+	user.Id = myId
+	user.Name = "bob"
+	store.On("getUserById", myId).Return(user, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreateOrgTaskCenter", myId, orgId, "bob").Return(0, testErr)
+	store.On("deleteOrg", orgId).Return(nil)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_deleteOrgErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+	user := &fullUserInfo{}
+	user.Id = myId
+	user.Name = "bob"
+	store.On("getUserById", myId).Return(user, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreateOrgTaskCenter", myId, orgId, "bob").Return(8, testErr)
+	store.On("deleteOrg", orgId).Return(testErr)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+	user := &fullUserInfo{}
+	user.Id = myId
+	user.Name = "bob"
+	store.On("getUserById", myId).Return(user, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreateOrgTaskCenter", myId, orgId, "bob").Return(8, nil)
+	store.On("deleteOrg", orgId).Return(nil)
+	store.On("updateOrg", &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: 8,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(testErr)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, org)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_CreateOrg_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getAccountByName", "newOrg").Return(nil, nil)
+	miscFuncs.On("newId").Return(orgId, nil)
+	store.On("createOrgAndMembership", myId, &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: -1,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+	user := &fullUserInfo{}
+	user.Id = myId
+	user.Name = "bob"
+	store.On("getUserById", myId).Return(user, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreateOrgTaskCenter", myId, orgId, "bob").Return(8, nil)
+	store.On("deleteOrg", orgId).Return(nil)
+	store.On("updateOrg", &org{
+		Entity: Entity{
+			Id: orgId,
+		},
+		Region: "us",
+		Shard: 8,
+		Created: timeNowReplacement,
+		Name: "newOrg",
+		IsUser: false,
+	}).Return(nil)
+
+	org, err := api.CreateOrg(myId, "newOrg", "us")
+	assert.Nil(t, err)
+	assert.Equal(t, "us", org.Region)
+	assert.Equal(t, 8, org.Shard)
+	assert.Equal(t, "newOrg", org.Name)
+	assert.Equal(t, false, org.IsUser)
+}
+
 //helpers
 var (
 	testErr            = errors.New("test")
@@ -1751,8 +2030,9 @@ func (m *mockStore) searchUsers(search string, offset, limit int) ([]*user, int,
 	return args.Get(0).([]*user), args.Int(1), args.Error(2)
 }
 
-func (m *mockStore) createOrg(org *org) error {
-	args := m.Called(org)
+func (m *mockStore) createOrgAndMembership(user Id, org *org) error {
+	org.Created = timeNowReplacement
+	args := m.Called(user, org)
 	return args.Error(0)
 }
 
@@ -1806,6 +2086,21 @@ func (m *mockStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, err
 	return args.Get(0).([]*org), args.Int(1), args.Error(2)
 }
 
+func (m *mockStore) membershipExists(user, org Id) (bool, error) {
+	args := m.Called(user, org)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockStore) createMembership(user, org Id) error {
+	args := m.Called(user, org)
+	return args.Error(0)
+}
+
+func (m *mockStore) deleteMembership(user, org Id) error {
+	args := m.Called(user, org)
+	return args.Error(0)
+}
+
 type mockLinkMailer struct {
 	mock.Mock
 }
@@ -1839,8 +2134,8 @@ func (m *mockInternalRegionApi) CreatePersonalTaskCenter(userId Id) (int, error)
 	return args.Int(0), args.Error(1)
 }
 
-func (m *mockInternalRegionApi) CreateOrgTaskCenter(ownerId, orgId Id) (int, error) {
-	args := m.Called(ownerId, orgId)
+func (m *mockInternalRegionApi) CreateOrgTaskCenter(ownerId, orgId Id, ownerName string) (int, error) {
+	args := m.Called(ownerId, orgId, ownerName)
 	return args.Int(0), args.Error(1)
 }
 

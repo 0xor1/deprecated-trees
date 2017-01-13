@@ -177,6 +177,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 					Region:  region,
 					Shard:   -1,
 					Created: time.Now().UTC(),
+					IsUser: true,
 				},
 				Email: email,
 			},
@@ -677,7 +678,65 @@ func (a *api) DeleteMe(myId Id) error {
 func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 	a.log.Location()
 
-	return nil, a.log.InfoUserErr(myId, NotImplementedErr)
+	name = strings.Trim(name, " ")
+	if err := validateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+		return nil, a.log.InfoUserErr(myId, err)
+	}
+
+	internalRegionApi, exists := a.internalRegionApis[region]
+	if !exists {
+		return nil, a.log.InfoUserErr(myId, noSuchRegionErr)
+	}
+
+	if account, err := a.store.getAccountByName(name); account != nil || err != nil {
+		if err != nil {
+			return nil, a.log.ErrorUserErr(myId, err)
+		} else {
+			return nil, a.log.InfoUserErr(myId, accountNameAlreadyInUseErr)
+		}
+	}
+
+	newOrgId, err := a.newId()
+	if err != nil {
+		return nil, a.log.ErrorUserErr(myId, err)
+	}
+
+	org := &org {
+		Entity: Entity{
+			Id: newOrgId,
+		},
+		Region: region,
+		Shard: -1,
+		Created: time.Now().UTC(),
+		Name: name,
+		IsUser: false,
+	}
+	if err := a.store.createOrgAndMembership(myId, org); err != nil {
+		return nil, a.log.ErrorUserErr(myId, err)
+	}
+
+	owner, err := a.store.getUserById(myId)
+	if err != nil {
+		return nil, a.log.ErrorUserErr(myId, err)
+	}
+	if owner == nil {
+		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
+	}
+
+	shard, err := internalRegionApi.CreateOrgTaskCenter(myId, newOrgId, owner.Name)
+	if err != nil {
+		if err := a.store.deleteOrg(newOrgId); err != nil {
+			return nil, a.log.ErrorUserErr(myId, err)
+		}
+		return nil, a.log.ErrorUserErr(myId, err)
+	}
+
+	org.Shard = shard
+	if err := a.store.updateOrg(org); err != nil {
+		return nil, a.log.ErrorUserErr(myId, err)
+	}
+
+	return org, nil
 }
 
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
@@ -737,7 +796,7 @@ type store interface {
 	getUsers(ids []Id) ([]*user, error)
 	searchUsers(search string, offset, limit int) ([]*user, int, error)
 	//org
-	createOrg(org *org) error
+	createOrgAndMembership(user Id, org *org) error
 	getOrgById(id Id) (*org, error)
 	getOrgByName(name string) (*org, error)
 	updateOrg(org *org) error
@@ -745,11 +804,15 @@ type store interface {
 	getOrgs(ids []Id) ([]*org, error)
 	searchOrgs(search string, offset, limit int) ([]*org, int, error)
 	getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error)
+	//members
+	membershipExists(user, org Id) (bool, error)
+	createMembership(user, org Id) error
+	deleteMembership(user, org Id) error
 }
 
 type internalRegionApi interface {
 	CreatePersonalTaskCenter(userId Id) (int, error)
-	CreateOrgTaskCenter(ownerId, orgId Id) (int, error)
+	CreateOrgTaskCenter(ownerId, orgId Id, ownerName string) (int, error)
 	RenameMember(memberId, orgId Id, newName string) error
 }
 
