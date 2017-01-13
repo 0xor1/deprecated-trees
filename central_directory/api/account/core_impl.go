@@ -643,7 +643,7 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 func (a *api) MigrateMe(myId Id, newRegion string) error {
 	a.log.Location()
 
-	return NotImplementedErr
+	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) GetMe(myId Id) (*me, error) {
@@ -651,10 +651,10 @@ func (a *api) GetMe(myId Id) (*me, error) {
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		return nil, a.log.ErrorErr(err)
+		return nil, a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return nil, a.log.InfoErr(noSuchUserErr)
+		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
 	return &user.me, nil
@@ -673,43 +673,43 @@ func (a *api) DeleteMe(myId Id) error {
 func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 	a.log.Location()
 
-	return nil, NotImplementedErr
+	return nil, a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
 
-	return NotImplementedErr
+	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
 	a.log.Location()
 
-	return NotImplementedErr
+	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
 	a.log.Location()
 
-	return nil, 0, NotImplementedErr
+	return nil, 0, a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) DeleteOrg(myId, orgId Id) error {
 	a.log.Location()
 
-	return NotImplementedErr
+	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 	a.log.Location()
 
-	return NotImplementedErr
+	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 	a.log.Location()
 
-	return NotImplementedErr
+	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
 //internal helpers

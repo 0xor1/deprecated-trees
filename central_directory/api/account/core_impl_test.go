@@ -101,7 +101,7 @@ func Test_api_Register_storeGetAccountByNameErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getAccountByName", "ali").Return(nil, expectedErr)
+	store.On("getAccountByName", "ali").Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -122,7 +122,7 @@ func Test_api_Register_storeGetUserByEmailErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getAccountByName", "ali").Return(nil, nil)
-	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
+	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -134,7 +134,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAcco
 
 	store.On("getAccountByName", "ali").Return(nil, nil)
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{me: me{Email: "email@email.com"}}, nil)
-	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(expectedErr)
+	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -158,7 +158,7 @@ func Test_api_Register_cryptoHelperBytesErr(t *testing.T) {
 
 	store.On("getAccountByName", "ali").Return(nil, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
-	cryptoHelper.On("Bytes", 128).Return(nil, expectedErr)
+	cryptoHelper.On("Bytes", 128).Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -172,7 +172,7 @@ func Test_api_Register_cryptoHelperScryptKeyErr(t *testing.T) {
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
-	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), salt, 16384, 8, 1, 32).Return(nil, expectedErr)
+	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), salt, 16384, 8, 1, 32).Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -188,7 +188,7 @@ func Test_api_Register_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	pwd := []byte("P@ss-W0rd")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
-	cryptoHelper.On("UrlSafeString", 40).Return("", expectedErr)
+	cryptoHelper.On("UrlSafeString", 40).Return("", testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -205,7 +205,7 @@ func Test_api_Register_gennewIdErr(t *testing.T) {
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
 	cryptoHelper.On("UrlSafeString", 40).Return("test", nil)
-	miscFuncs.On("newId").Return(nil, expectedErr)
+	miscFuncs.On("newId").Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -249,7 +249,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 			R:      8,
 			P:      1,
 			KeyLen: 32,
-		}).Return(expectedErr)
+		}).Return(testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -294,7 +294,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 			P:      1,
 			KeyLen: 32,
 		}).Return(nil)
-	linkMailer.On("sendActivationLink", "email@email.com", activationCode).Return(expectedErr)
+	linkMailer.On("sendActivationLink", "email@email.com", activationCode).Return(testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -349,7 +349,7 @@ func Test_api_ResendActivationEmail_storeGetUseByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
+	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
 	err := api.ResendActivationEmail("email@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -382,7 +382,7 @@ func Test_api_ResendActivationEmail_linkMailerSendActivationLinkErr(t *testing.T
 
 	code := "test"
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{ActivationCode: &code}, nil)
-	linkMailer.On("sendActivationLink", "email@email.com", code).Return(expectedErr)
+	linkMailer.On("sendActivationLink", "email@email.com", code).Return(testErr)
 
 	err := api.ResendActivationEmail("email@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -404,7 +404,7 @@ func Test_api_Activate_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
+	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
 	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
@@ -465,7 +465,7 @@ func Test_api_Activate_internalRegionalApiCreatePersonalTaskCenterErr(t *testing
 		ActivationCode: &activationCode,
 	}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
-	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", userId).Return(-1, expectedErr)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", userId).Return(-1, testErr)
 
 	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
@@ -492,7 +492,7 @@ func Test_api_Activate_storeUpdateUserErr(t *testing.T) {
 	}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", userId).Return(3, nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	id, err := api.Activate("email@email.com", "test")
 	assert.Nil(t, id)
@@ -533,7 +533,7 @@ func Test_api_Authenticate_storeGetUserByNameErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByName", "name").Return(nil, expectedErr)
+	store.On("getUserByName", "name").Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -558,7 +558,7 @@ func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{Activated: &activationTime}
 	store.On("getUserByName", "name").Return(user, nil)
-	store.On("getPwdInfo", Id(nil)).Return(nil, expectedErr)
+	store.On("getPwdInfo", Id(nil)).Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -573,7 +573,7 @@ func Test_api_Authenticate_cryptoHelperScryptKeyErr(t *testing.T) {
 	user := &fullUserInfo{Activated: &activationTime}
 	store.On("getUserByName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{}, nil)
-	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return(nil, expectedErr)
+	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -619,7 +619,7 @@ func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
 	store.On("getUserByName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -637,7 +637,7 @@ func Test_api_Authenticate_cryptoHelperBytesErr(t *testing.T) {
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
 	store.On("updateUser", user).Return(nil)
-	cryptoHelper.On("Bytes", 128).Return(nil, expectedErr)
+	cryptoHelper.On("Bytes", 128).Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -656,7 +656,7 @@ func Test_api_Authenticate_genScryptKey2Err(t *testing.T) {
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
 	store.On("updateUser", user).Return(nil)
 	cryptoHelper.On("Bytes", 128).Return([]byte("test"), nil)
-	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte("test"), 16384, 8, 1, 32).Return(nil, expectedErr)
+	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte("test"), 16384, 8, 1, 32).Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -677,7 +677,7 @@ func Test_api_Authenticate_storeUpdatePwdErr(t *testing.T) {
 	store.On("updateUser", user).Return(nil)
 	cryptoHelper.On("Bytes", 128).Return([]byte("test"), nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte("test"), 16384, 8, 1, 32).Return([]byte("P@ss-W0rd"), nil)
-	store.On("updatePwdInfo", Id(nil), pwdInfo).Return(expectedErr)
+	store.On("updatePwdInfo", Id(nil), pwdInfo).Return(testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -710,7 +710,7 @@ func Test_api_ConfirmNewEmail_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByEmail", "currentEmail@currentEmail.com").Return(nil, expectedErr)
+	store.On("getUserByEmail", "currentEmail@currentEmail.com").Return(nil, testErr)
 
 	resultId, err := api.ConfirmNewEmail("currentEmail@currentEmail.com", "email@email.com", "confirmationCode")
 	assert.Nil(t, resultId)
@@ -767,7 +767,7 @@ func Test_api_ConfirmNewEmail_storeGetUserByEmail2Err(t *testing.T) {
 	currentEmail := "currentEmail@currentEmail.com"
 	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
 	store.On("getUserByEmail", currentEmail).Return(user, nil)
-	store.On("getUserByEmail", newEmail).Return(nil, expectedErr)
+	store.On("getUserByEmail", newEmail).Return(nil, testErr)
 
 	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, confirmationCode)
 	assert.Nil(t, resultId)
@@ -800,7 +800,7 @@ func Test_api_ConfirmNewEmail_storeUpdateUserErr(t *testing.T) {
 	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail}}
 	store.On("getUserByEmail", currentEmail).Return(user, nil)
 	store.On("getUserByEmail", newEmail).Return(nil, nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	resultId, err := api.ConfirmNewEmail(currentEmail, newEmail, confirmationCode)
 	assert.Nil(t, resultId)
@@ -833,7 +833,7 @@ func Test_api_ResetPwd_storeGetUserByEmailErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
-	store.On("getUserByEmail", email).Return(nil, expectedErr)
+	store.On("getUserByEmail", email).Return(nil, testErr)
 
 	err := api.ResetPwd(email)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -856,7 +856,7 @@ func Test_api_ResetPwd_cryptoHelperUrlSafeStringErr(t *testing.T) {
 
 	email := "email@email.com"
 	store.On("getUserByEmail", email).Return(&fullUserInfo{}, nil)
-	cryptoHelper.On("UrlSafeString", 40).Return("", expectedErr)
+	cryptoHelper.On("UrlSafeString", 40).Return("", testErr)
 
 	err := api.ResetPwd(email)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -870,7 +870,7 @@ func Test_api_ResetPwd_storeUpdateUserErr(t *testing.T) {
 	user := &fullUserInfo{}
 	store.On("getUserByEmail", email).Return(user, nil)
 	cryptoHelper.On("UrlSafeString", 40).Return("test", nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	err := api.ResetPwd(email)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -885,7 +885,7 @@ func Test_api_ResetPwd_linkMailerSendPwdResetLinkErr(t *testing.T) {
 	store.On("getUserByEmail", email).Return(user, nil)
 	cryptoHelper.On("UrlSafeString", 40).Return("test", nil)
 	store.On("updateUser", user).Return(nil)
-	linkMailer.On("sendPwdResetLink", email, "test").Return(expectedErr)
+	linkMailer.On("sendPwdResetLink", email, "test").Return(testErr)
 
 	err := api.ResetPwd(email)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -919,7 +919,7 @@ func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByEmail", "email@email.com").Return(nil, expectedErr)
+	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
 	id, err := api.SetNewPwdFromPwdReset("P@ss-W0rd", "email@email.com", "resetCode")
 	assert.Nil(t, id)
@@ -956,7 +956,7 @@ func Test_api_SetNewPwdFromPwdReset_cryptoHelperBytesErr(t *testing.T) {
 	resetCode := "resetCode"
 	user := &fullUserInfo{ResetPwdCode: &resetCode}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
-	cryptoHelper.On("Bytes", 128).Return(nil, expectedErr)
+	cryptoHelper.On("Bytes", 128).Return(nil, testErr)
 
 	id, err := api.SetNewPwdFromPwdReset("P@ss-W0rd", "email@email.com", "resetCode")
 	assert.Nil(t, id)
@@ -973,7 +973,7 @@ func Test_api_SetNewPwdFromPwdReset_cryptoHelperScryptKeyErr(t *testing.T) {
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
-	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(nil, expectedErr)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(nil, testErr)
 
 	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
 	assert.Nil(t, id)
@@ -991,7 +991,7 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
 	newPwd := []byte("P@ss-W0rd")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
 	assert.Nil(t, id)
@@ -1013,7 +1013,7 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdatePwdInfoErr(t *testing.T) {
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
 	store.On("updateUser", user).Return(nil)
-	store.On("updatePwdInfo", user.Id, &pwdInfo{Pwd: newPwd, Salt: salt, N: 16384, R: 8, P: 1, KeyLen: 32}).Return(expectedErr)
+	store.On("updatePwdInfo", user.Id, &pwdInfo{Pwd: newPwd, Salt: salt, N: 16384, R: 8, P: 1, KeyLen: 32}).Return(testErr)
 
 	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
 	assert.Nil(t, id)
@@ -1049,7 +1049,7 @@ func Test_api_GetUsers_storeGetUsersErr(t *testing.T) {
 	id1, _ := NewId()
 	id2, _ := NewId()
 	ids := []Id{id1, id2}
-	store.On("getUsers", ids).Return(nil, expectedErr)
+	store.On("getUsers", ids).Return(nil, testErr)
 
 	users, err := api.GetUsers(ids)
 	assert.Nil(t, users)
@@ -1085,7 +1085,7 @@ func Test_api_SearchUsers_storeSearchUsersErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("searchUsers", "test", 0, 5).Return(nil, 0, expectedErr)
+	store.On("searchUsers", "test", 0, 5).Return(nil, 0, testErr)
 
 	users, total, err := api.SearchUsers("test", 0, 5)
 	assert.Nil(t, users)
@@ -1113,7 +1113,7 @@ func Test_api_GetOrgs_storeGetOrgsErr(t *testing.T) {
 	id1, _ := NewId()
 	id2, _ := NewId()
 	ids := []Id{id1, id2}
-	store.On("getOrgs", ids).Return(nil, expectedErr)
+	store.On("getOrgs", ids).Return(nil, testErr)
 
 	orgs, err := api.GetOrgs(ids)
 	assert.Nil(t, orgs)
@@ -1149,7 +1149,7 @@ func Test_api_SearchOrgs_storeSearchOrgsErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("searchOrgs", "test", 0, 5).Return(nil, 0, expectedErr)
+	store.On("searchOrgs", "test", 0, 5).Return(nil, 0, testErr)
 
 	orgs, total, err := api.SearchOrgs("test", 0, 5)
 	assert.Nil(t, orgs)
@@ -1185,7 +1185,7 @@ func Test_api_ChangeMyName_storeGetUserByNameErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
-	store.On("getUserByName", "test").Return(nil, expectedErr)
+	store.On("getUserByName", "test").Return(nil, testErr)
 
 	err := api.ChangeMyName(id, "test")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1208,7 +1208,7 @@ func Test_api_ChangeMyName_storeGetUserByIdErr(t *testing.T) {
 
 	id, _ := NewId()
 	store.On("getUserByName", "test").Return(nil, nil)
-	store.On("getUserById", id).Return(nil, expectedErr)
+	store.On("getUserById", id).Return(nil, testErr)
 
 	err := api.ChangeMyName(id, "test")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1234,7 +1234,7 @@ func Test_api_ChangeMyName_storeUpdateUserErr(t *testing.T) {
 	user := &fullUserInfo{}
 	store.On("getUserByName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	err := api.ChangeMyName(id, "test")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1270,7 +1270,7 @@ func Test_api_ChangeMyPwd_storeGetPwdInfoErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("getPwdInfo", myId).Return(nil, expectedErr)
+	store.On("getPwdInfo", myId).Return(nil, testErr)
 
 	err := api.ChangeMyPwd(myId, "0ld-P@ss-W0rd", "P@ss-W0rd")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1294,7 +1294,7 @@ func Test_api_ChangeMyPwd_cryptoHelperScryptKeyErr(t *testing.T) {
 	myId, _ := NewId()
 	pwdInfo := &pwdInfo{}
 	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
-	cryptoHelper.On("ScryptKey", []byte("0ld-P@ss-W0rd"), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(nil, expectedErr)
+	cryptoHelper.On("ScryptKey", []byte("0ld-P@ss-W0rd"), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(nil, testErr)
 
 	err := api.ChangeMyPwd(myId, "0ld-P@ss-W0rd", "P@ss-W0rd")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1322,7 +1322,7 @@ func Test_api_ChangeMyPwd_cryptoHelperBytesErr(t *testing.T) {
 	pwdInfo := &pwdInfo{Pwd: oldPwd}
 	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
 	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
-	cryptoHelper.On("Bytes", 128).Return(nil, expectedErr)
+	cryptoHelper.On("Bytes", 128).Return(nil, testErr)
 
 	err := api.ChangeMyPwd(myId, string(oldPwd), "P@ss-W0rd")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1340,7 +1340,7 @@ func Test_api_ChangeMyPwd_cryptoHelperScryptKey2Err(t *testing.T) {
 	store.On("getPwdInfo", myId).Return(pwdInfo, nil)
 	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
-	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(nil, expectedErr)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(nil, testErr)
 
 	err := api.ChangeMyPwd(myId, string(oldPwd), string(newPwd))
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1359,7 +1359,7 @@ func Test_api_ChangeMyPwd_storeUpdatePwdErr(t *testing.T) {
 	cryptoHelper.On("ScryptKey", oldPwd, pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen).Return(oldPwd, nil)
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
-	store.On("updatePwdInfo", myId, pwdInfo).Return(expectedErr)
+	store.On("updatePwdInfo", myId, pwdInfo).Return(testErr)
 
 	err := api.ChangeMyPwd(myId, string(oldPwd), string(newPwd))
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1405,7 +1405,7 @@ func Test_api_ChangeMyEmail_storeGetUserByEmailErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("getUserByEmail", "new@email.com").Return(nil, expectedErr)
+	store.On("getUserByEmail", "new@email.com").Return(nil, testErr)
 
 	err := api.ChangeMyEmail(myId, "new@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1417,7 +1417,7 @@ func Test_api_ChangeMyEmail_storeGetUserByEmailNoneNilUser_linkMailerSendMultipl
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(&fullUserInfo{me: me{Email: "test@expected.com"}}, nil)
-	linkMailer.On("sendMultipleAccountPolicyEmail", "test@expected.com").Return(expectedErr)
+	linkMailer.On("sendMultipleAccountPolicyEmail", "test@expected.com").Return(testErr)
 
 	err := api.ChangeMyEmail(myId, "new@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1441,7 +1441,7 @@ func Test_api_ChangeMyEmail_storeGetUserByIdErr(t *testing.T) {
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(nil, nil)
-	store.On("getUserById", myId).Return(nil, expectedErr)
+	store.On("getUserById", myId).Return(nil, testErr)
 
 	err := api.ChangeMyEmail(myId, "new@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1467,7 +1467,7 @@ func Test_api_ChangeMyEmail_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	user := &fullUserInfo{}
 	store.On("getUserByEmail", "new@email.com").Return(nil, nil)
 	store.On("getUserById", myId).Return(user, nil)
-	cryptoHelper.On("UrlSafeString", 40).Return("confirmationCode", expectedErr)
+	cryptoHelper.On("UrlSafeString", 40).Return("confirmationCode", testErr)
 
 	err := api.ChangeMyEmail(myId, "new@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1482,7 +1482,7 @@ func Test_api_ChangeMyEmail_storeUpdateUserErr(t *testing.T) {
 	store.On("getUserByEmail", "new@email.com").Return(nil, nil)
 	store.On("getUserById", myId).Return(user, nil)
 	cryptoHelper.On("UrlSafeString", 40).Return("confirmationCode", nil)
-	store.On("updateUser", user).Return(expectedErr)
+	store.On("updateUser", user).Return(testErr)
 
 	err := api.ChangeMyEmail(myId, "new@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1500,7 +1500,7 @@ func Test_api_ChangeMyEmail_linkMailerSendNewEmailConfirmationLinkErr(t *testing
 	store.On("getUserById", myId).Return(user, nil)
 	cryptoHelper.On("UrlSafeString", 40).Return("confirmationCode", nil)
 	store.On("updateUser", user).Return(nil)
-	linkMailer.On("sendNewEmailConfirmationLink", "current@email.com", "new@email.com", "confirmationCode").Return(expectedErr)
+	linkMailer.On("sendNewEmailConfirmationLink", "current@email.com", "new@email.com", "confirmationCode").Return(testErr)
 
 	err := api.ChangeMyEmail(myId, "new@email.com")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1527,7 +1527,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_storeGetUserByIdErr(t *testing.T
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("getUserById", myId).Return(nil, expectedErr)
+	store.On("getUserById", myId).Return(nil, testErr)
 
 	err := api.ResendMyNewEmailConfirmationEmail(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1575,7 +1575,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_linkMailerSendNewEmailConfirmati
 	newEmail := "new@email.com"
 	confirmationCode := "confirmationCode"
 	store.On("getUserById", myId).Return(&fullUserInfo{me: me{NewEmail: &newEmail, Email: "email@email.com"}, NewEmailConfirmationCode: &confirmationCode}, nil)
-	linkMailer.On("sendNewEmailConfirmationLink", "email@email.com", "new@email.com", "confirmationCode").Return(expectedErr)
+	linkMailer.On("sendNewEmailConfirmationLink", "email@email.com", "new@email.com", "confirmationCode").Return(testErr)
 
 	err := api.ResendMyNewEmailConfirmationEmail(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1595,9 +1595,56 @@ func Test_api_ResendMyNewEmailConfirmationEmail_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_MigrateMe_NotImplementedErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+
+	err := api.MigrateMe(myId, "us")
+	assert.Equal(t, NotImplementedErr, err)
+}
+
+func Test_api_GetMe_storeGetUserByIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getUserById", myId).Return(nil, testErr)
+
+	me, err := api.GetMe(myId)
+	assert.Nil(t, me)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_GetMe_storeGetUserByIdNilUser(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getUserById", myId).Return(nil, nil)
+
+	me, err := api.GetMe(myId)
+	assert.Nil(t, me)
+	assert.Equal(t, noSuchUserErr, err)
+}
+
+func Test_api_GetMe_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me:me{user:user{Entity:Entity{Id:myId}}}}
+	store.On("getUserById", myId).Return(user, nil)
+
+	me, err := api.GetMe(myId)
+	assert.Equal(t, &user.me, me)
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
-	expectedErr        = errors.New("test")
+	testErr = errors.New("test")
 	timeNowReplacement = time.Now().UTC()
 )
 
