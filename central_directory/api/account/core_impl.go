@@ -177,7 +177,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 					Region:  region,
 					Shard:   -1,
 					Created: time.Now().UTC(),
-					IsUser: true,
+					IsUser:  true,
 				},
 				Email: email,
 			},
@@ -701,15 +701,15 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
-	org := &org {
+	org := &org{
 		Entity: Entity{
 			Id: newOrgId,
 		},
-		Region: region,
-		Shard: -1,
+		Region:  region,
+		Shard:   -1,
 		Created: time.Now().UTC(),
-		Name: name,
-		IsUser: false,
+		Name:    name,
+		IsUser:  false,
 	}
 	if err := a.store.createOrgAndMembership(myId, org); err != nil {
 		return nil, a.log.ErrorUserErr(myId, err)

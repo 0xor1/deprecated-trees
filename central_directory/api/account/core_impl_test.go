@@ -237,7 +237,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
-					IsUser: true,
+					IsUser:  true,
 				},
 				Email: "email@email.com",
 			},
@@ -282,7 +282,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
-					IsUser: true,
+					IsUser:  true,
 				},
 				Email: "email@email.com",
 			},
@@ -328,7 +328,7 @@ func Test_api_Register_success(t *testing.T) {
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
-					IsUser: true,
+					IsUser:  true,
 				},
 				Email: "email@email.com",
 			},
@@ -1738,11 +1738,11 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
@@ -1762,11 +1762,11 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 	store.On("getUserById", myId).Return(nil, testErr)
 
@@ -1787,11 +1787,11 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 	store.On("getUserById", myId).Return(nil, nil)
 
@@ -1812,11 +1812,11 @@ func Test_api_CreateOrg_internalRegionApiCreateOrgTaskCenterErr(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
@@ -1842,11 +1842,11 @@ func Test_api_CreateOrg_deleteOrgErr(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
@@ -1872,11 +1872,11 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
@@ -1888,11 +1888,11 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: 8,
+		Region:  "us",
+		Shard:   8,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
@@ -1912,11 +1912,11 @@ func Test_api_CreateOrg_success(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: -1,
+		Region:  "us",
+		Shard:   -1,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
@@ -1928,11 +1928,11 @@ func Test_api_CreateOrg_success(t *testing.T) {
 		Entity: Entity{
 			Id: orgId,
 		},
-		Region: "us",
-		Shard: 8,
+		Region:  "us",
+		Shard:   8,
 		Created: timeNowReplacement,
-		Name: "newOrg",
-		IsUser: false,
+		Name:    "newOrg",
+		IsUser:  false,
 	}).Return(nil)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
