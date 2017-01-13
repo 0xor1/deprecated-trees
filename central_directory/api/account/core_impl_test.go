@@ -1634,7 +1634,7 @@ func Test_api_GetMe_success(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	user := &fullUserInfo{me:me{user:user{Entity:Entity{Id:myId}}}}
+	user := &fullUserInfo{me: me{user: user{Entity: Entity{Id: myId}}}}
 	store.On("getUserById", myId).Return(user, nil)
 
 	me, err := api.GetMe(myId)
@@ -1642,9 +1642,31 @@ func Test_api_GetMe_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_DeleteMe_storeDeleteUserErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("deleteUser", myId).Return(testErr)
+
+	err := api.DeleteMe(myId)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_DeleteMe_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("deleteUser", myId).Return(nil)
+
+	err := api.DeleteMe(myId)
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
-	testErr = errors.New("test")
+	testErr            = errors.New("test")
 	timeNowReplacement = time.Now().UTC()
 )
 
