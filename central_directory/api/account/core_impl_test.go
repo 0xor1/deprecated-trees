@@ -2087,6 +2087,43 @@ func Test_api_RenameOrg_success(t *testing.T) {
 	assert.Equal(t, "newOrg", org.Name)
 }
 
+func Test_api_MigrateOrg_notImplementedErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+
+	err := api.MigrateOrg(myId, orgId, "newOrg")
+	assert.Equal(t, NotImplementedErr, err)
+}
+
+func Test_api_GetMyOrgs_storeGetUsersOrgsErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, testErr)
+
+	orgs, total, err := api.GetMyOrgs(myId, -1, -1)
+	assert.Nil(t, orgs)
+	assert.Equal(t, 0, total)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_GetMyOrgs_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{}, &org{}}, 2, nil)
+
+	orgs, total, err := api.GetMyOrgs(myId, -1, -1)
+	assert.NotNil(t, orgs)
+	assert.Equal(t, 2, total)
+	assert.Nil(t, err)
+}
+
 //helpers
 var (
 	testErr            = errors.New("test")

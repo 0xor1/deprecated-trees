@@ -804,7 +804,18 @@ func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
 func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
 	a.log.Location()
 
-	return nil, 0, a.log.InfoUserErr(myId, NotImplementedErr)
+	if limit < 1 || limit > a.maxSearchLimitResults {
+		limit = a.maxSearchLimitResults
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	orgs, total, err := a.store.getUsersOrgs(myId, offset, limit)
+	if err != nil {
+		err = a.log.ErrorUserErr(myId, err)
+	}
+	return orgs, total, err
 }
 
 func (a *api) DeleteOrg(myId, orgId Id) error {
