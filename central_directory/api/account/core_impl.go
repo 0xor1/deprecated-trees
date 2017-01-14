@@ -493,15 +493,15 @@ func (a *api) SearchOrgs(search string, offset, limit int) ([]*org, int, error) 
 	return orgs, total, nil
 }
 
-func (a *api) ChangeMyName(myId Id, newUsername string) error {
+func (a *api) ChangeMyName(myId Id, newName string) error {
 	a.log.Location()
 
-	newUsername = strings.Trim(newUsername, " ")
-	if err := validateStringParam("username", newUsername, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	newName = strings.Trim(newName, " ")
+	if err := validateStringParam("username", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return a.log.InfoErr(err)
 	}
 
-	if user, err := a.store.getUserByName(newUsername); user != nil || err != nil {
+	if user, err := a.store.getUserByName(newName); user != nil || err != nil {
 		if err != nil {
 			return a.log.ErrorUserErr(myId, err)
 		} else {
@@ -517,9 +517,27 @@ func (a *api) ChangeMyName(myId Id, newUsername string) error {
 		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
-	user.Name = newUsername
+	user.Name = newName
 	if err = a.store.updateUser(user); err != nil {
 		return a.log.ErrorUserErr(myId, err)
+	}
+
+	for offset, total := 0, 1; offset < total; {
+		var orgs []*org
+		orgs, total, err = a.store.getUsersOrgs(myId, offset, 100)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		offset += len(orgs)
+		for _, org := range orgs {
+			internalRegionApi, exists := a.internalRegionApis[org.Region]
+			if !exists {
+				return a.log.ErrorUserErr(myId, regionGoneErr)
+			}
+			if err := internalRegionApi.RenameMember(myId, org.Id, newName); err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+		}
 	}
 
 	return nil
