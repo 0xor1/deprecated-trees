@@ -127,7 +127,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.InfoErr(err)
 	}
 
-	if _, exists := a.internalRegionApis[region]; !exists {
+	if internalRegionApi := a.internalRegionApis[region]; internalRegionApi == nil {
 		return a.log.InfoErr(noSuchRegionErr)
 	}
 
@@ -236,8 +236,8 @@ func (a *api) Activate(email, activationCode string) (Id, error) {
 		return nil, a.log.InfoErr(invalidActivationAttemptErr)
 	}
 
-	internalRegionApi, exists := a.internalRegionApis[user.Region]
-	if !exists {
+	internalRegionApi := a.internalRegionApis[user.Region]
+	if internalRegionApi == nil {
 		return nil, a.log.ErrorErr(regionGoneErr)
 	}
 
@@ -530,8 +530,8 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 		}
 		offset += len(orgs)
 		for _, org := range orgs {
-			internalRegionApi, exists := a.internalRegionApis[org.Region]
-			if !exists {
+			internalRegionApi := a.internalRegionApis[org.Region]
+			if internalRegionApi == nil {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
 			if err := internalRegionApi.RenameMember(myId, org.Id, newName); err != nil {
@@ -688,7 +688,7 @@ func (a *api) GetMe(myId Id) (*me, error) {
 func (a *api) DeleteMe(myId Id) error {
 	a.log.Location()
 
-	if err := a.store.deleteUser(myId); err != nil {
+	if err := a.store.deleteUserAndAllAssociatedMemberships(myId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
@@ -703,8 +703,8 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, err)
 	}
 
-	internalRegionApi, exists := a.internalRegionApis[region]
-	if !exists {
+	internalRegionApi := a.internalRegionApis[region]
+	if internalRegionApi == nil {
 		return nil, a.log.InfoUserErr(myId, noSuchRegionErr)
 	}
 
@@ -745,7 +745,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 
 	shard, err := internalRegionApi.CreateOrgTaskCenter(myId, newOrgId, owner.Name)
 	if err != nil {
-		if err := a.store.deleteOrg(newOrgId); err != nil {
+		if err := a.store.deleteOrgAndAllAssociatedMemberships(newOrgId); err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
 		}
 		return nil, a.log.ErrorUserErr(myId, err)
@@ -770,8 +770,8 @@ func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 		return a.log.InfoUserErr(myId, noSuchOrgErr)
 	}
 
-	internalRegionApi, exists := a.internalRegionApis[org.Region]
-	if !exists {
+	internalRegionApi := a.internalRegionApis[org.Region]
+	if internalRegionApi == nil {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
@@ -821,7 +821,32 @@ func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
 func (a *api) DeleteOrg(myId, orgId Id) error {
 	a.log.Location()
 
-	return a.log.InfoUserErr(myId, NotImplementedErr)
+	org, err := a.store.getOrgById(orgId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if org == nil {
+		return a.log.InfoUserErr(myId, noSuchOrgErr)
+	}
+
+	internalRegionApi := a.internalRegionApis[org.Region]
+	if internalRegionApi == nil {
+		return a.log.ErrorUserErr(myId, regionGoneErr)
+	}
+
+	can, err := internalRegionApi.UserCanDeleteOrg(myId, orgId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if !can {
+		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+	}
+
+	if err := a.store.deleteOrgAndAllAssociatedMemberships(orgId); err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+
+	return nil
 }
 
 func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
@@ -849,7 +874,7 @@ type store interface {
 	getPwdInfo(id Id) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
 	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
-	deleteUser(id Id) error
+	deleteUserAndAllAssociatedMemberships(id Id) error
 	getUsers(ids []Id) ([]*user, error)
 	searchUsers(search string, offset, limit int) ([]*user, int, error)
 	//org
@@ -857,7 +882,7 @@ type store interface {
 	getOrgById(id Id) (*org, error)
 	getOrgByName(name string) (*org, error)
 	updateOrg(org *org) error
-	deleteOrg(id Id) error
+	deleteOrgAndAllAssociatedMemberships(id Id) error
 	getOrgs(ids []Id) ([]*org, error)
 	searchOrgs(search string, offset, limit int) ([]*org, int, error)
 	getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error)
@@ -874,7 +899,7 @@ type internalRegionApi interface {
 	UserCanRenameOrg(user, org Id) (bool, error)
 	UserCanMigrateOrg(user, org Id) (bool, error)
 	UserCanDeleteOrg(user, org Id) (bool, error)
-	UserCanAddMembers(user, org Id) (bool, error)
+	UserCanManageMembers(user, org Id) (bool, error)
 }
 
 type linkMailer interface {
