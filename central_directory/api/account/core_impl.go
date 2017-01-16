@@ -534,7 +534,7 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 			if internalRegionApi == nil {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
-			if err := internalRegionApi.RenameMember(myId, org.Id, newName); err != nil {
+			if err := internalRegionApi.RenameMember(org.Shard, org.Id, myId, newName); err != nil {
 				return a.log.ErrorUserErr(myId, err)
 			}
 		}
@@ -743,7 +743,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
-	shard, err := internalRegionApi.CreateOrgTaskCenter(myId, newOrgId, owner.Name)
+	shard, err := internalRegionApi.CreateOrgTaskCenter(newOrgId, myId, owner.Name)
 	if err != nil {
 		if err := a.store.deleteOrgAndAllAssociatedMemberships(newOrgId); err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
@@ -775,7 +775,7 @@ func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := internalRegionApi.UserCanRenameOrg(myId, orgId)
+	can, err := internalRegionApi.UserCanRenameOrg(org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
@@ -834,7 +834,7 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := internalRegionApi.UserCanDeleteOrg(myId, orgId)
+	can, err := internalRegionApi.UserCanDeleteOrg(org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -852,7 +852,32 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 	a.log.Location()
 
-	return a.log.InfoUserErr(myId, NotImplementedErr)
+	org, err := a.store.getOrgById(orgId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if org == nil {
+		return a.log.InfoUserErr(myId, noSuchOrgErr)
+	}
+
+	internalRegionApi := a.internalRegionApis[org.Region]
+	if internalRegionApi == nil {
+		return a.log.ErrorUserErr(myId, regionGoneErr)
+	}
+
+	can, err := internalRegionApi.UserCanManageMembers(org.Shard, orgId, myId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if !can {
+		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+	}
+
+	//for _, newMember := range newMembers {
+	//	internalRegionApi.A
+	//}
+
+	return nil
 }
 
 func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
@@ -893,13 +918,14 @@ type store interface {
 }
 
 type internalRegionApi interface {
-	CreatePersonalTaskCenter(userId Id) (int, error)
-	CreateOrgTaskCenter(ownerId, orgId Id, ownerName string) (int, error)
-	RenameMember(memberId, orgId Id, newName string) error
-	UserCanRenameOrg(user, org Id) (bool, error)
-	UserCanMigrateOrg(user, org Id) (bool, error)
-	UserCanDeleteOrg(user, org Id) (bool, error)
-	UserCanManageMembers(user, org Id) (bool, error)
+	CreatePersonalTaskCenter(user Id) (int, error)
+	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
+	AddMember(shard int, org, member Id, memberName string) error
+	RenameMember(shard int, org, member Id, newName string) error
+	UserCanRenameOrg(shard int, org, user Id) (bool, error)
+	UserCanMigrateOrg(shard int, org, user Id) (bool, error)
+	UserCanDeleteOrg(shard int, org, user Id) (bool, error)
+	UserCanManageMembers(shard int, org, user Id) (bool, error)
 }
 
 type linkMailer interface {
@@ -914,7 +940,7 @@ type account struct {
 	Created   time.Time `json:"created"`
 	Name      string    `json:"name"`
 	Region    string    `json:"region"`
-	NewRegion *string   `json:"newRegion"`
+	NewRegion *string   `json:"newRegion,omitempty"`
 	Shard     int       `json:"shard"`
 	IsUser    bool      `json:"isUser"`
 }
