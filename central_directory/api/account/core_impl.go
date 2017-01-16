@@ -4,11 +4,8 @@ import (
 	. "bitbucket.org/robsix/task_center/misc"
 	"bytes"
 	"errors"
-	"fmt"
-	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
 
 var (
@@ -34,17 +31,6 @@ var (
 	noNewEmailRegisteredErr               = errors.New("no new email registered")
 	insufficientPermissionsErr            = errors.New("insufficient permissions")
 )
-
-type invalidStringParamErr struct {
-	paramPurpose  string
-	minRuneCount  int
-	maxRuneCount  int
-	regexMatchers []string
-}
-
-func (e *invalidStringParamErr) Error() string {
-	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.paramPurpose, e.minRuneCount, e.maxRuneCount, e.regexMatchers)
-}
 
 func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
 	if store == nil {
@@ -114,16 +100,16 @@ func (a *api) Register(name, email, pwd, region string) error {
 	a.log.Location()
 
 	name = strings.Trim(name, " ")
-	if err := validateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	if err := ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return a.log.InfoErr(err)
 	}
 
 	email = strings.Trim(email, " ")
-	if err := validateEmail(email); err != nil {
+	if err := ValidateEmail(email); err != nil {
 		return a.log.InfoErr(err)
 	}
 
-	if err := validateStringParam("password", pwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
+	if err := ValidateStringParam("password", pwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
 		return a.log.InfoErr(err)
 	}
 
@@ -380,7 +366,7 @@ func (a *api) ResetPwd(email string) error {
 func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, error) {
 	a.log.Location()
 
-	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
+	if err := ValidateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
 		return nil, a.log.InfoErr(err)
 	}
 
@@ -447,7 +433,7 @@ func (a *api) SearchUsers(search string, offset, limit int) ([]*user, int, error
 	}
 
 	search = strings.Trim(search, " ")
-	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	if err := ValidateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return nil, 0, a.log.InfoErr(err)
 	}
 
@@ -481,7 +467,7 @@ func (a *api) SearchOrgs(search string, offset, limit int) ([]*org, int, error) 
 	}
 
 	search = strings.Trim(search, " ")
-	if err := validateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	if err := ValidateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return nil, 0, a.log.InfoErr(err)
 	}
 
@@ -497,7 +483,7 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 	a.log.Location()
 
 	newName = strings.Trim(newName, " ")
-	if err := validateStringParam("username", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	if err := ValidateStringParam("username", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return a.log.InfoErr(err)
 	}
 
@@ -546,7 +532,7 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 	a.log.Location()
 
-	if err := validateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
+	if err := ValidateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
 		return a.log.InfoUserErr(myId, err)
 	}
 
@@ -594,7 +580,7 @@ func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
 	a.log.Location()
 
 	newEmail = strings.Trim(newEmail, " ")
-	if err := validateEmail(newEmail); err != nil {
+	if err := ValidateEmail(newEmail); err != nil {
 		return a.log.InfoUserErr(myId, err)
 	}
 
@@ -716,7 +702,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 	a.log.Location()
 
 	name = strings.Trim(name, " ")
-	if err := validateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	if err := ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return nil, a.log.InfoUserErr(myId, err)
 	}
 
@@ -1045,35 +1031,6 @@ type pwdInfo struct {
 	R      int
 	P      int
 	KeyLen int
-}
-
-func newInvalidStringParamErr(paramPurpose string, minRuneCount, maxRuneCount int, regexMatchers []string) *invalidStringParamErr {
-	return &invalidStringParamErr{
-		paramPurpose:  paramPurpose,
-		minRuneCount:  minRuneCount,
-		maxRuneCount:  maxRuneCount,
-		regexMatchers: append(make([]string, 0, len(regexMatchers)), regexMatchers...),
-	}
-}
-
-func validateStringParam(paramPurpose, param string, minRuneCount, maxRuneCount int, regexMatchers []string) error {
-	valRuneCount := utf8.RuneCountInString(param)
-	if valRuneCount < minRuneCount || valRuneCount > maxRuneCount {
-		return newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers)
-	}
-	for _, regex := range regexMatchers {
-		if matches, err := regexp.MatchString(regex, param); !matches || err != nil {
-			if err != nil {
-				return err
-			}
-			return newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers)
-		}
-	}
-	return nil
-}
-
-func validateEmail(email string) error {
-	return validateStringParam("email", email, 6, 254, []string{`.+@.+\..+`})
 }
 
 func pwdsMatch(a, b []byte) bool {

@@ -68,8 +68,8 @@ func Test_api_Register_invalidNameParam(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	err := api.Register("a", "email@email.email", "P@ss-W0rd", "us").(*invalidStringParamErr)
-	assert.Equal(t, "name", err.paramPurpose)
+	err := api.Register("a", "email@email.email", "P@ss-W0rd", "us").(*InvalidStringParamErr)
+	assert.Equal(t, "name", err.ParamPurpose)
 	assert.Equal(t, "name must be between 3 and 20 utf8 characters long and match all regexs []", err.Error())
 }
 
@@ -77,16 +77,16 @@ func Test_api_Register_invalidEmailParam(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	err := api.Register("ali", "invalidEmail", "P@ss-W0rd", "us").(*invalidStringParamErr)
-	assert.Equal(t, "email", err.paramPurpose)
+	err := api.Register("ali", "invalidEmail", "P@ss-W0rd", "us").(*InvalidStringParamErr)
+	assert.Equal(t, "email", err.ParamPurpose)
 }
 
 func Test_api_Register_invalidPwdParam(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	err := api.Register("ali", "email@email.com", "p", "us").(*invalidStringParamErr)
-	assert.Equal(t, "password", err.paramPurpose)
+	err := api.Register("ali", "email@email.com", "p", "us").(*InvalidStringParamErr)
+	assert.Equal(t, "password", err.ParamPurpose)
 }
 
 func Test_api_Register_invalidRegionParam(t *testing.T) {
@@ -915,7 +915,7 @@ func Test_api_SetNewPwdFromPwdReset_invalidNewPwd(t *testing.T) {
 
 	id, err := api.SetNewPwdFromPwdReset("yo", "email@email.com", "resetCode")
 	assert.Nil(t, id)
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 }
 
 func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailErr(t *testing.T) {
@@ -1080,7 +1080,7 @@ func Test_api_SearchUsers_invalidStringParam(t *testing.T) {
 
 	users, total, err := api.SearchUsers("yo", 0, 5)
 	assert.Nil(t, users)
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 	assert.Equal(t, 0, total)
 }
 
@@ -1144,7 +1144,7 @@ func Test_api_SearchOrgs_invalidStringParam(t *testing.T) {
 
 	orgs, total, err := api.SearchOrgs("yo", 0, 5)
 	assert.Nil(t, orgs)
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 	assert.Equal(t, 0, total)
 }
 
@@ -1180,7 +1180,7 @@ func Test_api_ChangeMyName_invalidStringParamErr(t *testing.T) {
 	id, _ := NewId()
 
 	err := api.ChangeMyName(id, "yo")
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 }
 
 func Test_api_ChangeMyName_storeGetUserByNameErr(t *testing.T) {
@@ -1316,7 +1316,7 @@ func Test_api_ChangeMyPwd_invalidStringParam(t *testing.T) {
 	myId, _ := NewId()
 
 	err := api.ChangeMyPwd(myId, "0ld-P@ss-W0rd", "yo")
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 }
 
 func Test_api_ChangeMyPwd_storeGetPwdInfoErr(t *testing.T) {
@@ -1451,7 +1451,7 @@ func Test_api_ChangeMyEmail_invalidStringParamErr(t *testing.T) {
 	myId, _ := NewId()
 
 	err := api.ChangeMyEmail(myId, "new-invalid-email")
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 }
 
 func Test_api_ChangeMyEmail_storeGetUserByEmailErr(t *testing.T) {
@@ -1779,7 +1779,7 @@ func Test_api_CreateOrg_invalidStringParamErr(t *testing.T) {
 
 	org, err := api.CreateOrg(myId, "yo", "us")
 	assert.Nil(t, org)
-	assert.IsType(t, &invalidStringParamErr{}, err)
+	assert.IsType(t, &InvalidStringParamErr{}, err)
 }
 
 func Test_api_CreateOrg_noSuchRegionErr(t *testing.T) {
