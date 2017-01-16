@@ -688,6 +688,23 @@ func (a *api) GetMe(myId Id) (*me, error) {
 func (a *api) DeleteMe(myId Id) error {
 	a.log.Location()
 
+	user, err := a.store.getUserById(myId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if user == nil {
+		return a.log.InfoUserErr(myId, noSuchUserErr)
+	}
+
+	internalRegionApi := a.internalRegionApis[user.Region]
+	if internalRegionApi == nil {
+		return a.log.ErrorUserErr(myId, regionGoneErr)
+	}
+
+	if err := internalRegionApi.DeleteTaskCenter(user.Shard, myId); err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+
 	if err := a.store.deleteUserAndAllAssociatedMemberships(myId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -842,6 +859,10 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
 	}
 
+	if err := internalRegionApi.DeleteTaskCenter(org.Shard, orgId); err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+
 	if err := a.store.deleteOrgAndAllAssociatedMemberships(orgId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -960,6 +981,7 @@ type store interface {
 type internalRegionApi interface {
 	CreatePersonalTaskCenter(user Id) (int, error)
 	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
+	DeleteTaskCenter(shard int, account Id) error
 	AddMember(shard int, org, member Id, memberName string) error
 	RemoveMember(shard int, org, member Id) error
 	RenameMember(shard int, org, member Id, newName string) error
