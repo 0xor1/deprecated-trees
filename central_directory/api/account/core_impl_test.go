@@ -2327,6 +2327,26 @@ func Test_api_AddMembers_internalRegionApiAddMemberErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
+func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanManageMembers", 0, orgId, myId).Return(true, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	store.On("getUsers", members).Return(users, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("AddMember", 0, orgId, m1, "test1").Return(nil)
+	store.On("createMembership", m1, orgId).Return(testErr)
+
+	err := api.AddMembers(myId, orgId, members)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
 func Test_api_AddMembers_success(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -2342,8 +2362,148 @@ func Test_api_AddMembers_success(t *testing.T) {
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("AddMember", 0, orgId, m1, "test1").Return(nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("AddMember", 0, orgId, m2, "test2").Return(nil)
+	store.On("createMembership", m1, orgId).Return(nil)
+	store.On("createMembership", m2, orgId).Return(nil)
 
 	err := api.AddMembers(myId, orgId, members)
+	assert.Nil(t, err)
+}
+
+func Test_api_RemoveMembers_storeGetOrgByIdErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(nil, testErr)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RemoveMembers_storeGetOrgByIdNilOrg(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(nil, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.Equal(t, noSuchOrgErr, err)
+}
+
+func Test_api_RemoveMembers_regionGoneErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "as"}, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RemoveMembers_internalRegionApiUserCanRemoveMembersErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanManageMembers", 0, orgId, myId).Return(false, testErr)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RemoveMembers_internalRegionApiUserCanManageMembersFalse(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanManageMembers", 0, orgId, myId).Return(false, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.Equal(t, insufficientPermissionsErr, err)
+}
+
+func Test_api_RemoveMembers_internalRegionApiRemoveMemberErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanManageMembers", 0, orgId, myId).Return(true, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	store.On("getUsers", members).Return(users, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("RemoveMember", 0, orgId, m1).Return(testErr)
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RemoveMembers_storeDeleteMembershipErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanManageMembers", 0, orgId, myId).Return(true, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	store.On("getUsers", members).Return(users, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("RemoveMember", 0, orgId, m1).Return(nil)
+	store.On("deleteMembership", m1, orgId).Return(testErr)
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RemoveMembers_success(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanManageMembers", 0, orgId, myId).Return(true, nil)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test2", Entity: Entity{Id: m2}}}
+	store.On("getUsers", members).Return(users, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("RemoveMember", 0, orgId, m1).Return(nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("RemoveMember", 0, orgId, m2).Return(nil)
+	store.On("deleteMembership", m1, orgId).Return(nil)
+	store.On("deleteMembership", m2, orgId).Return(nil)
+
+	err := api.RemoveMembers(myId, orgId, members)
 	assert.Nil(t, err)
 }
 
@@ -2545,6 +2705,11 @@ func (m *mockInternalRegionApi) CreateOrgTaskCenter(orgId, ownerId Id, ownerName
 
 func (m *mockInternalRegionApi) AddMember(shard int, org, newMember Id, newMemberName string) error {
 	args := m.Called(shard, org, newMember, newMemberName)
+	return args.Error(0)
+}
+
+func (m *mockInternalRegionApi) RemoveMember(shard int, org, newMember Id) error {
+	args := m.Called(shard, org, newMember)
 	return args.Error(0)
 }
 

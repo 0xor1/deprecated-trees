@@ -882,6 +882,9 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		if err := internalRegionApi.AddMember(org.Shard, orgId, user.Id, user.Name); err != nil {
 			return a.log.ErrorUserErr(myId, err)
 		}
+		if err := a.store.createMembership(user.Id, orgId); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
 	}
 
 	return nil
@@ -890,7 +893,37 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 	a.log.Location()
 
-	return a.log.InfoUserErr(myId, NotImplementedErr)
+	org, err := a.store.getOrgById(orgId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if org == nil {
+		return a.log.InfoUserErr(myId, noSuchOrgErr)
+	}
+
+	internalRegionApi := a.internalRegionApis[org.Region]
+	if internalRegionApi == nil {
+		return a.log.ErrorUserErr(myId, regionGoneErr)
+	}
+
+	can, err := internalRegionApi.UserCanManageMembers(org.Shard, orgId, myId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if !can {
+		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+	}
+
+	for _, member := range existingMembers {
+		if err := internalRegionApi.RemoveMember(org.Shard, orgId, member); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if err := a.store.deleteMembership(member, orgId); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+	}
+
+	return nil
 }
 
 //internal helpers
@@ -928,6 +961,7 @@ type internalRegionApi interface {
 	CreatePersonalTaskCenter(user Id) (int, error)
 	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
 	AddMember(shard int, org, member Id, memberName string) error
+	RemoveMember(shard int, org, member Id) error
 	RenameMember(shard int, org, member Id, newName string) error
 	UserCanRenameOrg(shard int, org, user Id) (bool, error)
 	UserCanMigrateOrg(shard int, org, user Id) (bool, error)
