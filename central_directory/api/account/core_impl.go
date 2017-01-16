@@ -873,9 +873,16 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
 	}
 
-	//for _, newMember := range newMembers {
-	//	internalRegionApi.A
-	//}
+	users, err := a.store.getUsers(newMembers)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+
+	for _, user := range users {
+		if err := internalRegionApi.AddMember(org.Shard, orgId, user.Id, user.Name); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+	}
 
 	return nil
 }
