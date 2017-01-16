@@ -388,6 +388,19 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 		return nil, a.log.ErrorErr(err)
 	}
 
+	if user.ActivationCode != nil {
+		internalRegionApi := a.internalRegionApis[user.Region]
+		if internalRegionApi == nil {
+			return nil, a.log.ErrorErr(regionGoneErr)
+		}
+
+		shard, err := internalRegionApi.CreatePersonalTaskCenter(user.Id)
+		if err != nil {
+			return nil, a.log.ErrorErr(err)
+		}
+		user.Shard = shard
+	}
+
 	user.ActivationCode = nil
 	user.ResetPwdCode = nil
 	if err = a.store.updateUser(user); err != nil {

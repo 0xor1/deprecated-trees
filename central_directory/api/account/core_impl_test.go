@@ -983,22 +983,61 @@ func Test_api_SetNewPwdFromPwdReset_cryptoHelperScryptKeyErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
-	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+func Test_api_SetNewPwdFromPwdReset_regionGoneErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode}
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us"}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+
+	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_internalRegionApiCreatePersonalTaskCenterErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	myId, _ := NewId()
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	salt := []byte("salt")
+	newPwd := []byte("P@ss-W0rd")
+	cryptoHelper.On("Bytes", 128).Return(salt, nil)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", myId).Return(0, testErr)
+
+	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
+	assert.Nil(t, id)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]internalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	resetCode := "resetCode"
+	myId, _ := NewId()
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
+	store.On("getUserByEmail", "email@email.com").Return(user, nil)
+	salt := []byte("salt")
+	newPwd := []byte("P@ss-W0rd")
+	cryptoHelper.On("Bytes", 128).Return(salt, nil)
+	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", myId).Return(3, nil)
 	store.On("updateUser", user).Return(testErr)
 
 	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
 	assert.Nil(t, id)
 	assert.IsType(t, &ErrorRef{}, err)
+	assert.Equal(t, 3, user.Shard)
 	assert.Nil(t, user.ResetPwdCode)
 	assert.Nil(t, user.ActivationCode)
 }
@@ -1008,13 +1047,14 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdatePwdInfoErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode}
-	user.Id, _ = NewId()
+	myId, _ := NewId()
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", myId).Return(3, nil)
 	store.On("updateUser", user).Return(nil)
 	store.On("updatePwdInfo", user.Id, &pwdInfo{Pwd: newPwd, Salt: salt, N: 16384, R: 8, P: 1, KeyLen: 32}).Return(testErr)
 
@@ -1028,21 +1068,20 @@ func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode}
-	user.Id, _ = NewId()
+	myId, _ := NewId()
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", newPwd, salt, 16384, 8, 1, 32).Return(newPwd, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("CreatePersonalTaskCenter", myId).Return(3, nil)
 	store.On("updateUser", user).Return(nil)
 	store.On("updatePwdInfo", user.Id, &pwdInfo{Pwd: newPwd, Salt: salt, N: 16384, R: 8, P: 1, KeyLen: 32}).Return(nil)
 
 	id, err := api.SetNewPwdFromPwdReset(string(newPwd), "email@email.com", "resetCode")
-	assert.NotNil(t, id)
+	assert.Equal(t, myId, id)
 	assert.Nil(t, err)
-	assert.Nil(t, user.ResetPwdCode)
-	assert.Nil(t, user.ActivationCode)
 }
 
 func Test_api_GetUsers_storeGetUsersErr(t *testing.T) {
