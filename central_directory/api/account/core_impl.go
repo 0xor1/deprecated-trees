@@ -32,7 +32,7 @@ var (
 	insufficientPermissionsErr            = errors.New("insufficient permissions")
 )
 
-func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
+func newApi(store store, internalRegionApis map[string]InternalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
 	if store == nil {
 		return nil, nilStoreErr
 	}
@@ -76,7 +76,7 @@ func newApi(store store, internalRegionApis map[string]internalRegionApi, linkMa
 
 type api struct {
 	store                 store
-	internalRegionApis    map[string]internalRegionApi
+	internalRegionApis    map[string]InternalRegionApi
 	linkMailer            linkMailer
 	newId                 GenNewId
 	cryptoHelper          CryptoHelper
@@ -975,19 +975,6 @@ type store interface {
 	membershipExists(user, org Id) (bool, error)
 	createMembership(user, org Id) error
 	deleteMembership(user, org Id) error
-}
-
-type internalRegionApi interface {
-	CreatePersonalTaskCenter(user Id) (int, error)
-	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
-	DeleteTaskCenter(shard int, account Id) error
-	AddMember(shard int, org, member Id, memberName string) error
-	RemoveMember(shard int, org, member Id) error
-	RenameMember(shard int, org, member Id, newName string) error
-	UserCanRenameOrg(shard int, org, user Id) (bool, error)
-	UserCanMigrateOrg(shard int, org, user Id) (bool, error)
-	UserCanDeleteOrg(shard int, org, user Id) (bool, error)
-	UserCanManageMembers(shard int, org, user Id) (bool, error)
 }
 
 type linkMailer interface {

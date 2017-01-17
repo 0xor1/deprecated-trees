@@ -37,6 +37,19 @@ type Api interface {
 	RemoveMembers(myId, orgId Id, existingMembers []Id) error
 }
 
+type InternalRegionApi interface {
+	CreatePersonalTaskCenter(user Id) (int, error)
+	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
+	DeleteTaskCenter(shard int, account Id) error
+	AddMember(shard int, org, member Id, memberName string) error
+	RemoveMember(shard int, org, member Id) error
+	RenameMember(shard int, org, member Id, newName string) error
+	UserCanRenameOrg(shard int, org, user Id) (bool, error)
+	UserCanMigrateOrg(shard int, org, user Id) (bool, error)
+	UserCanDeleteOrg(shard int, org, user Id) (bool, error)
+	UserCanManageMembers(shard int, org, user Id) (bool, error)
+}
+
 func NewLogLinkMailer(log Log) (linkMailer, error) {
 	if log == nil {
 		return nil, nilLogErr
