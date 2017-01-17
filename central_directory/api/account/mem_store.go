@@ -4,6 +4,7 @@ import(
 	. "bitbucket.org/robsix/task_center/misc"
 	"sync"
 	"strings"
+	"math"
 )
 
 func newMemStore() store {
@@ -216,9 +217,9 @@ func (s *memStore) createOrgAndMembership(user Id, org *org) error {
 	defer s.mtx.Unlock()
 	s.orgs[org.Id.String()] = s.copyOrg(org)
 	if s.memberships[user.String()] == nil {
-		s.memberships[user.String()] = []string{org.Id.String()}
+		s.memberships[user.String()] = map[string]bool{org.Id.String(): true}
 	} else {
-		s.memberships[user.String()] = append(s.memberships[user.String()], org.Id.String())
+		s.memberships[user.String()][org.Id.String()] = true
 	}
 	return nil
 }
@@ -251,11 +252,8 @@ func (s *memStore) deleteOrgAndAllAssociatedMemberships(id Id) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	delete(s.orgs, id.String())
-	for user, orgs := range s.memberships {
-		for i := range orgs {
-			orgs = orgs[:i+copy(orgs[i:], orgs[i+1:])]
-		}
-		s.memberships[user] = orgs
+	for userId, _ := range s.memberships {
+		delete(s.memberships[userId], id.String())
 	}
 	return nil
 }
@@ -293,15 +291,13 @@ func (s *memStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, erro
 	if usersOrgs == nil {
 		return nil, 0, nil
 	} else {
-
+		total := len(usersOrgs)
+		math.Ma
 	}
 }
 
 func (s *memStore) membershipExists(user, org Id) (bool, error) {
-	if s.memberships[user.String()] != nil && s.memberships[user.String()][org.String()] {
-		return true, nil
-	}
-	return false, nil
+	return s.memberships[user.String()] != nil && s.memberships[user.String()][org.String()], nil
 }
 
 func (s *memStore) createMembership(user, org Id) error {
