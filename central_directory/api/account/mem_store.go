@@ -2,6 +2,7 @@ package account
 
 import(
 	. "bitbucket.org/robsix/task_center/misc"
+	q "github.com/ahmetalpbalkan/go-linq"
 	"sync"
 	"strings"
 	"math"
@@ -11,18 +12,20 @@ func newMemStore() store {
 	return &memStore{
 		users: map[string]*fullUserInfo{},
 		orgs: map[string]*org{},
-		memberships: map[string]map[string]bool{},
+		membershipsUtoO: map[string]map[string]interface{}{},
+		membershipsOtoU: map[string]map[string]interface{}{},
 		pwdInfos: map[string]*pwdInfo{},
 		mtx: &sync.RWMutex{},
 	}
 }
 
 type memStore struct{
-	users map[string]*fullUserInfo
-	orgs map[string]*org
-	memberships map[string][]string //userId to orgIds
-	pwdInfos map[string]*pwdInfo
-	mtx *sync.RWMutex
+	users           map[string]*fullUserInfo
+	orgs            map[string]*org
+	membershipsUtoO map[string]map[string]interface{} //userId to orgIds
+	membershipsOtoU map[string]map[string]interface{} //orgId to userIds
+	pwdInfos        map[string]*pwdInfo
+	mtx             *sync.RWMutex
 }
 
 func (s *memStore) copyFullUserInfo(user *fullUserInfo) *fullUserInfo {
@@ -177,7 +180,10 @@ func (s *memStore) deleteUserAndAllAssociatedMemberships(id Id) error {
 	defer s.mtx.Unlock()
 	delete(s.users, id.String())
 	delete(s.pwdInfos, id.String())
-	delete(s.memberships, id.String())
+	for orgId := range s.membershipsUtoO[id.String()] {
+		delete(s.membershipsOtoU[orgId], id.String())
+	}
+	delete(s.membershipsUtoO, id.String())
 	return nil
 }
 
@@ -197,17 +203,21 @@ func (s *memStore) getUsers(ids []Id) ([]*user, error) {
 func (s *memStore) searchUsers(search string, offset, limit int) ([]*user, int, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
+
 	res := make([]*user, 0, limit)
-	total := 0
-	for _, user := range s.users {
-		if strings.Contains(user.Name, search) {
-			if total >= offset && len(res) < limit {
-				copy := s.copyFullUserInfo(user)
-				res = append(res, &copy.user)
-			}
-			total++
-		}
-	}
+
+	allMatches := q.From(s.users).Where(func(kv interface{}) bool {
+		return strings.Contains(kv.(q.KeyValue).Value.(*fullUserInfo).Name, search)
+	}).Select(func(kv interface{})interface{}{
+		return kv.(q.KeyValue).Value.(*fullUserInfo)
+	})
+
+	total := allMatches.Count()
+
+	allMatches.OrderBy(func(u interface{})interface{}{
+		return u.(*fullUserInfo).Name
+	}).Skip(offset).Take(limit).ToSlice(&res)
+
 	return res, total, nil
 
 }
@@ -216,10 +226,15 @@ func (s *memStore) createOrgAndMembership(user Id, org *org) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.orgs[org.Id.String()] = s.copyOrg(org)
-	if s.memberships[user.String()] == nil {
-		s.memberships[user.String()] = map[string]bool{org.Id.String(): true}
+	if s.membershipsUtoO[user.String()] == nil {
+		s.membershipsUtoO[user.String()] = map[string]interface{}{org.Id.String(): nil}
 	} else {
-		s.memberships[user.String()][org.Id.String()] = true
+		s.membershipsUtoO[user.String()][org.Id.String()] = nil
+	}
+	if s.membershipsOtoU[org.Id.String()] == nil {
+		s.membershipsOtoU[org.Id.String()] = map[string]interface{}{user.String(): nil}
+	} else {
+		s.membershipsOtoU[org.Id.String()][user.String()] = nil
 	}
 	return nil
 }
@@ -252,9 +267,10 @@ func (s *memStore) deleteOrgAndAllAssociatedMemberships(id Id) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	delete(s.orgs, id.String())
-	for userId, _ := range s.memberships {
-		delete(s.memberships[userId], id.String())
+	for userId := range s.membershipsOtoU[id.String()] {
+		delete(s.membershipsUtoO[userId], id.String())
 	}
+	delete(s.membershipsOtoU, id.String())
 	return nil
 }
 
@@ -273,39 +289,76 @@ func (s *memStore) getOrgs(ids []Id) ([]*org, error) {
 func (s *memStore) searchOrgs(search string, offset, limit int) ([]*org, int, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
+
 	res := make([]*org, 0, limit)
-	total := 0
-	for _, org := range s.orgs {
-		if strings.Contains(org.Name, search) {
-			if total >= offset && len(res) < limit {
-				res = append(res, s.copyOrg(org))
-			}
-			total++
-		}
-	}
+
+	allMatches := q.From(s.orgs).Where(func(kv interface{}) bool {
+		return strings.Contains(kv.(q.KeyValue).Value.(*org).Name, search)
+	}).Select(func(kv interface{})interface{}{
+		return kv.(q.KeyValue).Value.(*org)
+	})
+
+	total := allMatches.Count()
+
+	allMatches.OrderBy(func(o interface{})interface{}{
+		return o.(*org).Name
+	}).Skip(offset).Take(limit).ToSlice(&res)
+
 	return res, total, nil
 }
 
 func (s *memStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error) {
-	usersOrgs := s.memberships[userId.String()]
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+
+	usersOrgs := s.membershipsUtoO[userId.String()]
 	if usersOrgs == nil {
 		return nil, 0, nil
 	} else {
-		total := len(usersOrgs)
-		math.Ma
+		tmp := make([]*org, 0, len(usersOrgs))
+		for orgId := range usersOrgs {
+			tmp = append(tmp, s.orgs[orgId])
+		}
+		res := make([]*org, 0, int(math.Min(float64(limit), float64(len(usersOrgs)))))
+		q.From(tmp).OrderBy(func(o interface{})interface{}{
+			return o.(*org).Name
+		}).Skip(offset).Take(limit).ToSlice(&res)
+		return res, len(usersOrgs), nil
 	}
 }
 
 func (s *memStore) membershipExists(user, org Id) (bool, error) {
-	return s.memberships[user.String()] != nil && s.memberships[user.String()][org.String()], nil
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	exists := false
+	if s.membershipsUtoO[user.String()] != nil{
+		_, exists = s.membershipsUtoO[user.String()][org.String()]
+	}
+	return exists, nil
 }
 
 func (s *memStore) createMembership(user, org Id) error {
-
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	if s.membershipsUtoO[user.String()] == nil {
+		s.membershipsUtoO[user.String()] = map[string]interface{}{org.String(): nil}
+	} else {
+		s.membershipsUtoO[user.String()][org.String()] = nil
+	}
+	if s.membershipsOtoU[org.String()] == nil {
+		s.membershipsOtoU[org.String()] = map[string]interface{}{user.String(): nil}
+	} else {
+		s.membershipsOtoU[org.String()][user.String()] = nil
+	}
+	return nil
 }
 
 func (s *memStore) deleteMembership(user, org Id) error {
-
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	delete(s.membershipsUtoO[user.String()], org.String())
+	delete(s.membershipsOtoU[org.String()], user.String())
+	return nil
 }
 
 
