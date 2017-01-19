@@ -2,6 +2,7 @@ package account
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
+	"sync"
 )
 
 type Api interface {
@@ -48,6 +49,17 @@ type InternalRegionApi interface {
 	UserCanMigrateOrg(shard int, org, user Id) (bool, error)
 	UserCanDeleteOrg(shard int, org, user Id) (bool, error)
 	UserCanManageMembers(shard int, org, user Id) (bool, error)
+}
+
+func NewMemStore() store {
+	return &memStore{
+		users:           map[string]*fullUserInfo{},
+		orgs:            map[string]*org{},
+		membershipsUtoO: map[string]map[string]interface{}{},
+		membershipsOtoU: map[string]map[string]interface{}{},
+		pwdInfos:        map[string]*pwdInfo{},
+		mtx:             &sync.RWMutex{},
+	}
 }
 
 func NewLogLinkMailer(log Log) (linkMailer, error) {

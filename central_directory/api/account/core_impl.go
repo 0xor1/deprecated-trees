@@ -117,7 +117,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.InfoErr(noSuchRegionErr)
 	}
 
-	if account, err := a.store.getAccountByName(name); account != nil || err != nil {
+	if exists, err := a.store.accountWithNameExists(name); exists || err != nil {
 		if err != nil {
 			return a.log.ErrorErr(err)
 		} else {
@@ -724,7 +724,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, noSuchRegionErr)
 	}
 
-	if account, err := a.store.getAccountByName(name); account != nil || err != nil {
+	if exists, err := a.store.accountWithNameExists(name); exists || err != nil {
 		if err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
 		} else {
@@ -950,7 +950,7 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 
 type store interface {
 	//user or org
-	getAccountByName(name string) (*account, error)
+	accountWithNameExists(name string) (bool, error)
 	//user
 	createUser(user *fullUserInfo, pwdInfo *pwdInfo) error
 	getUserByName(name string) (*fullUserInfo, error)

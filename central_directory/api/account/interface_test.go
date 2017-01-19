@@ -6,6 +6,12 @@ import (
 	"testing"
 )
 
+func Test_NewMemStore_success(t *testing.T) {
+	store := NewMemStore()
+
+	assert.NotNil(t, store)
+}
+
 func Test_NewLogLinkMailer_nilLogErr(t *testing.T) {
 	linkMailer, err := NewLogLinkMailer(nil)
 

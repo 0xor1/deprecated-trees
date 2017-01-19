@@ -1,25 +1,14 @@
 package account
 
-import(
+import (
 	. "bitbucket.org/robsix/task_center/misc"
 	q "github.com/ahmetalpbalkan/go-linq"
-	"sync"
-	"strings"
 	"math"
+	"strings"
+	"sync"
 )
 
-func newMemStore() store {
-	return &memStore{
-		users: map[string]*fullUserInfo{},
-		orgs: map[string]*org{},
-		membershipsUtoO: map[string]map[string]interface{}{},
-		membershipsOtoU: map[string]map[string]interface{}{},
-		pwdInfos: map[string]*pwdInfo{},
-		mtx: &sync.RWMutex{},
-	}
-}
-
-type memStore struct{
+type memStore struct {
 	users           map[string]*fullUserInfo
 	orgs            map[string]*org
 	membershipsUtoO map[string]map[string]interface{} //userId to orgIds
@@ -37,27 +26,27 @@ func (s *memStore) copyFullUserInfo(user *fullUserInfo) *fullUserInfo {
 	if copy.Id != nil {
 		copy.Id = Id(append(make([]byte, 0, 16), []byte(copy.Id)...))
 	}
-	if copy.NewRegion != nil{
+	if copy.NewRegion != nil {
 		newRegionCopy := *copy.NewRegion
 		copy.NewRegion = &newRegionCopy
 	}
-	if copy.NewEmail != nil{
+	if copy.NewEmail != nil {
 		newEmailCopy := *copy.NewEmail
 		copy.NewEmail = &newEmailCopy
 	}
-	if copy.ActivationCode != nil{
+	if copy.ActivationCode != nil {
 		activationCodeCopy := *copy.ActivationCode
 		copy.ActivationCode = &activationCodeCopy
 	}
-	if copy.Activated != nil{
+	if copy.Activated != nil {
 		activatedCopy := *copy.Activated
 		copy.Activated = &activatedCopy
 	}
-	if copy.NewEmailConfirmationCode != nil{
+	if copy.NewEmailConfirmationCode != nil {
 		newEmailConfirmationCodeCopy := *copy.NewEmailConfirmationCode
 		copy.NewEmailConfirmationCode = &newEmailConfirmationCodeCopy
 	}
-	if copy.ResetPwdCode != nil{
+	if copy.ResetPwdCode != nil {
 		resetPwdCodeCopy := *copy.ResetPwdCode
 		copy.ResetPwdCode = &resetPwdCodeCopy
 	}
@@ -74,7 +63,7 @@ func (s *memStore) copyOrg(org *org) *org {
 	if copy.Id != nil {
 		copy.Id = Id(append(make([]byte, 0, 16), []byte(copy.Id)...))
 	}
-	if copy.NewRegion != nil{
+	if copy.NewRegion != nil {
 		newRegionCopy := *copy.NewRegion
 		copy.NewRegion = &newRegionCopy
 	}
@@ -98,24 +87,20 @@ func (s *memStore) copyPwdInfo(pwdInfo *pwdInfo) *pwdInfo {
 	return &copy
 }
 
-func (s *memStore) getAccountByName(name string) (*account, error) {
+func (s *memStore) accountWithNameExists(name string) (bool, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	for _, user := range s.users {
 		if user.Name == name {
-			copy := s.copyFullUserInfo(user)
-			val := account(copy.user)
-			return &val, nil
+			return true, nil
 		}
 	}
 	for _, org := range s.orgs {
 		if org.Name == name {
-			copy := s.copyOrg(org)
-			val := account(*copy)
-			return &val, nil
+			return true, nil
 		}
 	}
-	return nil, nil
+	return false, nil
 }
 
 func (s *memStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
@@ -208,14 +193,15 @@ func (s *memStore) searchUsers(search string, offset, limit int) ([]*user, int, 
 
 	allMatches := q.From(s.users).Where(func(kv interface{}) bool {
 		return strings.Contains(kv.(q.KeyValue).Value.(*fullUserInfo).Name, search)
-	}).Select(func(kv interface{})interface{}{
-		return kv.(q.KeyValue).Value.(*fullUserInfo)
+	}).Select(func(kv interface{}) interface{} {
+		copiedUser := s.copyFullUserInfo(kv.(q.KeyValue).Value.(*fullUserInfo)).user
+		return &copiedUser
 	})
 
 	total := allMatches.Count()
 
-	allMatches.OrderBy(func(u interface{})interface{}{
-		return u.(*fullUserInfo).Name
+	allMatches.OrderBy(func(u interface{}) interface{} {
+		return u.(*user).Name
 	}).Skip(offset).Take(limit).ToSlice(&res)
 
 	return res, total, nil
@@ -231,11 +217,7 @@ func (s *memStore) createOrgAndMembership(user Id, org *org) error {
 	} else {
 		s.membershipsUtoO[user.String()][org.Id.String()] = nil
 	}
-	if s.membershipsOtoU[org.Id.String()] == nil {
-		s.membershipsOtoU[org.Id.String()] = map[string]interface{}{user.String(): nil}
-	} else {
-		s.membershipsOtoU[org.Id.String()][user.String()] = nil
-	}
+	s.membershipsOtoU[org.Id.String()] = map[string]interface{}{user.String(): nil}
 	return nil
 }
 
@@ -294,13 +276,13 @@ func (s *memStore) searchOrgs(search string, offset, limit int) ([]*org, int, er
 
 	allMatches := q.From(s.orgs).Where(func(kv interface{}) bool {
 		return strings.Contains(kv.(q.KeyValue).Value.(*org).Name, search)
-	}).Select(func(kv interface{})interface{}{
+	}).Select(func(kv interface{}) interface{} {
 		return kv.(q.KeyValue).Value.(*org)
 	})
 
 	total := allMatches.Count()
 
-	allMatches.OrderBy(func(o interface{})interface{}{
+	allMatches.OrderBy(func(o interface{}) interface{} {
 		return o.(*org).Name
 	}).Skip(offset).Take(limit).ToSlice(&res)
 
@@ -320,7 +302,7 @@ func (s *memStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, erro
 			tmp = append(tmp, s.orgs[orgId])
 		}
 		res := make([]*org, 0, int(math.Min(float64(limit), float64(len(usersOrgs)))))
-		q.From(tmp).OrderBy(func(o interface{})interface{}{
+		q.From(tmp).OrderBy(func(o interface{}) interface{} {
 			return o.(*org).Name
 		}).Skip(offset).Take(limit).ToSlice(&res)
 		return res, len(usersOrgs), nil
@@ -331,7 +313,7 @@ func (s *memStore) membershipExists(user, org Id) (bool, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	exists := false
-	if s.membershipsUtoO[user.String()] != nil{
+	if s.membershipsUtoO[user.String()] != nil {
 		_, exists = s.membershipsUtoO[user.String()][org.String()]
 	}
 	return exists, nil
@@ -345,11 +327,7 @@ func (s *memStore) createMembership(user, org Id) error {
 	} else {
 		s.membershipsUtoO[user.String()][org.String()] = nil
 	}
-	if s.membershipsOtoU[org.String()] == nil {
-		s.membershipsOtoU[org.String()] = map[string]interface{}{user.String(): nil}
-	} else {
-		s.membershipsOtoU[org.String()][user.String()] = nil
-	}
+	s.membershipsOtoU[org.String()][user.String()] = nil
 	return nil
 }
 
@@ -360,5 +338,3 @@ func (s *memStore) deleteMembership(user, org Id) error {
 	delete(s.membershipsOtoU[org.String()], user.String())
 	return nil
 }
-
-
