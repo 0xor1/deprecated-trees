@@ -1757,6 +1757,19 @@ func Test_api_DeleteMe_storeGetUserByIdNilUser(t *testing.T) {
 	assert.Equal(t, noSuchUserErr, err)
 }
 
+func Test_api_DeleteMe_storeGetUsersOrgsErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
+	store.On("getUserById", myId).Return(user, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, testErr)
+
+	err := api.DeleteMe(myId)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
 func Test_api_DeleteMe_regionGoneErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -1764,6 +1777,52 @@ func Test_api_DeleteMe_regionGoneErr(t *testing.T) {
 	myId, _ := NewId()
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
+	orgId, _ := NewId()
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Entity: Entity{Id: orgId}}}, 1, nil)
+
+	err := api.DeleteMe(myId)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_DeleteMe_internalRegionApiRemoveMemberErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
+	store.On("getUserById", myId).Return(user, nil)
+	orgId, _ := NewId()
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, Entity: Entity{Id: orgId}}}, 1, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("RemoveMember", 4, orgId, myId).Return(testErr)
+
+	err := api.DeleteMe(myId)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_DeleteMe_storeDeleteMembershipErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
+	store.On("getUserById", myId).Return(user, nil)
+	orgId, _ := NewId()
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, Entity: Entity{Id: orgId}}}, 1, nil)
+	internalRegionApis["us"].(*mockInternalRegionApi).On("RemoveMember", 4, orgId, myId).Return(nil)
+	store.On("deleteMembership", myId, orgId).Return(testErr)
+
+	err := api.DeleteMe(myId)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_DeleteMe_regionGoneErr2(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": nil}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
+	store.On("getUserById", myId).Return(user, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1776,21 +1835,23 @@ func Test_api_DeleteMe_internalRegionApiDeleteTaskCenterErr(t *testing.T) {
 	myId, _ := NewId()
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("DeleteTaskCenter", 2, myId).Return(testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_DeleteMe_storeDeleteUserAndAllAssociatedMembershipsErr(t *testing.T) {
+func Test_api_DeleteMe_storeDeleteUserErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("DeleteTaskCenter", 2, myId).Return(nil)
-	store.On("deleteUserAndAllAssociatedMemberships", myId).Return(testErr)
+	store.On("deleteUser", myId).Return(testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1803,8 +1864,9 @@ func Test_api_DeleteMe_success(t *testing.T) {
 	myId, _ := NewId()
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("DeleteTaskCenter", 2, myId).Return(nil)
-	store.On("deleteUserAndAllAssociatedMemberships", myId).Return(nil)
+	store.On("deleteUser", myId).Return(nil)
 
 	err := api.DeleteMe(myId)
 	assert.Nil(t, err)
@@ -2678,7 +2740,7 @@ func (m *mockStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
 	return args.Error(0)
 }
 
-func (m *mockStore) deleteUserAndAllAssociatedMemberships(id Id) error {
+func (m *mockStore) deleteUser(id Id) error {
 	args := m.Called(id)
 	return args.Error(0)
 }

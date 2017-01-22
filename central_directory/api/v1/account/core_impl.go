@@ -695,6 +695,27 @@ func (a *api) DeleteMe(myId Id) error {
 		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
+	for offset, total := 0, 1; offset < total; {
+		var orgs []*org
+		orgs, total, err = a.store.getUsersOrgs(myId, offset, 100)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		offset += len(orgs)
+		for _, org := range orgs {
+			internalRegionApi := a.internalRegionApis[org.Region]
+			if internalRegionApi == nil {
+				return a.log.ErrorUserErr(myId, regionGoneErr)
+			}
+			if err := internalRegionApi.RemoveMember(org.Shard, org.Id, myId); err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+			if err := a.store.deleteMembership(myId, org.Id); err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+		}
+	}
+
 	internalRegionApi := a.internalRegionApis[user.Region]
 	if internalRegionApi == nil {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
@@ -704,7 +725,7 @@ func (a *api) DeleteMe(myId Id) error {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
-	if err := a.store.deleteUserAndAllAssociatedMemberships(myId); err != nil {
+	if err := a.store.deleteUser(myId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
@@ -959,7 +980,7 @@ type store interface {
 	getPwdInfo(id Id) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
 	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
-	deleteUserAndAllAssociatedMemberships(id Id) error
+	deleteUser(id Id) error
 	getUsers(ids []Id) ([]*user, error)
 	searchUsers(search string, offset, limit int) ([]*user, int, error)
 	//org

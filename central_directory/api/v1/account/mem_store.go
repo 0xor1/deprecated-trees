@@ -160,15 +160,11 @@ func (s *memStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
 	return nil
 }
 
-func (s *memStore) deleteUserAndAllAssociatedMemberships(id Id) error {
+func (s *memStore) deleteUser(id Id) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	delete(s.users, id.String())
 	delete(s.pwdInfos, id.String())
-	for orgId := range s.membershipsUtoO[id.String()] {
-		delete(s.membershipsOtoU[orgId], id.String())
-	}
-	delete(s.membershipsUtoO, id.String())
 	return nil
 }
 

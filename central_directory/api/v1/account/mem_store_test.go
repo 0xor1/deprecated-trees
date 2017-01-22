@@ -107,14 +107,10 @@ func Test_memStore_updatePwdInfo(t *testing.T) {
 	assert.Equal(t, []byte("pwd2"), pwdInfo.Pwd)
 }
 
-func Test_memStore_deleteUserAndAllAssociatedMemberships(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+func Test_memStore_deleteUser(t *testing.T) {
+	store, userId, _ := setup(t, NewMemStore())
 
-	err := store.deleteUserAndAllAssociatedMemberships(userId)
-	assert.Nil(t, err)
-
-	exists, err := store.membershipExists(userId, orgId)
-	assert.False(t, exists)
+	err := store.deleteUser(userId)
 	assert.Nil(t, err)
 
 	user, err := store.getUserById(userId)
