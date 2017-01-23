@@ -799,6 +799,14 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
 
+	if exists, err := a.store.accountWithNameExists(newName); exists || err != nil {
+		if err != nil {
+			return a.log.ErrorErr(err)
+		} else {
+			return a.log.InfoErr(accountNameAlreadyInUseErr)
+		}
+	}
+
 	org, err := a.store.getOrgById(orgId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)

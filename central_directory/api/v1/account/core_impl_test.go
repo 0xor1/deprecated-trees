@@ -2148,12 +2148,37 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	assert.Equal(t, false, org.IsUser)
 }
 
+func Test_api_RenameOrg_storeAccountWithNameExistsErr(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(false, testErr)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RenameOrg_storeAccountWithNameExistsTrue(t *testing.T) {
+	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(true, nil)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.Equal(t, accountNameAlreadyInUseErr, err)
+}
+
 func Test_api_RenameOrg_storeGetOrgByIdErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(nil, testErr)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
@@ -2166,6 +2191,7 @@ func Test_api_RenameOrg_storeGetOrgByIdNilOrg(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(nil, nil)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
@@ -2178,6 +2204,7 @@ func Test_api_RenameOrg_regionGoneErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(&org{Region: "sw"}, nil)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
@@ -2190,6 +2217,7 @@ func Test_api_RenameOrg_internalRegionApiUserCanRenameOrgErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(false, testErr)
 
@@ -2203,6 +2231,7 @@ func Test_api_RenameOrg_insufficientPermissionsErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(false, nil)
 
@@ -2217,6 +2246,7 @@ func Test_api_RenameOrg_storeUpdateOrgErr(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	org := &org{Region: "us"}
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(org, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(true, nil)
 	store.On("updateOrg", org).Return(testErr)
@@ -2232,6 +2262,7 @@ func Test_api_RenameOrg_success(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	org := &org{Region: "us"}
+	store.On("accountWithNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(org, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(true, nil)
 	store.On("updateOrg", org).Return(nil)
