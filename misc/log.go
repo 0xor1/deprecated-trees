@@ -1,13 +1,12 @@
 package misc
 
 import (
-	"errors"
 	"github.com/uber-go/zap"
 	"runtime"
 )
 
 var (
-	NotImplementedErr = errors.New("not implemented")
+	NotImplementedErr = &Error{Code: 0, Msg: "not implemented"}
 )
 
 type Log interface {

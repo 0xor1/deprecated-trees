@@ -2,12 +2,11 @@ package misc
 
 import (
 	"encoding/hex"
-	"errors"
 	. "github.com/pborman/uuid"
 )
 
 var (
-	idGenerationErr = errors.New("Failed to generate id")
+	idGenerationErr = &Error{Code: 1, Msg: "Failed to generate id"}
 )
 
 type Id UUID

@@ -3,33 +3,32 @@ package account
 import (
 	. "bitbucket.org/robsix/task_center/misc"
 	"bytes"
-	"errors"
 	"strings"
 	"time"
 )
 
 var (
-	nilStoreErr                           = errors.New("nil store")
-	nilInternalRegionApisErr              = errors.New("nil internalRegionApis")
-	nilLinkMailerErr                      = errors.New("nil linkMailer")
-	nilNewIdErr                           = errors.New("nil new id")
-	nilCryptoHelperErr                    = errors.New("nil CryptoHelper")
-	nilLogErr                             = errors.New("nil log")
-	noSuchRegionErr                       = errors.New("no such region")
-	regionGoneErr                         = errors.New("region no longer exists")
-	noSuchUserErr                         = errors.New("no such user")
-	noSuchOrgErr                          = errors.New("no such org")
-	invalidActivationAttemptErr           = errors.New("invalid activation attempt")
-	invalidResetPwdAttemptErr             = errors.New("invalid reset password attempt")
-	invalidNewEmailConfirmationAttemptErr = errors.New("invalid new email confirmation attempt")
-	nameOrPwdIncorrectErr                 = errors.New("Name or password incorrect")
-	incorrectPwdErr                       = errors.New("password incorrect")
-	userNotActivatedErr                   = errors.New("user not activated")
-	emailAlreadyInUseErr                  = errors.New("email already in use")
-	accountNameAlreadyInUseErr            = errors.New("account already in use")
-	emailConfirmationCodeErr              = errors.New("email confirmation code is of zero length")
-	noNewEmailRegisteredErr               = errors.New("no new email registered")
-	insufficientPermissionsErr            = errors.New("insufficient permissions")
+	nilStoreErr                           = &Error{Code: 2, Msg: "nil store"}
+	nilInternalRegionApisErr              = &Error{Code: 3, Msg: "nil internalRegionApis"}
+	nilLinkMailerErr                      = &Error{Code: 4, Msg: "nil linkMailer"}
+	nilNewIdErr                           = &Error{Code: 5, Msg: "nil new id"}
+	nilCryptoHelperErr                    = &Error{Code: 6, Msg: "nil CryptoHelper"}
+	nilLogErr                             = &Error{Code: 7, Msg: "nil log"}
+	noSuchRegionErr                       = &Error{Code: 8, Msg: "no such region"}
+	regionGoneErr                         = &Error{Code: 9, Msg: "region no longer exists"}
+	noSuchUserErr                         = &Error{Code: 10, Msg: "no such user"}
+	noSuchOrgErr                          = &Error{Code: 11, Msg: "no such org"}
+	invalidActivationAttemptErr           = &Error{Code: 12, Msg: "invalid activation attempt"}
+	invalidResetPwdAttemptErr             = &Error{Code: 13, Msg: "invalid reset password attempt"}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: 14, Msg: "invalid new email confirmation attempt"}
+	nameOrPwdIncorrectErr                 = &Error{Code: 15, Msg: "Name or password incorrect"}
+	incorrectPwdErr                       = &Error{Code: 16, Msg: "password incorrect"}
+	userNotActivatedErr                   = &Error{Code: 17, Msg: "user not activated"}
+	emailAlreadyInUseErr                  = &Error{Code: 18, Msg: "email already in use"}
+	accountNameAlreadyInUseErr            = &Error{Code: 19, Msg: "account already in use"}
+	emailConfirmationCodeErr              = &Error{Code: 20, Msg: "email confirmation code is of zero length"}
+	noNewEmailRegisteredErr               = &Error{Code: 21, Msg: "no new email registered"}
+	insufficientPermissionsErr            = &Error{Code: 22, Msg: "insufficient permissions"}
 )
 
 func newApi(store store, internalRegionApis map[string]InternalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
