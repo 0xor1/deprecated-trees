@@ -101,7 +101,7 @@ func Test_api_Register_storeAccountWithNameExistsErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, testErr)
+	store.On("accountWithCiNameExists", "ali").Return(false, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -111,7 +111,7 @@ func Test_api_Register_storeAccountWithNameExists_true(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(true, nil)
+	store.On("accountWithCiNameExists", "ali").Return(true, nil)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.Equal(t, accountNameAlreadyInUseErr, err)
@@ -121,7 +121,7 @@ func Test_api_Register_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
@@ -132,7 +132,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAcco
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{me: me{Email: "email@email.com"}}, nil)
 	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(testErr)
 
@@ -144,7 +144,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_success(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{me: me{Email: "email@email.com"}}, nil)
 	linkMailer.On("sendMultipleAccountPolicyEmail", "email@email.com").Return(nil)
 
@@ -156,7 +156,7 @@ func Test_api_Register_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	cryptoHelper.On("Bytes", 128).Return(nil, testErr)
 
@@ -168,7 +168,7 @@ func Test_api_Register_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
@@ -182,7 +182,7 @@ func Test_api_Register_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	pwd := []byte("P@ss-W0rd")
@@ -198,7 +198,7 @@ func Test_api_Register_gennewIdErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	pwd := []byte("P@ss-W0rd")
@@ -215,7 +215,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	pwd := []byte("P@ss-W0rd")
@@ -260,7 +260,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	pwd := []byte("P@ss-W0rd")
@@ -306,7 +306,7 @@ func Test_api_Register_success(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("accountWithNameExists", "ali").Return(false, nil)
+	store.On("accountWithCiNameExists", "ali").Return(false, nil)
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 	salt := []byte("salt")
 	pwd := []byte("P@ss-W0rd")
@@ -536,7 +536,7 @@ func Test_api_Authenticate_storeGetUserByNameErr(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByName", "name").Return(nil, testErr)
+	store.On("getUserByCiName", "name").Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -547,7 +547,7 @@ func Test_api_Authenticate_storeGetUserByNameNilUser(t *testing.T) {
 	store, internalRegionApis, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, map[string]InternalRegionApi{"us": &mockInternalRegionApi{}}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
-	store.On("getUserByName", "name").Return(nil, nil)
+	store.On("getUserByCiName", "name").Return(nil, nil)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
@@ -560,7 +560,7 @@ func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
 
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{Activated: &activationTime}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(nil, testErr)
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
@@ -574,7 +574,7 @@ func Test_api_Authenticate_cryptoHelperScryptKeyErr(t *testing.T) {
 
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{Activated: &activationTime}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return(nil, testErr)
 
@@ -589,7 +589,7 @@ func Test_api_Authenticate_incorrectPwdErr(t *testing.T) {
 
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{Activated: &activationTime}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("N0t-P@ss-W0rd"), nil)
 
@@ -603,7 +603,7 @@ func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) 
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	user := &fullUserInfo{}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
 
@@ -619,7 +619,7 @@ func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
 	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
 	store.On("updateUser", user).Return(testErr)
@@ -636,7 +636,7 @@ func Test_api_Authenticate_cryptoHelperBytesErr(t *testing.T) {
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
 	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
 	store.On("updateUser", user).Return(nil)
@@ -654,7 +654,7 @@ func Test_api_Authenticate_genScryptKey2Err(t *testing.T) {
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
 	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	store.On("getPwdInfo", Id(nil)).Return(&pwdInfo{Pwd: []byte("P@ss-W0rd")}, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
 	store.On("updateUser", user).Return(nil)
@@ -673,7 +673,7 @@ func Test_api_Authenticate_storeUpdatePwdErr(t *testing.T) {
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
 	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	pwdInfo := &pwdInfo{Pwd: []byte("P@ss-W0rd")}
 	store.On("getPwdInfo", Id(nil)).Return(pwdInfo, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
@@ -695,7 +695,7 @@ func Test_api_Authenticate_success(t *testing.T) {
 	resetPwdCode := "resetPwdCode"
 	id, _ := NewId()
 	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode, me: me{user: user{Entity: Entity{Id: id}}}}
-	store.On("getUserByName", "name").Return(user, nil)
+	store.On("getUserByCiName", "name").Return(user, nil)
 	pwdInfo := &pwdInfo{Pwd: []byte("P@ss-W0rd")}
 	store.On("getPwdInfo", id).Return(pwdInfo, nil)
 	cryptoHelper.On("ScryptKey", []byte("P@ss-W0rd"), []byte(nil), 0, 0, 0, 0).Return([]byte("P@ss-W0rd"), nil)
@@ -1227,7 +1227,7 @@ func Test_api_ChangeMyName_storeGetUserByNameErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
-	store.On("getUserByName", "test").Return(nil, testErr)
+	store.On("getUserByCiName", "test").Return(nil, testErr)
 
 	err := api.ChangeMyName(id, "test")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1238,7 +1238,7 @@ func Test_api_ChangeMyName_storeGetUserByNameNoneNilUser(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
-	store.On("getUserByName", "test").Return(&fullUserInfo{}, nil)
+	store.On("getUserByCiName", "test").Return(&fullUserInfo{}, nil)
 
 	err := api.ChangeMyName(id, "test")
 	assert.Equal(t, accountNameAlreadyInUseErr, err)
@@ -1249,7 +1249,7 @@ func Test_api_ChangeMyName_storeGetUserByIdErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(nil, testErr)
 
 	err := api.ChangeMyName(id, "test")
@@ -1261,7 +1261,7 @@ func Test_api_ChangeMyName_storeGetUserByIdNilUser(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(nil, nil)
 
 	err := api.ChangeMyName(id, "test")
@@ -1274,7 +1274,7 @@ func Test_api_ChangeMyName_storeUpdateUserErr(t *testing.T) {
 
 	id, _ := NewId()
 	user := &fullUserInfo{}
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(testErr)
 
@@ -1289,7 +1289,7 @@ func Test_api_ChangeMyName_storeGetUsersOrgsErr(t *testing.T) {
 
 	id, _ := NewId()
 	user := &fullUserInfo{}
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
 	store.On("getUsersOrgs", id, 0, 100).Return(nil, 0, testErr)
@@ -1305,7 +1305,7 @@ func Test_api_ChangeMyName_regionGoneErr(t *testing.T) {
 
 	id, _ := NewId()
 	user := &fullUserInfo{}
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
 	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{}}, 1, nil)
@@ -1321,7 +1321,7 @@ func Test_api_ChangeMyName_internalRegionApiRenameMemberErr(t *testing.T) {
 	id, _ := NewId()
 	orgId, _ := NewId()
 	user := &fullUserInfo{}
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
 	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us", Entity: Entity{Id: orgId}}}, 1, nil)
@@ -1338,7 +1338,7 @@ func Test_api_ChangeMyName_success(t *testing.T) {
 	id, _ := NewId()
 	orgId, _ := NewId()
 	user := &fullUserInfo{}
-	store.On("getUserByName", "test").Return(nil, nil)
+	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
 	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us", Entity: Entity{Id: orgId}}}, 1, nil)
@@ -1899,7 +1899,7 @@ func Test_api_CreateOrg_storeAccountWithNameExistsErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, testErr)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
 	assert.Nil(t, org)
@@ -1911,7 +1911,7 @@ func Test_api_CreateOrg_storeAccountWithNameExists_true(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(true, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(true, nil)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
 	assert.Nil(t, org)
@@ -1923,7 +1923,7 @@ func Test_api_CreateOrg_newIdErr(t *testing.T) {
 	api, _ := newApi(store, internalRegionApis, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(nil, testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
@@ -1937,7 +1937,7 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -1961,7 +1961,7 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -1986,7 +1986,7 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -2011,7 +2011,7 @@ func Test_api_CreateOrg_internalRegionApiCreateOrgTaskCenterErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -2041,7 +2041,7 @@ func Test_api_CreateOrg_deleteOrgAndAllAssociatedMembershipsErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -2071,7 +2071,7 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -2111,7 +2111,7 @@ func Test_api_CreateOrg_success(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
 		Entity: Entity{
@@ -2154,7 +2154,7 @@ func Test_api_RenameOrg_storeAccountWithNameExistsErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, testErr)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, testErr)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2166,7 +2166,7 @@ func Test_api_RenameOrg_storeAccountWithNameExistsTrue(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(true, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(true, nil)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
 	assert.Equal(t, accountNameAlreadyInUseErr, err)
@@ -2178,7 +2178,7 @@ func Test_api_RenameOrg_storeGetOrgByIdErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(nil, testErr)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
@@ -2191,7 +2191,7 @@ func Test_api_RenameOrg_storeGetOrgByIdNilOrg(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(nil, nil)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
@@ -2204,7 +2204,7 @@ func Test_api_RenameOrg_regionGoneErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(&org{Region: "sw"}, nil)
 
 	err := api.RenameOrg(myId, orgId, "newOrg")
@@ -2217,7 +2217,7 @@ func Test_api_RenameOrg_internalRegionApiUserCanRenameOrgErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(false, testErr)
 
@@ -2231,7 +2231,7 @@ func Test_api_RenameOrg_insufficientPermissionsErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(false, nil)
 
@@ -2246,7 +2246,7 @@ func Test_api_RenameOrg_storeUpdateOrgErr(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	org := &org{Region: "us"}
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(org, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(true, nil)
 	store.On("updateOrg", org).Return(testErr)
@@ -2262,7 +2262,7 @@ func Test_api_RenameOrg_success(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	org := &org{Region: "us"}
-	store.On("accountWithNameExists", "newOrg").Return(false, nil)
+	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	store.On("getOrgById", orgId).Return(org, nil)
 	internalRegionApis["us"].(*mockInternalRegionApi).On("UserCanRenameOrg", 0, orgId, myId).Return(true, nil)
 	store.On("updateOrg", org).Return(nil)
@@ -2718,7 +2718,7 @@ type mockStore struct {
 	mock.Mock
 }
 
-func (m *mockStore) accountWithNameExists(name string) (bool, error) {
+func (m *mockStore) accountWithCiNameExists(name string) (bool, error) {
 	args := m.Called(name)
 	return args.Bool(0), args.Error(1)
 }
@@ -2729,7 +2729,7 @@ func (m *mockStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	return args.Error(0)
 }
 
-func (m *mockStore) getUserByName(name string) (*fullUserInfo, error) {
+func (m *mockStore) getUserByCiName(name string) (*fullUserInfo, error) {
 	args := m.Called(name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)

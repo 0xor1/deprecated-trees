@@ -87,7 +87,7 @@ func (s *memStore) copyPwdInfo(pwdInfo *pwdInfo) *pwdInfo {
 	return &copy
 }
 
-func (s *memStore) accountWithNameExists(name string) (bool, error) {
+func (s *memStore) accountWithCiNameExists(name string) (bool, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	for _, user := range s.users {
@@ -112,7 +112,7 @@ func (s *memStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	return nil
 }
 
-func (s *memStore) getUserByName(name string) (*fullUserInfo, error) {
+func (s *memStore) getUserByCiName(name string) (*fullUserInfo, error) {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	for _, user := range s.users {

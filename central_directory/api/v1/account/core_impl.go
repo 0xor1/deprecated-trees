@@ -117,7 +117,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.InfoErr(noSuchRegionErr)
 	}
 
-	if exists, err := a.store.accountWithNameExists(name); exists || err != nil {
+	if exists, err := a.store.accountWithCiNameExists(name); exists || err != nil {
 		if err != nil {
 			return a.log.ErrorErr(err)
 		} else {
@@ -248,7 +248,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	a.log.Location()
 
 	name = strings.Trim(name, " ")
-	user, err := a.store.getUserByName(name)
+	user, err := a.store.getUserByCiName(name)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -500,7 +500,7 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 		return a.log.InfoErr(err)
 	}
 
-	if user, err := a.store.getUserByName(newName); user != nil || err != nil {
+	if user, err := a.store.getUserByCiName(newName); user != nil || err != nil {
 		if err != nil {
 			return a.log.ErrorUserErr(myId, err)
 		} else {
@@ -745,7 +745,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, noSuchRegionErr)
 	}
 
-	if exists, err := a.store.accountWithNameExists(name); exists || err != nil {
+	if exists, err := a.store.accountWithCiNameExists(name); exists || err != nil {
 		if err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
 		} else {
@@ -799,7 +799,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
 
-	if exists, err := a.store.accountWithNameExists(newName); exists || err != nil {
+	if exists, err := a.store.accountWithCiNameExists(newName); exists || err != nil {
 		if err != nil {
 			return a.log.ErrorErr(err)
 		} else {
@@ -979,10 +979,10 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 
 type store interface {
 	//user or org
-	accountWithNameExists(name string) (bool, error)
+	accountWithCiNameExists(name string) (bool, error)
 	//user
 	createUser(user *fullUserInfo, pwdInfo *pwdInfo) error
-	getUserByName(name string) (*fullUserInfo, error)
+	getUserByCiName(name string) (*fullUserInfo, error)
 	getUserByEmail(email string) (*fullUserInfo, error)
 	getUserById(id Id) (*fullUserInfo, error)
 	getPwdInfo(id Id) (*pwdInfo, error)

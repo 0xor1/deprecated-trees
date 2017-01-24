@@ -16,31 +16,31 @@ func Test_memStore_createOrgAndMembership(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_memStore_accountWithNameExists(t *testing.T) {
+func Test_memStore_accountWithCiNameExists(t *testing.T) {
 	store, _, _ := setup(t, NewMemStore())
 
-	exists, err := store.accountWithNameExists("ali")
+	exists, err := store.accountWithCiNameExists("ali")
 	assert.True(t, exists)
 	assert.Nil(t, err)
 
-	exists, err = store.accountWithNameExists("bob")
+	exists, err = store.accountWithCiNameExists("bob")
 	assert.True(t, exists)
 	assert.Nil(t, err)
 
-	exists, err = store.accountWithNameExists("cat")
+	exists, err = store.accountWithCiNameExists("cat")
 	assert.False(t, exists)
 	assert.Nil(t, err)
 }
 
-func Test_memStore_getUserByName(t *testing.T) {
+func Test_memStore_getUserByCiName(t *testing.T) {
 	store, _, _ := setup(t, NewMemStore())
 
-	acc, err := store.getUserByName("ali")
+	acc, err := store.getUserByCiName("ali")
 	assert.Equal(t, "ali", acc.Name)
 	assert.True(t, acc.IsUser)
 	assert.Nil(t, err)
 
-	acc, err = store.getUserByName("bob")
+	acc, err = store.getUserByCiName("bob")
 	assert.Nil(t, acc)
 	assert.Nil(t, err)
 }
@@ -87,7 +87,7 @@ func Test_memStore_getPwdInfo(t *testing.T) {
 func Test_memStore_updateUser(t *testing.T) {
 	store, _, _ := setup(t, NewMemStore())
 
-	user, _ := store.getUserByName("ali")
+	user, _ := store.getUserByCiName("ali")
 	user.Name = "cat"
 	err := store.updateUser(user)
 	assert.Nil(t, err)
