@@ -2,7 +2,6 @@ package misc
 
 import (
 	"errors"
-	"fmt"
 	"github.com/uber-go/zap"
 	"runtime"
 )
@@ -10,14 +9,6 @@ import (
 var (
 	NotImplementedErr = errors.New("not implemented")
 )
-
-type ErrorRef struct {
-	Id Id `json:"id"`
-}
-
-func (e *ErrorRef) Error() string {
-	return fmt.Sprintf("errorRef: %s", e.Id.String())
-}
 
 type Log interface {
 	Location()
