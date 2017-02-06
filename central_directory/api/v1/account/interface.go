@@ -2,9 +2,9 @@ package account
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
-	"sync"
 )
 
+// The main account Api interface
 type Api interface {
 	//accessible outside of active session
 	Register(name, email, pwd, region string) error
@@ -38,35 +38,12 @@ type Api interface {
 	RemoveMembers(myId, orgId Id, existingMembers []Id) error
 }
 
-type InternalRegionApi interface {
-	CreatePersonalTaskCenter(user Id) (int, error)
-	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
-	DeleteTaskCenter(shard int, account Id) error
-	AddMember(shard int, org, member Id, memberName string) error
-	RemoveMember(shard int, org, member Id) error
-	RenameMember(shard int, org, member Id, newName string) error
-	UserCanRenameOrg(shard int, org, user Id) (bool, error)
-	UserCanMigrateOrg(shard int, org, user Id) (bool, error)
-	UserCanDeleteOrg(shard int, org, user Id) (bool, error)
-	UserCanManageMembers(shard int, org, user Id) (bool, error)
+// Return a new account Api backed by local memory storage and logging link emails to stdout
+func NewMemApi(internalRegionApi internalRegionApi, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
+	return newApi(newMemStore(), internalRegionApi, newLogLinkMailer(log), NewId, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
 }
 
-func NewMemStore() store {
-	return &memStore{
-		users:           map[string]*fullUserInfo{},
-		orgs:            map[string]*org{},
-		membershipsUtoO: map[string]map[string]interface{}{},
-		membershipsOtoU: map[string]map[string]interface{}{},
-		pwdInfos:        map[string]*pwdInfo{},
-		mtx:             &sync.RWMutex{},
-	}
-}
-
-func NewLogLinkMailer(log Log) (linkMailer, error) {
-	if log == nil {
-		return nil, nilLogErr
-	}
-	return &logLinkMailer{
-		log: log,
-	}, nil
+// Return a new account Api backed by sql storage and sending link emails via an email service
+func NewSqlApi(internalRegionApi internalRegionApi, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
+	return newApi(newSqlStore(), internalRegionApi, newEmailLinkMailer(), NewId, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
 }

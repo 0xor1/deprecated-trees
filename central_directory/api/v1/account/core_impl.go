@@ -9,7 +9,7 @@ import (
 
 var (
 	nilStoreErr                           = &Error{Code: 2, Msg: "nil store"}
-	nilInternalRegionApisErr              = &Error{Code: 3, Msg: "nil internalRegionApis"}
+	nilInternalRegionApiErr              = &Error{Code: 3, Msg: "nil internalRegionApi"}
 	nilLinkMailerErr                      = &Error{Code: 4, Msg: "nil linkMailer"}
 	nilNewIdErr                           = &Error{Code: 5, Msg: "nil new id"}
 	nilCryptoHelperErr                    = &Error{Code: 6, Msg: "nil CryptoHelper"}
@@ -31,28 +31,28 @@ var (
 	insufficientPermissionsErr            = &Error{Code: 22, Msg: "insufficient permissions"}
 )
 
-func newApi(store store, internalRegionApis map[string]InternalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) (Api, error) {
+func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
 	if store == nil {
-		return nil, nilStoreErr
+		panic(nilStoreErr)
 	}
-	if internalRegionApis == nil {
-		return nil, nilInternalRegionApisErr
+	if internalRegionApi == nil {
+		panic(nilInternalRegionApiErr)
 	}
 	if linkMailer == nil {
-		return nil, nilLinkMailerErr
+		panic(nilLinkMailerErr)
 	}
 	if newId == nil {
-		return nil, nilNewIdErr
+		panic(nilNewIdErr)
 	}
 	if cryptoHelper == nil {
-		return nil, nilCryptoHelperErr
+		panic(nilCryptoHelperErr)
 	}
 	if log == nil {
-		return nil, nilLogErr
+		panic(nilLogErr)
 	}
 	return &api{
 		store:                 store,
-		internalRegionApis:    internalRegionApis,
+		internalRegionApi:    internalRegionApi,
 		linkMailer:            linkMailer,
 		newId:                 newId,
 		cryptoHelper:          cryptoHelper,
@@ -70,12 +70,12 @@ func newApi(store store, internalRegionApis map[string]InternalRegionApi, linkMa
 		scryptP:               scryptP,
 		scryptKeyLen:          scryptKeyLen,
 		log:                   log,
-	}, nil
+	}
 }
 
 type api struct {
 	store                 store
-	internalRegionApis    map[string]InternalRegionApi
+	internalRegionApi    internalRegionApi
 	linkMailer            linkMailer
 	newId                 GenNewId
 	cryptoHelper          CryptoHelper
@@ -112,7 +112,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.InfoErr(err)
 	}
 
-	if internalRegionApi := a.internalRegionApis[region]; internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(region) {
 		return a.log.InfoErr(noSuchRegionErr)
 	}
 
@@ -221,12 +221,11 @@ func (a *api) Activate(email, activationCode string) (Id, error) {
 		return nil, a.log.InfoErr(invalidActivationAttemptErr)
 	}
 
-	internalRegionApi := a.internalRegionApis[user.Region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(user.Region) {
 		return nil, a.log.ErrorErr(regionGoneErr)
 	}
 
-	shard, err := internalRegionApi.CreatePersonalTaskCenter(user.Id)
+	shard, err := a.internalRegionApi.CreatePersonalTaskCenter(user.Region, user.Id)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -388,12 +387,11 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 	}
 
 	if user.ActivationCode != nil {
-		internalRegionApi := a.internalRegionApis[user.Region]
-		if internalRegionApi == nil {
+		if !a.internalRegionApi.IsValidRegion(user.Region) {
 			return nil, a.log.ErrorErr(regionGoneErr)
 		}
 
-		shard, err := internalRegionApi.CreatePersonalTaskCenter(user.Id)
+		shard, err := a.internalRegionApi.CreatePersonalTaskCenter(user.Region, user.Id)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -528,11 +526,10 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 		}
 		offset += len(orgs)
 		for _, org := range orgs {
-			internalRegionApi := a.internalRegionApis[org.Region]
-			if internalRegionApi == nil {
+			if !a.internalRegionApi.IsValidRegion(org.Region) {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
-			if err := internalRegionApi.RenameMember(org.Shard, org.Id, myId, newName); err != nil {
+			if err := a.internalRegionApi.RenameMember(org.Region, org.Shard, org.Id, myId, newName); err != nil {
 				return a.log.ErrorUserErr(myId, err)
 			}
 		}
@@ -702,11 +699,10 @@ func (a *api) DeleteMe(myId Id) error {
 		}
 		offset += len(orgs)
 		for _, org := range orgs {
-			internalRegionApi := a.internalRegionApis[org.Region]
-			if internalRegionApi == nil {
+			if !a.internalRegionApi.IsValidRegion(org.Region) {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
-			if err := internalRegionApi.RemoveMember(org.Shard, org.Id, myId); err != nil {
+			if err := a.internalRegionApi.RemoveMember(org.Region, org.Shard, org.Id, myId); err != nil {
 				return a.log.ErrorUserErr(myId, err)
 			}
 			if err := a.store.deleteMembership(myId, org.Id); err != nil {
@@ -715,12 +711,11 @@ func (a *api) DeleteMe(myId Id) error {
 		}
 	}
 
-	internalRegionApi := a.internalRegionApis[user.Region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(user.Region) {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	if err := internalRegionApi.DeleteTaskCenter(user.Shard, myId); err != nil {
+	if err := a.internalRegionApi.DeleteTaskCenter(user.Region, user.Shard, myId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
@@ -739,8 +734,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, err)
 	}
 
-	internalRegionApi := a.internalRegionApis[region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(region) {
 		return nil, a.log.InfoUserErr(myId, noSuchRegionErr)
 	}
 
@@ -779,7 +773,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
-	shard, err := internalRegionApi.CreateOrgTaskCenter(newOrgId, myId, owner.Name)
+	shard, err := a.internalRegionApi.CreateOrgTaskCenter(region, newOrgId, myId, owner.Name)
 	if err != nil {
 		if err := a.store.deleteOrgAndAllAssociatedMemberships(newOrgId); err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
@@ -814,12 +808,11 @@ func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 		return a.log.InfoUserErr(myId, noSuchOrgErr)
 	}
 
-	internalRegionApi := a.internalRegionApis[org.Region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(org.Region) {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := internalRegionApi.UserCanRenameOrg(org.Shard, orgId, myId)
+	can, err := a.internalRegionApi.UserCanRenameOrg(org.Region, org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
@@ -873,12 +866,11 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 		return a.log.InfoUserErr(myId, noSuchOrgErr)
 	}
 
-	internalRegionApi := a.internalRegionApis[org.Region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(org.Region) {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := internalRegionApi.UserCanDeleteOrg(org.Shard, orgId, myId)
+	can, err := a.internalRegionApi.UserCanDeleteOrg(org.Region, org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -886,7 +878,7 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
 	}
 
-	if err := internalRegionApi.DeleteTaskCenter(org.Shard, orgId); err != nil {
+	if err := a.internalRegionApi.DeleteTaskCenter(org.Region, org.Shard, orgId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
@@ -908,12 +900,11 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		return a.log.InfoUserErr(myId, noSuchOrgErr)
 	}
 
-	internalRegionApi := a.internalRegionApis[org.Region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(org.Region) {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := internalRegionApi.UserCanManageMembers(org.Shard, orgId, myId)
+	can, err := a.internalRegionApi.UserCanManageMembers(org.Region, org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -927,7 +918,7 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 	}
 
 	for _, user := range users {
-		if err := internalRegionApi.AddMember(org.Shard, orgId, user.Id, user.Name); err != nil {
+		if err := a.internalRegionApi.AddMember(org.Region, org.Shard, orgId, user.Id, user.Name); err != nil {
 			return a.log.ErrorUserErr(myId, err)
 		}
 		if err := a.store.createMembership(user.Id, orgId); err != nil {
@@ -949,12 +940,11 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 		return a.log.InfoUserErr(myId, noSuchOrgErr)
 	}
 
-	internalRegionApi := a.internalRegionApis[org.Region]
-	if internalRegionApi == nil {
+	if !a.internalRegionApi.IsValidRegion(org.Region) {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := internalRegionApi.UserCanManageMembers(org.Shard, orgId, myId)
+	can, err := a.internalRegionApi.UserCanManageMembers(org.Region, org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -963,7 +953,7 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 	}
 
 	for _, member := range existingMembers {
-		if err := internalRegionApi.RemoveMember(org.Shard, orgId, member); err != nil {
+		if err := a.internalRegionApi.RemoveMember(org.Region, org.Shard, orgId, member); err != nil {
 			return a.log.ErrorUserErr(myId, err)
 		}
 		if err := a.store.deleteMembership(member, orgId); err != nil {
@@ -1003,6 +993,20 @@ type store interface {
 	membershipExists(user, org Id) (bool, error)
 	createMembership(user, org Id) error
 	deleteMembership(user, org Id) error
+}
+
+type internalRegionApi interface {
+	IsValidRegion(region string) bool
+	CreatePersonalTaskCenter(region string, user Id) (int, error)
+	CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error)
+	DeleteTaskCenter(region string, shard int, account Id) error
+	AddMember(region string, shard int, org, member Id, memberName string) error
+	RemoveMember(region string, shard int, org, member Id) error
+	RenameMember(region string, shard int, org, member Id, newName string) error
+	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
+	UserCanMigrateOrg(region string, shard int, org, user Id) (bool, error)
+	UserCanDeleteOrg(region string, shard int, org, user Id) (bool, error)
+	UserCanManageMembers(region string, shard int, org, user Id) (bool, error)
 }
 
 type linkMailer interface {

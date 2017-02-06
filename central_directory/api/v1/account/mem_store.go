@@ -8,6 +8,17 @@ import (
 	"sync"
 )
 
+func newMemStore() store {
+	return &memStore{
+		users:           map[string]*fullUserInfo{},
+		orgs:            map[string]*org{},
+		membershipsUtoO: map[string]map[string]interface{}{},
+		membershipsOtoU: map[string]map[string]interface{}{},
+		pwdInfos:        map[string]*pwdInfo{},
+		mtx:             &sync.RWMutex{},
+	}
+}
+
 type memStore struct {
 	users           map[string]*fullUserInfo
 	orgs            map[string]*org

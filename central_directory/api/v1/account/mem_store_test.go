@@ -7,8 +7,14 @@ import (
 	"time"
 )
 
+func Test_newMemStore_success(t *testing.T) {
+	store := newMemStore()
+
+	assert.NotNil(t, store)
+}
+
 func Test_memStore_createOrgAndMembership(t *testing.T) {
-	store, userId, _ := setup(t, NewMemStore())
+	store, userId, _ := setup(t, newMemStore())
 
 	org := &org{}
 	org.Id, _ = NewId()
@@ -17,7 +23,7 @@ func Test_memStore_createOrgAndMembership(t *testing.T) {
 }
 
 func Test_memStore_accountWithCiNameExists(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	exists, err := store.accountWithCiNameExists("ali")
 	assert.True(t, exists)
@@ -33,7 +39,7 @@ func Test_memStore_accountWithCiNameExists(t *testing.T) {
 }
 
 func Test_memStore_getUserByCiName(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	acc, err := store.getUserByCiName("ali")
 	assert.Equal(t, "ali", acc.Name)
@@ -46,7 +52,7 @@ func Test_memStore_getUserByCiName(t *testing.T) {
 }
 
 func Test_memStore_getUserByEmail(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	acc, err := store.getUserByEmail("ali@ali.com")
 	assert.Equal(t, "ali", acc.Name)
@@ -59,7 +65,7 @@ func Test_memStore_getUserByEmail(t *testing.T) {
 }
 
 func Test_memStore_getUserById(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+	store, userId, orgId := setup(t, newMemStore())
 
 	acc, err := store.getUserById(userId)
 	assert.Equal(t, "ali", acc.Name)
@@ -72,7 +78,7 @@ func Test_memStore_getUserById(t *testing.T) {
 }
 
 func Test_memStore_getPwdInfo(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+	store, userId, orgId := setup(t, newMemStore())
 
 	pwdInfo, err := store.getPwdInfo(userId)
 	assert.Equal(t, []byte("pwd"), pwdInfo.Pwd)
@@ -85,7 +91,7 @@ func Test_memStore_getPwdInfo(t *testing.T) {
 }
 
 func Test_memStore_updateUser(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	user, _ := store.getUserByCiName("ali")
 	user.Name = "cat"
@@ -97,7 +103,7 @@ func Test_memStore_updateUser(t *testing.T) {
 }
 
 func Test_memStore_updatePwdInfo(t *testing.T) {
-	store, userId, _ := setup(t, NewMemStore())
+	store, userId, _ := setup(t, newMemStore())
 
 	pwdInfo, _ := store.getPwdInfo(userId)
 	pwdInfo.Pwd = []byte("pwd2")
@@ -108,7 +114,7 @@ func Test_memStore_updatePwdInfo(t *testing.T) {
 }
 
 func Test_memStore_deleteUser(t *testing.T) {
-	store, userId, _ := setup(t, NewMemStore())
+	store, userId, _ := setup(t, newMemStore())
 
 	err := store.deleteUser(userId)
 	assert.Nil(t, err)
@@ -119,7 +125,7 @@ func Test_memStore_deleteUser(t *testing.T) {
 }
 
 func Test_memStore_getUsers(t *testing.T) {
-	store, userId, _ := setup(t, NewMemStore())
+	store, userId, _ := setup(t, newMemStore())
 
 	users, err := store.getUsers([]Id{userId})
 	assert.Equal(t, 1, len(users))
@@ -128,7 +134,7 @@ func Test_memStore_getUsers(t *testing.T) {
 }
 
 func Test_memStore_searchUsers(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	users, total, err := store.searchUsers("li", 0, 100)
 	assert.Equal(t, 1, total)
@@ -147,7 +153,7 @@ func Test_memStore_searchUsers(t *testing.T) {
 }
 
 func Test_memStore_getOrgById(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+	store, userId, orgId := setup(t, newMemStore())
 
 	org, err := store.getOrgById(orgId)
 	assert.Equal(t, "bob", org.Name)
@@ -159,7 +165,7 @@ func Test_memStore_getOrgById(t *testing.T) {
 }
 
 func Test_memStore_getOrgByName(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	org, err := store.getOrgByName("bob")
 	assert.Equal(t, "bob", org.Name)
@@ -171,7 +177,7 @@ func Test_memStore_getOrgByName(t *testing.T) {
 }
 
 func Test_memStore_updateOrg(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	org, _ := store.getOrgByName("bob")
 	org.Name = "cat"
@@ -184,7 +190,7 @@ func Test_memStore_updateOrg(t *testing.T) {
 }
 
 func Test_memStore_deleteOrgAndAllAssociatedMemberships(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+	store, userId, orgId := setup(t, newMemStore())
 
 	err := store.deleteOrgAndAllAssociatedMemberships(orgId)
 	assert.Nil(t, err)
@@ -199,7 +205,7 @@ func Test_memStore_deleteOrgAndAllAssociatedMemberships(t *testing.T) {
 }
 
 func Test_memStore_getOrgs(t *testing.T) {
-	store, _, orgId := setup(t, NewMemStore())
+	store, _, orgId := setup(t, newMemStore())
 
 	orgs, err := store.getOrgs([]Id{orgId})
 	assert.Equal(t, 1, len(orgs))
@@ -208,7 +214,7 @@ func Test_memStore_getOrgs(t *testing.T) {
 }
 
 func Test_memStore_searchOrgs(t *testing.T) {
-	store, _, _ := setup(t, NewMemStore())
+	store, _, _ := setup(t, newMemStore())
 
 	orgs, total, err := store.searchOrgs("ob", 0, 100)
 	assert.Equal(t, 1, total)
@@ -227,7 +233,7 @@ func Test_memStore_searchOrgs(t *testing.T) {
 }
 
 func Test_memStore_getUsersOrgs(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+	store, userId, orgId := setup(t, newMemStore())
 
 	orgs, total, err := store.getUsersOrgs(userId, 0, 100)
 	assert.Equal(t, 1, total)
@@ -246,7 +252,7 @@ func Test_memStore_getUsersOrgs(t *testing.T) {
 }
 
 func Test_memStore_memberships(t *testing.T) {
-	store, userId, orgId := setup(t, NewMemStore())
+	store, userId, orgId := setup(t, newMemStore())
 
 	user := &fullUserInfo{}
 	user.Id, _ = NewId()

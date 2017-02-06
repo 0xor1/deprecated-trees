@@ -5,6 +5,15 @@ import (
 	"github.com/uber-go/zap"
 )
 
+func newLogLinkMailer(log Log) linkMailer {
+	if log == nil {
+		panic(nilLogErr)
+	}
+	return &logLinkMailer{
+		log: log,
+	}
+}
+
 type logLinkMailer struct {
 	log Log
 }
