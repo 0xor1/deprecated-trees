@@ -10,7 +10,7 @@ import (
 )
 
 func Test_newApi_nilStorePanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, nilStoreErr, err)
 	}()
@@ -18,7 +18,7 @@ func Test_newApi_nilStorePanic(t *testing.T) {
 }
 
 func Test_newApi_nilInternalRegionApiPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, nilInternalRegionApiErr, err)
 	}()
@@ -27,7 +27,7 @@ func Test_newApi_nilInternalRegionApiPanic(t *testing.T) {
 }
 
 func Test_newApi_nilLinkMailerPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, nilLinkMailerErr, err)
 	}()
@@ -36,7 +36,7 @@ func Test_newApi_nilLinkMailerPanic(t *testing.T) {
 }
 
 func Test_newApi_nilNewIdPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, nilNewIdErr, err)
 	}()
@@ -45,7 +45,7 @@ func Test_newApi_nilNewIdPanic(t *testing.T) {
 }
 
 func Test_newApi_nilCryptoHelperPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, nilCryptoHelperErr, err)
 	}()
@@ -54,7 +54,7 @@ func Test_newApi_nilCryptoHelperPanic(t *testing.T) {
 }
 
 func Test_newApi_nilLogPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, nilLogErr, err)
 	}()
@@ -1336,7 +1336,7 @@ func Test_api_ChangeMyName_regionGoneErr(t *testing.T) {
 	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
-	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region:"us"}}, 1, nil)
+	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us"}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(false)
 
 	err := api.ChangeMyName(id, "test")

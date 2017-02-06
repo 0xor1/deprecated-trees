@@ -7,7 +7,7 @@ import (
 )
 
 func Test_newLogLinkMailer_nilLogPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, err, nilLogErr)
 	}()

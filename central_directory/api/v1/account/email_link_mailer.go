@@ -1,6 +1,6 @@
 package account
 
-import(
+import (
 	. "bitbucket.org/robsix/task_center/misc"
 )
 

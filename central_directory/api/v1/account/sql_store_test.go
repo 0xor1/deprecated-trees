@@ -7,7 +7,7 @@ import (
 )
 
 func Test_newSqlStore_notImplementedPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, NotImplementedErr, err)
 	}()

@@ -9,7 +9,7 @@ import (
 
 var (
 	nilStoreErr                           = &Error{Code: 2, Msg: "nil store"}
-	nilInternalRegionApiErr              = &Error{Code: 3, Msg: "nil internalRegionApi"}
+	nilInternalRegionApiErr               = &Error{Code: 3, Msg: "nil internalRegionApi"}
 	nilLinkMailerErr                      = &Error{Code: 4, Msg: "nil linkMailer"}
 	nilNewIdErr                           = &Error{Code: 5, Msg: "nil new id"}
 	nilCryptoHelperErr                    = &Error{Code: 6, Msg: "nil CryptoHelper"}
@@ -52,7 +52,7 @@ func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMai
 	}
 	return &api{
 		store:                 store,
-		internalRegionApi:    internalRegionApi,
+		internalRegionApi:     internalRegionApi,
 		linkMailer:            linkMailer,
 		newId:                 newId,
 		cryptoHelper:          cryptoHelper,
@@ -75,7 +75,7 @@ func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMai
 
 type api struct {
 	store                 store
-	internalRegionApi    internalRegionApi
+	internalRegionApi     internalRegionApi
 	linkMailer            linkMailer
 	newId                 GenNewId
 	cryptoHelper          CryptoHelper

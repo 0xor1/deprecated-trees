@@ -13,7 +13,7 @@ func Test_NewMemApi_success(t *testing.T) {
 }
 
 func Test_NewSqlApi_notImplementedErrPanic(t *testing.T) {
-	defer func(){
+	defer func() {
 		err := recover().(error)
 		assert.Equal(t, NotImplementedErr, err)
 	}()
