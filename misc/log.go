@@ -53,10 +53,10 @@ type log struct {
 
 func (l *log) log(callerDepth int, level zap.Level, fields ...zap.Field) {
 	if l.logger != nil {
-		pc, file, line, _ := runtime.Caller(callerDepth)
+		pc, _, line, _ := runtime.Caller(callerDepth)
 		f := runtime.FuncForPC(pc)
 		extendedFields := make([]zap.Field, 0, len(fields)+3)
-		extendedFields = append(extendedFields, zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line))
+		extendedFields = append(extendedFields, zap.String("func", f.Name()), zap.Int("line", line))
 		extendedFields = append(extendedFields, fields...)
 		l.logger.Log(level, "", extendedFields...)
 	}

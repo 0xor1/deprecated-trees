@@ -17,9 +17,9 @@ func Test_NewLog(t *testing.T) {
 func Test_log_Location(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+4)).Return()
+	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.Int("line", line+4)).Return()
 
 	l.Location()
 	logger.AssertExpectations(t)
@@ -28,10 +28,10 @@ func Test_log_Location(t *testing.T) {
 func Test_log_Debug(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	extraField := zap.Int("test", 0)
-	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), extraField).Return()
+	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), extraField).Return()
 
 	l.Debug(extraField)
 	logger.AssertExpectations(t)
@@ -40,10 +40,10 @@ func Test_log_Debug(t *testing.T) {
 func Test_log_DebugErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), zap.Error(expectedErr)).Return()
 
 	err := l.DebugErr(expectedErr)
 	logger.AssertExpectations(t)
@@ -54,10 +54,10 @@ func Test_log_DebugUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	id, _ := NewId()
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.String("user", id.String()), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.DebugLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), zap.String("user", id.String()), zap.Error(expectedErr)).Return()
 
 	err := l.DebugUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -67,10 +67,10 @@ func Test_log_DebugUserErr(t *testing.T) {
 func Test_log_Info(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	extraField := zap.Int("test", 0)
-	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), extraField).Return()
+	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), extraField).Return()
 
 	l.Info(extraField)
 	logger.AssertExpectations(t)
@@ -79,10 +79,10 @@ func Test_log_Info(t *testing.T) {
 func Test_log_InfoErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), zap.Error(expectedErr)).Return()
 
 	err := l.InfoErr(expectedErr)
 	logger.AssertExpectations(t)
@@ -93,10 +93,10 @@ func Test_log_InfoUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	id, _ := NewId()
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), zap.String("user", id.String()), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.InfoLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), zap.String("user", id.String()), zap.Error(expectedErr)).Return()
 
 	err := l.InfoUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -106,10 +106,10 @@ func Test_log_InfoUserErr(t *testing.T) {
 func Test_log_Warn(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	extraField := zap.Int("test", 0)
-	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), extraField).Return()
+	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), extraField).Return()
 
 	l.Warn(extraField)
 	logger.AssertExpectations(t)
@@ -118,12 +118,12 @@ func Test_log_Warn(t *testing.T) {
 func Test_log_WarnErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
+	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.WarnErr(inErr)
 	logger.AssertExpectations(t)
@@ -135,12 +135,12 @@ func Test_log_WarnUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	id, _ := NewId()
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.WarnUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -151,10 +151,10 @@ func Test_log_WarnUserErr(t *testing.T) {
 func Test_log_Error(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	extraField := zap.Int("test", 0)
-	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), extraField).Return()
+	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), extraField).Return()
 
 	l.Error(extraField)
 	logger.AssertExpectations(t)
@@ -163,12 +163,12 @@ func Test_log_Error(t *testing.T) {
 func Test_log_ErrorErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
+	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.ErrorErr(inErr)
 	logger.AssertExpectations(t)
@@ -179,12 +179,12 @@ func Test_log_ErrorUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	id, _ := NewId()
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.ErrorUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -195,10 +195,10 @@ func Test_log_ErrorUserErr(t *testing.T) {
 func Test_log_Panic(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	extraField := zap.Int("test", 0)
-	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), extraField).Return()
+	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), extraField).Return()
 
 	l.Panic(extraField)
 	logger.AssertExpectations(t)
@@ -207,12 +207,12 @@ func Test_log_Panic(t *testing.T) {
 func Test_log_PanicErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
+	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.PanicErr(inErr)
 	logger.AssertExpectations(t)
@@ -223,12 +223,12 @@ func Test_log_PanicUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	id, _ := NewId()
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.PanicUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
@@ -239,10 +239,10 @@ func Test_log_PanicUserErr(t *testing.T) {
 func Test_log_Fatal(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	extraField := zap.Int("test", 0)
-	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+5), extraField).Return()
+	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.Int("line", line+5), extraField).Return()
 
 	l.Fatal(extraField)
 	logger.AssertExpectations(t)
@@ -251,12 +251,12 @@ func Test_log_Fatal(t *testing.T) {
 func Test_log_FatalErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	id, _ := NewId()
 	miscFuncs.On("GenNewId").Return(id, nil)
 	inErr := errors.New("test")
-	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
+	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
 	err := l.FatalErr(inErr)
 	logger.AssertExpectations(t)
@@ -267,12 +267,12 @@ func Test_log_FatalUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	id, _ := NewId()
 	l := newLog(logger, miscFuncs.GenNewId)
-	pc, file, line, _ := runtime.Caller(0)
+	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
 	errId, _ := NewId()
 	miscFuncs.On("GenNewId").Return(errId, nil)
 	expectedErr := errors.New("test")
-	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.String("file", file), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
+	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
 	err := l.FatalUserErr(id, expectedErr)
 	logger.AssertExpectations(t)
