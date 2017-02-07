@@ -4,6 +4,18 @@ import (
 	"fmt"
 )
 
+var (
+	NotImplementedErr = &Error{Code: -1, Msg: "not implemented"}
+	idGenerationErr   = &Error{Code: 1, Msg: "Failed to generate id"}
+)
+
+func NilCriticalParamPanic(paramName string) {
+	panic(&Error{
+		Code: 0,
+		Msg:  fmt.Sprintf("nil %s", paramName),
+	})
+}
+
 type Error struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg"`

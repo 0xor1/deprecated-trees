@@ -5,10 +5,6 @@ import (
 	. "github.com/pborman/uuid"
 )
 
-var (
-	idGenerationErr = &Error{Code: 1, Msg: "Failed to generate id"}
-)
-
 type Id UUID
 
 func (id Id) String() string {

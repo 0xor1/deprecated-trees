@@ -9,7 +9,7 @@ import (
 func Test_newLogLinkMailer_nilLogPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, err, nilLogErr)
+		assert.IsType(t, &Error{}, err)
 	}()
 	newLogLinkMailer(nil)
 }

@@ -8,47 +8,41 @@ import (
 )
 
 var (
-	nilStoreErr                           = &Error{Code: 2, Msg: "nil store"}
-	nilInternalRegionApiErr               = &Error{Code: 3, Msg: "nil internalRegionApi"}
-	nilLinkMailerErr                      = &Error{Code: 4, Msg: "nil linkMailer"}
-	nilNewIdErr                           = &Error{Code: 5, Msg: "nil new id"}
-	nilCryptoHelperErr                    = &Error{Code: 6, Msg: "nil CryptoHelper"}
-	nilLogErr                             = &Error{Code: 7, Msg: "nil log"}
-	noSuchRegionErr                       = &Error{Code: 8, Msg: "no such region"}
-	regionGoneErr                         = &Error{Code: 9, Msg: "region no longer exists"}
-	noSuchUserErr                         = &Error{Code: 10, Msg: "no such user"}
-	noSuchOrgErr                          = &Error{Code: 11, Msg: "no such org"}
-	invalidActivationAttemptErr           = &Error{Code: 12, Msg: "invalid activation attempt"}
-	invalidResetPwdAttemptErr             = &Error{Code: 13, Msg: "invalid reset password attempt"}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: 14, Msg: "invalid new email confirmation attempt"}
-	nameOrPwdIncorrectErr                 = &Error{Code: 15, Msg: "Name or password incorrect"}
-	incorrectPwdErr                       = &Error{Code: 16, Msg: "password incorrect"}
-	userNotActivatedErr                   = &Error{Code: 17, Msg: "user not activated"}
-	emailAlreadyInUseErr                  = &Error{Code: 18, Msg: "email already in use"}
-	accountNameAlreadyInUseErr            = &Error{Code: 19, Msg: "account already in use"}
-	emailConfirmationCodeErr              = &Error{Code: 20, Msg: "email confirmation code is of zero length"}
-	noNewEmailRegisteredErr               = &Error{Code: 21, Msg: "no new email registered"}
-	insufficientPermissionsErr            = &Error{Code: 22, Msg: "insufficient permissions"}
+	noSuchRegionErr                       = &Error{Code: 2, Msg: "no such region"}
+	regionGoneErr                         = &Error{Code: 3, Msg: "region no longer exists"}
+	noSuchUserErr                         = &Error{Code: 4, Msg: "no such user"}
+	noSuchOrgErr                          = &Error{Code: 5, Msg: "no such org"}
+	invalidActivationAttemptErr           = &Error{Code: 6, Msg: "invalid activation attempt"}
+	invalidResetPwdAttemptErr             = &Error{Code: 7, Msg: "invalid reset password attempt"}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: 8, Msg: "invalid new email confirmation attempt"}
+	nameOrPwdIncorrectErr                 = &Error{Code: 9, Msg: "Name or password incorrect"}
+	incorrectPwdErr                       = &Error{Code: 10, Msg: "password incorrect"}
+	userNotActivatedErr                   = &Error{Code: 11, Msg: "user not activated"}
+	emailAlreadyInUseErr                  = &Error{Code: 12, Msg: "email already in use"}
+	accountNameAlreadyInUseErr            = &Error{Code: 13, Msg: "account already in use"}
+	emailConfirmationCodeErr              = &Error{Code: 14, Msg: "email confirmation code is of zero length"}
+	noNewEmailRegisteredErr               = &Error{Code: 15, Msg: "no new email registered"}
+	insufficientPermissionsErr            = &Error{Code: 16, Msg: "insufficient permissions"}
 )
 
 func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
 	if store == nil {
-		panic(nilStoreErr)
+		NilCriticalParamPanic("store")
 	}
 	if internalRegionApi == nil {
-		panic(nilInternalRegionApiErr)
+		NilCriticalParamPanic("internalRegionApi")
 	}
 	if linkMailer == nil {
-		panic(nilLinkMailerErr)
+		NilCriticalParamPanic("linkMailer")
 	}
 	if newId == nil {
-		panic(nilNewIdErr)
+		NilCriticalParamPanic("newId")
 	}
 	if cryptoHelper == nil {
-		panic(nilCryptoHelperErr)
+		NilCriticalParamPanic("cryptoHelper")
 	}
 	if log == nil {
-		panic(nilLogErr)
+		NilCriticalParamPanic("log")
 	}
 	return &api{
 		store:                 store,

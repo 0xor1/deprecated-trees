@@ -7,7 +7,7 @@ import (
 
 func newLogLinkMailer(log Log) linkMailer {
 	if log == nil {
-		panic(nilLogErr)
+		NilCriticalParamPanic("log")
 	}
 	return &logLinkMailer{
 		log: log,

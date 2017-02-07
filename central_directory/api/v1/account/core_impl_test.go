@@ -12,7 +12,7 @@ import (
 func Test_newApi_nilStorePanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, nilStoreErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
 	newApi(nil, nil, nil, nil, nil, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
 }
@@ -20,7 +20,7 @@ func Test_newApi_nilStorePanic(t *testing.T) {
 func Test_newApi_nilInternalRegionApiPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, nilInternalRegionApiErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
 	store := &mockStore{}
 	newApi(store, nil, nil, nil, nil, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
@@ -29,7 +29,7 @@ func Test_newApi_nilInternalRegionApiPanic(t *testing.T) {
 func Test_newApi_nilLinkMailerPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, nilLinkMailerErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
 	store, internalRegionApi := &mockStore{}, &mockInternalRegionApi{}
 	newApi(store, internalRegionApi, nil, nil, nil, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
@@ -38,7 +38,7 @@ func Test_newApi_nilLinkMailerPanic(t *testing.T) {
 func Test_newApi_nilNewIdPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, nilNewIdErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
 	store, internalRegionApi, linkMailer := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}
 	newApi(store, internalRegionApi, linkMailer, nil, nil, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
@@ -47,7 +47,7 @@ func Test_newApi_nilNewIdPanic(t *testing.T) {
 func Test_newApi_nilCryptoHelperPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, nilCryptoHelperErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
 	store, internalRegionApi, linkMailer, miscFuncs := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}
 	newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, nil, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
@@ -56,7 +56,7 @@ func Test_newApi_nilCryptoHelperPanic(t *testing.T) {
 func Test_newApi_nilLogPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, nilLogErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}
 	newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)

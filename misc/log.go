@@ -5,10 +5,6 @@ import (
 	"runtime"
 )
 
-var (
-	NotImplementedErr = &Error{Code: 0, Msg: "not implemented"}
-)
-
 type Log interface {
 	Location()
 	Debug(...zap.Field)
