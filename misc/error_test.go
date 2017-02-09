@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+func Test_NilCriticalParamPanic(t *testing.T) {
+	defer func() {
+		err := recover().(error)
+		assert.Equal(t, "code: 0, msg: nil yo", err.Error())
+	}()
+	NilCriticalParamPanic("yo")
+}
+
 func Test_Error(t *testing.T) {
 	e := &Error{Code: 123, Msg: "yo ho ho"}
 	assert.Equal(t, "code: 123, msg: yo ho ho", e.Error())
