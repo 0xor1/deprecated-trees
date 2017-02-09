@@ -15,6 +15,11 @@ type Entity struct {
 	Id Id `json:"id"`
 }
 
+type NamedEntity struct {
+	Entity
+	Name string `json:"name"`
+}
+
 type GenNewId func() (Id, error)
 
 //returns version 1 uuid as a byte slice

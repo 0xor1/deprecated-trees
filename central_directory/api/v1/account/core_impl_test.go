@@ -247,10 +247,12 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 		&fullUserInfo{
 			me: me{
 				user: user{
-					Entity: Entity{
-						Id: id,
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: id,
+						},
+						Name: "ali",
 					},
-					Name:    "ali",
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
@@ -293,10 +295,12 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 		&fullUserInfo{
 			me: me{
 				user: user{
-					Entity: Entity{
-						Id: id,
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: id,
+						},
+						Name: "ali",
 					},
-					Name:    "ali",
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
@@ -340,10 +344,12 @@ func Test_api_Register_success(t *testing.T) {
 		&fullUserInfo{
 			me: me{
 				user: user{
-					Entity: Entity{
-						Id: id,
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: id,
+						},
+						Name: "ali",
 					},
-					Name:    "ali",
 					Region:  "us",
 					Shard:   -1,
 					Created: timeNowReplacement,
@@ -479,8 +485,10 @@ func Test_api_Activate_internalRegionalApiCreatePersonalTaskCenterErr(t *testing
 		me: me{
 			user: user{
 				Region: "us",
-				Entity: Entity{
-					Id: userId,
+				NamedEntity: NamedEntity{
+					Entity: Entity{
+						Id: userId,
+					},
 				},
 				Shard: -1,
 			},
@@ -506,8 +514,10 @@ func Test_api_Activate_storeUpdateUserErr(t *testing.T) {
 		me: me{
 			user: user{
 				Region: "us",
-				Entity: Entity{
-					Id: userId,
+				NamedEntity: NamedEntity{
+					Entity: Entity{
+						Id: userId,
+					},
 				},
 				Shard: -1,
 			},
@@ -534,8 +544,10 @@ func Test_api_Activate_success(t *testing.T) {
 		me: me{
 			user: user{
 				Region: "us",
-				Entity: Entity{
-					Id: userId,
+				NamedEntity: NamedEntity{
+					Entity: Entity{
+						Id: userId,
+					},
 				},
 				Shard: -1,
 			},
@@ -717,7 +729,7 @@ func Test_api_Authenticate_success(t *testing.T) {
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
 	id, _ := NewId()
-	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode, me: me{user: user{Entity: Entity{Id: id}}}}
+	user := &fullUserInfo{Activated: &activationTime, ResetPwdCode: &resetPwdCode, me: me{user: user{NamedEntity: NamedEntity{Entity: Entity{Id: id}}}}}
 	store.On("getUserByCiName", "name").Return(user, nil)
 	pwdInfo := &pwdInfo{Pwd: []byte("P@ss-W0rd")}
 	store.On("getPwdInfo", id).Return(pwdInfo, nil)
@@ -841,7 +853,7 @@ func Test_api_ConfirmNewEmail_success(t *testing.T) {
 	newEmail := "new@email.com"
 	currentEmail := "currentEmail@currentEmail.com"
 	id, _ := NewId()
-	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail, user: user{Entity: Entity{Id: id}}}}
+	user := &fullUserInfo{NewEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail, user: user{NamedEntity: NamedEntity{Entity: Entity{Id: id}}}}}
 	store.On("getUserByEmail", currentEmail).Return(user, nil)
 	store.On("getUserByEmail", newEmail).Return(nil, nil)
 	store.On("updateUser", user).Return(nil)
@@ -1030,7 +1042,7 @@ func Test_api_SetNewPwdFromPwdReset_internalRegionApiCreatePersonalTaskCenterErr
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1050,7 +1062,7 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1074,7 +1086,7 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdatePwdInfoErr(t *testing.T) {
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1096,7 +1108,7 @@ func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", Entity: Entity{Id: myId}}}}
+	user := &fullUserInfo{ResetPwdCode: &resetCode, ActivationCode: &resetCode, me: me{user: user{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1353,7 +1365,7 @@ func Test_api_ChangeMyName_internalRegionApiRenameMemberErr(t *testing.T) {
 	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
-	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us", Entity: Entity{Id: orgId}}}, 1, nil)
+	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	internalRegionApi.On("RenameMember", "us", 0, orgId, id, "test").Return(testErr)
 
@@ -1371,7 +1383,7 @@ func Test_api_ChangeMyName_success(t *testing.T) {
 	store.On("getUserByCiName", "test").Return(nil, nil)
 	store.On("getUserById", id).Return(user, nil)
 	store.On("updateUser", user).Return(nil)
-	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us", Entity: Entity{Id: orgId}}}, 1, nil)
+	store.On("getUsersOrgs", id, 0, 100).Return([]*org{&org{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	internalRegionApi.On("RenameMember", "us", 0, orgId, id, "test").Return(nil)
 
@@ -1758,7 +1770,7 @@ func Test_api_GetMe_success(t *testing.T) {
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	user := &fullUserInfo{me: me{user: user{Entity: Entity{Id: myId}}}}
+	user := &fullUserInfo{me: me{user: user{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
 	store.On("getUserById", myId).Return(user, nil)
 
 	me, err := api.GetMe(myId)
@@ -1809,7 +1821,7 @@ func Test_api_DeleteMe_regionGoneErr(t *testing.T) {
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
 	orgId, _ := NewId()
-	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Entity: Entity{Id: orgId}}}, 1, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(false)
 
 	err := api.DeleteMe(myId)
@@ -1824,7 +1836,7 @@ func Test_api_DeleteMe_internalRegionApiRemoveMemberErr(t *testing.T) {
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
 	orgId, _ := NewId()
-	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, Entity: Entity{Id: orgId}}}, 1, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	internalRegionApi.On("RemoveMember", "us", 4, orgId, myId).Return(testErr)
 
@@ -1840,7 +1852,7 @@ func Test_api_DeleteMe_storeDeleteMembershipErr(t *testing.T) {
 	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
 	store.On("getUserById", myId).Return(user, nil)
 	orgId, _ := NewId()
-	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, Entity: Entity{Id: orgId}}}, 1, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	internalRegionApi.On("RemoveMember", "us", 4, orgId, myId).Return(nil)
 	store.On("deleteMembership", myId, orgId).Return(testErr)
@@ -1983,13 +1995,15 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(testErr)
 
@@ -2008,13 +2022,15 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 	store.On("getUserById", myId).Return(nil, testErr)
@@ -2034,13 +2050,15 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 	store.On("getUserById", myId).Return(nil, nil)
@@ -2060,13 +2078,15 @@ func Test_api_CreateOrg_internalRegionApiCreateOrgTaskCenterErr(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
@@ -2091,13 +2111,15 @@ func Test_api_CreateOrg_deleteOrgAndAllAssociatedMembershipsErr(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
@@ -2122,13 +2144,15 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
@@ -2138,13 +2162,15 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 	internalRegionApi.On("CreateOrgTaskCenter", "us", orgId, myId, "bob").Return(8, nil)
 	store.On("deleteOrgAndAllAssociatedMemberships", orgId).Return(nil)
 	store.On("updateOrg", &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   8,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(testErr)
 
@@ -2163,13 +2189,15 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
 	store.On("createOrgAndMembership", myId, &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   -1,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 	user := &fullUserInfo{}
@@ -2179,13 +2207,15 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	internalRegionApi.On("CreateOrgTaskCenter", "us", orgId, myId, "bob").Return(8, nil)
 	store.On("deleteOrgAndAllAssociatedMemberships", orgId).Return(nil)
 	store.On("updateOrg", &org{
-		Entity: Entity{
-			Id: orgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: orgId,
+			},
+			Name: "newOrg",
 		},
 		Region:  "us",
 		Shard:   8,
 		Created: timeNowReplacement,
-		Name:    "newOrg",
 		IsUser:  false,
 	}).Return(nil)
 
@@ -2585,7 +2615,7 @@ func Test_api_AddMembers_internalRegionApiAddMemberErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApi.On("AddMember", "us", 0, orgId, m1, "test1").Return(testErr)
 
@@ -2605,7 +2635,7 @@ func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApi.On("AddMember", "us", 0, orgId, m1, "test1").Return(nil)
 	store.On("createMembership", m1, orgId).Return(testErr)
@@ -2626,7 +2656,7 @@ func Test_api_AddMembers_success(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test2", Entity: Entity{Id: m2}}}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApi.On("AddMember", "us", 0, orgId, m1, "test1").Return(nil)
 	internalRegionApi.On("AddMember", "us", 0, orgId, m2, "test2").Return(nil)
@@ -2729,7 +2759,7 @@ func Test_api_RemoveMembers_internalRegionApiRemoveMemberErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApi.On("RemoveMember", "us", 0, orgId, m1).Return(testErr)
 
@@ -2749,7 +2779,7 @@ func Test_api_RemoveMembers_storeDeleteMembershipErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test1", Entity: Entity{Id: m2}}}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApi.On("RemoveMember", "us", 0, orgId, m1).Return(nil)
 	store.On("deleteMembership", m1, orgId).Return(testErr)
@@ -2770,7 +2800,7 @@ func Test_api_RemoveMembers_success(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*user{&user{Name: "test1", Entity: Entity{Id: m1}}, &user{Name: "test2", Entity: Entity{Id: m2}}}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionApi.On("RemoveMember", "us", 0, orgId, m1).Return(nil)
 	internalRegionApi.On("RemoveMember", "us", 0, orgId, m2).Return(nil)

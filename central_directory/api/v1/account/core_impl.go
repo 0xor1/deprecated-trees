@@ -151,10 +151,12 @@ func (a *api) Register(name, email, pwd, region string) error {
 		&fullUserInfo{
 			me: me{
 				user: user{
-					Entity: Entity{
-						Id: userId,
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: userId,
+						},
+						Name: name,
 					},
-					Name:    name,
 					Region:  region,
 					Shard:   -1,
 					Created: time.Now().UTC(),
@@ -746,13 +748,15 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 	}
 
 	org := &org{
-		Entity: Entity{
-			Id: newOrgId,
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: newOrgId,
+			},
+			Name: name,
 		},
 		Region:  region,
 		Shard:   -1,
 		Created: time.Now().UTC(),
-		Name:    name,
 		IsUser:  false,
 	}
 	if err := a.store.createOrgAndMembership(myId, org); err != nil {
@@ -1011,9 +1015,8 @@ type linkMailer interface {
 }
 
 type account struct {
-	Entity
+	NamedEntity
 	Created   time.Time `json:"created"`
-	Name      string    `json:"name"`
 	Region    string    `json:"region"`
 	NewRegion *string   `json:"newRegion,omitempty"`
 	Shard     int       `json:"shard"`
