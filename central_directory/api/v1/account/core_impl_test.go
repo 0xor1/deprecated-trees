@@ -1124,6 +1124,17 @@ func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_GetUsers_maxEntityCountExceededErri(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	ids := make([]Id, 101, 101)
+
+	users, err := api.GetUsers(ids)
+	assert.Nil(t, users)
+	assert.Equal(t, maxEntityCountExceededErr, err)
+}
+
 func Test_api_GetUsers_storeGetUsersErr(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -1186,6 +1197,17 @@ func Test_api_SearchUsers_success(t *testing.T) {
 	assert.Equal(t, res, users)
 	assert.Nil(t, err)
 	assert.Equal(t, 8, total)
+}
+
+func Test_api_GetOrgs_maxEntityCountExceededErri(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	ids := make([]Id, 101, 101)
+
+	orgs, err := api.GetOrgs(ids)
+	assert.Nil(t, orgs)
+	assert.Equal(t, maxEntityCountExceededErr, err)
 }
 
 func Test_api_GetOrgs_storeGetOrgsErr(t *testing.T) {
@@ -1838,7 +1860,7 @@ func Test_api_DeleteMe_internalRegionApiRemoveMemberErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("RemoveMember", "us", 4, orgId, myId).Return(testErr)
+	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1854,8 +1876,8 @@ func Test_api_DeleteMe_storeDeleteMembershipErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("RemoveMember", "us", 4, orgId, myId).Return(nil)
-	store.On("deleteMembership", myId, orgId).Return(testErr)
+	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(nil)
+	store.On("deleteMemberships", orgId, []Id{myId}).Return(testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1884,10 +1906,25 @@ func Test_api_DeleteMe_internalRegionApiDeleteTaskCenterErr(t *testing.T) {
 	store.On("getUserById", myId).Return(user, nil)
 	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId).Return(testErr)
+	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId, myId).Return(nil, testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_DeleteMe_internalRegionApiDeleteTaskCenterPublicErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
+	store.On("getUserById", myId).Return(user, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
+	internalRegionApi.On("IsValidRegion", "us").Return(true)
+	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId, myId).Return(testErr, nil)
+
+	err := api.DeleteMe(myId)
+	assert.Equal(t, testErr, err)
 }
 
 func Test_api_DeleteMe_storeDeleteUserErr(t *testing.T) {
@@ -1899,8 +1936,8 @@ func Test_api_DeleteMe_storeDeleteUserErr(t *testing.T) {
 	store.On("getUserById", myId).Return(user, nil)
 	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId).Return(nil)
-	store.On("deleteUser", myId).Return(testErr)
+	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId, myId).Return(nil, nil)
+	store.On("deleteUserAndAllAssociatedMemberships", myId).Return(testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -1915,8 +1952,8 @@ func Test_api_DeleteMe_success(t *testing.T) {
 	store.On("getUserById", myId).Return(user, nil)
 	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId).Return(nil)
-	store.On("deleteUser", myId).Return(nil)
+	internalRegionApi.On("DeleteTaskCenter", "us", 2, myId, myId).Return(nil, nil)
+	store.On("deleteUserAndAllAssociatedMemberships", myId).Return(nil)
 
 	err := api.DeleteMe(myId)
 	assert.Nil(t, err)
@@ -2430,34 +2467,6 @@ func Test_api_DeleteOrg_regionGoneErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_DeleteOrg_internalRegionApiUserCanDeleteOrgErr(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
-	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanDeleteOrg", "us", 0, orgId, myId).Return(false, testErr)
-
-	err := api.DeleteOrg(myId, orgId)
-	assert.IsType(t, &ErrorRef{}, err)
-}
-
-func Test_api_DeleteOrg_internalRegionApiUserCanDeleteOrgFalse(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
-	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanDeleteOrg", "us", 0, orgId, myId).Return(false, nil)
-
-	err := api.DeleteOrg(myId, orgId)
-	assert.Equal(t, insufficientPermissionsErr, err)
-}
-
 func Test_api_DeleteOrg_internalRegionApiDeleteTaskCenterErr(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -2466,11 +2475,24 @@ func Test_api_DeleteOrg_internalRegionApiDeleteTaskCenterErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanDeleteOrg", "us", 0, orgId, myId).Return(true, nil)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId).Return(testErr)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(nil, testErr)
 
 	err := api.DeleteOrg(myId, orgId)
 	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_DeleteOrg_internalRegionApiDeleteTaskCenterPublicErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApi.On("IsValidRegion", "us").Return(true)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(testErr, nil)
+
+	err := api.DeleteOrg(myId, orgId)
+	assert.Equal(t, testErr, err)
 }
 
 func Test_api_DeleteOrg_storeDeleteOrgAndAllAssociatedMembershipsErr(t *testing.T) {
@@ -2481,8 +2503,7 @@ func Test_api_DeleteOrg_storeDeleteOrgAndAllAssociatedMembershipsErr(t *testing.
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanDeleteOrg", "us", 0, orgId, myId).Return(true, nil)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId).Return(nil)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(nil, nil)
 	store.On("deleteOrgAndAllAssociatedMemberships", orgId).Return(testErr)
 
 	err := api.DeleteOrg(myId, orgId)
@@ -2497,12 +2518,23 @@ func Test_api_DeleteOrg_success(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanDeleteOrg", "us", 0, orgId, myId).Return(true, nil)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId).Return(nil)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(nil, nil)
 	store.On("deleteOrgAndAllAssociatedMemberships", orgId).Return(nil)
 
 	err := api.DeleteOrg(myId, orgId)
 	assert.Nil(t, err)
+}
+
+func Test_api_AddMembers_maxEntityCountExceededErri(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	members := make([]Id, 101, 101)
+
+	err := api.AddMembers(myId, orgId, members)
+	assert.Equal(t, maxEntityCountExceededErr, err)
 }
 
 func Test_api_AddMembers_storeGetOrgByIdErr(t *testing.T) {
@@ -2551,40 +2583,6 @@ func Test_api_AddMembers_regionGoneErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_AddMembers_internalRegionApiUserCanAddMembersErr(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
-	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(false, testErr)
-	m1, _ := NewId()
-	m2, _ := NewId()
-	members := []Id{m1, m2}
-
-	err := api.AddMembers(myId, orgId, members)
-	assert.IsType(t, &ErrorRef{}, err)
-}
-
-func Test_api_AddMembers_internalRegionApiUserCanManageMembersFalse(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
-	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(false, nil)
-	m1, _ := NewId()
-	m2, _ := NewId()
-	members := []Id{m1, m2}
-
-	err := api.AddMembers(myId, orgId, members)
-	assert.Equal(t, insufficientPermissionsErr, err)
-}
-
 func Test_api_AddMembers_storeGetUsersErr(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -2593,7 +2591,6 @@ func Test_api_AddMembers_storeGetUsersErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
@@ -2611,16 +2608,34 @@ func Test_api_AddMembers_internalRegionApiAddMemberErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
 	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
-	internalRegionApi.On("AddMember", "us", 0, orgId, m1, "test1").Return(testErr)
+	internalRegionApi.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, testErr)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_AddMembers_internalRegionApiAddMemberPublicErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApi.On("IsValidRegion", "us").Return(true)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	store.On("getUsers", members).Return(users, nil)
+	internalRegionApi.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(testErr, nil)
+
+	err := api.AddMembers(myId, orgId, members)
+	assert.Equal(t, testErr, err)
 }
 
 func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
@@ -2631,14 +2646,13 @@ func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
 	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
-	internalRegionApi.On("AddMember", "us", 0, orgId, m1, "test1").Return(nil)
-	store.On("createMembership", m1, orgId).Return(testErr)
+	internalRegionApi.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, nil)
+	store.On("createMemberships", orgId, members).Return(testErr)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2652,19 +2666,28 @@ func Test_api_AddMembers_success(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
 	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
-	internalRegionApi.On("AddMember", "us", 0, orgId, m1, "test1").Return(nil)
-	internalRegionApi.On("AddMember", "us", 0, orgId, m2, "test2").Return(nil)
-	store.On("createMembership", m1, orgId).Return(nil)
-	store.On("createMembership", m2, orgId).Return(nil)
+	internalRegionApi.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, nil)
+	store.On("createMemberships", orgId, members).Return(nil)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.Nil(t, err)
+}
+
+func Test_api_RemoveMembers_maxEntityCountExceededErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	members := make([]Id, 101, 101)
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.Equal(t, maxEntityCountExceededErr, err)
 }
 
 func Test_api_RemoveMembers_storeGetOrgByIdErr(t *testing.T) {
@@ -2713,40 +2736,6 @@ func Test_api_RemoveMembers_regionGoneErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_RemoveMembers_internalRegionApiUserCanRemoveMembersErr(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
-	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(false, testErr)
-	m1, _ := NewId()
-	m2, _ := NewId()
-	members := []Id{m1, m2}
-
-	err := api.RemoveMembers(myId, orgId, members)
-	assert.IsType(t, &ErrorRef{}, err)
-}
-
-func Test_api_RemoveMembers_internalRegionApiUserCanManageMembersFalse(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
-	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(false, nil)
-	m1, _ := NewId()
-	m2, _ := NewId()
-	members := []Id{m1, m2}
-
-	err := api.RemoveMembers(myId, orgId, members)
-	assert.Equal(t, insufficientPermissionsErr, err)
-}
-
 func Test_api_RemoveMembers_internalRegionApiRemoveMemberErr(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -2755,16 +2744,34 @@ func Test_api_RemoveMembers_internalRegionApiRemoveMemberErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
 	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
-	internalRegionApi.On("RemoveMember", "us", 0, orgId, m1).Return(testErr)
+	internalRegionApi.On("RemoveMembers", "us", 0, orgId, myId, members).Return(nil, testErr)
 
 	err := api.RemoveMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_RemoveMembers_internalRegionApiRemoveMemberPublicErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
+	internalRegionApi.On("IsValidRegion", "us").Return(true)
+	m1, _ := NewId()
+	m2, _ := NewId()
+	members := []Id{m1, m2}
+	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	store.On("getUsers", members).Return(users, nil)
+	internalRegionApi.On("RemoveMembers", "us", 0, orgId, myId, members).Return(testErr, nil)
+
+	err := api.RemoveMembers(myId, orgId, members)
+	assert.IsType(t, testErr, err)
 }
 
 func Test_api_RemoveMembers_storeDeleteMembershipErr(t *testing.T) {
@@ -2775,14 +2782,13 @@ func Test_api_RemoveMembers_storeDeleteMembershipErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
 	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
-	internalRegionApi.On("RemoveMember", "us", 0, orgId, m1).Return(nil)
-	store.On("deleteMembership", m1, orgId).Return(testErr)
+	internalRegionApi.On("RemoveMembers", "us", 0, orgId, myId, members).Return(nil, nil)
+	store.On("deleteMemberships", orgId, members).Return(testErr)
 
 	err := api.RemoveMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2796,16 +2802,13 @@ func Test_api_RemoveMembers_success(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("UserCanManageMembers", "us", 0, orgId, myId).Return(true, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
 	users := []*user{&user{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &user{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
 	store.On("getUsers", members).Return(users, nil)
-	internalRegionApi.On("RemoveMember", "us", 0, orgId, m1).Return(nil)
-	internalRegionApi.On("RemoveMember", "us", 0, orgId, m2).Return(nil)
-	store.On("deleteMembership", m1, orgId).Return(nil)
-	store.On("deleteMembership", m2, orgId).Return(nil)
+	internalRegionApi.On("RemoveMembers", "us", 0, orgId, myId, members).Return(nil, nil)
+	store.On("deleteMemberships", orgId, members).Return(nil)
 
 	err := api.RemoveMembers(myId, orgId, members)
 	assert.Nil(t, err)
@@ -2874,7 +2877,7 @@ func (m *mockStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
 	return args.Error(0)
 }
 
-func (m *mockStore) deleteUser(id Id) error {
+func (m *mockStore) deleteUserAndAllAssociatedMemberships(id Id) error {
 	args := m.Called(id)
 	return args.Error(0)
 }
@@ -2951,18 +2954,13 @@ func (m *mockStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, err
 	return args.Get(0).([]*org), args.Int(1), args.Error(2)
 }
 
-func (m *mockStore) membershipExists(user, org Id) (bool, error) {
-	args := m.Called(user, org)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockStore) createMembership(user, org Id) error {
-	args := m.Called(user, org)
+func (m *mockStore) createMemberships(org Id, users []Id) error {
+	args := m.Called(org, users)
 	return args.Error(0)
 }
 
-func (m *mockStore) deleteMembership(user, org Id) error {
-	args := m.Called(user, org)
+func (m *mockStore) deleteMemberships(org Id, users []Id) error {
+	args := m.Called(org, users)
 	return args.Error(0)
 }
 
@@ -3009,18 +3007,23 @@ func (m *mockInternalRegionApi) CreateOrgTaskCenter(region string, orgId, ownerI
 	return args.Int(0), args.Error(1)
 }
 
-func (m *mockInternalRegionApi) DeleteTaskCenter(region string, shard int, org Id) error {
-	args := m.Called(region, shard, org)
-	return args.Error(0)
+func (m *mockInternalRegionApi) DeleteTaskCenter(region string, shard int, owner, account Id) (error, error) {
+	args := m.Called(region, shard, owner, account)
+	return args.Error(0), args.Error(1)
 }
 
-func (m *mockInternalRegionApi) AddMember(region string, shard int, org, newMember Id, newMemberName string) error {
-	args := m.Called(region, shard, org, newMember, newMemberName)
-	return args.Error(0)
+func (m *mockInternalRegionApi) AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (error, error) {
+	args := m.Called(region, shard, org, admin, members)
+	return args.Error(0), args.Error(1)
 }
 
-func (m *mockInternalRegionApi) RemoveMember(region string, shard int, org, newMember Id) error {
-	args := m.Called(region, shard, org, newMember)
+func (m *mockInternalRegionApi) RemoveMembers(region string, shard int, org, admin Id, members []Id) (error, error) {
+	args := m.Called(region, shard, org, admin, members)
+	return args.Error(0), args.Error(1)
+}
+
+func (m *mockInternalRegionApi) SetMemberDeleted(region string, shard int, org, member Id) error {
+	args := m.Called(region, shard, org, member)
 	return args.Error(0)
 }
 
@@ -3030,21 +3033,6 @@ func (m *mockInternalRegionApi) RenameMember(region string, shard int, org, memb
 }
 
 func (m *mockInternalRegionApi) UserCanRenameOrg(region string, shard int, org, user Id) (bool, error) {
-	args := m.Called(region, shard, org, user)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockInternalRegionApi) UserCanMigrateOrg(region string, shard int, org, user Id) (bool, error) {
-	args := m.Called(region, shard, org, user)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockInternalRegionApi) UserCanDeleteOrg(region string, shard int, org, user Id) (bool, error) {
-	args := m.Called(region, shard, org, user)
-	return args.Bool(0), args.Error(1)
-}
-
-func (m *mockInternalRegionApi) UserCanManageMembers(region string, shard int, org, user Id) (bool, error) {
 	args := m.Called(region, shard, org, user)
 	return args.Bool(0), args.Error(1)
 }

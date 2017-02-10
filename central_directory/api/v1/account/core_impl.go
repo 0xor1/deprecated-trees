@@ -23,9 +23,10 @@ var (
 	emailConfirmationCodeErr              = &Error{Code: 14, Msg: "email confirmation code is of zero length"}
 	noNewEmailRegisteredErr               = &Error{Code: 15, Msg: "no new email registered"}
 	insufficientPermissionsErr            = &Error{Code: 16, Msg: "insufficient permissions"}
+	maxEntityCountExceededErr             = &Error{Code: 17, Msg: "max entity count exceeded"}
 )
 
-func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
+func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
 	if store == nil {
 		NilCriticalParamPanic("store")
 	}
@@ -45,48 +46,48 @@ func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMai
 		NilCriticalParamPanic("log")
 	}
 	return &api{
-		store:                 store,
-		internalRegionApi:     internalRegionApi,
-		linkMailer:            linkMailer,
-		newId:                 newId,
-		cryptoHelper:          cryptoHelper,
-		nameRegexMatchers:     append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
-		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
-		nameMinRuneCount:      nameMinRuneCount,
-		nameMaxRuneCount:      nameMaxRuneCount,
-		pwdMinRuneCount:       pwdMinRuneCount,
-		pwdMaxRuneCount:       pwdMaxRuneCount,
-		maxSearchLimitResults: maxSearchLimitResults,
-		cryptoCodeLen:         cryptoCodeLen,
-		saltLen:               saltLen,
-		scryptN:               scryptN,
-		scryptR:               scryptR,
-		scryptP:               scryptP,
-		scryptKeyLen:          scryptKeyLen,
-		log:                   log,
+		store:             store,
+		internalRegionApi: internalRegionApi,
+		linkMailer:        linkMailer,
+		newId:             newId,
+		cryptoHelper:      cryptoHelper,
+		nameRegexMatchers: append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
+		pwdRegexMatchers:  append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		nameMinRuneCount:  nameMinRuneCount,
+		nameMaxRuneCount:  nameMaxRuneCount,
+		pwdMinRuneCount:   pwdMinRuneCount,
+		pwdMaxRuneCount:   pwdMaxRuneCount,
+		maxGetEntityCount: maxGetEntityCount,
+		cryptoCodeLen:     cryptoCodeLen,
+		saltLen:           saltLen,
+		scryptN:           scryptN,
+		scryptR:           scryptR,
+		scryptP:           scryptP,
+		scryptKeyLen:      scryptKeyLen,
+		log:               log,
 	}
 }
 
 type api struct {
-	store                 store
-	internalRegionApi     internalRegionApi
-	linkMailer            linkMailer
-	newId                 GenNewId
-	cryptoHelper          CryptoHelper
-	nameRegexMatchers     []string
-	pwdRegexMatchers      []string
-	nameMinRuneCount      int
-	nameMaxRuneCount      int
-	pwdMinRuneCount       int
-	pwdMaxRuneCount       int
-	maxSearchLimitResults int
-	cryptoCodeLen         int
-	saltLen               int
-	scryptN               int
-	scryptR               int
-	scryptP               int
-	scryptKeyLen          int
-	log                   Log
+	store             store
+	internalRegionApi internalRegionApi
+	linkMailer        linkMailer
+	newId             GenNewId
+	cryptoHelper      CryptoHelper
+	nameRegexMatchers []string
+	pwdRegexMatchers  []string
+	nameMinRuneCount  int
+	nameMaxRuneCount  int
+	pwdMinRuneCount   int
+	pwdMaxRuneCount   int
+	maxGetEntityCount int
+	cryptoCodeLen     int
+	saltLen           int
+	scryptN           int
+	scryptR           int
+	scryptP           int
+	scryptKeyLen      int
+	log               Log
 }
 
 func (a *api) Register(name, email, pwd, region string) error {
@@ -420,6 +421,10 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 func (a *api) GetUsers(ids []Id) ([]*user, error) {
 	a.log.Location()
 
+	if len(ids) > a.maxGetEntityCount {
+		return nil, a.log.InfoErr(maxEntityCountExceededErr)
+	}
+
 	users, err := a.store.getUsers(ids)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
@@ -431,8 +436,8 @@ func (a *api) GetUsers(ids []Id) ([]*user, error) {
 func (a *api) SearchUsers(search string, offset, limit int) ([]*user, int, error) {
 	a.log.Location()
 
-	if limit < 1 || limit > a.maxSearchLimitResults {
-		limit = a.maxSearchLimitResults
+	if limit < 1 || limit > a.maxGetEntityCount {
+		limit = a.maxGetEntityCount
 	}
 	if offset < 0 {
 		offset = 0
@@ -454,6 +459,10 @@ func (a *api) SearchUsers(search string, offset, limit int) ([]*user, int, error
 func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 	a.log.Location()
 
+	if len(ids) > a.maxGetEntityCount {
+		return nil, a.log.InfoErr(maxEntityCountExceededErr)
+	}
+
 	orgs, err := a.store.getOrgs(ids)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
@@ -465,8 +474,8 @@ func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 func (a *api) SearchOrgs(search string, offset, limit int) ([]*org, int, error) {
 	a.log.Location()
 
-	if limit < 1 || limit > a.maxSearchLimitResults {
-		limit = a.maxSearchLimitResults
+	if limit < 1 || limit > a.maxGetEntityCount {
+		limit = a.maxGetEntityCount
 	}
 	if offset < 0 {
 		offset = 0
@@ -698,10 +707,10 @@ func (a *api) DeleteMe(myId Id) error {
 			if !a.internalRegionApi.IsValidRegion(org.Region) {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
-			if err := a.internalRegionApi.RemoveMember(org.Region, org.Shard, org.Id, myId); err != nil {
+			if err := a.internalRegionApi.SetMemberDeleted(org.Region, org.Shard, org.Id, myId); err != nil {
 				return a.log.ErrorUserErr(myId, err)
 			}
-			if err := a.store.deleteMembership(myId, org.Id); err != nil {
+			if err := a.store.deleteMemberships(org.Id, []Id{myId}); err != nil {
 				return a.log.ErrorUserErr(myId, err)
 			}
 		}
@@ -711,11 +720,15 @@ func (a *api) DeleteMe(myId Id) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	if err := a.internalRegionApi.DeleteTaskCenter(user.Region, user.Shard, myId); err != nil {
+	publicErr, err := a.internalRegionApi.DeleteTaskCenter(user.Region, user.Shard, myId, myId)
+	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
+	if publicErr != nil {
+		return a.log.InfoUserErr(myId, publicErr)
+	}
 
-	if err := a.store.deleteUser(myId); err != nil {
+	if err := a.store.deleteUserAndAllAssociatedMemberships(myId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
@@ -839,8 +852,8 @@ func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
 func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
 	a.log.Location()
 
-	if limit < 1 || limit > a.maxSearchLimitResults {
-		limit = a.maxSearchLimitResults
+	if limit < 1 || limit > a.maxGetEntityCount {
+		limit = a.maxGetEntityCount
 	}
 	if offset < 0 {
 		offset = 0
@@ -868,16 +881,12 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := a.internalRegionApi.UserCanDeleteOrg(org.Region, org.Shard, orgId, myId)
+	publicErr, err := a.internalRegionApi.DeleteTaskCenter(org.Region, org.Shard, myId, orgId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
-	if !can {
-		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
-	}
-
-	if err := a.internalRegionApi.DeleteTaskCenter(org.Region, org.Shard, orgId); err != nil {
-		return a.log.ErrorUserErr(myId, err)
+	if publicErr != nil {
+		return a.log.InfoUserErr(myId, publicErr)
 	}
 
 	if err := a.store.deleteOrgAndAllAssociatedMemberships(orgId); err != nil {
@@ -890,6 +899,10 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 	a.log.Location()
 
+	if len(newMembers) > a.maxGetEntityCount {
+		return a.log.InfoUserErr(myId, maxEntityCountExceededErr)
+	}
+
 	org, err := a.store.getOrgById(orgId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
@@ -902,26 +915,26 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := a.internalRegionApi.UserCanManageMembers(org.Region, org.Shard, orgId, myId)
-	if err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-	if !can {
-		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
-	}
-
 	users, err := a.store.getUsers(newMembers)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
+	entities := make([]*NamedEntity, 0, len(users))
 	for _, user := range users {
-		if err := a.internalRegionApi.AddMember(org.Region, org.Shard, orgId, user.Id, user.Name); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		if err := a.store.createMembership(user.Id, orgId); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
+		entities = append(entities, &user.NamedEntity)
+	}
+
+	publicErr, err := a.internalRegionApi.AddMembers(org.Region, org.Shard, orgId, myId, entities)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if publicErr != nil {
+		return a.log.InfoUserErr(myId, publicErr)
+	}
+
+	if err := a.store.createMemberships(orgId, newMembers); err != nil {
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
@@ -930,6 +943,10 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 	a.log.Location()
 
+	if len(existingMembers) > a.maxGetEntityCount {
+		return a.log.InfoUserErr(myId, maxEntityCountExceededErr)
+	}
+
 	org, err := a.store.getOrgById(orgId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
@@ -942,21 +959,16 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := a.internalRegionApi.UserCanManageMembers(org.Region, org.Shard, orgId, myId)
+	publicErr, err := a.internalRegionApi.RemoveMembers(org.Region, org.Shard, orgId, myId, existingMembers)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
-	if !can {
-		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+	if publicErr != nil {
+		return a.log.InfoUserErr(myId, publicErr)
 	}
 
-	for _, member := range existingMembers {
-		if err := a.internalRegionApi.RemoveMember(org.Region, org.Shard, orgId, member); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		if err := a.store.deleteMembership(member, orgId); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
+	if err := a.store.deleteMemberships(orgId, existingMembers); err != nil {
+		return a.log.ErrorUserErr(myId, err)
 	}
 
 	return nil
@@ -975,7 +987,7 @@ type store interface {
 	getPwdInfo(id Id) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
 	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
-	deleteUser(id Id) error
+	deleteUserAndAllAssociatedMemberships(id Id) error
 	getUsers(ids []Id) ([]*user, error)
 	searchUsers(search string, offset, limit int) ([]*user, int, error)
 	//org
@@ -988,23 +1000,20 @@ type store interface {
 	searchOrgs(search string, offset, limit int) ([]*org, int, error)
 	getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error)
 	//members
-	membershipExists(user, org Id) (bool, error)
-	createMembership(user, org Id) error
-	deleteMembership(user, org Id) error
+	createMemberships(org Id, users []Id) error
+	deleteMemberships(org Id, users []Id) error
 }
 
 type internalRegionApi interface {
 	IsValidRegion(region string) bool
 	CreatePersonalTaskCenter(region string, user Id) (int, error)
 	CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error)
-	DeleteTaskCenter(region string, shard int, account Id) error
-	AddMember(region string, shard int, org, member Id, memberName string) error
-	RemoveMember(region string, shard int, org, member Id) error
+	DeleteTaskCenter(region string, shard int, owner, account Id) (public error, private error)
+	AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (public error, private error)
+	RemoveMembers(region string, shard int, org, admin Id, members []Id) (public error, private error)
+	SetMemberDeleted(region string, shard int, org, member Id) error
 	RenameMember(region string, shard int, org, member Id, newName string) error
 	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
-	UserCanMigrateOrg(region string, shard int, org, user Id) (bool, error)
-	UserCanDeleteOrg(region string, shard int, org, user Id) (bool, error)
-	UserCanManageMembers(region string, shard int, org, user Id) (bool, error)
 }
 
 type linkMailer interface {

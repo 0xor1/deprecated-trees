@@ -171,11 +171,15 @@ func (s *memStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
 	return nil
 }
 
-func (s *memStore) deleteUser(id Id) error {
+func (s *memStore) deleteUserAndAllAssociatedMemberships(id Id) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	delete(s.users, id.String())
 	delete(s.pwdInfos, id.String())
+	for orgId := range s.membershipsUtoO[id.String()] {
+		delete(s.membershipsOtoU[orgId], id.String())
+	}
+	delete(s.membershipsUtoO, id.String())
 	return nil
 }
 
@@ -316,32 +320,26 @@ func (s *memStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, erro
 	}
 }
 
-func (s *memStore) membershipExists(user, org Id) (bool, error) {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	exists := false
-	if s.membershipsUtoO[user.String()] != nil {
-		_, exists = s.membershipsUtoO[user.String()][org.String()]
-	}
-	return exists, nil
-}
-
-func (s *memStore) createMembership(user, org Id) error {
+func (s *memStore) createMemberships(org Id, users []Id) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	if s.membershipsUtoO[user.String()] == nil {
-		s.membershipsUtoO[user.String()] = map[string]interface{}{org.String(): nil}
-	} else {
-		s.membershipsUtoO[user.String()][org.String()] = nil
+	for _, user := range users {
+		if s.membershipsUtoO[user.String()] == nil {
+			s.membershipsUtoO[user.String()] = map[string]interface{}{org.String(): nil}
+		} else {
+			s.membershipsUtoO[user.String()][org.String()] = nil
+		}
+		s.membershipsOtoU[org.String()][user.String()] = nil
 	}
-	s.membershipsOtoU[org.String()][user.String()] = nil
 	return nil
 }
 
-func (s *memStore) deleteMembership(user, org Id) error {
+func (s *memStore) deleteMemberships(org Id, users []Id) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	delete(s.membershipsUtoO[user.String()], org.String())
-	delete(s.membershipsOtoU[org.String()], user.String())
+	for _, user := range users {
+		delete(s.membershipsUtoO[user.String()], org.String())
+		delete(s.membershipsOtoU[org.String()], user.String())
+	}
 	return nil
 }

@@ -113,10 +113,10 @@ func Test_memStore_updatePwdInfo(t *testing.T) {
 	assert.Equal(t, []byte("pwd2"), pwdInfo.Pwd)
 }
 
-func Test_memStore_deleteUser(t *testing.T) {
+func Test_memStore_deleteUserAndAllAssociatedMemberships(t *testing.T) {
 	store, userId, _ := setup(t, newMemStore())
 
-	err := store.deleteUser(userId)
+	err := store.deleteUserAndAllAssociatedMemberships(userId)
 	assert.Nil(t, err)
 
 	user, err := store.getUserById(userId)
@@ -190,14 +190,13 @@ func Test_memStore_updateOrg(t *testing.T) {
 }
 
 func Test_memStore_deleteOrgAndAllAssociatedMemberships(t *testing.T) {
-	store, userId, orgId := setup(t, newMemStore())
+	store, _, orgId := setup(t, newMemStore())
 
 	err := store.deleteOrgAndAllAssociatedMemberships(orgId)
 	assert.Nil(t, err)
 
-	exists, err := store.membershipExists(userId, orgId)
-	assert.False(t, exists)
-	assert.Nil(t, err)
+	mStore := store.(*memStore)
+	assert.Nil(t, mStore.membershipsOtoU[orgId.String()])
 
 	org, err := store.getOrgById(orgId)
 	assert.Nil(t, org)
@@ -257,17 +256,18 @@ func Test_memStore_memberships(t *testing.T) {
 	user := &fullUserInfo{}
 	user.Id, _ = NewId()
 	store.createUser(user, &pwdInfo{})
-	err := store.createMembership(user.Id, orgId)
+
+	err := store.createMemberships(orgId, []Id{user.Id})
 	assert.Nil(t, err)
 
-	exists, err := store.membershipExists(user.Id, orgId)
+	mStore := store.(*memStore)
+	_, exists := mStore.membershipsOtoU[orgId.String()][user.Id.String()]
 	assert.True(t, exists)
+
+	err = store.deleteMemberships(orgId, []Id{user.Id})
 	assert.Nil(t, err)
 
-	err = store.deleteMembership(user.Id, orgId)
-	assert.Nil(t, err)
-
-	exists, err = store.membershipExists(user.Id, orgId)
+	_, exists = mStore.membershipsOtoU[orgId.String()][user.Id.String()]
 	assert.False(t, exists)
 	assert.Nil(t, err)
 
@@ -276,7 +276,7 @@ func Test_memStore_memberships(t *testing.T) {
 	err = store.createOrgAndMembership(userId, org)
 	assert.Nil(t, err)
 
-	err = store.createMembership(user.Id, org.Id)
+	err = store.createMemberships(org.Id, []Id{user.Id})
 	assert.Nil(t, err)
 }
 
@@ -316,10 +316,6 @@ func setup(t *testing.T, store store) (store, Id, Id) {
 	org.NewRegion = &newRegion
 	org.IsUser = false
 	err = store.createOrgAndMembership(user.Id, org)
-	assert.Nil(t, err)
-
-	exists, err := store.membershipExists(user.Id, org.Id)
-	assert.True(t, exists)
 	assert.Nil(t, err)
 
 	return store, user.Id, org.Id
