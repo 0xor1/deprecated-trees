@@ -10,10 +10,7 @@ var (
 )
 
 func NilCriticalParamPanic(paramName string) {
-	panic(&Error{
-		Code: 0,
-		Msg:  fmt.Sprintf("nil %s", paramName),
-	})
+	panic(&Error{Code: 0, Msg:  fmt.Sprintf("nil %s", paramName)})
 }
 
 type Error struct {
