@@ -3,8 +3,8 @@ package internal
 import (
 	. "bitbucket.org/robsix/task_center/misc"
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 func Test_newApi_nilRegionsPanic(t *testing.T) {
@@ -31,7 +31,7 @@ func Test_newApi_success(t *testing.T) {
 	assert.NotNil(t, api)
 }
 
-type mockInternalApi struct{
+type mockInternalApi struct {
 	mock.Mock
 }
 

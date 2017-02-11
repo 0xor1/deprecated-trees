@@ -86,7 +86,6 @@ func (a *api) UserCanRenameOrg(region string, shard int, org, user Id) (bool, er
 	return false, NotImplementedErr
 }
 
-
 type internalApi interface {
 	createPersonalTaskCenter(user Id) (int, error)
 	createOrgTaskCenter(org, owner Id, ownerName string) (int, error)
