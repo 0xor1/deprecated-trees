@@ -7,6 +7,7 @@ import (
 // The main account Api interface
 type Api interface {
 	//accessible outside of active session
+	GetRegions() []string
 	Register(name, email, pwd, region string) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) (Id, error)

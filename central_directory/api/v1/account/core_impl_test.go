@@ -69,6 +69,16 @@ func Test_newApi_success(t *testing.T) {
 	assert.NotNil(t, api)
 }
 
+func Test_api_GetRegiosn_success(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	expectedRegions := []string{"us-w", "us-e", "ch", "au"}
+	internalRegionApi.On("GetRegions").Return(expectedRegions)
+	regions := api.GetRegions()
+	assert.Equal(t, expectedRegions, regions)
+}
+
 func Test_api_Register_invalidNameParam(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -2990,6 +3000,15 @@ func (m *mockLinkMailer) sendNewEmailConfirmationLink(currentEmail, newEmail, co
 
 type mockInternalRegionApi struct {
 	mock.Mock
+}
+
+func (m *mockInternalRegionApi) GetRegions() []string {
+	args := m.Called()
+	regions := args.Get(0)
+	if regions != nil {
+		return regions.([]string)
+	}
+	return nil
 }
 
 func (m *mockInternalRegionApi) IsValidRegion(region string) bool {

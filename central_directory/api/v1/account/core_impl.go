@@ -90,6 +90,10 @@ type api struct {
 	log               Log
 }
 
+func (a *api) GetRegions() []string {
+	return a.internalRegionApi.GetRegions()
+}
+
 func (a *api) Register(name, email, pwd, region string) error {
 	a.log.Location()
 
@@ -1005,6 +1009,7 @@ type store interface {
 }
 
 type internalRegionApi interface {
+	GetRegions() []string
 	IsValidRegion(region string) bool
 	CreatePersonalTaskCenter(region string, user Id) (int, error)
 	CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error)

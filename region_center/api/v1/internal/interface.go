@@ -5,6 +5,7 @@ import (
 )
 
 type Api interface {
+	GetRegions() []string
 	IsValidRegion(region string) bool
 	CreatePersonalTaskCenter(region string, user Id) (int, error)
 	CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error)

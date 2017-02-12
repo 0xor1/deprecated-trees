@@ -40,6 +40,15 @@ func Test_apiIsValidRegion(t *testing.T) {
 	assert.True(t, api.IsValidRegion("us"))
 }
 
+func Test_apiGetRegions(t *testing.T) {
+	regions := map[string]internalApi{"us": &mockInternalApi{}, "au": &mockInternalApi{}}
+	api := newApi(regions, NewLog(nil))
+
+	regionsSlice := api.GetRegions()
+	assert.Contains(t, regionsSlice, "us")
+	assert.Contains(t, regionsSlice, "au")
+}
+
 func Test_apiCreatePersonalTaskCenter(t *testing.T) {
 	iApi := &mockInternalApi{}
 	regions := map[string]internalApi{"us": iApi}

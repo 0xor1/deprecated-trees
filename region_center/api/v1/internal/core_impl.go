@@ -26,6 +26,14 @@ type api struct {
 	log     Log
 }
 
+func (a *api) GetRegions() []string {
+	regions := make([]string, 0, len(a.regions))
+	for k := range a.regions {
+		regions = append(regions, k)
+	}
+	return regions
+}
+
 func (a *api) IsValidRegion(region string) bool {
 	return a.regions[region] != nil
 }
@@ -86,6 +94,46 @@ func (a *api) UserCanRenameOrg(region string, shard int, org, user Id) (bool, er
 	return a.regions[region].userCanRenameOrg(shard, org, user)
 }
 
+//func newInternalApi() internalApi {
+//	return &iApi{}
+//}
+//
+//type iApi struct{
+//}
+//
+//func (a *iApi) createPersonalTaskCenter(user Id) (int, error) {
+//	a.store.createRootNode(user)
+//}
+//
+//func (a *iApi) createOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
+//
+//}
+//
+//func (a *iApi) deleteTaskCenter(shard int, owner, account Id) (public error, private error) {
+//
+//}
+//
+//func (a *iApi) addMembers(shard int, org, admin Id, members []*NamedEntity) (public error, private error) {
+//
+//}
+//
+//func (a *iApi) removeMembers(shard int, org, admin Id, members []Id) (public error, private error) {
+//
+//}
+//
+//func (a *iApi) setMemberDeleted(shard int, org, member Id) error {
+//
+//}
+//
+//func (a *iApi) renameMember(shard int, org, member Id, newName string) error {
+//
+//}
+//
+//func (a *iApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
+//
+//}
+
+
 type internalApi interface {
 	createPersonalTaskCenter(user Id) (int, error)
 	createOrgTaskCenter(org, owner Id, ownerName string) (int, error)
@@ -95,4 +143,8 @@ type internalApi interface {
 	setMemberDeleted(shard int, org, member Id) error
 	renameMember(shard int, org, member Id, newName string) error
 	userCanRenameOrg(shard int, org, user Id) (bool, error)
+}
+
+type store interface{
+	createRootNode(node Id) error
 }
