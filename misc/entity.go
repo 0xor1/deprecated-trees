@@ -11,6 +11,10 @@ func (id Id) String() string {
 	return hex.EncodeToString(id)
 }
 
+func (id Id) Equal(other Id) bool {
+	return id.String() == other.String()
+}
+
 type Entity struct {
 	Id Id `json:"id"`
 }
