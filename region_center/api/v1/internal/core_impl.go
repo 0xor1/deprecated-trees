@@ -10,6 +10,7 @@ var (
 	invalidRegionErr          = &Error{Code: 18, Msg: "invalid region"}
 	insufficientPermissionErr = &Error{Code: 19, Msg: "insufficient permission"}
 	zeroOwnerCountErr         = &Error{Code: 20, Msg: "zero owner count"}
+	invalidTaskCenterTypeErr  = &Error{Code: 21, Msg: "invalid task center type"}
 )
 
 func newApi(regions map[string]internalApi, log Log) Api {
@@ -270,7 +271,7 @@ func (a *iApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
 			return false, nil
 		}
 	}
-	return true, nil
+	return false, invalidTaskCenterTypeErr
 }
 
 type internalApi interface {
