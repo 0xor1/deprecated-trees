@@ -3,6 +3,7 @@ package misc
 import (
 	"encoding/hex"
 	. "github.com/pborman/uuid"
+	"bytes"
 )
 
 type Id UUID
@@ -12,7 +13,8 @@ func (id Id) String() string {
 }
 
 func (id Id) Equal(other Id) bool {
-	return id.String() == other.String()
+	return bytes.Equal(id, other)
+	//return id.String() == other.String()
 }
 
 type Entity struct {

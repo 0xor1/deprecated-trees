@@ -44,58 +44,90 @@ func (a *api) IsValidRegion(region string) bool {
 
 func (a *api) CreatePersonalTaskCenter(region string, user Id) (int, error) {
 	if !a.IsValidRegion(region) {
-		return 0, invalidRegionErr
+		return 0, a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].createPersonalTaskCenter(user)
+	shard, err := a.regions[region].createPersonalTaskCenter(user)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return shard, err
 }
 
 func (a *api) CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error) {
 	if !a.IsValidRegion(region) {
-		return 0, invalidRegionErr
+		return 0, a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].createOrgTaskCenter(org, owner, ownerName)
+	shard, err := a.regions[region].createOrgTaskCenter(org, owner, ownerName)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return shard, err
 }
 
 func (a *api) DeleteTaskCenter(region string, shard int, owner, account Id) (error, error) {
 	if !a.IsValidRegion(region) {
-		return nil, invalidRegionErr
+		return nil, a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].deleteTaskCenter(shard, owner, account)
+	publicErr, err := a.regions[region].deleteTaskCenter(shard, owner, account)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return publicErr, err
 }
 
 func (a *api) AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (error, error) {
 	if !a.IsValidRegion(region) {
-		return nil, invalidRegionErr
+		return nil, a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].addMembers(shard, org, admin, members)
+	publicErr, err := a.regions[region].addMembers(shard, org, admin, members)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return publicErr, err
 }
 
 func (a *api) RemoveMembers(region string, shard int, org, admin Id, members []Id) (error, error) {
 	if !a.IsValidRegion(region) {
-		return nil, invalidRegionErr
+		return nil, a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].removeMembers(shard, org, admin, members)
+	publicErr, err := a.regions[region].removeMembers(shard, org, admin, members)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return publicErr, err
 }
 
 func (a *api) SetMemberDeleted(region string, shard int, org, member Id) error {
 	if !a.IsValidRegion(region) {
-		return invalidRegionErr
+		return a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].setMemberDeleted(shard, org, member)
+	err := a.regions[region].setMemberDeleted(shard, org, member)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return err
 }
 
 func (a *api) RenameMember(region string, shard int, org, member Id, newName string) error {
 	if !a.IsValidRegion(region) {
-		return invalidRegionErr
+		return a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].renameMember(shard, org, member, newName)
+	err := a.regions[region].renameMember(shard, org, member, newName)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return err
 }
 
 func (a *api) UserCanRenameOrg(region string, shard int, org, user Id) (bool, error) {
 	if !a.IsValidRegion(region) {
-		return false, invalidRegionErr
+		return false, a.log.InfoErr(invalidRegionErr)
 	}
-	return a.regions[region].userCanRenameOrg(shard, org, user)
+	can, err := a.regions[region].userCanRenameOrg(shard, org, user)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return can, err
 }
 
 //func newIApi(store store) internalApi {
@@ -213,17 +245,33 @@ func (a *iApi) removeMembers(shard int, org, admin Id, members []Id) (error, err
 	return nil, a.store.setMembersInactive(shard, org, members)
 }
 
-//func (a *iApi) setMemberDeleted(shard int, org, member Id) error {
-//
-//}
-//
-//func (a *iApi) renameMember(shard int, org, member Id, newName string) error {
-//
-//}
-//
-//func (a *iApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
-//
-//}
+func (a *iApi) setMemberDeleted(shard int, org, member Id) error {
+	return a.store.setMemberDeleted(shard, org, member)
+}
+
+func (a *iApi) renameMember(shard int, org, member Id, newName string) error {
+	return a.store.createMember(shard, &model.Member{
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: member,
+			},
+			Name: newName,
+		},
+	})
+}
+
+func (a *iApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
+	if !user.Equal(org) {
+		member, err := a.store.getMember(shard, user)
+		if err != nil {
+			return false, err
+		}
+		if member == nil || member.Role != model.Owner {
+			return false, nil
+		}
+	}
+	return true, nil
+}
 
 type internalApi interface {
 	createPersonalTaskCenter(user Id) (int, error)
@@ -237,12 +285,13 @@ type internalApi interface {
 }
 
 type store interface {
-	createTaskSet(node Id) (int, error)
-	createMember(shard int, member model.Member) error
+	createTaskSet(*model.TaskSet) (int, error)
+	createMember(shard int, member *model.Member) error
 	deleteAccount(shard int, account Id) error
 	getMember(shard int, member Id) (*model.Member, error)
 	addMembers(shard int, members []*NamedEntity) error
 	getTotalOrgOwnerCount(shard int, org Id) (int, error)
 	getOwnerCountInRemoveSet(shard int, org Id, members []Id) (int, error)
 	setMembersInactive(shard int, org Id, members []Id) error
+	setMemberDeleted(shard int, org Id, member Id) error
 }
