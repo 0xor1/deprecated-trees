@@ -130,11 +130,11 @@ func (a *api) UserCanRenameOrg(region string, shard int, org, user Id) (bool, er
 	return can, err
 }
 
-//func newIApi(store store) internalApi {
-//	return &iApi{
-//		store: store,
-//	}
-//}
+func newIApi(store store) internalApi {
+	return &iApi{
+		store: store,
+	}
+}
 
 type iApi struct {
 	store store
