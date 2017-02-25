@@ -2485,7 +2485,7 @@ func Test_api_DeleteOrg_internalRegionApiDeleteTaskCenterErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(nil, testErr)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId, myId).Return(nil, testErr)
 
 	err := api.DeleteOrg(myId, orgId)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2499,7 +2499,7 @@ func Test_api_DeleteOrg_internalRegionApiDeleteTaskCenterPublicErr(t *testing.T)
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(testErr, nil)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId, myId).Return(testErr, nil)
 
 	err := api.DeleteOrg(myId, orgId)
 	assert.Equal(t, testErr, err)
@@ -2513,7 +2513,7 @@ func Test_api_DeleteOrg_storeDeleteOrgAndAllAssociatedMembershipsErr(t *testing.
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(nil, nil)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId, myId).Return(nil, nil)
 	store.On("deleteOrgAndAllAssociatedMemberships", orgId).Return(testErr)
 
 	err := api.DeleteOrg(myId, orgId)
@@ -2528,7 +2528,7 @@ func Test_api_DeleteOrg_success(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getOrgById", orgId).Return(&org{Region: "us"}, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("DeleteTaskCenter", "us", 0, myId, orgId).Return(nil, nil)
+	internalRegionApi.On("DeleteTaskCenter", "us", 0, orgId, myId).Return(nil, nil)
 	store.On("deleteOrgAndAllAssociatedMemberships", orgId).Return(nil)
 
 	err := api.DeleteOrg(myId, orgId)
@@ -3026,8 +3026,8 @@ func (m *mockInternalRegionApi) CreateOrgTaskCenter(region string, orgId, ownerI
 	return args.Int(0), args.Error(1)
 }
 
-func (m *mockInternalRegionApi) DeleteTaskCenter(region string, shard int, owner, account Id) (error, error) {
-	args := m.Called(region, shard, owner, account)
+func (m *mockInternalRegionApi) DeleteTaskCenter(region string, shard int, account, owner Id) (error, error) {
+	args := m.Called(region, shard, account, owner)
 	return args.Error(0), args.Error(1)
 }
 
