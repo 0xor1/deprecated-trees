@@ -1,10 +1,19 @@
-package internal
+package tree
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
 )
 
-type Api interface {
+const (
+	Owner  = role("owner")
+	Admin  = role("admin")
+	Writer = role("writer")
+	Reader = role("reader")
+)
+
+type role string
+
+type InternalApi interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool
 	CreatePersonalTaskCenter(region string, user Id) (int, error)

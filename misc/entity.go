@@ -1,9 +1,9 @@
 package misc
 
 import (
+	"bytes"
 	"encoding/hex"
 	. "github.com/pborman/uuid"
-	"bytes"
 )
 
 type Id UUID

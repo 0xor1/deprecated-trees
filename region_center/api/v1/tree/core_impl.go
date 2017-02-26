@@ -1,8 +1,7 @@
-package internal
+package tree
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
-	"bitbucket.org/robsix/task_center/region_center/model"
 	"time"
 )
 
@@ -13,25 +12,25 @@ var (
 	invalidTaskCenterTypeErr  = &Error{Code: 21, Msg: "invalid task center type"}
 )
 
-func newApi(regions map[string]internalApi, log Log) Api {
+func newInternalApi(regions map[string]singularInternalApi, log Log) InternalApi {
 	if regions == nil {
 		NilCriticalParamPanic("regions")
 	}
 	if log == nil {
 		NilCriticalParamPanic("logs")
 	}
-	return &api{
+	return &internalApi{
 		regions: regions,
 		log:     log,
 	}
 }
 
-type api struct {
-	regions map[string]internalApi
+type internalApi struct {
+	regions map[string]singularInternalApi
 	log     Log
 }
 
-func (a *api) GetRegions() []string {
+func (a *internalApi) GetRegions() []string {
 	regions := make([]string, 0, len(a.regions))
 	for k := range a.regions {
 		regions = append(regions, k)
@@ -39,11 +38,11 @@ func (a *api) GetRegions() []string {
 	return regions
 }
 
-func (a *api) IsValidRegion(region string) bool {
+func (a *internalApi) IsValidRegion(region string) bool {
 	return a.regions[region] != nil
 }
 
-func (a *api) CreatePersonalTaskCenter(region string, user Id) (int, error) {
+func (a *internalApi) CreatePersonalTaskCenter(region string, user Id) (int, error) {
 	if !a.IsValidRegion(region) {
 		return 0, a.log.InfoErr(invalidRegionErr)
 	}
@@ -54,7 +53,7 @@ func (a *api) CreatePersonalTaskCenter(region string, user Id) (int, error) {
 	return shard, err
 }
 
-func (a *api) CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error) {
+func (a *internalApi) CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error) {
 	if !a.IsValidRegion(region) {
 		return 0, a.log.InfoErr(invalidRegionErr)
 	}
@@ -65,7 +64,7 @@ func (a *api) CreateOrgTaskCenter(region string, org, owner Id, ownerName string
 	return shard, err
 }
 
-func (a *api) DeleteTaskCenter(region string, shard int, account, owner Id) (error, error) {
+func (a *internalApi) DeleteTaskCenter(region string, shard int, account, owner Id) (error, error) {
 	if !a.IsValidRegion(region) {
 		return nil, a.log.InfoErr(invalidRegionErr)
 	}
@@ -76,7 +75,7 @@ func (a *api) DeleteTaskCenter(region string, shard int, account, owner Id) (err
 	return publicErr, err
 }
 
-func (a *api) AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (error, error) {
+func (a *internalApi) AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (error, error) {
 	if !a.IsValidRegion(region) {
 		return nil, a.log.InfoErr(invalidRegionErr)
 	}
@@ -87,7 +86,7 @@ func (a *api) AddMembers(region string, shard int, org, admin Id, members []*Nam
 	return publicErr, err
 }
 
-func (a *api) RemoveMembers(region string, shard int, org, admin Id, members []Id) (error, error) {
+func (a *internalApi) RemoveMembers(region string, shard int, org, admin Id, members []Id) (error, error) {
 	if !a.IsValidRegion(region) {
 		return nil, a.log.InfoErr(invalidRegionErr)
 	}
@@ -98,7 +97,7 @@ func (a *api) RemoveMembers(region string, shard int, org, admin Id, members []I
 	return publicErr, err
 }
 
-func (a *api) SetMemberDeleted(region string, shard int, org, member Id) error {
+func (a *internalApi) SetMemberDeleted(region string, shard int, org, member Id) error {
 	if !a.IsValidRegion(region) {
 		return a.log.InfoErr(invalidRegionErr)
 	}
@@ -109,7 +108,7 @@ func (a *api) SetMemberDeleted(region string, shard int, org, member Id) error {
 	return err
 }
 
-func (a *api) RenameMember(region string, shard int, org, member Id, newName string) error {
+func (a *internalApi) RenameMember(region string, shard int, org, member Id, newName string) error {
 	if !a.IsValidRegion(region) {
 		return a.log.InfoErr(invalidRegionErr)
 	}
@@ -120,7 +119,7 @@ func (a *api) RenameMember(region string, shard int, org, member Id, newName str
 	return err
 }
 
-func (a *api) UserCanRenameOrg(region string, shard int, org, user Id) (bool, error) {
+func (a *internalApi) UserCanRenameOrg(region string, shard int, org, user Id) (bool, error) {
 	if !a.IsValidRegion(region) {
 		return false, a.log.InfoErr(invalidRegionErr)
 	}
@@ -131,22 +130,22 @@ func (a *api) UserCanRenameOrg(region string, shard int, org, user Id) (bool, er
 	return can, err
 }
 
-func newIApi(store store) internalApi {
+func newSingularInternalApi(store internalStore) singularInternalApi {
 	if store == nil {
 		NilCriticalParamPanic("store")
 	}
-	return &iApi{
+	return &sIApi{
 		store: store,
 	}
 }
 
-type iApi struct {
-	store store
+type sIApi struct {
+	store internalStore
 }
 
-func (a *iApi) createPersonalTaskCenter(user Id) (int, error) {
-	return a.store.createTaskSet(&model.TaskSet{
-		Task: model.Task{
+func (a *sIApi) createPersonalTaskCenter(user Id) (int, error) {
+	return a.store.createTaskSet(&taskSet{
+		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: user,
@@ -157,9 +156,9 @@ func (a *iApi) createPersonalTaskCenter(user Id) (int, error) {
 	})
 }
 
-func (a *iApi) createOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
-	shard, err := a.store.createTaskSet(&model.TaskSet{
-		Task: model.Task{
+func (a *sIApi) createOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
+	shard, err := a.store.createTaskSet(&taskSet{
+		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: org,
@@ -172,7 +171,7 @@ func (a *iApi) createOrgTaskCenter(org, owner Id, ownerName string) (int, error)
 		return shard, err
 	}
 
-	err = a.store.createMember(shard, org, &model.Member{
+	err = a.store.createMember(shard, org, &member{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: owner,
@@ -188,38 +187,38 @@ func (a *iApi) createOrgTaskCenter(org, owner Id, ownerName string) (int, error)
 	return shard, err
 }
 
-func (a *iApi) deleteTaskCenter(shard int, account, owner Id) (error, error) {
+func (a *sIApi) deleteTaskCenter(shard int, account, owner Id) (error, error) {
 	if !owner.Equal(account) {
 		member, err := a.store.getMember(shard, account, owner)
 		if err != nil {
 			return nil, err
 		}
-		if member == nil || member.Role != model.Owner {
+		if member == nil || member.Role != Owner {
 			return insufficientPermissionErr, nil
 		}
 	}
 	return nil, a.store.deleteAccount(shard, account)
 }
 
-func (a *iApi) addMembers(shard int, org, admin Id, members []*NamedEntity) (error, error) {
+func (a *sIApi) addMembers(shard int, org, admin Id, members []*NamedEntity) (error, error) {
 	member, err := a.store.getMember(shard, org, admin)
 	if err != nil {
 		return nil, err
 	}
-	if member == nil || (member.Role != model.Owner && member.Role != model.Admin) {
+	if member == nil || (member.Role != Owner && member.Role != Admin) {
 		return insufficientPermissionErr, nil
 	}
 	return nil, a.store.addMembers(shard, org, members)
 }
 
-func (a *iApi) removeMembers(shard int, org, admin Id, members []Id) (error, error) {
+func (a *sIApi) removeMembers(shard int, org, admin Id, members []Id) (error, error) {
 	member, err := a.store.getMember(shard, org, admin)
 	if err != nil {
 		return nil, err
 	}
 
 	switch member.Role {
-	case model.Owner:
+	case Owner:
 		totalOrgOwnerCount, err := a.store.getTotalOrgOwnerCount(shard, org)
 		if err != nil {
 			return nil, err
@@ -234,7 +233,7 @@ func (a *iApi) removeMembers(shard int, org, admin Id, members []Id) (error, err
 			return zeroOwnerCountErr, nil
 		}
 
-	case model.Admin:
+	case Admin:
 		ownerCountInRemoveSet, err := a.store.getOwnerCountInRemoveSet(shard, org, members)
 		if err != nil {
 			return nil, err
@@ -250,21 +249,21 @@ func (a *iApi) removeMembers(shard int, org, admin Id, members []Id) (error, err
 	return nil, a.store.setMembersInactive(shard, org, members)
 }
 
-func (a *iApi) setMemberDeleted(shard int, org, member Id) error {
+func (a *sIApi) setMemberDeleted(shard int, org, member Id) error {
 	return a.store.setMemberInactiveAndDeleted(shard, org, member)
 }
 
-func (a *iApi) renameMember(shard int, org, member Id, newName string) error {
+func (a *sIApi) renameMember(shard int, org, member Id, newName string) error {
 	return a.store.renameMember(shard, org, member, newName)
 }
 
-func (a *iApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
+func (a *sIApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
 	if !user.Equal(org) {
 		member, err := a.store.getMember(shard, org, user)
 		if err != nil {
 			return false, err
 		}
-		if member != nil && member.Role == model.Owner {
+		if member != nil && member.Role == Owner {
 			return true, nil
 		} else {
 			return false, nil
@@ -273,7 +272,7 @@ func (a *iApi) userCanRenameOrg(shard int, org, user Id) (bool, error) {
 	return false, invalidTaskCenterTypeErr
 }
 
-type internalApi interface {
+type singularInternalApi interface {
 	createPersonalTaskCenter(user Id) (int, error)
 	createOrgTaskCenter(org, owner Id, ownerName string) (int, error)
 	deleteTaskCenter(shard int, account, owner Id) (public error, private error)
@@ -284,15 +283,50 @@ type internalApi interface {
 	userCanRenameOrg(shard int, org, user Id) (bool, error)
 }
 
-type store interface {
-	createTaskSet(*model.TaskSet) (int, error)
-	createMember(shard int, org Id, member *model.Member) error
+type internalStore interface {
+	createTaskSet(*taskSet) (int, error)
+	createMember(shard int, org Id, member *member) error
 	deleteAccount(shard int, account Id) error
-	getMember(shard int, org, member Id) (*model.Member, error)
+	getMember(shard int, org, member Id) (*member, error)
 	addMembers(shard int, org Id, members []*NamedEntity) error
 	getTotalOrgOwnerCount(shard int, org Id) (int, error)
 	getOwnerCountInRemoveSet(shard int, org Id, members []Id) (int, error)
 	setMembersInactive(shard int, org Id, members []Id) error
 	setMemberInactiveAndDeleted(shard int, org Id, member Id) error
 	renameMember(shard int, org Id, member Id, newName string) error
+}
+
+type task struct {
+	NamedEntity
+	User               Id        `json:"user"`
+	TotalRemainingTime uint64    `json:"totalRemainingTime"`
+	TotalLoggedTime    uint64    `json:"totalLoggedTime"`
+	ChatCount          uint64    `json:"chatCount"`
+	FileCount          uint64    `json:"fileCount"`
+	FileSize           uint64    `json:"fileSize"`
+	Created            time.Time `json:"created"`
+}
+
+type taskSet struct {
+	task
+	MinimumRemainingTime uint64 `json:"minimumRemainingTime"`
+	IsParallel           bool   `json:"isParallel"`
+	ChildCount           uint32 `json:"childCount"`
+	TaskCount            uint64 `json:"taskCount"`
+	SubFileCount         uint64 `json:"subFileCount"`
+	SubFileSize          uint64 `json:"subFileSize"`
+	ArchivedChildCount   uint32 `json:"archivedChildCount"`
+	ArchivedTaskCount    uint64 `json:"archivedTaskCount"`
+	ArchivedSubFileCount uint64 `json:"archivedSubFileCount"`
+	ArchivedSubFileSize  uint64 `json:"archivedSubFileSize"`
+}
+
+type member struct {
+	NamedEntity
+	AccessTask         Id     `json:"accessTask"`
+	TotalRemainingTime uint64 `json:"totalRemainingTime"`
+	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+	Role               role   `json:"role"`
+	IsActive           bool   `json:"isActive"`
+	IsDeleted          bool   `json:"isDeleted"`
 }
