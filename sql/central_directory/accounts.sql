@@ -28,13 +28,13 @@ CREATE TABLE users(
     FOREIGN KEY (id) REFERENCES accounts (id)
 );
 
-DROP USER IF EXISTS 'task_center_central_directory_api'@'%';
-CREATE USER 'task_center_central_directory_api'@'%' IDENTIFIED BY 'T@sk-C3n-T3r'; 
-GRANT SELECT ON accounts.accounts TO 'task_center_central_directory_api'@'%';
-GRANT INSERT ON accounts.accounts TO 'task_center_central_directory_api'@'%';
-GRANT UPDATE ON accounts.accounts TO 'task_center_central_directory_api'@'%';
-GRANT DELETE ON accounts.accounts TO 'task_center_central_directory_api'@'%';
-GRANT SELECT ON accounts.users TO 'task_center_central_directory_api'@'%';
-GRANT INSERT ON accounts.users TO 'task_center_central_directory_api'@'%';
-GRANT UPDATE ON accounts.users TO 'task_center_central_directory_api'@'%';
-GRANT DELETE ON accounts.users TO 'task_center_central_directory_api'@'%';
+DROP USER IF EXISTS 'tc_cd'@'%';
+CREATE USER 'tc_cd'@'%' IDENTIFIED BY 'T@sk-C3n-T3r'; 
+GRANT SELECT ON accounts.accounts TO 'tc_cd'@'%';
+GRANT INSERT ON accounts.accounts TO 'tc_cd'@'%';
+GRANT UPDATE ON accounts.accounts TO 'tc_cd'@'%';
+GRANT DELETE ON accounts.accounts TO 'tc_cd'@'%';
+GRANT SELECT ON accounts.users TO 'tc_cd'@'%';
+GRANT INSERT ON accounts.users TO 'tc_cd'@'%';
+GRANT UPDATE ON accounts.users TO 'tc_cd'@'%';
+GRANT DELETE ON accounts.users TO 'tc_cd'@'%';

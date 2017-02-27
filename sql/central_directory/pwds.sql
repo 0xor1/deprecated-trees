@@ -14,9 +14,9 @@ CREATE TABLE pwds(
     PRIMARY KEY (id)
 );
 
-DROP USER IF EXISTS 'task_center_central_directory_api'@'%';
-CREATE USER 'task_center_central_directory_api'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd'; 
-GRANT SELECT ON pwds.pwds TO 'task_center_central_directory_api'@'%'; 
-GRANT INSERT ON pwds.pwds TO 'task_center_central_directory_api'@'%';
-GRANT UPDATE ON pwds.pwds TO 'task_center_central_directory_api'@'%';
-GRANT DELETE ON pwds.pwds TO 'task_center_central_directory_api'@'%';
+DROP USER IF EXISTS 'tc_cd'@'%';
+CREATE USER 'tc_cd'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd'; 
+GRANT SELECT ON pwds.pwds TO 'tc_cd'@'%'; 
+GRANT INSERT ON pwds.pwds TO 'tc_cd'@'%';
+GRANT UPDATE ON pwds.pwds TO 'tc_cd'@'%';
+GRANT DELETE ON pwds.pwds TO 'tc_cd'@'%';
