@@ -30,4 +30,11 @@ CREATE TABLE users(
 
 DROP USER IF EXISTS 'task_center_central_directory_api'@'%';
 CREATE USER 'task_center_central_directory_api'@'%' IDENTIFIED BY 'T@sk-C3n-T3r'; 
-GRANT SELECT (id, salt, pwd, n, r, p, keyLen) ON pwds.pwds TO 'task_center_central_directory_api'@'%';
+GRANT SELECT ON accounts.accounts TO 'task_center_central_directory_api'@'%';
+GRANT INSERT ON accounts.accounts TO 'task_center_central_directory_api'@'%';
+GRANT UPDATE ON accounts.accounts TO 'task_center_central_directory_api'@'%';
+GRANT DELETE ON accounts.accounts TO 'task_center_central_directory_api'@'%';
+GRANT SELECT ON accounts.users TO 'task_center_central_directory_api'@'%';
+GRANT INSERT ON accounts.users TO 'task_center_central_directory_api'@'%';
+GRANT UPDATE ON accounts.users TO 'task_center_central_directory_api'@'%';
+GRANT DELETE ON accounts.users TO 'task_center_central_directory_api'@'%';

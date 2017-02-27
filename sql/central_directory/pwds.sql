@@ -16,4 +16,7 @@ CREATE TABLE pwds(
 
 DROP USER IF EXISTS 'task_center_central_directory_api'@'%';
 CREATE USER 'task_center_central_directory_api'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd'; 
-GRANT SELECT (id, salt, pwd, n, r, p, keyLen) ON pwds.pwds TO 'task_center_central_directory_api'@'%';
+GRANT SELECT ON pwds.pwds TO 'task_center_central_directory_api'@'%'; 
+GRANT INSERT ON pwds.pwds TO 'task_center_central_directory_api'@'%';
+GRANT UPDATE ON pwds.pwds TO 'task_center_central_directory_api'@'%';
+GRANT DELETE ON pwds.pwds TO 'task_center_central_directory_api'@'%';
