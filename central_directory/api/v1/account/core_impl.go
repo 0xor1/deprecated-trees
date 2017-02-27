@@ -169,15 +169,15 @@ func (a *api) Register(name, email, pwd, region string) error {
 				},
 				Email: email,
 			},
-			ActivationCode: &activationCode,
+			activationCode: &activationCode,
 		},
 		&pwdInfo{
-			Salt:   scryptSalt,
-			Pwd:    scryptPwd,
-			N:      a.scryptN,
-			R:      a.scryptR,
-			P:      a.scryptP,
-			KeyLen: a.scryptKeyLen,
+			salt:   scryptSalt,
+			pwd:    scryptPwd,
+			n:      a.scryptN,
+			r:      a.scryptR,
+			p:      a.scryptP,
+			keyLen: a.scryptKeyLen,
 		},
 	)
 	if err != nil {
@@ -203,7 +203,7 @@ func (a *api) ResendActivationEmail(email string) error {
 		return nil
 	}
 
-	if err = a.linkMailer.sendActivationLink(email, *user.ActivationCode); err != nil {
+	if err = a.linkMailer.sendActivationLink(email, *user.activationCode); err != nil {
 		return a.log.ErrorErr(err)
 	}
 
@@ -218,7 +218,7 @@ func (a *api) Activate(email, activationCode string) (Id, error) {
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil || user.ActivationCode == nil || activationCode != *user.ActivationCode {
+	if user == nil || user.activationCode == nil || activationCode != *user.activationCode {
 		return nil, a.log.InfoErr(invalidActivationAttemptErr)
 	}
 
@@ -232,9 +232,9 @@ func (a *api) Activate(email, activationCode string) (Id, error) {
 	}
 
 	user.Shard = shard
-	user.ActivationCode = nil
+	user.activationCode = nil
 	activationTime := time.Now().UTC()
-	user.Activated = &activationTime
+	user.activated = &activationTime
 	err = a.store.updateUser(user)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
@@ -260,12 +260,12 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
+	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
 		return nil, a.log.InfoErr(nameOrPwdIncorrectErr)
 	}
 
@@ -274,23 +274,23 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	}
 
 	//if there was an outstanding password reset on this user, remove it, they have since remembered their password
-	if len(*user.ResetPwdCode) > 0 {
-		user.ResetPwdCode = nil
+	if len(*user.resetPwdCode) > 0 {
+		user.resetPwdCode = nil
 		if err = a.store.updateUser(user); err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
-	if pwdInfo.N != a.scryptN || pwdInfo.R != a.scryptR || pwdInfo.P != a.scryptP || pwdInfo.KeyLen != a.scryptKeyLen || len(pwdInfo.Salt) < a.saltLen {
-		pwdInfo.Salt, err = a.cryptoHelper.Bytes(a.saltLen)
+	if pwdInfo.n != a.scryptN || pwdInfo.r != a.scryptR || pwdInfo.p != a.scryptP || pwdInfo.keyLen != a.scryptKeyLen || len(pwdInfo.salt) < a.saltLen {
+		pwdInfo.salt, err = a.cryptoHelper.Bytes(a.saltLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
-		pwdInfo.N = a.scryptN
-		pwdInfo.R = a.scryptR
-		pwdInfo.P = a.scryptP
-		pwdInfo.KeyLen = a.scryptKeyLen
-		pwdInfo.Pwd, err = a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+		pwdInfo.n = a.scryptN
+		pwdInfo.r = a.scryptR
+		pwdInfo.p = a.scryptP
+		pwdInfo.keyLen = a.scryptKeyLen
+		pwdInfo.pwd, err = a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 		if err != nil {
 			return nil, a.log.ErrorErr(err)
 		}
@@ -310,7 +310,7 @@ func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil || user.NewEmail == nil || newEmail != *user.NewEmail || user.NewEmailConfirmationCode == nil || confirmationCode != *user.NewEmailConfirmationCode {
+	if user == nil || user.NewEmail == nil || newEmail != *user.NewEmail || user.newEmailConfirmationCode == nil || confirmationCode != *user.newEmailConfirmationCode {
 		return nil, a.log.InfoErr(invalidNewEmailConfirmationAttemptErr)
 	}
 
@@ -324,7 +324,7 @@ func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (
 
 	user.Email = newEmail
 	user.NewEmail = nil
-	user.NewEmailConfirmationCode = nil
+	user.newEmailConfirmationCode = nil
 	if err = a.store.updateUser(user); err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -349,7 +349,7 @@ func (a *api) ResetPwd(email string) error {
 		return a.log.ErrorErr(err)
 	}
 
-	user.ResetPwdCode = &resetPwdCode
+	user.resetPwdCode = &resetPwdCode
 	if err = a.store.updateUser(user); err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -373,7 +373,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
-	if user == nil || user.ResetPwdCode == nil || resetPwdCode != *user.ResetPwdCode {
+	if user == nil || user.resetPwdCode == nil || resetPwdCode != *user.resetPwdCode {
 		return nil, a.log.InfoErr(invalidResetPwdAttemptErr)
 	}
 
@@ -387,7 +387,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 		return nil, a.log.ErrorErr(err)
 	}
 
-	if user.ActivationCode != nil {
+	if user.activationCode != nil {
 		if !a.internalRegionApi.IsValidRegion(user.Region) {
 			return nil, a.log.ErrorErr(regionGoneErr)
 		}
@@ -399,8 +399,8 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 		user.Shard = shard
 	}
 
-	user.ActivationCode = nil
-	user.ResetPwdCode = nil
+	user.activationCode = nil
+	user.resetPwdCode = nil
 	if err = a.store.updateUser(user); err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
@@ -408,12 +408,12 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 	if err = a.store.updatePwdInfo(
 		user.Id,
 		&pwdInfo{
-			Pwd:    scryptPwd,
-			Salt:   scryptSalt,
-			N:      a.scryptN,
-			R:      a.scryptR,
-			P:      a.scryptP,
-			KeyLen: a.scryptKeyLen,
+			pwd:    scryptPwd,
+			salt:   scryptSalt,
+			n:      a.scryptN,
+			r:      a.scryptR,
+			p:      a.scryptP,
+			keyLen: a.scryptKeyLen,
 		},
 	); err != nil {
 		return nil, a.log.ErrorErr(err)
@@ -527,12 +527,12 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 		return a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
-	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(oldPwd), pwdInfo.Salt, pwdInfo.N, pwdInfo.R, pwdInfo.P, pwdInfo.KeyLen)
+	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(oldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
-	if !pwdsMatch(pwdInfo.Pwd, scryptPwdTry) {
+	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
 		return a.log.InfoUserErr(myId, incorrectPwdErr)
 	}
 
@@ -546,12 +546,12 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
-	pwdInfo.Pwd = scryptPwd
-	pwdInfo.Salt = scryptSalt
-	pwdInfo.N = a.scryptN
-	pwdInfo.R = a.scryptR
-	pwdInfo.P = a.scryptP
-	pwdInfo.KeyLen = a.scryptKeyLen
+	pwdInfo.pwd = scryptPwd
+	pwdInfo.salt = scryptSalt
+	pwdInfo.n = a.scryptN
+	pwdInfo.r = a.scryptR
+	pwdInfo.p = a.scryptP
+	pwdInfo.keyLen = a.scryptKeyLen
 	if err = a.store.updatePwdInfo(myId, pwdInfo); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -590,7 +590,7 @@ func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
 	}
 
 	user.NewEmail = &newEmail
-	user.NewEmailConfirmationCode = &confirmationCode
+	user.newEmailConfirmationCode = &confirmationCode
 	if err = a.store.updateUser(user); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -618,11 +618,11 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 		return a.log.InfoUserErr(myId, noNewEmailRegisteredErr)
 	}
 	// just in case something has gone crazy wrong
-	if user.NewEmailConfirmationCode == nil {
+	if user.newEmailConfirmationCode == nil {
 		return a.log.ErrorUserErr(myId, emailConfirmationCodeErr)
 	}
 
-	err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, *user.NewEmail, *user.NewEmailConfirmationCode)
+	err = a.linkMailer.sendNewEmailConfirmationLink(user.Email, *user.NewEmail, *user.newEmailConfirmationCode)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -1017,14 +1017,14 @@ type me struct {
 
 type fullUserInfo struct {
 	me
-	ActivationCode           *string
-	Activated                *time.Time
-	NewEmailConfirmationCode *string
-	ResetPwdCode             *string
+	activationCode           *string
+	activated                *time.Time
+	newEmailConfirmationCode *string
+	resetPwdCode             *string
 }
 
 func (u *fullUserInfo) isActivated() bool {
-	return u.Activated != nil
+	return u.activated != nil
 }
 
 func (u *fullUserInfo) isMigrating() bool {
@@ -1032,12 +1032,12 @@ func (u *fullUserInfo) isMigrating() bool {
 }
 
 type pwdInfo struct {
-	Salt   []byte
-	Pwd    []byte
-	N      int
-	R      int
-	P      int
-	KeyLen int
+	salt   []byte
+	pwd    []byte
+	n      int
+	r      int
+	p      int
+	keyLen int
 }
 
 func pwdsMatch(a, b []byte) bool {
