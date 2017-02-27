@@ -422,6 +422,17 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 	return user.Id, nil
 }
 
+func (a *api) GetAccount(name string) (*account, error) {
+	a.log.Location()
+
+	acc, err := a.store.getAccountByCiName(name)
+	if err != nil {
+		return acc, a.log.ErrorErr(err)
+	}
+
+	return acc, err
+}
+
 func (a *api) GetUsers(ids []Id) ([]*user, error) {
 	a.log.Location()
 
@@ -437,29 +448,6 @@ func (a *api) GetUsers(ids []Id) ([]*user, error) {
 	return users, nil
 }
 
-func (a *api) SearchUsers(search string, offset, limit int) ([]*user, int, error) {
-	a.log.Location()
-
-	if limit < 1 || limit > a.maxGetEntityCount {
-		limit = a.maxGetEntityCount
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	search = strings.Trim(search, " ")
-	if err := ValidateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		return nil, 0, a.log.InfoErr(err)
-	}
-
-	users, total, err := a.store.searchUsers(search, offset, limit)
-	if err != nil {
-		return nil, 0, a.log.ErrorErr(err)
-	}
-
-	return users, total, nil
-}
-
 func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 	a.log.Location()
 
@@ -473,29 +461,6 @@ func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 	}
 
 	return orgs, nil
-}
-
-func (a *api) SearchOrgs(search string, offset, limit int) ([]*org, int, error) {
-	a.log.Location()
-
-	if limit < 1 || limit > a.maxGetEntityCount {
-		limit = a.maxGetEntityCount
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	search = strings.Trim(search, " ")
-	if err := ValidateStringParam("search", search, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		return nil, 0, a.log.InfoErr(err)
-	}
-
-	orgs, total, err := a.store.searchOrgs(search, offset, limit)
-	if err != nil {
-		return nil, 0, a.log.ErrorErr(err)
-	}
-
-	return orgs, total, nil
 }
 
 func (a *api) ChangeMyName(myId Id, newName string) error {
@@ -983,6 +948,7 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 type store interface {
 	//user or org
 	accountWithCiNameExists(name string) (bool, error)
+	getAccountByCiName(name string) (*account, error)
 	//user
 	createUser(user *fullUserInfo, pwdInfo *pwdInfo) error
 	getUserByCiName(name string) (*fullUserInfo, error)
@@ -993,7 +959,6 @@ type store interface {
 	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
 	deleteUserAndAllAssociatedMemberships(id Id) error
 	getUsers(ids []Id) ([]*user, error)
-	searchUsers(search string, offset, limit int) ([]*user, int, error)
 	//org
 	createOrgAndMembership(user Id, org *org) error
 	getOrgById(id Id) (*org, error)
@@ -1001,7 +966,6 @@ type store interface {
 	updateOrg(org *org) error
 	deleteOrgAndAllAssociatedMemberships(id Id) error
 	getOrgs(ids []Id) ([]*org, error)
-	searchOrgs(search string, offset, limit int) ([]*org, int, error)
 	getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error)
 	//members
 	createMemberships(org Id, users []Id) error

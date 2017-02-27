@@ -1134,6 +1134,29 @@ func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_api_GetAccount_storeGetAccountErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	store.On("getAccountByCiName", "ali").Return(nil, testErr)
+
+	account, err := api.GetAccount("ali")
+	assert.Nil(t, account)
+	assert.IsType(t, &ErrorRef{}, err)
+}
+
+func Test_api_GetAccount_success(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	acc := &account{}
+	store.On("getAccountByCiName", "ali").Return(acc, nil)
+
+	account, err := api.GetAccount("ali")
+	assert.Equal(t, acc, account)
+	assert.Nil(t, err)
+}
+
 func Test_api_GetUsers_maxEntityCountExceededErri(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -1174,41 +1197,6 @@ func Test_api_GetUsers_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_api_SearchUsers_invalidStringParam(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	users, total, err := api.SearchUsers("yo", 0, 5)
-	assert.Nil(t, users)
-	assert.IsType(t, &InvalidStringParamErr{}, err)
-	assert.Equal(t, 0, total)
-}
-
-func Test_api_SearchUsers_storeSearchUsersErr(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	store.On("searchUsers", "test", 0, 5).Return(nil, 0, testErr)
-
-	users, total, err := api.SearchUsers("test", 0, 5)
-	assert.Nil(t, users)
-	assert.IsType(t, &ErrorRef{}, err)
-	assert.Equal(t, 0, total)
-}
-
-func Test_api_SearchUsers_success(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	res := []*user{}
-	store.On("searchUsers", "test", 0, 100).Return(res, 8, nil)
-
-	users, total, err := api.SearchUsers("test", -1, -1)
-	assert.Equal(t, res, users)
-	assert.Nil(t, err)
-	assert.Equal(t, 8, total)
-}
-
 func Test_api_GetOrgs_maxEntityCountExceededErri(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
@@ -1247,41 +1235,6 @@ func Test_api_GetOrgs_success(t *testing.T) {
 	orgs, err := api.GetOrgs(ids)
 	assert.Equal(t, res, orgs)
 	assert.Nil(t, err)
-}
-
-func Test_api_SearchOrgs_invalidStringParam(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	orgs, total, err := api.SearchOrgs("yo", 0, 5)
-	assert.Nil(t, orgs)
-	assert.IsType(t, &InvalidStringParamErr{}, err)
-	assert.Equal(t, 0, total)
-}
-
-func Test_api_SearchOrgs_storeSearchOrgsErr(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	store.On("searchOrgs", "test", 0, 5).Return(nil, 0, testErr)
-
-	orgs, total, err := api.SearchOrgs("test", 0, 5)
-	assert.Nil(t, orgs)
-	assert.IsType(t, &ErrorRef{}, err)
-	assert.Equal(t, 0, total)
-}
-
-func Test_api_SearchOrgs_success(t *testing.T) {
-	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
-
-	res := []*org{}
-	store.On("searchOrgs", "test", 0, 100).Return(res, 8, nil)
-
-	orgs, total, err := api.SearchOrgs("test", -1, -1)
-	assert.Equal(t, res, orgs)
-	assert.Nil(t, err)
-	assert.Equal(t, 8, total)
 }
 
 func Test_api_ChangeMyName_invalidStringParamErr(t *testing.T) {
@@ -2839,6 +2792,15 @@ func (m *mockStore) accountWithCiNameExists(name string) (bool, error) {
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *mockStore) getAccountByCiName(name string) (*account, error) {
+	args := m.Called(name)
+	acc := args.Get(0)
+	if acc == nil {
+		return nil, args.Error(1)
+	}
+	return acc.(*account), args.Error(1)
+}
+
 func (m *mockStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	user.Created = timeNowReplacement
 	args := m.Called(user, pwdInfo)
@@ -2900,14 +2862,6 @@ func (m *mockStore) getUsers(ids []Id) ([]*user, error) {
 	return args.Get(0).([]*user), args.Error(1)
 }
 
-func (m *mockStore) searchUsers(search string, offset, limit int) ([]*user, int, error) {
-	args := m.Called(search, offset, limit)
-	if args.Get(0) == nil {
-		return nil, args.Int(1), args.Error(2)
-	}
-	return args.Get(0).([]*user), args.Int(1), args.Error(2)
-}
-
 func (m *mockStore) createOrgAndMembership(user Id, org *org) error {
 	org.Created = timeNowReplacement
 	args := m.Called(user, org)
@@ -2946,14 +2900,6 @@ func (m *mockStore) getOrgs(ids []Id) ([]*org, error) {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]*org), args.Error(1)
-}
-
-func (m *mockStore) searchOrgs(search string, offset, limit int) ([]*org, int, error) {
-	args := m.Called(search, offset, limit)
-	if args.Get(0) == nil {
-		return nil, args.Int(1), args.Error(2)
-	}
-	return args.Get(0).([]*org), args.Int(1), args.Error(2)
 }
 
 func (m *mockStore) getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error) {

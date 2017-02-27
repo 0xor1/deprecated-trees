@@ -6,12 +6,6 @@ import (
 	"testing"
 )
 
-func Test_NewMemApi_success(t *testing.T) {
-	api := NewMemApi(&mockInternalRegionApi{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, NewLog(nil))
-
-	assert.NotNil(t, api)
-}
-
 func Test_NewSqlApi_notImplementedErrPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)

@@ -15,10 +15,9 @@ type Api interface {
 	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) (Id, error)
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, error)
+	GetAccount(name string) (*account, error)
 	GetUsers(ids []Id) ([]*user, error)
-	SearchUsers(search string, offset, limit int) ([]*user, int, error)
 	GetOrgs(ids []Id) ([]*org, error)
-	SearchOrgs(search string, offset, limit int) ([]*org, int, error)
 	//requires active session to access
 	//user centric
 	ChangeMyName(myId Id, newUsername string) error
@@ -37,11 +36,6 @@ type Api interface {
 	//member centric - must be an owner or admin
 	AddMembers(myId, orgId Id, newMembers []Id) error
 	RemoveMembers(myId, orgId Id, existingMembers []Id) error
-}
-
-// Return a new account Api backed by local memory storage and logging link emails to stdout
-func NewMemApi(internalRegionApi internalRegionApi, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
-	return newApi(newMemStore(), internalRegionApi, newLogLinkMailer(log), NewId, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
 }
 
 // Return a new account Api backed by sql storage and sending link emails via an email service

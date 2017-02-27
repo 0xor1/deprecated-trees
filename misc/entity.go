@@ -14,7 +14,14 @@ func (id Id) String() string {
 
 func (id Id) Equal(other Id) bool {
 	return bytes.Equal(id, other)
-	//return id.String() == other.String()
+}
+
+func (id Id) GreaterThanOrEqualTo(other Id) bool {
+	return bytes.Compare(id, other) > -1
+}
+
+func (id Id) Copy() Id {
+	return Id(append(make([]byte, 0, 16), []byte(id)...))
 }
 
 type Entity struct {
