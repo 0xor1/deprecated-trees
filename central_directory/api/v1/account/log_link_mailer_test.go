@@ -6,22 +6,8 @@ import (
 	"testing"
 )
 
-func Test_newLogLinkMailer_nilLogPanic(t *testing.T) {
-	defer func() {
-		err := recover().(error)
-		assert.IsType(t, &Error{}, err)
-	}()
-	newLogLinkMailer(nil)
-}
-
-func Test_newLogLinkMailer_success(t *testing.T) {
-	linkMailer := newLogLinkMailer(NewLog(nil))
-
-	assert.NotNil(t, linkMailer)
-}
-
 func Test_logLinkMailer_all_methods(t *testing.T) {
-	linkMailer := newLogLinkMailer(NewLog(nil))
+	linkMailer := NewLogLinkMailer(NewLog(nil))
 
 	err := linkMailer.sendMultipleAccountPolicyEmail("1")
 	assert.Nil(t, err)

@@ -6,10 +6,18 @@ import (
 	"testing"
 )
 
-func Test_newSqlStore_notImplementedPanic(t *testing.T) {
+func Test_newSqlStore_nilAccountsDbPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, NotImplementedErr, err)
+		assert.IsType(t, &Error{}, err)
 	}()
-	newSqlStore()
+	newSqlStore(nil, nil)
+}
+
+func Test_newSqlStore_nilPwdsDbPanic(t *testing.T) {
+	defer func() {
+		err := recover().(error)
+		assert.IsType(t, &Error{}, err)
+	}()
+	newSqlStore(nil, nil)
 }

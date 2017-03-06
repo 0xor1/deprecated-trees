@@ -5,7 +5,7 @@ USE accounts;
 DROP TABLE IF EXISTS accounts;
 CREATE TABLE accounts(
 	id BINARY(16) NOT NULL,
-    name VARCHAR(20) NOT NULL,
+    name VARCHAR(50) NOT NULL,
     created DATETIME NOT NULL,
     region CHAR(3) NOT NULL,
     newRegion CHAR(3) NULL,
@@ -49,3 +49,7 @@ GRANT SELECT ON accounts.users TO 'tc_cd'@'%';
 GRANT INSERT ON accounts.users TO 'tc_cd'@'%';
 GRANT UPDATE ON accounts.users TO 'tc_cd'@'%';
 GRANT DELETE ON accounts.users TO 'tc_cd'@'%';
+GRANT SELECT ON accounts.memberships TO 'tc_cd'@'%';
+GRANT INSERT ON accounts.memberships TO 'tc_cd'@'%';
+GRANT UPDATE ON accounts.memberships TO 'tc_cd'@'%';
+GRANT DELETE ON accounts.memberships TO 'tc_cd'@'%';

@@ -1994,7 +1994,7 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2005,7 +2005,7 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(testErr)
+	}, myId).Return(testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
 	assert.Nil(t, org)
@@ -2021,7 +2021,7 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2032,7 +2032,7 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(nil)
+	}, myId).Return(nil)
 	store.On("getUserById", myId).Return(nil, testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
@@ -2049,7 +2049,7 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2060,7 +2060,7 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(nil)
+	}, myId).Return(nil)
 	store.On("getUserById", myId).Return(nil, nil)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
@@ -2077,7 +2077,7 @@ func Test_api_CreateOrg_internalRegionApiCreateOrgTaskCenterErr(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2088,7 +2088,7 @@ func Test_api_CreateOrg_internalRegionApiCreateOrgTaskCenterErr(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(nil)
+	}, myId).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
 	user.Name = "bob"
@@ -2110,7 +2110,7 @@ func Test_api_CreateOrg_deleteOrgAndAllAssociatedMembershipsErr(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2121,7 +2121,7 @@ func Test_api_CreateOrg_deleteOrgAndAllAssociatedMembershipsErr(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(nil)
+	}, myId).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
 	user.Name = "bob"
@@ -2143,7 +2143,7 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2154,7 +2154,7 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(nil)
+	}, myId).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
 	user.Name = "bob"
@@ -2188,7 +2188,7 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newId").Return(orgId, nil)
-	store.On("createOrgAndMembership", myId, &org{
+	store.On("createOrgAndMembership", &org{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
 				Id: orgId,
@@ -2199,7 +2199,7 @@ func Test_api_CreateOrg_success(t *testing.T) {
 		Shard:   -1,
 		Created: timeNowReplacement,
 		IsUser:  false,
-	}).Return(nil)
+	}, myId).Return(nil)
 	user := &fullUserInfo{}
 	user.Id = myId
 	user.Name = "bob"
@@ -2862,9 +2862,9 @@ func (m *mockStore) getUsers(ids []Id) ([]*user, error) {
 	return args.Get(0).([]*user), args.Error(1)
 }
 
-func (m *mockStore) createOrgAndMembership(user Id, org *org) error {
+func (m *mockStore) createOrgAndMembership(org *org, user Id) error {
 	org.Created = timeNowReplacement
-	args := m.Called(user, org)
+	args := m.Called(org, user)
 	return args.Error(0)
 }
 

@@ -2,6 +2,7 @@ package account
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
+	"github.com/robsix/isql"
 )
 
 // The main account Api interface
@@ -39,6 +40,19 @@ type Api interface {
 }
 
 // Return a new account Api backed by sql storage and sending link emails via an email service
-func NewSqlApi(internalRegionApi internalRegionApi, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
-	return newApi(newSqlStore(), internalRegionApi, newEmailLinkMailer(), NewId, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+func NewSqlApi(internalRegionApi internalRegionApi, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, accountsDb, pwdsDb isql.DB, log Log) Api {
+	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionApi, linkMailer, NewId, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+}
+
+func NewLogLinkMailer(log Log) linkMailer {
+	if log == nil {
+		NilCriticalParamPanic("log")
+	}
+	return &logLinkMailer{
+		log: log,
+	}
+}
+
+func NewEmailLinkMailer() linkMailer {
+	panic(NotImplementedErr)
 }

@@ -741,7 +741,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		Created: time.Now().UTC(),
 		IsUser:  false,
 	}
-	if err := a.store.createOrgAndMembership(myId, org); err != nil {
+	if err := a.store.createOrgAndMembership(org, myId); err != nil {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
@@ -960,7 +960,7 @@ type store interface {
 	deleteUserAndAllAssociatedMemberships(id Id) error
 	getUsers(ids []Id) ([]*user, error)
 	//org
-	createOrgAndMembership(user Id, org *org) error
+	createOrgAndMembership(org *org, user Id) error
 	getOrgById(id Id) (*org, error)
 	getOrgByName(name string) (*org, error)
 	updateOrg(org *org) error
