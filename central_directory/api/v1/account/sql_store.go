@@ -40,13 +40,18 @@ func (s *sqlStore) getAccountByCiName(name string) (*account, error) {
 	return &acc, err
 }
 
-var query_createUser_accounts = `INSERT INTO accounts (id, name, created, region, newRegion, shard, isUser) VALUES (?, ?, ?, ?, ?, ?); INSERT INTO users (id, email, newEmail, activationCode, activated, newEmailConfirmationCode, resetPwdCode) VALUES (?, ?, ?, ?, ?, ?, ?);`
+var query_createUser_accounts = `INSERT INTO accounts (id, name, created, region, newRegion, shard, isUser) VALUES (?, ?, ?, ?, ?, ?, ?);`
+var query_createUser_users = `INSERT INTO users (id, email, newEmail, activationCode, activated, newEmailConfirmationCode, resetPwdCode) VALUES (?, ?, ?, ?, ?, ?, ?);`
 var query_createUser_pwds = `INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?);`
 func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
-	if _, err := s.accountsDB.Exec(query_createUser_accounts, user.Id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.IsUser, user.Id, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+	id := []byte(user.Id)
+	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.IsUser); err != nil {
 		return err
 	}
-	_, err := s.pwdsDB.Exec(query_createUser_pwds, user.Id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+	if _, err := s.accountsDB.Exec(query_createUser_users, id, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+		return err
+	}
+	_, err := s.pwdsDB.Exec(query_createUser_pwds, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	return err
 }
 
@@ -68,7 +73,7 @@ func (s *sqlStore) getUserByEmail(email string) (*fullUserInfo, error) {
 
 var query_getUserById = `SELECT a.id, a.name, a.created, a.region, a.newRegion, a.shard, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.id = ?;`
 func (s *sqlStore) getUserById(id Id) (*fullUserInfo, error) {
-	row := s.accountsDB.QueryRow(query_getUserById, id)
+	row := s.accountsDB.QueryRow(query_getUserById, []byte(id))
 	user := fullUserInfo{}
 	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	return &user, err
@@ -76,28 +81,34 @@ func (s *sqlStore) getUserById(id Id) (*fullUserInfo, error) {
 
 var query_getPwdInfo = `SELECT salt, pwd, n, r, p, keyLen FROM pwds WHERE id = ?;`
 func (s *sqlStore) getPwdInfo(id Id) (*pwdInfo, error) {
-	row := s.pwdsDB.QueryRow(query_getPwdInfo, id)
+	row := s.pwdsDB.QueryRow(query_getPwdInfo, []byte(id))
 	pwd := pwdInfo{}
 	err := row.Scan(&pwd.salt, &pwd.pwd, &pwd.n, &pwd.r, &pwd.p, &pwd.keyLen)
 	return &pwd, err
 }
 
-var query_updateUser = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=?, isUser=? WHERE id = ?; UPDATE users SET email=?, newEmail=?, activationCode=?, activated=?, newEmailConfirmationCode=?, resetPwdCode=? WHERE id = ?;`
+var query_updateUser_accounts = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=?, isUser=? WHERE id = ?;`
+var query_updateUser_users = `UPDATE users SET email=?, newEmail=?, activationCode=?, activated=?, newEmailConfirmationCode=?, resetPwdCode=? WHERE id = ?;`
 func (s *sqlStore) updateUser(user *fullUserInfo) error {
-	_, err := s.accountsDB.Exec(query_updateUser, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.IsUser, user.Id, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode, user.Id)
+	id := []byte(user.Id)
+	if _, err := s.accountsDB.Exec(query_updateUser_accounts, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.IsUser, id); err != nil {
+		return err
+	}
+	_, err := s.accountsDB.Exec(query_updateUser_users, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode, id)
 	return err
 }
 
 var query_updatePwdInfo = `UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?;`
 func (s *sqlStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
-	_, err := s.pwdsDB.Exec(query_updatePwdInfo, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, id)
+	_, err := s.pwdsDB.Exec(query_updatePwdInfo, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, []byte(id))
 	return err
 }
 
 var query_deleteUserAndAllAssociatedMemberships_accounts = `DELETE FROM memberships WHERE user = ?; DELETE FROM users WHERE id = ?; DELETE FROM account WHERE id = ?;`
 var query_deleteUserAndAllAssociatedMemberships_pwds = `DELETE FROM pwds WHERE id = ?;`
 func (s *sqlStore) deleteUserAndAllAssociatedMemberships(id Id) error {
-	_, err := s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_accounts, id, id, id)
+	castId := []byte(id)
+	_, err := s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_accounts, castId, castId, castId)
 	if err != nil {
 		return err
 	}
@@ -107,7 +118,11 @@ func (s *sqlStore) deleteUserAndAllAssociatedMemberships(id Id) error {
 
 var query_getUsers = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = true AND id IN ?;`
 func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
-	rows, err := s.accountsDB.Query(query_getUsers, ids)
+	castedIds := make([][]byte, 0, len(ids))
+	for _, id := range ids {
+		castedIds = append(castedIds, []byte(id))
+	}
+	rows, err := s.accountsDB.Query(query_getUsers, castedIds)
 	if rows != nil {
 		defer rows.Close()
 	}
