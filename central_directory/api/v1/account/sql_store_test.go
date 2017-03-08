@@ -33,6 +33,7 @@ func Test_newSqlStore_success(t *testing.T) {
 
 //this test tests everything using a real sql db, comment/uncomment as necessary
 func Test_sqlStore_adHoc(t *testing.T) {
+
 	rawAccountsDb, _ := sql.Open("mysql", "tc_cd_accounts:T@sk-C3n-T3r@tcp(127.0.0.1:3306)/accounts?parseTime=true&loc=UTC&multiStatements=true")
 	rawPwdsDb, _ := sql.Open("mysql", "tc_cd_pwds:T@sk-C3n-T3r-Pwd@tcp(127.0.0.1:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
 	accountsDb, pwdsDb := isql.NewDB(rawAccountsDb), isql.NewDB(rawPwdsDb)
@@ -176,6 +177,15 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, pwdInfo1.p, pwdInfo1Dup2.p)
 	assert.Equal(t, pwdInfo1.keyLen, pwdInfo1Dup2.keyLen)
 	assert.Nil(t, err)
-	
 
+	users1, err := store.getUsers([]Id{user1.Id})
+	assert.Equal(t, 1, len(users1))
+	assert.Equal(t, user1.Id, users1[0].Id)
+	assert.Equal(t, user1.Name, users1[0].Name)
+	assert.Equal(t, user1.Created.Unix(), users1[0].Created.Unix())
+	assert.Equal(t, user1.Region, users1[0].Region)
+	assert.Equal(t, user1.NewRegion, users1[0].NewRegion)
+	assert.Equal(t, user1.Shard, users1[0].Shard)
+	assert.Equal(t, user1.IsUser, users1[0].IsUser)
+	assert.Nil(t, err)	
 }

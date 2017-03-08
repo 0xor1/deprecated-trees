@@ -116,13 +116,21 @@ func (s *sqlStore) deleteUserAndAllAssociatedMemberships(id Id) error {
 	return err
 }
 
-var query_getUsers = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = true AND id IN ?;`
+var query_getUsers = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = true AND id IN (`
 func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
-	castedIds := make([][]byte, 0, len(ids))
-	for _, id := range ids {
+	castedIds := make([]interface{}, 0, len(ids))
+	var query bytes.Buffer
+	query.WriteString(query_getUsers)
+	for i, id := range ids {
+		if i == 0 {
+			query.WriteString(`?`)
+		} else {
+			query.WriteString(`, ?`)
+		}
 		castedIds = append(castedIds, []byte(id))
 	}
-	rows, err := s.accountsDB.Query(query_getUsers, castedIds)
+	query.WriteString(`);`)
+	rows, err := s.accountsDB.Query(query.String(), castedIds...)
 	if rows != nil {
 		defer rows.Close()
 	}
