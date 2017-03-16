@@ -471,7 +471,7 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 		return a.log.InfoErr(err)
 	}
 
-	if user, err := a.store.getUserByCiName(newName); user != nil || err != nil {
+	if exists, err := a.store.accountWithCiNameExists(newName); exists || err != nil {
 		if err != nil {
 			return a.log.ErrorUserErr(myId, err)
 		} else {
@@ -962,7 +962,6 @@ type store interface {
 	//org
 	createOrgAndMembership(org *org, user Id) error
 	getOrgById(id Id) (*org, error)
-	getOrgByName(name string) (*org, error)
 	updateOrg(org *org) error
 	deleteOrgAndAllAssociatedMemberships(id Id) error
 	getOrgs(ids []Id) ([]*org, error)

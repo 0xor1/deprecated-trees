@@ -187,5 +187,137 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.NewRegion, users1[0].NewRegion)
 	assert.Equal(t, user1.Shard, users1[0].Shard)
 	assert.Equal(t, user1.IsUser, users1[0].IsUser)
-	assert.Nil(t, err)	
+	assert.Nil(t, err)
+
+	org1 := &org{}
+	org1.Id, _ = NewId()
+	org1.Name = "org1"
+	org1.Created = time.Now().UTC()
+	org1.Region = "use"
+	org1.NewRegion = nil
+	org1.Shard = 4
+	org1.IsUser = false
+	err = store.createOrgAndMembership(org1, user1.Id)
+	assert.Nil(t, err)
+
+	org1Dup1, err := store.getOrgById(org1.Id)
+	assert.Equal(t, org1.Id, org1Dup1.Id)
+	assert.Equal(t, org1.Name, org1Dup1.Name)
+	assert.Equal(t, org1.Created.Unix(), org1Dup1.Created.Unix())
+	assert.Equal(t, org1.Region, org1Dup1.Region)
+	assert.Equal(t, org1.NewRegion, org1Dup1.NewRegion)
+	assert.Equal(t, org1.Shard, org1Dup1.Shard)
+	assert.Equal(t, org1.IsUser, org1Dup1.IsUser)
+	assert.Nil(t, err)
+
+	org1.Name = "org1_updated"
+	err = store.updateOrg(org1)
+	assert.Nil(t, err)
+
+	orgs1, err := store.getOrgs([]Id{org1.Id})
+	assert.Equal(t, 1, len(orgs1))
+	assert.Equal(t, org1.Id, orgs1[0].Id)
+	assert.Equal(t, org1.Name, orgs1[0].Name)
+	assert.Equal(t, org1.Created.Unix(), orgs1[0].Created.Unix())
+	assert.Equal(t, org1.Region, orgs1[0].Region)
+	assert.Equal(t, org1.NewRegion, orgs1[0].NewRegion)
+	assert.Equal(t, org1.Shard, orgs1[0].Shard)
+	assert.Equal(t, org1.IsUser, orgs1[0].IsUser)
+	assert.Nil(t, err)
+
+	orgs2, total, err := store.getUsersOrgs(user1.Id, 0, 50)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(orgs2))
+	assert.Equal(t, 1, total)
+	assert.Equal(t, org1.Id, orgs2[0].Id)
+	assert.Equal(t, org1.Name, orgs2[0].Name)
+	assert.Equal(t, org1.Created.Unix(), orgs2[0].Created.Unix())
+	assert.Equal(t, org1.Region, orgs2[0].Region)
+	assert.Equal(t, org1.NewRegion, orgs2[0].NewRegion)
+	assert.Equal(t, org1.Shard, orgs2[0].Shard)
+	assert.Equal(t, org1.IsUser, orgs2[0].IsUser)
+	assert.Nil(t, err)
+
+	user2 := &fullUserInfo{}
+	user2.Id, _ = NewId()
+	user2.Name = "cat"
+	user2.Created = time.Now().UTC()
+	user2.Region = "use"
+	user2.NewRegion = nil
+	user2.Shard = 3
+	user2.IsUser = true
+	user2.Email = "cat@cat.com"
+	user2.NewEmail = &str
+	user2.activationCode = &str
+	user2.activated = &now
+	user2.newEmailConfirmationCode = &str
+	user2.resetPwdCode = &str
+	err = store.createUser(user2, pwdInfo1)
+	assert.Nil(t, err)
+
+	user3 := &fullUserInfo{}
+	user3.Id, _ = NewId()
+	user3.Name = "dad"
+	user3.Created = time.Now().UTC()
+	user3.Region = "use"
+	user3.NewRegion = nil
+	user3.Shard = 3
+	user3.IsUser = true
+	user3.Email = "dad@dad.com"
+	user3.NewEmail = &str
+	user3.activationCode = &str
+	user3.activated = &now
+	user3.newEmailConfirmationCode = &str
+	user3.resetPwdCode = &str
+	err = store.createUser(user3, pwdInfo1)
+	assert.Nil(t, err)
+
+	org2 := &org{}
+	org2.Id, _ = NewId()
+	org2.Name = "org2"
+	org2.Created = time.Now().UTC()
+	org2.Region = "use"
+	org2.NewRegion = nil
+	org2.Shard = 4
+	org2.IsUser = false
+	err = store.createOrgAndMembership(org2, user1.Id)
+	assert.Nil(t, err)
+
+	err = store.createMemberships(org2.Id, []Id{user2.Id, user3.Id})
+	assert.Nil(t, err)
+
+	orgs3, total, err := store.getUsersOrgs(user2.Id, 0, 50)
+	assert.Equal(t, 1, len(orgs3))
+	assert.Equal(t, 1, total)
+	assert.Equal(t, org2.Id, orgs3[0].Id)
+	assert.Equal(t, org2.Name, orgs3[0].Name)
+	assert.Equal(t, org2.Created.Unix(), orgs3[0].Created.Unix())
+	assert.Equal(t, org2.Region, orgs3[0].Region)
+	assert.Equal(t, org2.NewRegion, orgs3[0].NewRegion)
+	assert.Equal(t, org2.Shard, orgs3[0].Shard)
+	assert.Equal(t, org2.IsUser, orgs3[0].IsUser)
+	assert.Nil(t, err)
+
+	err = store.deleteMemberships(org2.Id, []Id{user2.Id, user3.Id})
+	assert.Nil(t, err)
+
+	orgs4, total, err := store.getUsersOrgs(user2.Id, 0, 50)
+	assert.Equal(t, 0, len(orgs4))
+	assert.Equal(t, 0, total)
+
+	err = store.deleteOrgAndAllAssociatedMemberships(org2.Id)
+	assert.Nil(t, err)
+
+	orgs5, total, err := store.getUsersOrgs(user1.Id, 0, 50)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(orgs5))
+	assert.Equal(t, 1, total)
+
+	err = store.deleteUserAndAllAssociatedMemberships(user1.Id)
+	assert.Nil(t, err)
+
+	orgs6, total, err := store.getUsersOrgs(user1.Id, 0, 50)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(orgs6))
+	assert.Equal(t, 0, total)
 }

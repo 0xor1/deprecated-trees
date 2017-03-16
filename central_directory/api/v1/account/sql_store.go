@@ -45,7 +45,7 @@ var query_createUser_users = `INSERT INTO users (id, email, newEmail, activation
 var query_createUser_pwds = `INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?);`
 func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.IsUser); err != nil {
+	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, true); err != nil {
 		return err
 	}
 	if _, err := s.accountsDB.Exec(query_createUser_users, id, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
@@ -87,11 +87,11 @@ func (s *sqlStore) getPwdInfo(id Id) (*pwdInfo, error) {
 	return &pwd, err
 }
 
-var query_updateUser_accounts = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=?, isUser=? WHERE id = ?;`
+var query_updateUser_accounts = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=? WHERE id = ?;`
 var query_updateUser_users = `UPDATE users SET email=?, newEmail=?, activationCode=?, activated=?, newEmailConfirmationCode=?, resetPwdCode=? WHERE id = ?;`
 func (s *sqlStore) updateUser(user *fullUserInfo) error {
 	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(query_updateUser_accounts, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.IsUser, id); err != nil {
+	if _, err := s.accountsDB.Exec(query_updateUser_accounts, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, id); err != nil {
 		return err
 	}
 	_, err := s.accountsDB.Exec(query_updateUser_users, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode, id)
@@ -104,15 +104,25 @@ func (s *sqlStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
 	return err
 }
 
-var query_deleteUserAndAllAssociatedMemberships_accounts = `DELETE FROM memberships WHERE user = ?; DELETE FROM users WHERE id = ?; DELETE FROM account WHERE id = ?;`
+var query_deleteUserAndAllAssociatedMemberships_memberships = `DELETE FROM memberships WHERE user = ?;`
+var query_deleteUserAndAllAssociatedMemberships_users = `DELETE FROM users WHERE id = ?;`
+var query_deleteUserAndAllAssociatedMemberships_accounts = `DELETE FROM accounts WHERE id = ?;`
 var query_deleteUserAndAllAssociatedMemberships_pwds = `DELETE FROM pwds WHERE id = ?;`
 func (s *sqlStore) deleteUserAndAllAssociatedMemberships(id Id) error {
 	castId := []byte(id)
-	_, err := s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_accounts, castId, castId, castId)
+	_, err := s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_memberships, castId)
 	if err != nil {
 		return err
 	}
-	_, err = s.pwdsDB.Exec(query_deleteUserAndAllAssociatedMemberships_pwds, id)
+	_, err = s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_users, castId)
+	if err != nil {
+		return err
+	}
+	_, err = s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_accounts, castId)
+	if err != nil {
+		return err
+	}
+	_, err = s.pwdsDB.Exec(query_deleteUserAndAllAssociatedMemberships_pwds, castId)
 	return err
 }
 
@@ -149,43 +159,59 @@ func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
 	return res, nil
 }
 
-var query_createOrgAndMembership = `INSERT INTO accounts (id, name, created, region, newRegion, shard, isUser) VALUES (?, ?, ?, ?, ?, ?); INSERT INTO memberships (org, user) VALUES (?, ?);`
+var query_createOrgAndMembership_org = `INSERT INTO accounts (id, name, created, region, newRegion, shard, isUser) VALUES (?, ?, ?, ?, ?, ?, ?);`
+var query_createOrgAndMembership_membership = `INSERT INTO memberships (org, user) VALUES (?, ?);`
 func (s *sqlStore) createOrgAndMembership(org *org, user Id) error {
-	_, err := s.accountsDB.Exec(query_createOrgAndMembership, org, user)
+	orgId := []byte(org.Id)
+	_, err := s.accountsDB.Exec(query_createOrgAndMembership_org, orgId, org.Name, org.Created, org.Region, org.NewRegion, org.Shard, false)
+	if err != nil {
+		return err
+	}
+	_, err = s.accountsDB.Exec(query_createOrgAndMembership_membership, orgId, []byte(user))
 	return err
 }
 
 var query_getOrgById = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE id = ?;`
 func (s *sqlStore) getOrgById(id Id) (*org, error) {
-	row := s.accountsDB.QueryRow(query_getOrgById, id)
+	row := s.accountsDB.QueryRow(query_getOrgById, []byte(id))
 	o := org{}
 	err := row.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
 	return &o, err
 }
 
-var query_getOrgByName = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE name = ?;`
-func (s *sqlStore) getOrgByName(name string) (*org, error) {
-	row := s.accountsDB.QueryRow(query_getOrgByName, name)
-	o := org{}
-	err := row.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
-	return &o, err
-}
-
-var query_updateOrg = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=?, isUser=? WHERE id = ?;`
+var query_updateOrg = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=? WHERE id = ?;`
 func (s *sqlStore) updateOrg(org *org) error {
-	_, err := s.accountsDB.Exec(query_updateOrg, org.Id)
+	_, err := s.accountsDB.Exec(query_updateOrg, org.Name, org.Created, org.Region, org.NewRegion, org.Shard, []byte(org.Id))
 	return err
 }
 
-var query_deleteOrgAndAllAssociatedMemberships = `DELETE FROM memberships WHERE org = ?; DELETE FROM account WHERE id = ?;`
+var query_deleteOrgAndAllAssociatedMemberships_memberships = `DELETE FROM memberships WHERE org = ?;`
+var query_deleteOrgAndAllAssociatedMemberships_account = `DELETE FROM accounts WHERE id = ?;`
 func (s *sqlStore) deleteOrgAndAllAssociatedMemberships(id Id) error {
-	_, err := s.accountsDB.Exec(query_deleteOrgAndAllAssociatedMemberships, id, id)
+	castId := []byte(id)
+	_, err := s.accountsDB.Exec(query_deleteOrgAndAllAssociatedMemberships_memberships, castId)
+	if err != nil {
+		return nil
+	}
+	_, err = s.accountsDB.Exec(query_deleteOrgAndAllAssociatedMemberships_account, castId)
 	return err
 }
 
-var query_getOrgs = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = false AND id IN ?;`
+var query_getOrgs = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = false AND id IN (`
 func (s *sqlStore) getOrgs(ids []Id) ([]*org, error) {
-	rows, err := s.accountsDB.Query(query_getOrgs, ids)
+	castedIds := make([]interface{}, 0, len(ids))
+	var query bytes.Buffer
+	query.WriteString(query_getOrgs)
+	for i, id := range ids {
+		if i == 0 {
+			query.WriteString(`?`)
+		} else {
+			query.WriteString(`, ?`)
+		}
+		castedIds = append(castedIds, []byte(id))
+	}
+	query.WriteString(`);`)
+	rows, err := s.accountsDB.Query(query.String(), castedIds...)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -204,20 +230,25 @@ func (s *sqlStore) getOrgs(ids []Id) ([]*org, error) {
 	return res, nil
 }
 
-var query_getUsersOrgs = `SELECT COUNT(*), id, name, created, region, newRegion, shard, isUser FROM accounts AS a JOIN memberships AS m ON a.id = m.org WHERE m.user = ? ORDER BY name ASC LIMIT ?, ?;`
+var query_getUsersOrgs_total = `SELECT COUNT(*) FROM memberships WHERE user = ?;`
+var query_getUsersOrgs = `SELECT a.id, a.name, a.created, a.region, a.newRegion, a.shard, a.isUser FROM accounts AS a JOIN memberships AS m ON a.id = m.org WHERE m.user = ? ORDER BY a.name ASC LIMIT ?, ?;`
 func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*org, int, error) {
-	rows, err := s.accountsDB.Query(query_getUsersOrgs, user, offset, limit)
+	row := s.accountsDB.QueryRow(query_getUsersOrgs_total, []byte(user))
+	total := 0
+	if err := row.Scan(&total); err != nil {
+		return nil, total, err
+	}
+	rows, err := s.accountsDB.Query(query_getUsersOrgs, []byte(user), offset, limit)
 	if rows != nil {
 		defer rows.Close()
 	}
 	if err != nil {
 		return nil, 0, err
 	}
-	total := 0
 	res := make([]*org, 0, limit)
 	for rows.Next() {
 		o := org{}
-		rows.Scan(&total, &o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
+		rows.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -231,17 +262,34 @@ func (s *sqlStore) createMemberships(org Id, users []Id) error {
 	var query bytes.Buffer
 	args := make([]interface{}, 0, len(users)*2)
 	query.WriteString(query_createMemberships)
-	for _, id := range users {
-		query.WriteString(`(?, ?) `)
-		args = append(args, org, id)
+	for i, id := range users {
+		if i == 0 {
+			query.WriteString(`(?, ?)`)
+		} else {
+			query.WriteString(`, (?, ?)`)
+		}
+		args = append(args, []byte(org), []byte(id))
 	}
 	_, err := s.accountsDB.Exec(query.String(), args...)
 	return err
 }
 
-var query_deleteMemberships = `DELETE FROM memberships WHERE org = ? user IN ?;`
+var query_deleteMemberships = `DELETE FROM memberships WHERE org = ? AND user IN (`
 func (s *sqlStore) deleteMemberships(org Id, users []Id) error {
-	_, err := s.accountsDB.Exec(query_deleteMemberships, org, users)
+	castedIds := make([]interface{}, 0, len(users) + 1)
+	castedIds = append(castedIds, []byte(org))
+	var query bytes.Buffer
+	query.WriteString(query_deleteMemberships)
+	for i, id := range users {
+		if i == 0 {
+			query.WriteString(`?`)
+		} else {
+			query.WriteString(`, ?`)
+		}
+		castedIds = append(castedIds, []byte(id))
+	}
+	query.WriteString(`);`)
+	_, err := s.accountsDB.Exec(query.String(), castedIds...)
 	return err
 }
 

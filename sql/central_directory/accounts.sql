@@ -41,15 +41,7 @@ CREATE TABLE memberships(
 
 DROP USER IF EXISTS 'tc_cd_accounts'@'%';
 CREATE USER 'tc_cd_accounts'@'%' IDENTIFIED BY 'T@sk-C3n-T3r'; 
-GRANT SELECT ON accounts.accounts TO 'tc_cd_accounts'@'%';
-GRANT INSERT ON accounts.accounts TO 'tc_cd_accounts'@'%';
-GRANT UPDATE ON accounts.accounts TO 'tc_cd_accounts'@'%';
-GRANT DELETE ON accounts.accounts TO 'tc_cd_accounts'@'%';
-GRANT SELECT ON accounts.users TO 'tc_cd_accounts'@'%';
-GRANT INSERT ON accounts.users TO 'tc_cd_accounts'@'%';
-GRANT UPDATE ON accounts.users TO 'tc_cd_accounts'@'%';
-GRANT DELETE ON accounts.users TO 'tc_cd_accounts'@'%';
-GRANT SELECT ON accounts.memberships TO 'tc_cd_accounts'@'%';
-GRANT INSERT ON accounts.memberships TO 'tc_cd_accounts'@'%';
-GRANT UPDATE ON accounts.memberships TO 'tc_cd_accounts'@'%';
-GRANT DELETE ON accounts.memberships TO 'tc_cd_accounts'@'%';
+GRANT SELECT ON accounts.* TO 'tc_cd_accounts'@'%';
+GRANT INSERT ON accounts.* TO 'tc_cd_accounts'@'%';
+GRANT UPDATE ON accounts.* TO 'tc_cd_accounts'@'%';
+GRANT DELETE ON accounts.* TO 'tc_cd_accounts'@'%';

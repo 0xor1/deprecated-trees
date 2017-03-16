@@ -16,7 +16,7 @@ CREATE TABLE pwds(
 
 DROP USER IF EXISTS 'tc_cd_pwds'@'%';
 CREATE USER 'tc_cd_pwds'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd'; 
-GRANT SELECT ON pwds.pwds TO 'tc_cd_pwds'@'%'; 
-GRANT INSERT ON pwds.pwds TO 'tc_cd_pwds'@'%';
-GRANT UPDATE ON pwds.pwds TO 'tc_cd_pwds'@'%';
-GRANT DELETE ON pwds.pwds TO 'tc_cd_pwds'@'%';
+GRANT SELECT ON pwds.* TO 'tc_cd_pwds'@'%'; 
+GRANT INSERT ON pwds.* TO 'tc_cd_pwds'@'%';
+GRANT UPDATE ON pwds.* TO 'tc_cd_pwds'@'%';
+GRANT DELETE ON pwds.* TO 'tc_cd_pwds'@'%';
