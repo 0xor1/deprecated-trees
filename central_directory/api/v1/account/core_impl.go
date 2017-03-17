@@ -676,8 +676,12 @@ func (a *api) DeleteMe(myId Id) error {
 			if !a.internalRegionApi.IsValidRegion(org.Region) {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
-			if err := a.internalRegionApi.SetMemberDeleted(org.Region, org.Shard, org.Id, myId); err != nil {
+			publicErr, err := a.internalRegionApi.SetMemberDeleted(org.Region, org.Shard, org.Id, myId)
+			if err != nil {
 				return a.log.ErrorUserErr(myId, err)
+			}
+			if publicErr != nil {
+				return a.log.InfoUserErr(myId, publicErr)
 			}
 			if err := a.store.deleteMemberships(org.Id, []Id{myId}); err != nil {
 				return a.log.ErrorUserErr(myId, err)
@@ -979,7 +983,7 @@ type internalRegionApi interface {
 	DeleteTaskCenter(region string, shard int, account, owner Id) (public error, private error)
 	AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (public error, private error)
 	RemoveMembers(region string, shard int, org, admin Id, members []Id) (public error, private error)
-	SetMemberDeleted(region string, shard int, org, member Id) error
+	SetMemberDeleted(region string, shard int, org, member Id) (public error, private error)
 	RenameMember(region string, shard int, org, member Id, newName string) error
 	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
 }
