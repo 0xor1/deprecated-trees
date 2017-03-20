@@ -6,10 +6,10 @@ import (
 )
 
 var (
-	invalidRegionErr          = &Error{Code: 18, Msg: "invalid region"}
-	insufficientPermissionErr = &Error{Code: 19, Msg: "insufficient permission"}
-	zeroOwnerCountErr         = &Error{Code: 20, Msg: "zero owner count"}
-	invalidTaskCenterTypeErr  = &Error{Code: 21, Msg: "invalid task center type"}
+	invalidRegionErr          = &Error{Code: 19, Msg: "invalid region"}
+	insufficientPermissionErr = &Error{Code: 20, Msg: "insufficient permission"}
+	zeroOwnerCountErr         = &Error{Code: 21, Msg: "zero owner count"}
+	invalidTaskCenterTypeErr  = &Error{Code: 22, Msg: "invalid task center type"}
 )
 
 func newInternalApi(regions map[string]singularInternalApi, log Log) InternalApi {
@@ -101,11 +101,24 @@ func (a *internalApi) SetMemberDeleted(region string, shard int, org, member Id)
 	if !a.IsValidRegion(region) {
 		return a.log.InfoErr(invalidRegionErr)
 	}
+
 	err := a.regions[region].setMemberDeleted(shard, org, member)
 	if err != nil {
 		a.log.InfoErr(err)
 	}
 	return err
+}
+
+func (a *internalApi) MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error) {
+	if !a.IsValidRegion(region) {
+		return false, a.log.InfoErr(invalidRegionErr)
+	}
+
+	isOnlyOwner, err := a.regions[region].memberIsOnlyOwner(shard, org, member)
+	if err != nil {
+		a.log.InfoErr(err)
+	}
+	return isOnlyOwner, err
 }
 
 func (a *internalApi) RenameMember(region string, shard int, org, member Id, newName string) error {
@@ -253,6 +266,10 @@ func (a *sIApi) setMemberDeleted(shard int, org, member Id) error {
 	return a.store.setMemberInactiveAndDeleted(shard, org, member)
 }
 
+func (a *sIApi) memberIsOnlyOwner(shard int, org, member Id) (bool, error) {
+	return a.store.memberIsOnlyOwner(shard, org, member)
+}
+
 func (a *sIApi) renameMember(shard int, org, member Id, newName string) error {
 	return a.store.renameMember(shard, org, member, newName)
 }
@@ -279,6 +296,7 @@ type singularInternalApi interface {
 	addMembers(shard int, org, admin Id, members []*NamedEntity) (public error, private error)
 	removeMembers(shard int, org, admin Id, members []Id) (public error, private error)
 	setMemberDeleted(shard int, org, member Id) error
+	memberIsOnlyOwner(shard int, org, member Id) (bool, error)
 	renameMember(shard int, org, member Id, newName string) error
 	userCanRenameOrg(shard int, org, user Id) (bool, error)
 }
@@ -292,6 +310,7 @@ type internalStore interface {
 	getTotalOrgOwnerCount(shard int, org Id) (int, error)
 	getOwnerCountInRemoveSet(shard int, org Id, members []Id) (int, error)
 	setMembersInactive(shard int, org Id, members []Id) error
+	memberIsOnlyOwner(shard int, org, member Id) (bool, error)
 	setMemberInactiveAndDeleted(shard int, org Id, member Id) error
 	renameMember(shard int, org Id, member Id, newName string) error
 }

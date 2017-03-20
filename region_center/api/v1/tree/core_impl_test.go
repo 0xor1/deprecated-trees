@@ -151,6 +151,23 @@ func Test_apiSetMemberDeleted(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
+func Test_apiMemberIsOnlyOwner(t *testing.T) {
+	iApi := &mockInternalApi{}
+	regions := map[string]singularInternalApi{"us": iApi}
+	userId, _ := NewId()
+	orgId, _ := NewId()
+	api := newInternalApi(regions, NewLog(nil))
+
+	isOnlyOwner, err := api.MemberIsOnlyOwner("ch", 2, orgId, userId)
+	assert.False(t, isOnlyOwner)
+	assert.Equal(t, invalidRegionErr, err)
+
+	iApi.On("memberIsOnlyOwner", 2, orgId, userId).Return(true, testErr)
+	isOnlyOwner, err = api.MemberIsOnlyOwner("us", 2, orgId, userId)
+	assert.True(t, isOnlyOwner)
+	assert.Equal(t, testErr, err)
+}
+
 func Test_apiRenameMember(t *testing.T) {
 	iApi := &mockInternalApi{}
 	regions := map[string]singularInternalApi{"us": iApi}
@@ -579,6 +596,32 @@ func Test_iApiSetMemberDeleted_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func Test_iApiMemberIsOnlyOwner_storeMemberIsOnlyOwnerErr(t *testing.T) {
+	store := &mockStore{}
+	iApi := newSingularInternalApi(store)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("memberIsOnlyOwner", 5, orgId, myId).Return(true, testErr)
+
+	isOnlyOwner, err := iApi.memberIsOnlyOwner(5, orgId, myId)
+	assert.True(t, isOnlyOwner)
+	assert.Equal(t, testErr, err)
+}
+
+func Test_iApiMemberIsOnlyOwner_success(t *testing.T) {
+	store := &mockStore{}
+	iApi := newSingularInternalApi(store)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("memberIsOnlyOwner", 5, orgId, myId).Return(true, nil)
+
+	isOnlyOwner, err := iApi.memberIsOnlyOwner(5, orgId, myId)
+	assert.True(t, isOnlyOwner)
+	assert.Nil(t, err)
+}
+
 func Test_iApiRenameMember_storeRenameMemberErr(t *testing.T) {
 	store := &mockStore{}
 	iApi := newSingularInternalApi(store)
@@ -693,6 +736,11 @@ func (m *mockInternalApi) setMemberDeleted(shard int, org, member Id) error {
 	return args.Error(0)
 }
 
+func (m *mockInternalApi) memberIsOnlyOwner(shard int, org, member Id) (bool, error) {
+	args := m.Called(shard, org, member)
+	return args.Bool(0), args.Error(1)
+}
+
 func (m *mockInternalApi) renameMember(shard int, org, member Id, newName string) error {
 	args := m.Called(shard, org, member, newName)
 	return args.Error(0)
@@ -755,6 +803,11 @@ func (m *mockStore) setMembersInactive(shard int, org Id, members []Id) error {
 func (m *mockStore) setMemberInactiveAndDeleted(shard int, org Id, member Id) error {
 	args := m.Called(shard, org, member)
 	return args.Error(0)
+}
+
+func (m *mockStore) memberIsOnlyOwner(shard int, org, member Id) (bool, error) {
+	args := m.Called(shard, org, member)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *mockStore) renameMember(shard int, org Id, member Id, newName string) error {

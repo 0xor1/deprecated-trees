@@ -2,11 +2,11 @@ package account
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
-	"github.com/stretchr/testify/assert"
-	"testing"
-	"github.com/robsix/isql"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/robsix/isql"
+	"github.com/stretchr/testify/assert"
+	"testing"
 	"time"
 )
 
@@ -257,13 +257,13 @@ func Test_sqlStore_adHoc(t *testing.T) {
 
 	user3 := &fullUserInfo{}
 	user3.Id, _ = NewId()
-	user3.Name = "dad"
+	user3.Name = "dan"
 	user3.Created = time.Now().UTC()
 	user3.Region = "use"
 	user3.NewRegion = nil
 	user3.Shard = 3
 	user3.IsUser = true
-	user3.Email = "dad@dad.com"
+	user3.Email = "dan@dan.com"
 	user3.NewEmail = &str
 	user3.activationCode = &str
 	user3.activated = &now
@@ -320,4 +320,9 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(orgs6))
 	assert.Equal(t, 0, total)
+
+	// clean up left over test data
+	store.deleteUserAndAllAssociatedMemberships(user2.Id)
+	store.deleteUserAndAllAssociatedMemberships(user3.Id)
+	store.deleteOrgAndAllAssociatedMemberships(org1.Id)
 }

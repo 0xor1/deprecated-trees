@@ -2,9 +2,9 @@ package account
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
+	"github.com/robsix/isql"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"github.com/robsix/isql"
 )
 
 func Test_NewSqlApi_success(t *testing.T) {

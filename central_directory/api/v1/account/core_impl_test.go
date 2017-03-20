@@ -1813,7 +1813,7 @@ func Test_api_DeleteMe_regionGoneErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_DeleteMe_internalRegionApiRemoveMemberErr(t *testing.T) {
+func Test_api_DeleteMe_internalRegionApiMemberIsOnlyOwnerErr(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -1823,13 +1823,13 @@ func Test_api_DeleteMe_internalRegionApiRemoveMemberErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(nil, testErr)
+	internalRegionApi.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(false, testErr)
 
 	err := api.DeleteMe(myId)
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_DeleteMe_internalRegionApiRemoveMemberPublicErr(t *testing.T) {
+func Test_api_DeleteMe_internalRegionApiMemberIsOnlyOwnerTrue(t *testing.T) {
 	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
@@ -1839,10 +1839,27 @@ func Test_api_DeleteMe_internalRegionApiRemoveMemberPublicErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(testErr, nil)
+	internalRegionApi.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(true, nil)
 
 	err := api.DeleteMe(myId)
-	assert.Equal(t, testErr, err)
+	assert.Equal(t, onlyOwnerMemberErr, err)
+}
+
+func Test_api_DeleteMe_internalRegionApiSetMemberDeletedErr(t *testing.T) {
+	store, internalRegionApi, linkMailer, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionApi{}, &mockLinkMailer{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionApi, linkMailer, miscFuncs.newId, cryptoHelper, nil, nil, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	user := &fullUserInfo{me: me{user: user{Shard: 2, Region: "us"}}}
+	store.On("getUserById", myId).Return(user, nil)
+	orgId, _ := NewId()
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
+	internalRegionApi.On("IsValidRegion", "us").Return(true)
+	internalRegionApi.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(false, nil)
+	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(testErr)
+
+	err := api.DeleteMe(myId)
+	assert.IsType(t, &ErrorRef{}, err)
 }
 
 func Test_api_DeleteMe_storeDeleteMembershipErr(t *testing.T) {
@@ -1855,7 +1872,8 @@ func Test_api_DeleteMe_storeDeleteMembershipErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return([]*org{&org{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
 	internalRegionApi.On("IsValidRegion", "us").Return(true)
-	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(nil, nil)
+	internalRegionApi.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(false, nil)
+	internalRegionApi.On("SetMemberDeleted", "us", 4, orgId, myId).Return(nil)
 	store.On("deleteMemberships", orgId, []Id{myId}).Return(testErr)
 
 	err := api.DeleteMe(myId)
@@ -2995,9 +3013,14 @@ func (m *mockInternalRegionApi) RemoveMembers(region string, shard int, org, adm
 	return args.Error(0), args.Error(1)
 }
 
-func (m *mockInternalRegionApi) SetMemberDeleted(region string, shard int, org, member Id) (error, error) {
+func (m *mockInternalRegionApi) SetMemberDeleted(region string, shard int, org, member Id) error {
 	args := m.Called(region, shard, org, member)
-	return args.Error(0), args.Error(1)
+	return args.Error(0)
+}
+
+func (m *mockInternalRegionApi) MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error) {
+	args := m.Called(region, shard, org, member)
+	return args.Bool(0), args.Error(1)
 }
 
 func (m *mockInternalRegionApi) RenameMember(region string, shard int, org, member Id, newName string) error {

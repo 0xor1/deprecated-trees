@@ -22,6 +22,7 @@ type InternalApi interface {
 	AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (public error, private error)
 	RemoveMembers(region string, shard int, org, admin Id, members []Id) (public error, private error)
 	SetMemberDeleted(region string, shard int, org, member Id) error
+	MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error)
 	RenameMember(region string, shard int, org, member Id, newName string) error
 	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
 }

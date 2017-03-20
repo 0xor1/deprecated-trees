@@ -24,6 +24,7 @@ var (
 	noNewEmailRegisteredErr               = &Error{Code: 15, Msg: "no new email registered"}
 	insufficientPermissionsErr            = &Error{Code: 16, Msg: "insufficient permissions"}
 	maxEntityCountExceededErr             = &Error{Code: 17, Msg: "max entity count exceeded"}
+	onlyOwnerMemberErr                    = &Error{Code: 18, Msg: "can't delete user who is the only owner of an org"}
 )
 
 func newApi(store store, internalRegionApi internalRegionApi, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
@@ -676,12 +677,17 @@ func (a *api) DeleteMe(myId Id) error {
 			if !a.internalRegionApi.IsValidRegion(org.Region) {
 				return a.log.ErrorUserErr(myId, regionGoneErr)
 			}
-			publicErr, err := a.internalRegionApi.SetMemberDeleted(org.Region, org.Shard, org.Id, myId)
+			isOnlyOwner, err := a.internalRegionApi.MemberIsOnlyOwner(org.Region, org.Shard, org.Id, myId)
 			if err != nil {
 				return a.log.ErrorUserErr(myId, err)
 			}
-			if publicErr != nil {
-				return a.log.InfoUserErr(myId, publicErr)
+			if isOnlyOwner {
+				return a.log.InfoUserErr(myId, onlyOwnerMemberErr)
+			}
+		}
+		for _, org := range orgs {
+			if err := a.internalRegionApi.SetMemberDeleted(org.Region, org.Shard, org.Id, myId); err != nil {
+				return a.log.ErrorUserErr(myId, err)
 			}
 			if err := a.store.deleteMemberships(org.Id, []Id{myId}); err != nil {
 				return a.log.ErrorUserErr(myId, err)
@@ -983,7 +989,8 @@ type internalRegionApi interface {
 	DeleteTaskCenter(region string, shard int, account, owner Id) (public error, private error)
 	AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (public error, private error)
 	RemoveMembers(region string, shard int, org, admin Id, members []Id) (public error, private error)
-	SetMemberDeleted(region string, shard int, org, member Id) (public error, private error)
+	SetMemberDeleted(region string, shard int, org, member Id) error
+	MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error)
 	RenameMember(region string, shard int, org, member Id, newName string) error
 	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
 }
