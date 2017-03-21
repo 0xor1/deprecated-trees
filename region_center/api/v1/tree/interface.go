@@ -11,8 +11,6 @@ const (
 	Reader = role("reader")
 )
 
-type role string
-
 type InternalApi interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool
@@ -25,4 +23,16 @@ type InternalApi interface {
 	MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error)
 	RenameMember(region string, shard int, org, member Id, newName string) error
 	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
+}
+
+type SingularInternalApi interface {
+	CreatePersonalTaskCenter(user Id) (int, error)
+	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
+	DeleteTaskCenter(shard int, account, owner Id) (public error, private error)
+	AddMembers(shard int, org, admin Id, members []*NamedEntity) (public error, private error)
+	RemoveMembers(shard int, org, admin Id, members []Id) (public error, private error)
+	SetMemberDeleted(shard int, org, member Id) error
+	MemberIsOnlyOwner(shard int, org, member Id) (bool, error)
+	RenameMember(shard int, org, member Id, newName string) error
+	UserCanRenameOrg(shard int, org, user Id) (bool, error)
 }

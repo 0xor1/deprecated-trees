@@ -59,6 +59,9 @@ func (l *log) log(callerDepth int, level zap.Level, fields ...zap.Field) {
 }
 
 func (l *log) logErr(level zap.Level, err error) error {
+	if err == nil {
+		return nil
+	}
 	if level == zap.DebugLevel || level == zap.InfoLevel {
 		l.log(3, level, zap.Error(err))
 		return err
@@ -70,6 +73,9 @@ func (l *log) logErr(level zap.Level, err error) error {
 }
 
 func (l *log) logUserErr(level zap.Level, userId Id, err error) error {
+	if err == nil {
+		return nil
+	}
 	if level == zap.DebugLevel || level == zap.InfoLevel {
 		l.log(3, level, zap.String("user", userId.String()), zap.Error(err))
 		return err

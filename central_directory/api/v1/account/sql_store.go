@@ -3,6 +3,7 @@ package account
 import (
 	. "bitbucket.org/robsix/task_center/misc"
 	"bytes"
+	"database/sql"
 	"github.com/robsix/isql"
 )
 
@@ -39,6 +40,9 @@ func (s *sqlStore) getAccountByCiName(name string) (*account, error) {
 	row := s.accountsDB.QueryRow(query_getAccountByCiName, name)
 	acc := account{}
 	err := row.Scan(&acc.Id, &acc.Name, &acc.Created, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.IsUser)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return &acc, err
 }
 
@@ -64,6 +68,9 @@ func (s *sqlStore) getUserByCiName(name string) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserByCiName, name)
 	user := fullUserInfo{}
 	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return &user, err
 }
 
@@ -73,6 +80,9 @@ func (s *sqlStore) getUserByEmail(email string) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserByEmail, email)
 	user := fullUserInfo{}
 	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return &user, err
 }
 
@@ -82,6 +92,9 @@ func (s *sqlStore) getUserById(id Id) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserById, []byte(id))
 	user := fullUserInfo{}
 	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return &user, err
 }
 
@@ -91,6 +104,9 @@ func (s *sqlStore) getPwdInfo(id Id) (*pwdInfo, error) {
 	row := s.pwdsDB.QueryRow(query_getPwdInfo, []byte(id))
 	pwd := pwdInfo{}
 	err := row.Scan(&pwd.salt, &pwd.pwd, &pwd.n, &pwd.r, &pwd.p, &pwd.keyLen)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return &pwd, err
 }
 
@@ -189,6 +205,9 @@ func (s *sqlStore) getOrgById(id Id) (*org, error) {
 	row := s.accountsDB.QueryRow(query_getOrgById, []byte(id))
 	o := org{}
 	err := row.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return &o, err
 }
 

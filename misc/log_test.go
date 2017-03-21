@@ -14,6 +14,14 @@ func Test_NewLog(t *testing.T) {
 	assert.IsType(t, &log{}, l)
 }
 
+func Test_log_logErr_logUserErr_nil(t *testing.T) {
+	l := &log{}
+	err := l.logErr(zap.ErrorLevel, nil)
+	assert.Nil(t, err)
+	err = l.logUserErr(zap.ErrorLevel, nil, nil)
+	assert.Nil(t, err)
+}
+
 func Test_log_Location(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
 	l := newLog(logger, miscFuncs.GenNewId)
