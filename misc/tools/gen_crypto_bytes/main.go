@@ -14,8 +14,9 @@ func main() {
 	flag.Parse()
 	n := int(nTmp)
 	l := int(lTmp)
+	ch := misc.NewCryptoHelper()
 	for i := 0; i < n; i++ {
-		bs, _ := misc.CryptoBytes(l)
+		bs, _ := ch.Bytes(l)
 		fmt.Println(fmt.Sprintf("%x", bs))
 	}
 }

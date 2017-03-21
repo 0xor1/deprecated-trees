@@ -14,8 +14,9 @@ func main() {
 	flag.Parse()
 	n := int(nTmp)
 	l := int(lTmp)
+	ch := misc.NewCryptoHelper()
 	for i := 0; i < n; i++ {
-		str, _ := misc.CryptoUrlSafeString(l)
+		str, _ := ch.UrlSafeString(l)
 		fmt.Println(str)
 	}
 }
