@@ -34,8 +34,8 @@ func Test_newSqlStore_success(t *testing.T) {
 //this test tests everything using a real sql db, comment/uncomment as necessary
 func Test_sqlStore_adHoc(t *testing.T) {
 
-	rawAccountsDb, _ := sql.Open("mysql", "tc_cd_accounts:T@sk-C3n-T3r@tcp(127.0.0.1:3306)/accounts?parseTime=true&loc=UTC&multiStatements=true")
-	rawPwdsDb, _ := sql.Open("mysql", "tc_cd_pwds:T@sk-C3n-T3r-Pwd@tcp(127.0.0.1:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
+	rawAccountsDb, _ := sql.Open("mysql", "tc_cd_accounts:T@sk-C3n-T3r-@cc-0unt5@tcp(127.0.0.1:3306)/accounts?parseTime=true&loc=UTC&multiStatements=true")
+	rawPwdsDb, _ := sql.Open("mysql", "tc_cd_pwds:T@sk-C3n-T3r-Pwd5@tcp(127.0.0.1:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
 	accountsDb, pwdsDb := isql.NewDB(rawAccountsDb), isql.NewDB(rawPwdsDb)
 	store := newSqlStore(accountsDb, pwdsDb)
 

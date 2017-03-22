@@ -15,7 +15,7 @@ CREATE TABLE pwds(
 );
 
 DROP USER IF EXISTS 'tc_cd_pwds'@'%';
-CREATE USER 'tc_cd_pwds'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd'; 
+CREATE USER 'tc_cd_pwds'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd5'; 
 GRANT SELECT ON pwds.* TO 'tc_cd_pwds'@'%'; 
 GRANT INSERT ON pwds.* TO 'tc_cd_pwds'@'%';
 GRANT UPDATE ON pwds.* TO 'tc_cd_pwds'@'%';

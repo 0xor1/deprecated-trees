@@ -40,7 +40,7 @@ CREATE TABLE memberships(
 );
 
 DROP USER IF EXISTS 'tc_cd_accounts'@'%';
-CREATE USER 'tc_cd_accounts'@'%' IDENTIFIED BY 'T@sk-C3n-T3r'; 
+CREATE USER 'tc_cd_accounts'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-@cc-0unt5'; 
 GRANT SELECT ON accounts.* TO 'tc_cd_accounts'@'%';
 GRANT INSERT ON accounts.* TO 'tc_cd_accounts'@'%';
 GRANT UPDATE ON accounts.* TO 'tc_cd_accounts'@'%';

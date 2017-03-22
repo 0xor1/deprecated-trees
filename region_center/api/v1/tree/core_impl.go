@@ -186,7 +186,7 @@ func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntit
 		return insufficientPermissionErr, nil
 	}
 
-	existingMembers := make([]*NamedEntity, 0, len(members))
+	pastMembers := make([]*NamedEntity, 0, len(members))
 	newMembers := make([]*NamedEntity, 0, len(members))
 	for _, mem := range members {
 		existingMember, err := a.store.getMember(shard, org, mem.Id)
@@ -195,8 +195,8 @@ func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntit
 		}
 		if existingMember == nil {
 			newMembers = append(newMembers, mem)
-		} else {
-			existingMembers = append(existingMembers, mem)
+		} else if !existingMember.IsActive {
+			pastMembers = append(pastMembers, mem)
 		}
 	}
 
@@ -205,8 +205,8 @@ func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntit
 			return nil, a.log.InfoErr(err)
 		}
 	}
-	if len(existingMembers) > 0 {
-		if err := a.store.setMembersActive(shard, org, existingMembers); err != nil {
+	if len(pastMembers) > 0 {
+		if err := a.store.setMembersActive(shard, org, pastMembers); err != nil { //has to be NamedEntity in case the user changed their name whilst they were inactive on the org
 			return nil, a.log.InfoErr(err)
 		}
 	}
@@ -324,11 +324,10 @@ type taskSet struct {
 
 type member struct {
 	NamedEntity
-	Added              time.Time  `json:"added"`
-	Deactivated        *time.Time `json:"deactivated,omitempty"`
-	Deleted            *time.Time `json:"deleted,omitempty"`
 	AccessTask         Id         `json:"accessTask"`
 	TotalRemainingTime uint64     `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64     `json:"totalLoggedTime"`
+	IsActive	   bool       `json:"isActive"`
+	IsDeleted	   bool       `json:"isDeleted"`
 	Role               role       `json:"role"`
 }
