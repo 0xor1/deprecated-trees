@@ -9,43 +9,43 @@ import (
 	"time"
 )
 
-func Test_newApi_nilRegionsPanic(t *testing.T) {
+func Test_newInternalApiClient_nilRegionsPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
 		assert.IsType(t, &Error{}, err)
 	}()
-	newInternalApi(nil)
+	newInternalApiClient(nil)
 }
 
-func Test_newApi_success(t *testing.T) {
-	regions := map[string]SingularInternalApi{"us": &mockSingluarInternalApi{}}
-	api := newInternalApi(regions)
+func Test_newInternalApiClient_success(t *testing.T) {
+	regions := map[string]InternalApi{"us": &mockSingluarInternalApi{}}
+	api := newInternalApiClient(regions)
 
 	assert.NotNil(t, api)
 }
 
-func Test_apiIsValidRegion(t *testing.T) {
-	regions := map[string]SingularInternalApi{"us": &mockSingluarInternalApi{}}
-	api := newInternalApi(regions)
+func Test_clientIsValidRegion(t *testing.T) {
+	regions := map[string]InternalApi{"us": &mockSingluarInternalApi{}}
+	api := newInternalApiClient(regions)
 
 	assert.False(t, api.IsValidRegion("ch"))
 	assert.True(t, api.IsValidRegion("us"))
 }
 
-func Test_apiGetRegions(t *testing.T) {
-	regions := map[string]SingularInternalApi{"us": &mockSingluarInternalApi{}, "au": &mockSingluarInternalApi{}}
-	api := newInternalApi(regions)
+func Test_clientGetRegions(t *testing.T) {
+	regions := map[string]InternalApi{"us": &mockSingluarInternalApi{}, "au": &mockSingluarInternalApi{}}
+	api := newInternalApiClient(regions)
 
 	regionsSlice := api.GetRegions()
 	assert.Contains(t, regionsSlice, "us")
 	assert.Contains(t, regionsSlice, "au")
 }
 
-func Test_apiCreatePersonalTaskCenter(t *testing.T) {
+func Test_clientCreatePersonalTaskCenter(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	shard, err := api.CreatePersonalTaskCenter("ch", userId)
 	assert.Equal(t, 0, shard)
@@ -57,12 +57,12 @@ func Test_apiCreatePersonalTaskCenter(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_apiCreateOrgTaskCenter(t *testing.T) {
+func Test_clientCreateOrgTaskCenter(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	shard, err := api.CreateOrgTaskCenter("ch", orgId, userId, "ali")
 	assert.Equal(t, 0, shard)
@@ -74,12 +74,12 @@ func Test_apiCreateOrgTaskCenter(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_apiDeleteTaskCenter(t *testing.T) {
+func Test_clientDeleteTaskCenter(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	publicErr, err := api.DeleteTaskCenter("ch", 2, orgId, userId)
 	assert.Nil(t, publicErr)
@@ -91,13 +91,13 @@ func Test_apiDeleteTaskCenter(t *testing.T) {
 	assert.Equal(t, testErr2, err)
 }
 
-func Test_apiAddMembers(t *testing.T) {
+func Test_clientAddMembers(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
 	members := make([]*NamedEntity, 2, 2)
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	publicErr, err := api.AddMembers("ch", 2, orgId, userId, members)
 	assert.Nil(t, publicErr)
@@ -109,13 +109,13 @@ func Test_apiAddMembers(t *testing.T) {
 	assert.Equal(t, testErr2, err)
 }
 
-func Test_apiRemoveMembers(t *testing.T) {
+func Test_clientRemoveMembers(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
 	members := make([]Id, 2, 2)
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	publicErr, err := api.RemoveMembers("ch", 2, orgId, userId, members)
 	assert.Nil(t, publicErr)
@@ -127,12 +127,12 @@ func Test_apiRemoveMembers(t *testing.T) {
 	assert.Equal(t, testErr2, err)
 }
 
-func Test_apiSetMemberDeleted(t *testing.T) {
+func Test_clientSetMemberDeleted(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	err := api.SetMemberDeleted("ch", 2, orgId, userId)
 	assert.Equal(t, invalidRegionErr, err)
@@ -142,12 +142,12 @@ func Test_apiSetMemberDeleted(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_apiMemberIsOnlyOwner(t *testing.T) {
+func Test_clientMemberIsOnlyOwner(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	isOnlyOwner, err := api.MemberIsOnlyOwner("ch", 2, orgId, userId)
 	assert.False(t, isOnlyOwner)
@@ -159,12 +159,12 @@ func Test_apiMemberIsOnlyOwner(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_apiRenameMember(t *testing.T) {
+func Test_clientRenameMember(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	err := api.RenameMember("ch", 2, orgId, userId, "ali")
 	assert.Equal(t, invalidRegionErr, err)
@@ -174,12 +174,12 @@ func Test_apiRenameMember(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_apiUserCanRenameOrg(t *testing.T) {
+func Test_clientUserCanRenameOrg(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
-	regions := map[string]SingularInternalApi{"us": iApi}
+	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
-	api := newInternalApi(regions)
+	api := newInternalApiClient(regions)
 
 	can, err := api.UserCanRenameOrg("ch", 2, orgId, userId)
 	assert.False(t, can)
@@ -191,32 +191,32 @@ func Test_apiUserCanRenameOrg(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_newIApi_nilStorePanic(t *testing.T) {
+func Test_newInternalApi_nilStorePanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
 		assert.IsType(t, &Error{}, err)
 	}()
-	newSingularInternalApi(nil, nil)
+	newInternalApi(nil, nil)
 }
 
-func Test_newIApi_nilLogPanic(t *testing.T) {
+func Test_newInternalApi_nilLogPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
 		assert.IsType(t, &Error{}, err)
 	}()
 	store := &mockStore{}
-	newSingularInternalApi(store, nil)
+	newInternalApi(store, nil)
 }
 
-func Test_newIApi_success(t *testing.T) {
+func Test_newInternalApi_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 	assert.NotNil(t, iApi)
 }
 
-func Test_iApiCreatePersonalTaskCenter_storeCreateTaskSetErr(t *testing.T) {
+func Test_internalApiCreatePersonalTaskCenter_storeCreateTaskSetErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	store.On("createTaskSet", &taskSet{
@@ -235,9 +235,9 @@ func Test_iApiCreatePersonalTaskCenter_storeCreateTaskSetErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiCreatePersonalTaskCenter_success(t *testing.T) {
+func Test_internalApiCreatePersonalTaskCenter_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	store.On("createTaskSet", &taskSet{
@@ -256,9 +256,9 @@ func Test_iApiCreatePersonalTaskCenter_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiCreateOrgTaskCenter_storeCreateTaskSetErr(t *testing.T) {
+func Test_internalApiCreateOrgTaskCenter_storeCreateTaskSetErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -278,9 +278,9 @@ func Test_iApiCreateOrgTaskCenter_storeCreateTaskSetErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiCreateOrgTaskCenter_storeCreateMemberErr(t *testing.T) {
+func Test_internalApiCreateOrgTaskCenter_storeCreateMemberErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -309,9 +309,9 @@ func Test_iApiCreateOrgTaskCenter_storeCreateMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiCreateOrgTaskCenter_success(t *testing.T) {
+func Test_internalApiCreateOrgTaskCenter_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -339,9 +339,9 @@ func Test_iApiCreateOrgTaskCenter_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiDeleteTaskCenter_storeGetMemberErr(t *testing.T) {
+func Test_internalApiDeleteTaskCenter_storeGetMemberErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -352,9 +352,9 @@ func Test_iApiDeleteTaskCenter_storeGetMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiDeleteTaskCenter_insufficientPermissionErr(t *testing.T) {
+func Test_internalApiDeleteTaskCenter_insufficientPermissionErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -365,9 +365,9 @@ func Test_iApiDeleteTaskCenter_insufficientPermissionErr(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiDeleteTaskCenter_storeDeleteAccountErr(t *testing.T) {
+func Test_internalApiDeleteTaskCenter_storeDeleteAccountErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -379,9 +379,9 @@ func Test_iApiDeleteTaskCenter_storeDeleteAccountErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiDeleteTaskCenter_success(t *testing.T) {
+func Test_internalApiDeleteTaskCenter_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -393,9 +393,9 @@ func Test_iApiDeleteTaskCenter_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiAddMembers_storeGetMemberErr(t *testing.T) {
+func Test_internalApiAddMembers_storeGetMemberErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -407,9 +407,9 @@ func Test_iApiAddMembers_storeGetMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiAddMembers_insufficientPermissionErr(t *testing.T) {
+func Test_internalApiAddMembers_insufficientPermissionErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -421,9 +421,9 @@ func Test_iApiAddMembers_insufficientPermissionErr(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiAddMembers_storeGetMemberErr2(t *testing.T) {
+func Test_internalApiAddMembers_storeGetMemberErr2(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -438,9 +438,9 @@ func Test_iApiAddMembers_storeGetMemberErr2(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiAddMembers_storeAddMembersErr(t *testing.T) {
+func Test_internalApiAddMembers_storeAddMembersErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -456,9 +456,9 @@ func Test_iApiAddMembers_storeAddMembersErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiAddMembers_storeSetMembersActiveErr(t *testing.T) {
+func Test_internalApiAddMembers_storeSetMembersActiveErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -474,9 +474,9 @@ func Test_iApiAddMembers_storeSetMembersActiveErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiAddMembers_success(t *testing.T) {
+func Test_internalApiAddMembers_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -496,9 +496,9 @@ func Test_iApiAddMembers_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiRemoveMembers_storeGetMemberErr(t *testing.T) {
+func Test_internalApiRemoveMembers_storeGetMemberErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -510,9 +510,9 @@ func Test_iApiRemoveMembers_storeGetMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiRemoveMembers_insufficientPermissionErr(t *testing.T) {
+func Test_internalApiRemoveMembers_insufficientPermissionErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -524,9 +524,9 @@ func Test_iApiRemoveMembers_insufficientPermissionErr(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiRemoveMembers_owner_storeGetTotalOrgOwnerCountErr(t *testing.T) {
+func Test_internalApiRemoveMembers_owner_storeGetTotalOrgOwnerCountErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -539,9 +539,9 @@ func Test_iApiRemoveMembers_owner_storeGetTotalOrgOwnerCountErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiRemoveMembers_owner_storegetOwnerCountInSetErr(t *testing.T) {
+func Test_internalApiRemoveMembers_owner_storegetOwnerCountInSetErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -555,9 +555,9 @@ func Test_iApiRemoveMembers_owner_storegetOwnerCountInSetErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiRemoveMembers_owner_zeroOwnerCountErr(t *testing.T) {
+func Test_internalApiRemoveMembers_owner_zeroOwnerCountErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -571,9 +571,9 @@ func Test_iApiRemoveMembers_owner_zeroOwnerCountErr(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiRemoveMembers_admin_storegetOwnerCountInSetErr(t *testing.T) {
+func Test_internalApiRemoveMembers_admin_storegetOwnerCountInSetErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -586,9 +586,9 @@ func Test_iApiRemoveMembers_admin_storegetOwnerCountInSetErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiRemoveMembers_admin_insufficientPermissionErr(t *testing.T) {
+func Test_internalApiRemoveMembers_admin_insufficientPermissionErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -601,9 +601,9 @@ func Test_iApiRemoveMembers_admin_insufficientPermissionErr(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiRemoveMembers_storeSetMembersInactiveErr(t *testing.T) {
+func Test_internalApiRemoveMembers_storeSetMembersInactiveErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -617,9 +617,9 @@ func Test_iApiRemoveMembers_storeSetMembersInactiveErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiSetMemberDeleted_storeSetMemberDeletedErr(t *testing.T) {
+func Test_internalApiSetMemberDeleted_storeSetMemberDeletedErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -629,9 +629,9 @@ func Test_iApiSetMemberDeleted_storeSetMemberDeletedErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiSetMemberDeleted_success(t *testing.T) {
+func Test_internalApiSetMemberDeleted_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -641,9 +641,9 @@ func Test_iApiSetMemberDeleted_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiMemberIsOnlyOwner_storeMemberIsOnlyOwnerErr(t *testing.T) {
+func Test_internalApiMemberIsOnlyOwner_storeMemberIsOnlyOwnerErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -654,9 +654,9 @@ func Test_iApiMemberIsOnlyOwner_storeMemberIsOnlyOwnerErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiMemberIsOnlyOwner_success(t *testing.T) {
+func Test_internalApiMemberIsOnlyOwner_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -667,9 +667,9 @@ func Test_iApiMemberIsOnlyOwner_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiRenameMember_storeRenameMemberErr(t *testing.T) {
+func Test_internalApiRenameMember_storeRenameMemberErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -679,9 +679,9 @@ func Test_iApiRenameMember_storeRenameMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiUserCanRenameOrg_storeGetMemberErr(t *testing.T) {
+func Test_internalApiUserCanRenameOrg_storeGetMemberErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -692,9 +692,9 @@ func Test_iApiUserCanRenameOrg_storeGetMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_iApiUserCanRenameOrg_true(t *testing.T) {
+func Test_internalApiUserCanRenameOrg_true(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -705,9 +705,9 @@ func Test_iApiUserCanRenameOrg_true(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiUserCanRenameOrg_false(t *testing.T) {
+func Test_internalApiUserCanRenameOrg_false(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -718,9 +718,9 @@ func Test_iApiUserCanRenameOrg_false(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_iApiUserCanRenameOrg_invalidTaskCenterTypeErr(t *testing.T) {
+func Test_internalApiUserCanRenameOrg_invalidTaskCenterTypeErr(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 
@@ -729,9 +729,9 @@ func Test_iApiUserCanRenameOrg_invalidTaskCenterTypeErr(t *testing.T) {
 	assert.Equal(t, invalidTaskCenterTypeErr, err)
 }
 
-func Test_iApiRenameMember_success(t *testing.T) {
+func Test_internalApiRenameMember_success(t *testing.T) {
 	store := &mockStore{}
-	iApi := newSingularInternalApi(store, NewLog(nil))
+	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()

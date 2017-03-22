@@ -4,7 +4,7 @@ package tree
 //	. "bitbucket.org/robsix/task_center/misc"
 //)
 //
-//func newSqlStore() internalStore {
+//func newSqlStore() store {
 //	return &sqlStore{}
 //}
 //
@@ -31,11 +31,15 @@ package tree
 //
 //}
 //
+//func (s *sqlStore) setMembersActive(shard int, org Id, members []*NamedEntity) error {
+//
+//}
+//
 //func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) (int, error) {
 //
 //}
 //
-//func (s *sqlStore) getOwnerCountInRemoveSet(shard int, org Id, members []Id) (int, error) {
+//func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) (int, error) {
 //
 //}
 //
@@ -47,7 +51,7 @@ package tree
 //
 //}
 //
-//func (s *sqlStore) setMemberInactiveAndDeleted(shard int, org Id, member Id) error {
+//func (s *sqlStore) setMemberDeleted(shard int, org Id, member Id) error {
 //
 //}
 //

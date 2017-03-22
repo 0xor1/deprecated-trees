@@ -11,7 +11,7 @@ const (
 	Reader = role("reader")
 )
 
-type InternalApi interface {
+type InternalApiClient interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool
 	CreatePersonalTaskCenter(region string, user Id) (int, error)
@@ -25,7 +25,7 @@ type InternalApi interface {
 	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
 }
 
-type SingularInternalApi interface {
+type InternalApi interface {
 	CreatePersonalTaskCenter(user Id) (int, error)
 	CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error)
 	DeleteTaskCenter(shard int, account, owner Id) (public error, private error)
