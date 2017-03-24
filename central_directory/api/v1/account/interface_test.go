@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func Test_NewSqlApi_success(t *testing.T) {
-	api := NewSqlApi(&mockInternalRegionClient{}, &mockLinkMailer{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, &isql.MockDB{}, &isql.MockDB{}, NewLog(nil))
+func Test_NewApi_success(t *testing.T) {
+	api := NewApi(&mockInternalRegionClient{}, &mockLinkMailer{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, &isql.MockDB{}, &isql.MockDB{}, NewLog(nil))
 	assert.NotNil(t, api)
 }
 
@@ -31,5 +31,5 @@ func Test_NewEmailLinkMailer_notImplementedPanic(t *testing.T) {
 		err := recover().(error)
 		assert.Equal(t, NotImplementedErr, err)
 	}()
-	NewEmailLinkMailer()
+	NewSparkPostLinkMailer()
 }

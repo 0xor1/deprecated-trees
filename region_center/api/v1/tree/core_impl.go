@@ -120,28 +120,32 @@ type internalApi struct {
 }
 
 func (a *internalApi) CreatePersonalTaskCenter(user Id) (int, error) {
-	shard, err := a.store.createTaskSet(&taskSet{
+	shard, err := a.store.createAbstractTask(&abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: user,
 				},
 			},
+			Org: user,
 			Created: time.Now().UTC(),
+			IsAbstractTask: true,
 		},
 	})
 	return shard, a.log.InfoErr(err)
 }
 
 func (a *internalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
-	shard, err := a.store.createTaskSet(&taskSet{
+	shard, err := a.store.createAbstractTask(&abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: org,
 				},
 			},
+			Org: org,
 			Created: time.Now().UTC(),
+			IsAbstractTask: true,
 		},
 	})
 	if err != nil {
@@ -283,7 +287,7 @@ func (a *internalApi) UserCanRenameOrg(shard int, org, user Id) (bool, error) {
 type role string
 
 type store interface {
-	createTaskSet(*taskSet) (int, error)
+	createAbstractTask(*abstractTask) (int, error)
 	createMember(shard int, org Id, member *member) error
 	deleteAccount(shard int, account Id) error
 	getMember(shard int, org, member Id) (*member, error)
@@ -299,6 +303,7 @@ type store interface {
 
 type task struct {
 	NamedEntity
+	Org		   Id        `json:"org"`
 	User               Id        `json:"user"`
 	TotalRemainingTime uint64    `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64    `json:"totalLoggedTime"`
@@ -306,17 +311,18 @@ type task struct {
 	FileCount          uint64    `json:"fileCount"`
 	FileSize           uint64    `json:"fileSize"`
 	Created            time.Time `json:"created"`
+	IsAbstractTask     bool      `json:"isAbstractTask"`
 }
 
-type taskSet struct {
+type abstractTask struct {
 	task
 	MinimumRemainingTime uint64 `json:"minimumRemainingTime"`
 	IsParallel           bool   `json:"isParallel"`
-	ChildCount           uint32 `json:"childCount"`
+	ChildCount           uint16 `json:"childCount"`
 	TaskCount            uint64 `json:"taskCount"`
 	SubFileCount         uint64 `json:"subFileCount"`
 	SubFileSize          uint64 `json:"subFileSize"`
-	ArchivedChildCount   uint32 `json:"archivedChildCount"`
+	ArchivedChildCount   uint64 `json:"archivedChildCount"`
 	ArchivedTaskCount    uint64 `json:"archivedTaskCount"`
 	ArchivedSubFileCount uint64 `json:"archivedSubFileCount"`
 	ArchivedSubFileSize  uint64 `json:"archivedSubFileSize"`

@@ -214,19 +214,21 @@ func Test_newInternalApi_success(t *testing.T) {
 	assert.NotNil(t, iApi)
 }
 
-func Test_internalApiCreatePersonalTaskCenter_storeCreateTaskSetErr(t *testing.T) {
+func Test_internalApiCreatePersonalTaskCenter_storeCreateAbstractTaskErr(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
-	store.On("createTaskSet", &taskSet{
+	store.On("createAbstractTask", &abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: myId,
 				},
 			},
+			Org: myId,
 			Created: nowTestVal,
+			IsAbstractTask: true,
 		},
 	}).Return(0, testErr)
 
@@ -240,14 +242,16 @@ func Test_internalApiCreatePersonalTaskCenter_success(t *testing.T) {
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
-	store.On("createTaskSet", &taskSet{
+	store.On("createAbstractTask", &abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: myId,
 				},
 			},
+			Org: myId,
 			Created: nowTestVal,
+			IsAbstractTask: true,
 		},
 	}).Return(5, nil)
 
@@ -256,20 +260,22 @@ func Test_internalApiCreatePersonalTaskCenter_success(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func Test_internalApiCreateOrgTaskCenter_storeCreateTaskSetErr(t *testing.T) {
+func Test_internalApiCreateOrgTaskCenter_storeCreateAbstractTaskErr(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("createTaskSet", &taskSet{
+	store.On("createAbstractTask", &abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: orgId,
 				},
 			},
+			Org: orgId,
 			Created: nowTestVal,
+			IsAbstractTask: true,
 		},
 	}).Return(0, testErr)
 
@@ -284,14 +290,16 @@ func Test_internalApiCreateOrgTaskCenter_storeCreateMemberErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("createTaskSet", &taskSet{
+	store.On("createAbstractTask", &abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: orgId,
 				},
 			},
+			Org: orgId,
 			Created: nowTestVal,
+			IsAbstractTask: true,
 		},
 	}).Return(5, nil)
 	store.On("createMember", 5, orgId, &member{
@@ -315,14 +323,16 @@ func Test_internalApiCreateOrgTaskCenter_success(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("createTaskSet", &taskSet{
+	store.On("createAbstractTask", &abstractTask{
 		task: task{
 			NamedEntity: NamedEntity{
 				Entity: Entity{
 					Id: orgId,
 				},
 			},
+			Org: orgId,
 			Created: nowTestVal,
+			IsAbstractTask: true,
 		},
 	}).Return(5, nil)
 	store.On("createMember", 5, orgId, &member{
@@ -800,7 +810,7 @@ type mockStore struct {
 	mock.Mock
 }
 
-func (m *mockStore) createTaskSet(ts *taskSet) (int, error) {
+func (m *mockStore) createAbstractTask(ts *abstractTask) (int, error) {
 	ts.Created = nowTestVal
 	args := m.Called(ts)
 	return args.Int(0), args.Error(1)

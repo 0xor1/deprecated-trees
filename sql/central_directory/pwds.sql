@@ -20,3 +20,4 @@ GRANT SELECT ON pwds.* TO 'tc_cd_pwds'@'%';
 GRANT INSERT ON pwds.* TO 'tc_cd_pwds'@'%';
 GRANT UPDATE ON pwds.* TO 'tc_cd_pwds'@'%';
 GRANT DELETE ON pwds.* TO 'tc_cd_pwds'@'%';
+GRANT EXECUTE ON pwds.* TO 'tc_cd_pwds'@'%';
