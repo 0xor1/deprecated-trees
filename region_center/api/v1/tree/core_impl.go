@@ -284,7 +284,7 @@ func (a *internalApi) UserCanRenameOrg(shard int, org, user Id) (bool, error) {
 	return false, invalidTaskCenterTypeErr
 }
 
-type role string
+type role uint8
 
 type store interface {
 	createAbstractTask(*abstractTask) (int, error)

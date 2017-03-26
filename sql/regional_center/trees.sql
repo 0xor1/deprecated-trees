@@ -12,8 +12,8 @@ CREATE TABLE members(
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
     isActive BOOL NOT NULL,
     isDeleted BOOL NOT NULL,
-    role VARCHAR(10) NOT NULL,
-    PRIMARY KEY (org, isActive, name),
+    role TINYINT UNSIGNED NOT NULL,
+    PRIMARY KEY (org, isActive, role, name),
     UNIQUE INDEX (org, id)
 );
 
@@ -49,6 +49,19 @@ CREATE TABLE abstractTasks(
 	archivedSubFileSize BIGINT UNSIGNED NOT NULL,
     PRIMARY KEY (org, id)
 );
+
+DROP TABLE IF EXISTS structure;
+CREATE TABLE structure(
+	org BINARY(16) NOT NULL,
+	node BINARY(16) NOT NULL,
+	parent BINARY(16) NOT NULL,
+    firstChild BINARY(16) NULL,
+    nextSibling BINARY(16) NULL,
+    nodeArchived DATETIME NULL,
+    PRIMARY KEY (org, node),
+    UNIQUE INDEX (org, parent, nodeArchived, node)
+);
+
 
 
 DROP USER IF EXISTS 'tc_rc_trees'@'%';

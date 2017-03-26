@@ -5,10 +5,10 @@ import (
 )
 
 const (
-	Owner  = role("owner")
-	Admin  = role("admin")
-	Writer = role("writer")
-	Reader = role("reader")
+	Owner  = role(0)
+	Admin  = role(1)
+	Writer = role(2)
+	Reader = role(3)
 )
 
 type InternalApiClient interface {
