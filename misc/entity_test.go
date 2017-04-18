@@ -3,6 +3,7 @@ package misc
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func Test_NewId(t *testing.T) {
@@ -32,4 +33,21 @@ func Test_IdCopy(t *testing.T) {
 	([]byte(id2))[0] = []byte(id2)[1]
 	([]byte(id2))[1] = tmp
 	assert.False(t, id1.Equal(id2))
+}
+
+func Test_NewEntity(t *testing.T) {
+	e, err := NewEntity()
+	now := time.Now().UTC()
+	assert.Nil(t, err)
+	assert.NotNil(t, e.Id)
+	assert.True(t, now.Add(-1*time.Millisecond).Before(e.Created) && now.Add(1*time.Millisecond).After(e.Created))
+}
+
+func Test_NewNamedEntity(t *testing.T) {
+	e, err := NewNamedEntity("ali")
+	now := time.Now().UTC()
+	assert.Nil(t, err)
+	assert.NotNil(t, e.Id)
+	assert.True(t, now.Add(-1*time.Millisecond).Before(e.Created) && now.Add(1*time.Millisecond).After(e.Created))
+	assert.Equal(t, "ali", e.Name)
 }

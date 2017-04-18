@@ -27,7 +27,7 @@ var (
 	onlyOwnerMemberErr                    = &Error{Code: 18, Msg: "can't delete user who is the only owner of an org"}
 )
 
-func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, newId GenNewId, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
+func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, newNamedEntity GenNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
 	if store == nil {
 		NilCriticalParamPanic("store")
 	}
@@ -37,8 +37,8 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 	if linkMailer == nil {
 		NilCriticalParamPanic("linkMailer")
 	}
-	if newId == nil {
-		NilCriticalParamPanic("newId")
+	if newNamedEntity == nil {
+		NilCriticalParamPanic("newNamedEntity")
 	}
 	if cryptoHelper == nil {
 		NilCriticalParamPanic("cryptoHelper")
@@ -47,25 +47,25 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 		NilCriticalParamPanic("log")
 	}
 	return &api{
-		store:             store,
+		store:                store,
 		internalRegionClient: internalRegionClient,
-		linkMailer:        linkMailer,
-		newId:             newId,
-		cryptoHelper:      cryptoHelper,
-		nameRegexMatchers: append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
-		pwdRegexMatchers:  append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
-		nameMinRuneCount:  nameMinRuneCount,
-		nameMaxRuneCount:  nameMaxRuneCount,
-		pwdMinRuneCount:   pwdMinRuneCount,
-		pwdMaxRuneCount:   pwdMaxRuneCount,
-		maxGetEntityCount: maxGetEntityCount,
-		cryptoCodeLen:     cryptoCodeLen,
-		saltLen:           saltLen,
-		scryptN:           scryptN,
-		scryptR:           scryptR,
-		scryptP:           scryptP,
-		scryptKeyLen:      scryptKeyLen,
-		log:               log,
+		linkMailer:           linkMailer,
+		newNamedEntity:       newNamedEntity,
+		cryptoHelper:         cryptoHelper,
+		nameRegexMatchers:    append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
+		pwdRegexMatchers:     append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		nameMinRuneCount:     nameMinRuneCount,
+		nameMaxRuneCount:     nameMaxRuneCount,
+		pwdMinRuneCount:      pwdMinRuneCount,
+		pwdMaxRuneCount:      pwdMaxRuneCount,
+		maxGetEntityCount:    maxGetEntityCount,
+		cryptoCodeLen:        cryptoCodeLen,
+		saltLen:              saltLen,
+		scryptN:              scryptN,
+		scryptR:              scryptR,
+		scryptP:              scryptP,
+		scryptKeyLen:         scryptKeyLen,
+		log:                  log,
 	}
 }
 
@@ -73,7 +73,7 @@ type api struct {
 	store                store
 	internalRegionClient internalRegionClient
 	linkMailer           linkMailer
-	newId                GenNewId
+	newNamedEntity       GenNamedEntity
 	cryptoHelper         CryptoHelper
 	nameRegexMatchers    []string
 	pwdRegexMatchers     []string
@@ -148,7 +148,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.ErrorErr(err)
 	}
 
-	userId, err := a.newId()
+	userCore, err := a.newNamedEntity(name)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -157,16 +157,10 @@ func (a *api) Register(name, email, pwd, region string) error {
 		&fullUserInfo{
 			me: me{
 				user: user{
-					NamedEntity: NamedEntity{
-						Entity: Entity{
-							Id: userId,
-						},
-						Name: name,
-					},
-					Region:  region,
-					Shard:   -1,
-					Created: time.Now().UTC(),
-					IsUser:  true,
+					NamedEntity: *userCore,
+					Region:      region,
+					Shard:       -1,
+					IsUser:      true,
 				},
 				Email: email,
 			},
@@ -734,22 +728,16 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		}
 	}
 
-	newOrgId, err := a.newId()
+	orgCore, err := a.newNamedEntity(name)
 	if err != nil {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
 	org := &org{
-		NamedEntity: NamedEntity{
-			Entity: Entity{
-				Id: newOrgId,
-			},
-			Name: name,
-		},
-		Region:  region,
-		Shard:   -1,
-		Created: time.Now().UTC(),
-		IsUser:  false,
+		NamedEntity: *orgCore,
+		Region:      region,
+		Shard:       -1,
+		IsUser:      false,
 	}
 	if err := a.store.createOrgAndMembership(org, myId); err != nil {
 		return nil, a.log.ErrorUserErr(myId, err)
@@ -763,9 +751,9 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
 	}
 
-	shard, err := a.internalRegionClient.CreateOrgTaskCenter(region, newOrgId, myId, owner.Name)
+	shard, err := a.internalRegionClient.CreateOrgTaskCenter(region, orgCore.Id, myId, owner.Name)
 	if err != nil {
-		if err := a.store.deleteOrgAndAllAssociatedMemberships(newOrgId); err != nil {
+		if err := a.store.deleteOrgAndAllAssociatedMemberships(orgCore.Id); err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
 		}
 		return nil, a.log.ErrorUserErr(myId, err)
@@ -1004,11 +992,10 @@ type linkMailer interface {
 
 type account struct {
 	NamedEntity
-	Created   time.Time `json:"created"`
-	Region    string    `json:"region"`
-	NewRegion *string   `json:"newRegion,omitempty"`
-	Shard     int       `json:"shard"`
-	IsUser    bool      `json:"isUser"`
+	Region    string  `json:"region"`
+	NewRegion *string `json:"newRegion,omitempty"`
+	Shard     int     `json:"shard"`
+	IsUser    bool    `json:"isUser"`
 }
 
 type org account

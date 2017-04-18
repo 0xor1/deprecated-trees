@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	. "github.com/pborman/uuid"
+	"time"
 )
 
 type Id UUID
@@ -25,7 +26,21 @@ func (id Id) Copy() Id {
 }
 
 type Entity struct {
-	Id Id `json:"id"`
+	Id      Id        `json:"id"`
+	Created time.Time `json:"created"`
+}
+
+type GenEntity func() (*Entity, error)
+
+func NewEntity() (*Entity, error) {
+	id, err := NewId()
+	if err != nil {
+		return nil, err
+	}
+	return &Entity{
+		Id:      id,
+		Created: time.Now().UTC(),
+	}, nil
 }
 
 type NamedEntity struct {
@@ -33,7 +48,20 @@ type NamedEntity struct {
 	Name string `json:"name"`
 }
 
-type GenNewId func() (Id, error)
+type GenNamedEntity func(name string) (*NamedEntity, error)
+
+func NewNamedEntity(name string) (*NamedEntity, error) {
+	entity, err := NewEntity()
+	if err != nil {
+		return nil, err
+	}
+	return &NamedEntity{
+		Entity: *entity,
+		Name:   name,
+	}, nil
+}
+
+type GenId func() (Id, error)
 
 //returns version 1 uuid as a byte slice
 func NewId() (Id, error) {

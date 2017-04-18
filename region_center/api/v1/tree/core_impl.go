@@ -127,8 +127,8 @@ func (a *internalApi) CreatePersonalTaskCenter(user Id) (int, error) {
 					Id: user,
 				},
 			},
-			Org: user,
-			Created: time.Now().UTC(),
+			Org:            user,
+			Created:        time.Now().UTC(),
 			IsAbstractTask: true,
 		},
 	})
@@ -143,8 +143,8 @@ func (a *internalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) (int,
 					Id: org,
 				},
 			},
-			Org: org,
-			Created: time.Now().UTC(),
+			Org:            org,
+			Created:        time.Now().UTC(),
 			IsAbstractTask: true,
 		},
 	})
@@ -303,7 +303,7 @@ type store interface {
 
 type task struct {
 	NamedEntity
-	Org		   Id        `json:"org"`
+	Org                Id        `json:"org"`
 	User               Id        `json:"user"`
 	TotalRemainingTime uint64    `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64    `json:"totalLoggedTime"`
@@ -316,24 +316,26 @@ type task struct {
 
 type abstractTask struct {
 	task
-	MinimumRemainingTime uint64 `json:"minimumRemainingTime"`
-	IsParallel           bool   `json:"isParallel"`
-	ChildCount           uint16 `json:"childCount"`
-	TaskCount            uint64 `json:"taskCount"`
-	SubFileCount         uint64 `json:"subFileCount"`
-	SubFileSize          uint64 `json:"subFileSize"`
-	ArchivedChildCount   uint64 `json:"archivedChildCount"`
-	ArchivedTaskCount    uint64 `json:"archivedTaskCount"`
-	ArchivedSubFileCount uint64 `json:"archivedSubFileCount"`
-	ArchivedSubFileSize  uint64 `json:"archivedSubFileSize"`
+	MinimumRemainingTime    uint64 `json:"minimumRemainingTime"`
+	IsParallel              bool   `json:"isParallel"`
+	ChildCount              uint64 `json:"childCount"`
+	DescendantCount         uint64 `json:"descendantCount"`
+	LeafCount               uint64 `json:"leafCount"`
+	SubFileCount            uint64 `json:"subFileCount"`
+	SubFileSize             uint64 `json:"subFileSize"`
+	ArchivedChildCount      uint64 `json:"archivedChildCount"`
+	ArchivedDescendantCount uint64 `json:"archivedDescendantCount"`
+	ArchivedLeafCount       uint64 `json:"archivedLeafCount"`
+	ArchivedSubFileCount    uint64 `json:"archivedSubFileCount"`
+	ArchivedSubFileSize     uint64 `json:"archivedSubFileSize"`
 }
 
 type member struct {
 	NamedEntity
-	AccessTask         Id         `json:"accessTask"`
-	TotalRemainingTime uint64     `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64     `json:"totalLoggedTime"`
-	IsActive	   bool       `json:"isActive"`
-	IsDeleted	   bool       `json:"isDeleted"`
-	Role               role       `json:"role"`
+	AccessTask         Id     `json:"accessTask"`
+	TotalRemainingTime uint64 `json:"totalRemainingTime"`
+	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+	IsActive           bool   `json:"isActive"`
+	IsDeleted          bool   `json:"isDeleted"`
+	Role               role   `json:"role"`
 }

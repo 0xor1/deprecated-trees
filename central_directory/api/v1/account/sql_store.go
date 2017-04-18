@@ -49,7 +49,6 @@ func (s *sqlStore) getAccountByCiName(name string) (*account, error) {
 var query_createUser_accounts = `CALL createUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 var query_createUser_pwds = `INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?);`
 
-
 func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	id := []byte(user.Id)
 	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, true, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {

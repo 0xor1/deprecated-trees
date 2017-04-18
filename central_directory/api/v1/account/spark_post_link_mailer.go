@@ -1,10 +1,8 @@
 package account
 
-import (
+import ()
 
-)
-
-const(
+const (
 	sparkPostApiKey = "e38dfdcfead6c487718c658e67504102d25077e6"
 )
 
