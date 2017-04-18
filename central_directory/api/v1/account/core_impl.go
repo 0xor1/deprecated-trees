@@ -15,7 +15,7 @@ var (
 	invalidActivationAttemptErr           = &Error{Code: 6, Msg: "invalid activation attempt"}
 	invalidResetPwdAttemptErr             = &Error{Code: 7, Msg: "invalid reset password attempt"}
 	invalidNewEmailConfirmationAttemptErr = &Error{Code: 8, Msg: "invalid new email confirmation attempt"}
-	nameOrPwdIncorrectErr                 = &Error{Code: 9, Msg: "Name or password incorrect"}
+	invalidNameOrPwdErr                   = &Error{Code: 9, Msg: "invalid name or password"}
 	incorrectPwdErr                       = &Error{Code: 10, Msg: "password incorrect"}
 	userNotActivatedErr                   = &Error{Code: 11, Msg: "user not activated"}
 	emailAlreadyInUseErr                  = &Error{Code: 12, Msg: "email already in use"}
@@ -247,7 +247,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 		return nil, a.log.ErrorErr(err)
 	}
 	if user == nil {
-		return nil, a.log.InfoErr(nameOrPwdIncorrectErr)
+		return nil, a.log.InfoErr(invalidNameOrPwdErr)
 	}
 
 	pwdInfo, err := a.store.getPwdInfo(user.Id)
@@ -261,7 +261,7 @@ func (a *api) Authenticate(name, pwdTry string) (Id, error) {
 	}
 
 	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-		return nil, a.log.InfoErr(nameOrPwdIncorrectErr)
+		return nil, a.log.InfoErr(invalidNameOrPwdErr)
 	}
 
 	if !user.isActivated() {

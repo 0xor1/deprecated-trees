@@ -581,7 +581,7 @@ func Test_api_Authenticate_storeGetUserByNameNilUser(t *testing.T) {
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
-	assert.Equal(t, nameOrPwdIncorrectErr, err)
+	assert.Equal(t, invalidNameOrPwdErr, err)
 }
 
 func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
@@ -625,7 +625,7 @@ func Test_api_Authenticate_incorrectPwdErr(t *testing.T) {
 
 	id, err := api.Authenticate("name", "P@ss-W0rd")
 	assert.Nil(t, id)
-	assert.Equal(t, nameOrPwdIncorrectErr, err)
+	assert.Equal(t, invalidNameOrPwdErr, err)
 }
 
 func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) {
