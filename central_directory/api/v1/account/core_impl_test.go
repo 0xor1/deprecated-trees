@@ -251,7 +251,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 	activationCode := "test"
 	cryptoHelper.On("UrlSafeString", 40).Return(activationCode, nil)
 	userCore, _ := NewNamedEntity("ali")
-	userCore.Created = timeNowReplacement
+	userCore.CreatedOn = timeNowReplacement
 	miscFuncs.On("newNamedEntity", "ali").Return(userCore, nil)
 	store.On(
 		"createUser",
@@ -294,7 +294,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 	activationCode := "test"
 	cryptoHelper.On("UrlSafeString", 40).Return(activationCode, nil)
 	userCore, _ := NewNamedEntity("ali")
-	userCore.Created = timeNowReplacement
+	userCore.CreatedOn = timeNowReplacement
 	miscFuncs.On("newNamedEntity", "ali").Return(userCore, nil)
 	store.On(
 		"createUser",
@@ -338,7 +338,7 @@ func Test_api_Register_success(t *testing.T) {
 	activationCode := "test"
 	cryptoHelper.On("UrlSafeString", 40).Return(activationCode, nil)
 	userCore, _ := NewNamedEntity("ali")
-	userCore.Created = timeNowReplacement
+	userCore.CreatedOn = timeNowReplacement
 	miscFuncs.On("newNamedEntity", "ali").Return(userCore, nil)
 	store.On(
 		"createUser",
@@ -2010,7 +2010,7 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2032,7 +2032,7 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2055,7 +2055,7 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2078,7 +2078,7 @@ func Test_api_CreateOrg_internalRegionClientCreateOrgTaskCenterErr(t *testing.T)
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2106,7 +2106,7 @@ func Test_api_CreateOrg_deleteOrgAndAllAssociatedMembershipsErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2134,7 +2134,7 @@ func Test_api_CreateOrg_updateOrgErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2168,7 +2168,7 @@ func Test_api_CreateOrg_success(t *testing.T) {
 
 	myId, _ := NewId()
 	orgCore, _ := NewNamedEntity("newOrg")
-	orgCore.Created = timeNowReplacement
+	orgCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
 	miscFuncs.On("newNamedEntity", "newOrg").Return(orgCore, nil)
@@ -2774,7 +2774,7 @@ func (m *mockStore) getAccountByCiName(name string) (*account, error) {
 }
 
 func (m *mockStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
-	user.Created = timeNowReplacement
+	user.CreatedOn = timeNowReplacement
 	args := m.Called(user, pwdInfo)
 	return args.Error(0)
 }
@@ -2835,7 +2835,7 @@ func (m *mockStore) getUsers(ids []Id) ([]*user, error) {
 }
 
 func (m *mockStore) createOrgAndMembership(org *org, user Id) error {
-	org.Created = timeNowReplacement
+	org.CreatedOn = timeNowReplacement
 	args := m.Called(org, user)
 	return args.Error(0)
 }

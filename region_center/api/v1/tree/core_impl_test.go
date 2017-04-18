@@ -811,7 +811,7 @@ type mockStore struct {
 }
 
 func (m *mockStore) createAbstractTask(ts *abstractTask) (int, error) {
-	ts.Created = nowTestVal
+	ts.CreatedOn = nowTestVal
 	args := m.Called(ts)
 	return args.Int(0), args.Error(1)
 }

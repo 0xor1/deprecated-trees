@@ -44,7 +44,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1 := &fullUserInfo{}
 	user1.Id, _ = NewId()
 	user1.Name = "ali"
-	user1.Created = time.Now().UTC()
+	user1.CreatedOn = time.Now().UTC()
 	user1.Region = "use"
 	user1.NewRegion = nil
 	user1.Shard = 3
@@ -74,7 +74,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1Dup1, err := store.getAccountByCiName("ali")
 	assert.Equal(t, user1.Id, user1Dup1.Id)
 	assert.Equal(t, user1.Name, user1Dup1.Name)
-	assert.Equal(t, user1.Created.Unix(), user1Dup1.Created.Unix())
+	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup1.CreatedOn.Unix())
 	assert.Equal(t, user1.Region, user1Dup1.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup1.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup1.Shard)
@@ -84,7 +84,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1Dup2, err := store.getUserByCiName("ali")
 	assert.Equal(t, user1.Id, user1Dup2.Id)
 	assert.Equal(t, user1.Name, user1Dup2.Name)
-	assert.Equal(t, user1.Created.Unix(), user1Dup2.Created.Unix())
+	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup2.CreatedOn.Unix())
 	assert.Equal(t, user1.Region, user1Dup2.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup2.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup2.Shard)
@@ -100,7 +100,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1Dup3, err := store.getUserByEmail("ali@ali.com")
 	assert.Equal(t, user1.Id, user1Dup3.Id)
 	assert.Equal(t, user1.Name, user1Dup3.Name)
-	assert.Equal(t, user1.Created.Unix(), user1Dup3.Created.Unix())
+	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup3.CreatedOn.Unix())
 	assert.Equal(t, user1.Region, user1Dup3.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup3.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup3.Shard)
@@ -116,7 +116,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1Dup4, err := store.getUserById(user1.Id)
 	assert.Equal(t, user1.Id, user1Dup4.Id)
 	assert.Equal(t, user1.Name, user1Dup4.Name)
-	assert.Equal(t, user1.Created.Unix(), user1Dup4.Created.Unix())
+	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup4.CreatedOn.Unix())
 	assert.Equal(t, user1.Region, user1Dup4.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup4.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup4.Shard)
@@ -147,7 +147,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1Dup5, err := store.getUserByEmail("bob@bob.com")
 	assert.Equal(t, user1.Id, user1Dup5.Id)
 	assert.Equal(t, user1.Name, user1Dup5.Name)
-	assert.Equal(t, user1.Created.Unix(), user1Dup5.Created.Unix())
+	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup5.CreatedOn.Unix())
 	assert.Equal(t, user1.Region, user1Dup5.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup5.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup5.Shard)
@@ -182,7 +182,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, len(users1))
 	assert.Equal(t, user1.Id, users1[0].Id)
 	assert.Equal(t, user1.Name, users1[0].Name)
-	assert.Equal(t, user1.Created.Unix(), users1[0].Created.Unix())
+	assert.Equal(t, user1.CreatedOn.Unix(), users1[0].CreatedOn.Unix())
 	assert.Equal(t, user1.Region, users1[0].Region)
 	assert.Equal(t, user1.NewRegion, users1[0].NewRegion)
 	assert.Equal(t, user1.Shard, users1[0].Shard)
@@ -192,7 +192,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	org1 := &org{}
 	org1.Id, _ = NewId()
 	org1.Name = "org1"
-	org1.Created = time.Now().UTC()
+	org1.CreatedOn = time.Now().UTC()
 	org1.Region = "use"
 	org1.NewRegion = nil
 	org1.Shard = 4
@@ -203,7 +203,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	org1Dup1, err := store.getOrgById(org1.Id)
 	assert.Equal(t, org1.Id, org1Dup1.Id)
 	assert.Equal(t, org1.Name, org1Dup1.Name)
-	assert.Equal(t, org1.Created.Unix(), org1Dup1.Created.Unix())
+	assert.Equal(t, org1.CreatedOn.Unix(), org1Dup1.CreatedOn.Unix())
 	assert.Equal(t, org1.Region, org1Dup1.Region)
 	assert.Equal(t, org1.NewRegion, org1Dup1.NewRegion)
 	assert.Equal(t, org1.Shard, org1Dup1.Shard)
@@ -218,7 +218,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, len(orgs1))
 	assert.Equal(t, org1.Id, orgs1[0].Id)
 	assert.Equal(t, org1.Name, orgs1[0].Name)
-	assert.Equal(t, org1.Created.Unix(), orgs1[0].Created.Unix())
+	assert.Equal(t, org1.CreatedOn.Unix(), orgs1[0].CreatedOn.Unix())
 	assert.Equal(t, org1.Region, orgs1[0].Region)
 	assert.Equal(t, org1.NewRegion, orgs1[0].NewRegion)
 	assert.Equal(t, org1.Shard, orgs1[0].Shard)
@@ -231,7 +231,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, total)
 	assert.Equal(t, org1.Id, orgs2[0].Id)
 	assert.Equal(t, org1.Name, orgs2[0].Name)
-	assert.Equal(t, org1.Created.Unix(), orgs2[0].Created.Unix())
+	assert.Equal(t, org1.CreatedOn.Unix(), orgs2[0].CreatedOn.Unix())
 	assert.Equal(t, org1.Region, orgs2[0].Region)
 	assert.Equal(t, org1.NewRegion, orgs2[0].NewRegion)
 	assert.Equal(t, org1.Shard, orgs2[0].Shard)
@@ -241,7 +241,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user2 := &fullUserInfo{}
 	user2.Id, _ = NewId()
 	user2.Name = "cat"
-	user2.Created = time.Now().UTC()
+	user2.CreatedOn = time.Now().UTC()
 	user2.Region = "use"
 	user2.NewRegion = nil
 	user2.Shard = 3
@@ -258,7 +258,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user3 := &fullUserInfo{}
 	user3.Id, _ = NewId()
 	user3.Name = "dan"
-	user3.Created = time.Now().UTC()
+	user3.CreatedOn = time.Now().UTC()
 	user3.Region = "use"
 	user3.NewRegion = nil
 	user3.Shard = 3
@@ -275,7 +275,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	org2 := &org{}
 	org2.Id, _ = NewId()
 	org2.Name = "org2"
-	org2.Created = time.Now().UTC()
+	org2.CreatedOn = time.Now().UTC()
 	org2.Region = "use"
 	org2.NewRegion = nil
 	org2.Shard = 4
@@ -291,7 +291,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, total)
 	assert.Equal(t, org2.Id, orgs3[0].Id)
 	assert.Equal(t, org2.Name, orgs3[0].Name)
-	assert.Equal(t, org2.Created.Unix(), orgs3[0].Created.Unix())
+	assert.Equal(t, org2.CreatedOn.Unix(), orgs3[0].CreatedOn.Unix())
 	assert.Equal(t, org2.Region, orgs3[0].Region)
 	assert.Equal(t, org2.NewRegion, orgs3[0].NewRegion)
 	assert.Equal(t, org2.Shard, orgs3[0].Shard)

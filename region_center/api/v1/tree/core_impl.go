@@ -2,7 +2,6 @@ package tree
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
-	"time"
 )
 
 var (
@@ -120,15 +119,14 @@ type internalApi struct {
 }
 
 func (a *internalApi) CreatePersonalTaskCenter(user Id) (int, error) {
+	taskCore, err := NewNamedEntity("")
+	if err != nil {
+		return 0, err
+	}
 	shard, err := a.store.createAbstractTask(&abstractTask{
 		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: user,
-				},
-			},
+			NamedEntity:    *taskCore,
 			Org:            user,
-			Created:        time.Now().UTC(),
 			IsAbstractTask: true,
 		},
 	})
@@ -136,15 +134,14 @@ func (a *internalApi) CreatePersonalTaskCenter(user Id) (int, error) {
 }
 
 func (a *internalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
+	taskCore, err := NewNamedEntity("")
+	if err != nil {
+		return 0, err
+	}
 	shard, err := a.store.createAbstractTask(&abstractTask{
 		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: org,
-				},
-			},
+			NamedEntity:    *taskCore,
 			Org:            org,
-			Created:        time.Now().UTC(),
 			IsAbstractTask: true,
 		},
 	})
@@ -303,15 +300,14 @@ type store interface {
 
 type task struct {
 	NamedEntity
-	Org                Id        `json:"org"`
-	User               Id        `json:"user"`
-	TotalRemainingTime uint64    `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64    `json:"totalLoggedTime"`
-	ChatCount          uint64    `json:"chatCount"`
-	FileCount          uint64    `json:"fileCount"`
-	FileSize           uint64    `json:"fileSize"`
-	Created            time.Time `json:"created"`
-	IsAbstractTask     bool      `json:"isAbstractTask"`
+	Org                Id     `json:"org"`
+	User               Id     `json:"user"`
+	TotalRemainingTime uint64 `json:"totalRemainingTime"`
+	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+	ChatCount          uint64 `json:"chatCount"`
+	FileCount          uint64 `json:"fileCount"`
+	FileSize           uint64 `json:"fileSize"`
+	IsAbstractTask     bool   `json:"isAbstractTask"`
 }
 
 type abstractTask struct {

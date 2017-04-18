@@ -27,7 +27,7 @@ var query_createAbstractTask = `CALL createAbstractTask(?, ?, ?, ?)`
 
 func (s *sqlStore) createAbstractTask(at *abstractTask) (int, error) {
 	shardId := rand.Intn(len(s.shards))
-	_, err := s.shards[shardId].Exec(query_createAbstractTask, at.Org, nil, at.Org, at.Id, at.Name, at.User, at.TotalRemainingTime, at.TotalLoggedTime, at.ChatCount, at.FileCount, at.FileSize, at.Created, true, at.MinimumRemainingTime, at.IsParallel, at.ChildCount, at.DescendantCount, at.LeafCount, at.SubFileCount, at.SubFileSize, at.ArchivedChildCount, at.ArchivedDescendantCount, at.ArchivedLeafCount, at.ArchivedSubFileCount, at.ArchivedSubFileSize)
+	_, err := s.shards[shardId].Exec(query_createAbstractTask, at.Org, nil, at.Org, at.Id, at.Name, at.User, at.TotalRemainingTime, at.TotalLoggedTime, at.ChatCount, at.FileCount, at.FileSize, at.CreatedOn, true, at.MinimumRemainingTime, at.IsParallel, at.ChildCount, at.DescendantCount, at.LeafCount, at.SubFileCount, at.SubFileSize, at.ArchivedChildCount, at.ArchivedDescendantCount, at.ArchivedLeafCount, at.ArchivedSubFileCount, at.ArchivedSubFileSize)
 	return shardId, err
 }
 

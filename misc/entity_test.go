@@ -40,7 +40,7 @@ func Test_NewEntity(t *testing.T) {
 	now := time.Now().UTC()
 	assert.Nil(t, err)
 	assert.NotNil(t, e.Id)
-	assert.True(t, now.Add(-1*time.Millisecond).Before(e.Created) && now.Add(1*time.Millisecond).After(e.Created))
+	assert.True(t, now.Add(-1*time.Millisecond).Before(e.CreatedOn) && now.Add(1*time.Millisecond).After(e.CreatedOn))
 }
 
 func Test_NewNamedEntity(t *testing.T) {
@@ -48,6 +48,6 @@ func Test_NewNamedEntity(t *testing.T) {
 	now := time.Now().UTC()
 	assert.Nil(t, err)
 	assert.NotNil(t, e.Id)
-	assert.True(t, now.Add(-1*time.Millisecond).Before(e.Created) && now.Add(1*time.Millisecond).After(e.Created))
+	assert.True(t, now.Add(-1*time.Millisecond).Before(e.CreatedOn) && now.Add(1*time.Millisecond).After(e.CreatedOn))
 	assert.Equal(t, "ali", e.Name)
 }

@@ -39,7 +39,7 @@ var query_getAccountByCiName = `SELECT id, name, created, region, newRegion, sha
 func (s *sqlStore) getAccountByCiName(name string) (*account, error) {
 	row := s.accountsDB.QueryRow(query_getAccountByCiName, name)
 	acc := account{}
-	err := row.Scan(&acc.Id, &acc.Name, &acc.Created, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.IsUser)
+	err := row.Scan(&acc.Id, &acc.Name, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.IsUser)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -51,7 +51,7 @@ var query_createUser_pwds = `INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) V
 
 func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, true, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, true, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
 		return err
 	}
 	_, err := s.pwdsDB.Exec(query_createUser_pwds, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
@@ -63,7 +63,7 @@ var query_getUserByCiName = `SELECT a.id, a.name, a.created, a.region, a.newRegi
 func (s *sqlStore) getUserByCiName(name string) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserByCiName, name)
 	user := fullUserInfo{}
-	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -75,7 +75,7 @@ var query_getUserByEmail = `SELECT a.id, a.name, a.created, a.region, a.newRegio
 func (s *sqlStore) getUserByEmail(email string) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserByEmail, email)
 	user := fullUserInfo{}
-	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -87,7 +87,7 @@ var query_getUserById = `SELECT a.id, a.name, a.created, a.region, a.newRegion, 
 func (s *sqlStore) getUserById(id Id) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserById, []byte(id))
 	user := fullUserInfo{}
-	err := row.Scan(&user.Id, &user.Name, &user.Created, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -110,7 +110,7 @@ var query_updateUser = `CALL updateUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
 func (s *sqlStore) updateUser(user *fullUserInfo) error {
 	id := []byte(user.Id)
-	_, err := s.accountsDB.Exec(query_updateUser, id, user.Name, user.Created, user.Region, user.NewRegion, user.Shard, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode)
+	_, err := s.accountsDB.Exec(query_updateUser, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode)
 	return err
 }
 
@@ -159,7 +159,7 @@ func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
 	res := make([]*user, 0, len(ids))
 	for rows.Next() {
 		u := user{}
-		err := rows.Scan(&u.Id, &u.Name, &u.Created, &u.Region, &u.NewRegion, &u.Shard, &u.IsUser)
+		err := rows.Scan(&u.Id, &u.Name, &u.CreatedOn, &u.Region, &u.NewRegion, &u.Shard, &u.IsUser)
 		if err != nil {
 			return nil, err
 		}
@@ -171,7 +171,7 @@ func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
 var query_createOrgAndMembership = `CALL  createOrgAndMembership(?, ?, ?, ?, ?, ?, ?, ?);`
 
 func (s *sqlStore) createOrgAndMembership(org *org, user Id) error {
-	_, err := s.accountsDB.Exec(query_createOrgAndMembership, []byte(org.Id), org.Name, org.Created, org.Region, org.NewRegion, org.Shard, false, []byte(user))
+	_, err := s.accountsDB.Exec(query_createOrgAndMembership, []byte(org.Id), org.Name, org.CreatedOn, org.Region, org.NewRegion, org.Shard, false, []byte(user))
 	return err
 }
 
@@ -180,7 +180,7 @@ var query_getOrgById = `SELECT id, name, created, region, newRegion, shard, isUs
 func (s *sqlStore) getOrgById(id Id) (*org, error) {
 	row := s.accountsDB.QueryRow(query_getOrgById, []byte(id))
 	o := org{}
-	err := row.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
+	err := row.Scan(&o.Id, &o.Name, &o.CreatedOn, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -190,7 +190,7 @@ func (s *sqlStore) getOrgById(id Id) (*org, error) {
 var query_updateOrg = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=? WHERE id = ?;`
 
 func (s *sqlStore) updateOrg(org *org) error {
-	_, err := s.accountsDB.Exec(query_updateOrg, org.Name, org.Created, org.Region, org.NewRegion, org.Shard, []byte(org.Id))
+	_, err := s.accountsDB.Exec(query_updateOrg, org.Name, org.CreatedOn, org.Region, org.NewRegion, org.Shard, []byte(org.Id))
 	return err
 }
 
@@ -226,7 +226,7 @@ func (s *sqlStore) getOrgs(ids []Id) ([]*org, error) {
 	res := make([]*org, 0, len(ids))
 	for rows.Next() {
 		o := org{}
-		err := rows.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
+		err := rows.Scan(&o.Id, &o.Name, &o.CreatedOn, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
 		if err != nil {
 			return nil, err
 		}
@@ -254,7 +254,7 @@ func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*org, int, error)
 	res := make([]*org, 0, limit)
 	for rows.Next() {
 		o := org{}
-		rows.Scan(&o.Id, &o.Name, &o.Created, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
+		rows.Scan(&o.Id, &o.Name, &o.CreatedOn, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
 		if err != nil {
 			return nil, 0, err
 		}

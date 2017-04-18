@@ -26,8 +26,8 @@ func (id Id) Copy() Id {
 }
 
 type Entity struct {
-	Id      Id        `json:"id"`
-	Created time.Time `json:"created"`
+	Id        Id        `json:"id"`
+	CreatedOn time.Time `json:"createdOn"`
 }
 
 type GenEntity func() (*Entity, error)
@@ -38,8 +38,8 @@ func NewEntity() (*Entity, error) {
 		return nil, err
 	}
 	return &Entity{
-		Id:      id,
-		Created: time.Now().UTC(),
+		Id:        id,
+		CreatedOn: time.Now().UTC(),
 	}, nil
 }
 
