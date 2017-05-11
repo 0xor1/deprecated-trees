@@ -2,12 +2,17 @@ DROP DATABASE IF EXISTS trees;
 CREATE DATABASE trees;
 USE trees;
 
-DROP TABLE IF EXISTS members;
-CREATE TABLE members(
+DROP TABLE IF EXISTS orgs;
+CREATE TABLE orgs(
+	id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+);
+
+DROP TABLE IF EXISTS org_members;
+CREATE TABLE org_members(
 	org BINARY(16) NOT NULL,
-	member BINARY(16) NOT NULL,
+	id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
-    accessAllProjects BOOL NOT NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
     isActive BOOL NOT NULL,
@@ -22,7 +27,6 @@ CREATE TABLE members_projectAccess(
 	org BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
 	member BINARY(16) NOT NULL,
-    name VARCHAR(50) NOT NULL,
     accessAllProjects BOOL NOT NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,

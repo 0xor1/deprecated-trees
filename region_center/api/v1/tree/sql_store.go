@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	invalidShardIdErr = &Error{Code: 23, Msg: "invalid shard id"}
+	invalidShardIdErr = &Error{Code: 24, Msg: "invalid shard id"}
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {

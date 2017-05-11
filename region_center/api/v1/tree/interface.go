@@ -22,7 +22,7 @@ type InternalApiClient interface {
 	SetMemberDeleted(region string, shard int, org, member Id) error
 	MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error)
 	RenameMember(region string, shard int, org, member Id, newName string) error
-	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
+	UserIsOrgOwner(region string, shard int, org, user Id) (bool, error)
 }
 
 type InternalApi interface {
@@ -34,5 +34,5 @@ type InternalApi interface {
 	SetMemberDeleted(shard int, org, member Id) error
 	MemberIsOnlyOwner(shard int, org, member Id) (bool, error)
 	RenameMember(shard int, org, member Id, newName string) error
-	UserCanRenameOrg(shard int, org, user Id) (bool, error)
+	UserIsOrgOwner(shard int, org, user Id) (bool, error)
 }

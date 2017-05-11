@@ -8,7 +8,7 @@ import (
 )
 
 func Test_NewApi_success(t *testing.T) {
-	api := NewApi(&mockInternalRegionClient{}, &mockLinkMailer{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, &isql.MockDB{}, &isql.MockDB{}, NewLog(nil))
+	api := NewApi(&mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, &isql.MockDB{}, &isql.MockDB{}, NewLog(nil))
 	assert.NotNil(t, api)
 }
 

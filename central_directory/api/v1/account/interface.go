@@ -3,6 +3,7 @@ package account
 import (
 	. "bitbucket.org/robsix/task_center/misc"
 	"github.com/robsix/isql"
+	"io"
 )
 
 // The main account Api interface
@@ -21,9 +22,10 @@ type Api interface {
 	GetOrgs(ids []Id) ([]*org, error)
 	//requires active session to access
 	//user centric
-	ChangeMyName(myId Id, newUsername string) error
-	ChangeMyPwd(myId Id, oldPwd, newPwd string) error
-	ChangeMyEmail(myId Id, newEmail string) error
+	SetMyName(myId Id, newUsername string) error
+	SetAccountAvatar(myId Id, accountId Id, avatarImage io.ReadCloser) error
+	SetMyPwd(myId Id, oldPwd, newPwd string) error
+	SetMyEmail(myId Id, newEmail string) error
 	ResendMyNewEmailConfirmationEmail(myId Id) error
 	MigrateMe(myId Id, newRegion string) error
 	GetMe(myId Id) (*me, error)
@@ -40,8 +42,8 @@ type Api interface {
 }
 
 // Return a new account Api backed by sql storage and sending link emails via an email service
-func NewApi(internalRegionApi internalRegionClient, linkMailer linkMailer, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, accountsDb, pwdsDb isql.DB, log Log) Api {
-	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionApi, linkMailer, NewNamedEntity, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+func NewApi(internalRegionApi internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, accountsDb, pwdsDb isql.DB, log Log) Api {
+	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionApi, linkMailer, avatarStore, NewNamedEntity, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
 }
 
 func NewLogLinkMailer(log Log) linkMailer {

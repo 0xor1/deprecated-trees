@@ -10,6 +10,7 @@ CREATE TABLE accounts(
     region CHAR(3) NOT NULL,
     newRegion CHAR(3) NULL,
     shard MEDIUMINT NOT NULL DEFAULT -1,
+    avatarExt VARCHAR(10) NULL,
     isUser BOOL NOT NULL,
     PRIMARY KEY (name),
     UNIQUE INDEX (id)

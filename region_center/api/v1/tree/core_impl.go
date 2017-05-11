@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	invalidRegionErr          = &Error{Code: 19, Msg: "invalid region"}
-	insufficientPermissionErr = &Error{Code: 20, Msg: "insufficient permission"}
-	zeroOwnerCountErr         = &Error{Code: 21, Msg: "zero owner count"}
-	invalidTaskCenterTypeErr  = &Error{Code: 22, Msg: "invalid task center type"}
+	invalidRegionErr          = &Error{Code: 20, Msg: "invalid region"}
+	insufficientPermissionErr = &Error{Code: 21, Msg: "insufficient permission"}
+	zeroOwnerCountErr         = &Error{Code: 22, Msg: "zero owner count"}
+	invalidTaskCenterTypeErr  = &Error{Code: 23, Msg: "invalid task center type"}
 )
 
 func newInternalApiClient(regions map[string]InternalApi) InternalApiClient {
@@ -93,11 +93,11 @@ func (a *internalApiClient) RenameMember(region string, shard int, org, member I
 	return a.regions[region].RenameMember(shard, org, member, newName)
 }
 
-func (a *internalApiClient) UserCanRenameOrg(region string, shard int, org, user Id) (bool, error) {
+func (a *internalApiClient) UserIsOrgOwner(region string, shard int, org, user Id) (bool, error) {
 	if !a.IsValidRegion(region) {
 		return false, invalidRegionErr
 	}
-	return a.regions[region].UserCanRenameOrg(shard, org, user)
+	return a.regions[region].UserIsOrgOwner(shard, org, user)
 }
 
 func newInternalApi(store store, log Log) InternalApi {
@@ -266,7 +266,7 @@ func (a *internalApi) RenameMember(shard int, org, member Id, newName string) er
 	return a.log.InfoErr(a.store.renameMember(shard, org, member, newName))
 }
 
-func (a *internalApi) UserCanRenameOrg(shard int, org, user Id) (bool, error) {
+func (a *internalApi) UserIsOrgOwner(shard int, org, user Id) (bool, error) {
 	if !user.Equal(org) {
 		member, err := a.store.getMember(shard, org, user)
 		if err != nil {

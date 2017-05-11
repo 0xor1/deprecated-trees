@@ -174,19 +174,19 @@ func Test_clientRenameMember(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_clientUserCanRenameOrg(t *testing.T) {
+func Test_clientUserIsOrgOwner(t *testing.T) {
 	iApi := &mockSingluarInternalApi{}
 	regions := map[string]InternalApi{"us": iApi}
 	userId, _ := NewId()
 	orgId, _ := NewId()
 	api := newInternalApiClient(regions)
 
-	can, err := api.UserCanRenameOrg("ch", 2, orgId, userId)
+	can, err := api.UserIsOrgOwner("ch", 2, orgId, userId)
 	assert.False(t, can)
 	assert.Equal(t, invalidRegionErr, err)
 
-	iApi.On("UserCanRenameOrg", 2, orgId, userId).Return(true, testErr)
-	can, err = api.UserCanRenameOrg("us", 2, orgId, userId)
+	iApi.On("UserIsOrgOwner", 2, orgId, userId).Return(true, testErr)
+	can, err = api.UserIsOrgOwner("us", 2, orgId, userId)
 	assert.True(t, can)
 	assert.Equal(t, testErr, err)
 }
@@ -689,7 +689,7 @@ func Test_internalApiRenameMember_storeRenameMemberErr(t *testing.T) {
 	assert.Equal(t, testErr, err)
 }
 
-func Test_internalApiUserCanRenameOrg_storeGetMemberErr(t *testing.T) {
+func Test_internalApiUserIsOrgOwner_storeGetMemberErr(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
@@ -697,12 +697,12 @@ func Test_internalApiUserCanRenameOrg_storeGetMemberErr(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getMember", 5, orgId, myId).Return(nil, testErr)
 
-	can, err := iApi.UserCanRenameOrg(5, orgId, myId)
+	can, err := iApi.UserIsOrgOwner(5, orgId, myId)
 	assert.False(t, can)
 	assert.Equal(t, testErr, err)
 }
 
-func Test_internalApiUserCanRenameOrg_true(t *testing.T) {
+func Test_internalApiUserIsOrgOwner_true(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
@@ -710,12 +710,12 @@ func Test_internalApiUserCanRenameOrg_true(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
 
-	can, err := iApi.UserCanRenameOrg(5, orgId, myId)
+	can, err := iApi.UserIsOrgOwner(5, orgId, myId)
 	assert.True(t, can)
 	assert.Nil(t, err)
 }
 
-func Test_internalApiUserCanRenameOrg_false(t *testing.T) {
+func Test_internalApiUserIsOrgOwner_false(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
@@ -723,18 +723,18 @@ func Test_internalApiUserCanRenameOrg_false(t *testing.T) {
 	orgId, _ := NewId()
 	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
 
-	can, err := iApi.UserCanRenameOrg(5, orgId, myId)
+	can, err := iApi.UserIsOrgOwner(5, orgId, myId)
 	assert.False(t, can)
 	assert.Nil(t, err)
 }
 
-func Test_internalApiUserCanRenameOrg_invalidTaskCenterTypeErr(t *testing.T) {
+func Test_internalApiUserIsOrgOwner_invalidTaskCenterTypeErr(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 
-	can, err := iApi.UserCanRenameOrg(5, myId, myId)
+	can, err := iApi.UserIsOrgOwner(5, myId, myId)
 	assert.False(t, can)
 	assert.Equal(t, invalidTaskCenterTypeErr, err)
 }
@@ -801,7 +801,7 @@ func (m *mockSingluarInternalApi) RenameMember(shard int, org, member Id, newNam
 	return args.Error(0)
 }
 
-func (m *mockSingluarInternalApi) UserCanRenameOrg(shard int, org, user Id) (bool, error) {
+func (m *mockSingluarInternalApi) UserIsOrgOwner(shard int, org, user Id) (bool, error) {
 	args := m.Called(shard, org, user)
 	return args.Bool(0), args.Error(1)
 }

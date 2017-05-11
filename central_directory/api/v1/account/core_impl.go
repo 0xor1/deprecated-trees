@@ -5,6 +5,12 @@ import (
 	"bytes"
 	"strings"
 	"time"
+	"io"
+	"image"
+	"image/jpeg"
+	_ "image/png"
+	_ "image/gif"
+	"github.com/nfnt/resize"
 )
 
 var (
@@ -25,9 +31,10 @@ var (
 	insufficientPermissionsErr            = &Error{Code: 16, Msg: "insufficient permissions"}
 	maxEntityCountExceededErr             = &Error{Code: 17, Msg: "max entity count exceeded"}
 	onlyOwnerMemberErr                    = &Error{Code: 18, Msg: "can't delete user who is the only owner of an org"}
+	invalidAvatarShapeErr                 = &Error{Code: 19, Msg: "avatar images must be square"}
 )
 
-func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, newNamedEntity GenNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
+func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newNamedEntity GenNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
 	if store == nil {
 		NilCriticalParamPanic("store")
 	}
@@ -36,6 +43,9 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 	}
 	if linkMailer == nil {
 		NilCriticalParamPanic("linkMailer")
+	}
+	if avatarStore == nil {
+		NilCriticalParamPanic("avatarStore")
 	}
 	if newNamedEntity == nil {
 		NilCriticalParamPanic("newNamedEntity")
@@ -50,10 +60,12 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 		store:                store,
 		internalRegionClient: internalRegionClient,
 		linkMailer:           linkMailer,
+		avatarStore:          avatarStore,
 		newNamedEntity:       newNamedEntity,
 		cryptoHelper:         cryptoHelper,
 		nameRegexMatchers:    append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
 		pwdRegexMatchers:     append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		maxAvatarDim: maxAvatarDim,
 		nameMinRuneCount:     nameMinRuneCount,
 		nameMaxRuneCount:     nameMaxRuneCount,
 		pwdMinRuneCount:      pwdMinRuneCount,
@@ -73,10 +85,12 @@ type api struct {
 	store                store
 	internalRegionClient internalRegionClient
 	linkMailer           linkMailer
+	avatarStore          avatarStore
 	newNamedEntity       GenNamedEntity
 	cryptoHelper         CryptoHelper
 	nameRegexMatchers    []string
 	pwdRegexMatchers     []string
+	maxAvatarDim         uint
 	nameMinRuneCount     int
 	nameMaxRuneCount     int
 	pwdMinRuneCount      int
@@ -458,7 +472,7 @@ func (a *api) GetOrgs(ids []Id) ([]*org, error) {
 	return orgs, nil
 }
 
-func (a *api) ChangeMyName(myId Id, newName string) error {
+func (a *api) SetMyName(myId Id, newName string) error {
 	a.log.Location()
 
 	newName = strings.Trim(newName, " ")
@@ -507,7 +521,74 @@ func (a *api) ChangeMyName(myId Id, newName string) error {
 	return nil
 }
 
-func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
+func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadCloser) error {
+	a.log.Location()
+
+	if avatarImageData != nil {
+		avatarImageData.Close()
+	}
+
+	user, err := a.store.getUserById(myId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if user == nil {
+		return a.log.InfoUserErr(myId, noSuchUserErr)
+	}
+
+	if !myId.Equal(accountId) {
+		org, err := a.store.getOrgById(accountId)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if org == nil {
+			return a.log.InfoUserErr(myId, noSuchOrgErr)
+		}
+
+		if !a.internalRegionClient.IsValidRegion(org.Region) {
+			return a.log.ErrorUserErr(myId, regionGoneErr)
+		}
+
+		can, err := a.internalRegionClient.UserIsOrgOwner(org.Region, org.Shard, accountId, myId)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, regionGoneErr)
+		}
+		if !can {
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+	}
+
+	if avatarImageData != nil {
+		avatarImage, _, err := image.Decode(avatarImageData)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		bounds := avatarImage.Bounds()
+		if bounds.Max.X - bounds.Min.X != bounds.Max.Y - bounds.Min.Y { //if it  isn't square, then error
+			return a.log.InfoUserErr(myId, invalidAvatarShapeErr)
+		}
+		if  uint(bounds.Max.X - bounds.Min.X) > a.maxAvatarDim { // if it is larger than allowed then resize
+			avatarImage = resize.Resize(a.maxAvatarDim, a.maxAvatarDim, avatarImage, resize.NearestNeighbor)
+		}
+		buff := &bytes.Buffer{}
+		if err := jpeg.Encode(buff, avatarImage, nil); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		data := buff.Bytes()
+		readerSeeker := bytes.NewReader(data)
+		if err := a.avatarStore.put(myId.String(), "image/jpeg", int64(len(data)), readerSeeker); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+	} else {
+		if err := a.avatarStore.delete(myId.String()); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+	}
+
+	return nil
+}
+
+func (a *api) SetMyPwd(myId Id, oldPwd, newPwd string) error {
 	a.log.Location()
 
 	if err := ValidateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers); err != nil {
@@ -554,7 +635,7 @@ func (a *api) ChangeMyPwd(myId Id, oldPwd, newPwd string) error {
 	return nil
 }
 
-func (a *api) ChangeMyEmail(myId Id, newEmail string) error {
+func (a *api) SetMyEmail(myId Id, newEmail string) error {
 	a.log.Location()
 
 	newEmail = strings.Trim(newEmail, " ")
@@ -790,7 +871,7 @@ func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	can, err := a.internalRegionClient.UserCanRenameOrg(org.Region, org.Shard, orgId, myId)
+	can, err := a.internalRegionClient.UserIsOrgOwner(org.Region, org.Shard, orgId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
@@ -980,7 +1061,7 @@ type internalRegionClient interface {
 	SetMemberDeleted(region string, shard int, org, member Id) error
 	MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error)
 	RenameMember(region string, shard int, org, member Id, newName string) error
-	UserCanRenameOrg(region string, shard int, org, user Id) (bool, error)
+	UserIsOrgOwner(region string, shard int, org, user Id) (bool, error)
 }
 
 type linkMailer interface {
@@ -988,6 +1069,11 @@ type linkMailer interface {
 	sendActivationLink(address, activationCode string) error
 	sendPwdResetLink(address, resetCode string) error
 	sendNewEmailConfirmationLink(currentEmail, newEmail, confirmationCode string) error
+}
+
+type avatarStore interface {
+	put(key string, mimeType string, size int64, data io.ReadSeeker) error
+	delete(key string) error
 }
 
 type account struct {
