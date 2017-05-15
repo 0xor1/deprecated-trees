@@ -476,7 +476,7 @@ func (a *api) SetMyName(myId Id, newName string) error {
 	a.log.Location()
 
 	newName = strings.Trim(newName, " ")
-	if err := ValidateStringParam("username", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+	if err := ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
 		return a.log.InfoErr(err)
 	}
 
@@ -850,6 +850,11 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 
 func (a *api) RenameOrg(myId, orgId Id, newName string) error {
 	a.log.Location()
+
+	newName = strings.Trim(newName, " ")
+	if err := ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+		return a.log.InfoErr(err)
+	}
 
 	if exists, err := a.store.accountWithCiNameExists(newName); exists || err != nil {
 		if err != nil {

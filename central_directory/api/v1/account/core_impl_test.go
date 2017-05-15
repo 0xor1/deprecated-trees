@@ -2408,6 +2408,18 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	assert.Equal(t, false, org.IsUser)
 }
 
+func Test_api_RenameOrg_invalidNameErr(t *testing.T) {
+	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, []string{`\[^*]+`}, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+
+	myId, _ := NewId()
+	orgId, _ := NewId()
+	store.On("accountWithCiNameExists", "newOrg*invalid").Return(false, testErr)
+
+	err := api.RenameOrg(myId, orgId, "newOrg")
+	assert.IsType(t, &InvalidStringParamErr{}, err)
+}
+
 func Test_api_RenameOrg_storeAccountWithNameExistsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
 	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
