@@ -8,8 +8,8 @@ CREATE TABLE orgs(
     PRIMARY KEY (id)
 );
 
-DROP TABLE IF EXISTS org_members;
-CREATE TABLE org_members(
+DROP TABLE IF EXISTS orgMembers;
+CREATE TABLE orgMembers(
 	org BINARY(16) NOT NULL,
 	id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
@@ -22,16 +22,35 @@ CREATE TABLE org_members(
     UNIQUE INDEX (org, id)
 );
 
+DROP TABLE IF EXISTS projects;
+CREATE TABLE projects(
+	org BINARY(16) NOT NULL,
+    id BINARY(16) NOT NULL,
+	member BINARY(16) NOT NULL,
+    totalRemainingTime BIGINT UNSIGNED NOT NULL,
+    totalLoggedTime BIGINT UNSIGNED NOT NULL,
+    role TINYINT UNSIGNED NOT NULL,
+    PRIMARY KEY (org, isActive, role, name),
+    UNIQUE INDEX (org, id)
+);
+
+DROP TABLE IF EXISTS projectMembers;
+CREATE TABLE projectMembers(
+	org BINARY(16) NOT NULL,
+    id BINARY(16) NOT NULL,
+    totalRemainingTime BIGINT UNSIGNED NOT NULL,
+    totalLoggedTime BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (org, id),
+    UNIQUE INDEX (org, id)
+);
+
 DROP TABLE IF EXISTS members_projectAccess;
 CREATE TABLE members_projectAccess(
 	org BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
 	member BINARY(16) NOT NULL,
-    accessAllProjects BOOL NOT NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    isActive BOOL NOT NULL,
-    isDeleted BOOL NOT NULL,
     role TINYINT UNSIGNED NOT NULL,
     PRIMARY KEY (org, isActive, role, name),
     UNIQUE INDEX (org, id)

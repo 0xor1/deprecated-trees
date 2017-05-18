@@ -34,60 +34,60 @@ func (s *sqlStore) accountWithCiNameExists(name string) (bool, error) {
 	return count != 0, err
 }
 
-var query_getAccountByCiName = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE name = ?;`
+var query_getAccountByCiName = `SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE name = ?;`
 
 func (s *sqlStore) getAccountByCiName(name string) (*account, error) {
 	row := s.accountsDB.QueryRow(query_getAccountByCiName, name)
 	acc := account{}
-	err := row.Scan(&acc.Id, &acc.Name, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.IsUser)
+	err := row.Scan(&acc.Id, &acc.Name, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsUser)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &acc, err
 }
 
-var query_createUser_accounts = `CALL createUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+var query_createUser_accounts = `CALL createUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 var query_createUser_pwds = `INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?);`
 
 func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) error {
 	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, true, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+	if _, err := s.accountsDB.Exec(query_createUser_accounts, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.IsUser, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
 		return err
 	}
 	_, err := s.pwdsDB.Exec(query_createUser_pwds, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	return err
 }
 
-var query_getUserByCiName = `SELECT a.id, a.name, a.created, a.region, a.newRegion, a.shard, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.name = ?;`
+var query_getUserByCiName = `SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.name = ?;`
 
 func (s *sqlStore) getUserByCiName(name string) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserByCiName, name)
 	user := fullUserInfo{}
-	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &user, err
 }
 
-var query_getUserByEmail = `SELECT a.id, a.name, a.created, a.region, a.newRegion, a.shard, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE u.email = ?;`
+var query_getUserByEmail = `SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE u.email = ?;`
 
 func (s *sqlStore) getUserByEmail(email string) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserByEmail, email)
 	user := fullUserInfo{}
-	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &user, err
 }
 
-var query_getUserById = `SELECT a.id, a.name, a.created, a.region, a.newRegion, a.shard, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.id = ?;`
+var query_getUserById = `SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.id = ?;`
 
 func (s *sqlStore) getUserById(id Id) (*fullUserInfo, error) {
 	row := s.accountsDB.QueryRow(query_getUserById, []byte(id))
 	user := fullUserInfo{}
-	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
+	err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -106,11 +106,18 @@ func (s *sqlStore) getPwdInfo(id Id) (*pwdInfo, error) {
 	return &pwd, err
 }
 
-var query_updateUser = `CALL updateUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
+var query_updateUser = `CALL updateUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
 func (s *sqlStore) updateUser(user *fullUserInfo) error {
 	id := []byte(user.Id)
-	_, err := s.accountsDB.Exec(query_updateUser, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode)
+	_, err := s.accountsDB.Exec(query_updateUser, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode)
+	return err
+}
+
+var query_updateAccount = `UPDATE accounts SET name=?, createdOn=?, region=?, newRegion=?, shard=?, hasAvatar=?, isUser=? WHERE id = ?;`
+
+func (s *sqlStore) updateAccount(account *account) error {
+	_, err := s.accountsDB.Exec(query_updateAccount, account.Name, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsUser, []byte(account.Id))
 	return err
 }
 
@@ -121,22 +128,68 @@ func (s *sqlStore) updatePwdInfo(id Id, pwdInfo *pwdInfo) error {
 	return err
 }
 
-var query_deleteUserAndAllAssociatedMemberships_accounts = `CALL deleteUserAndAllAssociatedMemberships(?);`
-var query_deleteUserAndAllAssociatedMemberships_pwds = `DELETE FROM pwds WHERE id = ?;`
+var query_deleteAccountAndAllAssociatedMemberships_accounts = `CALL deleteAccountAndAllAssociatedMemberships(?);`
+var query_deleteAccountAndAllAssociatedMemberships_pwds = `DELETE FROM pwds WHERE id = ?;`
 
-func (s *sqlStore) deleteUserAndAllAssociatedMemberships(id Id) error {
+func (s *sqlStore) deleteAccountAndAllAssociatedMemberships(id Id) error {
 	castId := []byte(id)
-	_, err := s.accountsDB.Exec(query_deleteUserAndAllAssociatedMemberships_accounts, castId)
+	_, err := s.accountsDB.Exec(query_deleteAccountAndAllAssociatedMemberships_accounts, castId)
 	if err != nil {
 		return err
 	}
-	_, err = s.pwdsDB.Exec(query_deleteUserAndAllAssociatedMemberships_pwds, castId)
+	_, err = s.pwdsDB.Exec(query_deleteAccountAndAllAssociatedMemberships_pwds, castId)
 	return err
 }
 
-var query_getUsers = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = true AND id IN (`
+var query_getAccount = `SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE id = ?;`
 
-func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
+func (s *sqlStore) getAccount(id Id) (*account, error) {
+	row := s.accountsDB.QueryRow(query_getAccount, []byte(id))
+	a := account{}
+	err := row.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsUser)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &a, err
+}
+
+var query_getAccounts = `SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE id IN (`
+
+func (s *sqlStore) getAccounts(ids []Id) ([]*account, error) {
+	castedIds := make([]interface{}, 0, len(ids))
+	var query bytes.Buffer
+	query.WriteString(query_getAccounts)
+	for i, id := range ids {
+		if i == 0 {
+			query.WriteString(`?`)
+		} else {
+			query.WriteString(`, ?`)
+		}
+		castedIds = append(castedIds, []byte(id))
+	}
+	query.WriteString(`);`)
+	rows, err := s.accountsDB.Query(query.String(), castedIds...)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*account, 0, len(ids))
+	for rows.Next() {
+		a := account{}
+		err := rows.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsUser)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, &a)
+	}
+	return res, nil
+}
+
+var query_getUsers = `SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE isUser = true AND id IN (`
+
+func (s *sqlStore) getUsers(ids []Id) ([]*account, error) {
 	castedIds := make([]interface{}, 0, len(ids))
 	var query bytes.Buffer
 	query.WriteString(query_getUsers)
@@ -156,10 +209,10 @@ func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := make([]*user, 0, len(ids))
+	res := make([]*account, 0, len(ids))
 	for rows.Next() {
-		u := user{}
-		err := rows.Scan(&u.Id, &u.Name, &u.CreatedOn, &u.Region, &u.NewRegion, &u.Shard, &u.IsUser)
+		u := account{}
+		err := rows.Scan(&u.Id, &u.Name, &u.CreatedOn, &u.Region, &u.NewRegion, &u.Shard, &u.HasAvatar, &u.IsUser)
 		if err != nil {
 			return nil, err
 		}
@@ -168,77 +221,17 @@ func (s *sqlStore) getUsers(ids []Id) ([]*user, error) {
 	return res, nil
 }
 
-var query_createOrgAndMembership = `CALL  createOrgAndMembership(?, ?, ?, ?, ?, ?, ?, ?);`
+var query_createOrgAndMembership = `CALL  createOrgAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?);`
 
-func (s *sqlStore) createOrgAndMembership(org *org, user Id) error {
-	_, err := s.accountsDB.Exec(query_createOrgAndMembership, []byte(org.Id), org.Name, org.CreatedOn, org.Region, org.NewRegion, org.Shard, false, []byte(user))
+func (s *sqlStore) createOrgAndMembership(org *account, user Id) error {
+	_, err := s.accountsDB.Exec(query_createOrgAndMembership, []byte(org.Id), org.Name, org.CreatedOn, org.Region, org.NewRegion, org.Shard, org.HasAvatar, false, []byte(user))
 	return err
-}
-
-var query_getOrgById = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE id = ?;`
-
-func (s *sqlStore) getOrgById(id Id) (*org, error) {
-	row := s.accountsDB.QueryRow(query_getOrgById, []byte(id))
-	o := org{}
-	err := row.Scan(&o.Id, &o.Name, &o.CreatedOn, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return &o, err
-}
-
-var query_updateOrg = `UPDATE accounts SET name=?, created=?, region=?, newRegion=?, shard=? WHERE id = ?;`
-
-func (s *sqlStore) updateOrg(org *org) error {
-	_, err := s.accountsDB.Exec(query_updateOrg, org.Name, org.CreatedOn, org.Region, org.NewRegion, org.Shard, []byte(org.Id))
-	return err
-}
-
-var query_deleteOrgAndAllAssociatedMemberships = `CALL deleteOrgAndAllAssociatedMemberships(?);`
-
-func (s *sqlStore) deleteOrgAndAllAssociatedMemberships(id Id) error {
-	_, err := s.accountsDB.Exec(query_deleteOrgAndAllAssociatedMemberships, []byte(id))
-	return err
-}
-
-var query_getOrgs = `SELECT id, name, created, region, newRegion, shard, isUser FROM accounts WHERE isUser = false AND id IN (`
-
-func (s *sqlStore) getOrgs(ids []Id) ([]*org, error) {
-	castedIds := make([]interface{}, 0, len(ids))
-	var query bytes.Buffer
-	query.WriteString(query_getOrgs)
-	for i, id := range ids {
-		if i == 0 {
-			query.WriteString(`?`)
-		} else {
-			query.WriteString(`, ?`)
-		}
-		castedIds = append(castedIds, []byte(id))
-	}
-	query.WriteString(`);`)
-	rows, err := s.accountsDB.Query(query.String(), castedIds...)
-	if rows != nil {
-		defer rows.Close()
-	}
-	if err != nil {
-		return nil, err
-	}
-	res := make([]*org, 0, len(ids))
-	for rows.Next() {
-		o := org{}
-		err := rows.Scan(&o.Id, &o.Name, &o.CreatedOn, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
-		if err != nil {
-			return nil, err
-		}
-		res = append(res, &o)
-	}
-	return res, nil
 }
 
 var query_getUsersOrgs_total = `SELECT COUNT(*) FROM memberships WHERE user = ?;`
-var query_getUsersOrgs = `SELECT a.id, a.name, a.created, a.region, a.newRegion, a.shard, a.isUser FROM accounts AS a JOIN memberships AS m ON a.id = m.org WHERE m.user = ? ORDER BY a.name ASC LIMIT ?, ?;`
+var query_getUsersOrgs = `SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser FROM accounts AS a JOIN memberships AS m ON a.id = m.org WHERE m.user = ? ORDER BY a.name ASC LIMIT ?, ?;`
 
-func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*org, int, error) {
+func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*account, int, error) {
 	row := s.accountsDB.QueryRow(query_getUsersOrgs_total, []byte(user))
 	total := 0
 	if err := row.Scan(&total); err != nil {
@@ -251,14 +244,14 @@ func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*org, int, error)
 	if err != nil {
 		return nil, 0, err
 	}
-	res := make([]*org, 0, limit)
+	res := make([]*account, 0, limit)
 	for rows.Next() {
-		o := org{}
-		rows.Scan(&o.Id, &o.Name, &o.CreatedOn, &o.Region, &o.NewRegion, &o.Shard, &o.IsUser)
+		a := account{}
+		rows.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsUser)
 		if err != nil {
 			return nil, 0, err
 		}
-		res = append(res, &o)
+		res = append(res, &a)
 	}
 	return res, total, nil
 }

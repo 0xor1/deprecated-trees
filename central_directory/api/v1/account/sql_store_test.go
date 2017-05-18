@@ -48,6 +48,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1.Region = "use"
 	user1.NewRegion = nil
 	user1.Shard = 3
+	user1.HasAvatar = true
 	user1.IsUser = true
 	user1.Email = "ali@ali.com"
 	user1.NewEmail = &str
@@ -78,6 +79,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Region, user1Dup1.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup1.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup1.Shard)
+	assert.Equal(t, user1.HasAvatar, user1Dup1.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup1.IsUser)
 	assert.Nil(t, err)
 
@@ -88,6 +90,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Region, user1Dup2.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup2.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup2.Shard)
+	assert.Equal(t, user1.HasAvatar, user1Dup2.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup2.IsUser)
 	assert.Equal(t, user1.Email, user1Dup2.Email)
 	assert.Equal(t, user1.NewEmail, user1Dup2.NewEmail)
@@ -104,6 +107,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Region, user1Dup3.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup3.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup3.Shard)
+	assert.Equal(t, user1.HasAvatar, user1Dup3.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup3.IsUser)
 	assert.Equal(t, user1.Email, user1Dup3.Email)
 	assert.Equal(t, user1.NewEmail, user1Dup3.NewEmail)
@@ -120,6 +124,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Region, user1Dup4.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup4.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup4.Shard)
+	assert.Equal(t, user1.HasAvatar, user1Dup4.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup4.IsUser)
 	assert.Equal(t, user1.Email, user1Dup4.Email)
 	assert.Equal(t, user1.NewEmail, user1Dup4.NewEmail)
@@ -151,6 +156,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Region, user1Dup5.Region)
 	assert.Equal(t, user1.NewRegion, user1Dup5.NewRegion)
 	assert.Equal(t, user1.Shard, user1Dup5.Shard)
+	assert.Equal(t, user1.HasAvatar, user1Dup5.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup5.IsUser)
 	assert.Equal(t, user1.Email, user1Dup5.Email)
 	assert.Equal(t, user1.NewEmail, user1Dup5.NewEmail)
@@ -186,35 +192,38 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Region, users1[0].Region)
 	assert.Equal(t, user1.NewRegion, users1[0].NewRegion)
 	assert.Equal(t, user1.Shard, users1[0].Shard)
+	assert.Equal(t, user1.HasAvatar, users1[0].HasAvatar)
 	assert.Equal(t, user1.IsUser, users1[0].IsUser)
 	assert.Nil(t, err)
 
-	org1 := &org{}
+	org1 := &account{}
 	org1.Id, _ = NewId()
 	org1.Name = "org1"
 	org1.CreatedOn = time.Now().UTC()
 	org1.Region = "use"
 	org1.NewRegion = nil
 	org1.Shard = 4
+	org1.HasAvatar = true
 	org1.IsUser = false
 	err = store.createOrgAndMembership(org1, user1.Id)
 	assert.Nil(t, err)
 
-	org1Dup1, err := store.getOrgById(org1.Id)
+	org1Dup1, err := store.getAccount(org1.Id)
 	assert.Equal(t, org1.Id, org1Dup1.Id)
 	assert.Equal(t, org1.Name, org1Dup1.Name)
 	assert.Equal(t, org1.CreatedOn.Unix(), org1Dup1.CreatedOn.Unix())
 	assert.Equal(t, org1.Region, org1Dup1.Region)
 	assert.Equal(t, org1.NewRegion, org1Dup1.NewRegion)
 	assert.Equal(t, org1.Shard, org1Dup1.Shard)
+	assert.Equal(t, org1.HasAvatar, org1Dup1.HasAvatar)
 	assert.Equal(t, org1.IsUser, org1Dup1.IsUser)
 	assert.Nil(t, err)
 
 	org1.Name = "org1_updated"
-	err = store.updateOrg(org1)
+	err = store.updateAccount(org1)
 	assert.Nil(t, err)
 
-	orgs1, err := store.getOrgs([]Id{org1.Id})
+	orgs1, err := store.getAccounts([]Id{org1.Id})
 	assert.Equal(t, 1, len(orgs1))
 	assert.Equal(t, org1.Id, orgs1[0].Id)
 	assert.Equal(t, org1.Name, orgs1[0].Name)
@@ -222,6 +231,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org1.Region, orgs1[0].Region)
 	assert.Equal(t, org1.NewRegion, orgs1[0].NewRegion)
 	assert.Equal(t, org1.Shard, orgs1[0].Shard)
+	assert.Equal(t, org1.HasAvatar, orgs1[0].HasAvatar)
 	assert.Equal(t, org1.IsUser, orgs1[0].IsUser)
 	assert.Nil(t, err)
 
@@ -235,6 +245,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org1.Region, orgs2[0].Region)
 	assert.Equal(t, org1.NewRegion, orgs2[0].NewRegion)
 	assert.Equal(t, org1.Shard, orgs2[0].Shard)
+	assert.Equal(t, org1.HasAvatar, orgs2[0].HasAvatar)
 	assert.Equal(t, org1.IsUser, orgs2[0].IsUser)
 	assert.Nil(t, err)
 
@@ -245,6 +256,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user2.Region = "use"
 	user2.NewRegion = nil
 	user2.Shard = 3
+	user2.HasAvatar = false
 	user2.IsUser = true
 	user2.Email = "cat@cat.com"
 	user2.NewEmail = &str
@@ -262,6 +274,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user3.Region = "use"
 	user3.NewRegion = nil
 	user3.Shard = 3
+	user3.HasAvatar = true
 	user3.IsUser = true
 	user3.Email = "dan@dan.com"
 	user3.NewEmail = &str
@@ -272,13 +285,14 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	err = store.createUser(user3, pwdInfo1)
 	assert.Nil(t, err)
 
-	org2 := &org{}
+	org2 := &account{}
 	org2.Id, _ = NewId()
 	org2.Name = "org2"
 	org2.CreatedOn = time.Now().UTC()
 	org2.Region = "use"
 	org2.NewRegion = nil
 	org2.Shard = 4
+	org2.HasAvatar = true
 	org2.IsUser = false
 	err = store.createOrgAndMembership(org2, user1.Id)
 	assert.Nil(t, err)
@@ -295,6 +309,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org2.Region, orgs3[0].Region)
 	assert.Equal(t, org2.NewRegion, orgs3[0].NewRegion)
 	assert.Equal(t, org2.Shard, orgs3[0].Shard)
+	assert.Equal(t, org2.HasAvatar, orgs3[0].HasAvatar)
 	assert.Equal(t, org2.IsUser, orgs3[0].IsUser)
 	assert.Nil(t, err)
 
@@ -305,7 +320,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 0, len(orgs4))
 	assert.Equal(t, 0, total)
 
-	err = store.deleteOrgAndAllAssociatedMemberships(org2.Id)
+	err = store.deleteAccountAndAllAssociatedMemberships(org2.Id)
 	assert.Nil(t, err)
 
 	orgs5, total, err := store.getUsersOrgs(user1.Id, 0, 50)
@@ -313,7 +328,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, len(orgs5))
 	assert.Equal(t, 1, total)
 
-	err = store.deleteUserAndAllAssociatedMemberships(user1.Id)
+	err = store.deleteAccountAndAllAssociatedMemberships(user1.Id)
 	assert.Nil(t, err)
 
 	orgs6, total, err := store.getUsersOrgs(user1.Id, 0, 50)
@@ -322,7 +337,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 0, total)
 
 	// clean up left over test data
-	store.deleteUserAndAllAssociatedMemberships(user2.Id)
-	store.deleteUserAndAllAssociatedMemberships(user3.Id)
-	store.deleteOrgAndAllAssociatedMemberships(org1.Id)
+	store.deleteAccountAndAllAssociatedMemberships(user2.Id)
+	store.deleteAccountAndAllAssociatedMemberships(user3.Id)
+	store.deleteAccountAndAllAssociatedMemberships(org1.Id)
 }

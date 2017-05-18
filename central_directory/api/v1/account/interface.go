@@ -18,32 +18,26 @@ type Api interface {
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, error)
 	GetAccount(name string) (*account, error)
-	GetUsers(ids []Id) ([]*user, error)
-	GetOrgs(ids []Id) ([]*org, error)
+	GetAccounts(ids []Id) ([]*account, error)
 	//requires active session to access
-	//user centric
-	SetMyName(myId Id, newUsername string) error
-	SetAccountAvatar(myId Id, accountId Id, avatarImage io.ReadCloser) error
+	GetMe(myId Id) (*me, error)
 	SetMyPwd(myId Id, oldPwd, newPwd string) error
 	SetMyEmail(myId Id, newEmail string) error
 	ResendMyNewEmailConfirmationEmail(myId Id) error
-	MigrateMe(myId Id, newRegion string) error
-	GetMe(myId Id) (*me, error)
-	DeleteMe(myId Id) error
-	//org centric - must be an owner member
-	CreateOrg(myId Id, name, region string) (*org, error)
-	RenameOrg(myId, orgId Id, newName string) error
-	MigrateOrg(myId, orgId Id, newRegion string) error
-	GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error)
-	DeleteOrg(myId, orgId Id) error
+	SetAccountName(myId, accountId Id, newName string) error
+	SetAccountAvatar(myId, accountId Id, avatarImage io.ReadCloser) error
+	MigrateAccount(myId, accountId Id, newRegion string) error
+	CreateOrg(myId Id, name, region string) (*account, error)
+	GetMyOrgs(myId Id, offset, limit int) ([]*account, int, error)
+	DeleteAccount(myId, accountId Id) error
 	//member centric - must be an owner or admin
 	AddMembers(myId, orgId Id, newMembers []Id) error
 	RemoveMembers(myId, orgId Id, existingMembers []Id) error
 }
 
 // Return a new account Api backed by sql storage and sending link emails via an email service
-func NewApi(internalRegionApi internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, accountsDb, pwdsDb isql.DB, log Log) Api {
-	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionApi, linkMailer, avatarStore, NewNamedEntity, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
+func NewApi(internalRegionClient internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, accountsDb, pwdsDb isql.DB, log Log) Api {
+	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionClient, linkMailer, avatarStore, NewNamedEntity, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen, log)
 }
 
 func NewLogLinkMailer(log Log) linkMailer {

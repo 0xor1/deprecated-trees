@@ -5,10 +5,10 @@ import (
 )
 
 var (
-	invalidRegionErr          = &Error{Code: 20, Msg: "invalid region"}
-	insufficientPermissionErr = &Error{Code: 21, Msg: "insufficient permission"}
-	zeroOwnerCountErr         = &Error{Code: 22, Msg: "zero owner count"}
-	invalidTaskCenterTypeErr  = &Error{Code: 23, Msg: "invalid task center type"}
+	invalidRegionErr          = &Error{Code: 19, Msg: "invalid region"}
+	insufficientPermissionErr = &Error{Code: 20, Msg: "insufficient permission"}
+	zeroOwnerCountErr         = &Error{Code: 21, Msg: "zero owner count"}
+	invalidTaskCenterTypeErr  = &Error{Code: 22, Msg: "invalid task center type"}
 )
 
 func newInternalApiClient(regions map[string]InternalApi) InternalApiClient {

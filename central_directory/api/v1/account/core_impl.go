@@ -16,22 +16,21 @@ import (
 var (
 	noSuchRegionErr                       = &Error{Code: 2, Msg: "no such region"}
 	regionGoneErr                         = &Error{Code: 3, Msg: "region no longer exists"}
-	noSuchUserErr                         = &Error{Code: 4, Msg: "no such user"}
-	noSuchOrgErr                          = &Error{Code: 5, Msg: "no such org"}
-	invalidActivationAttemptErr           = &Error{Code: 6, Msg: "invalid activation attempt"}
-	invalidResetPwdAttemptErr             = &Error{Code: 7, Msg: "invalid reset password attempt"}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: 8, Msg: "invalid new email confirmation attempt"}
-	invalidNameOrPwdErr                   = &Error{Code: 9, Msg: "invalid name or password"}
-	incorrectPwdErr                       = &Error{Code: 10, Msg: "password incorrect"}
-	userNotActivatedErr                   = &Error{Code: 11, Msg: "user not activated"}
-	emailAlreadyInUseErr                  = &Error{Code: 12, Msg: "email already in use"}
-	accountNameAlreadyInUseErr            = &Error{Code: 13, Msg: "account already in use"}
-	emailConfirmationCodeErr              = &Error{Code: 14, Msg: "email confirmation code is of zero length"}
-	noNewEmailRegisteredErr               = &Error{Code: 15, Msg: "no new email registered"}
-	insufficientPermissionsErr            = &Error{Code: 16, Msg: "insufficient permissions"}
-	maxEntityCountExceededErr             = &Error{Code: 17, Msg: "max entity count exceeded"}
-	onlyOwnerMemberErr                    = &Error{Code: 18, Msg: "can't delete user who is the only owner of an org"}
-	invalidAvatarShapeErr                 = &Error{Code: 19, Msg: "avatar images must be square"}
+	noSuchAccountErr 		      = &Error{Code: 4, Msg: "no such account"}
+	invalidActivationAttemptErr           = &Error{Code: 5, Msg: "invalid activation attempt"}
+	invalidResetPwdAttemptErr             = &Error{Code: 6, Msg: "invalid reset password attempt"}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: 7, Msg: "invalid new email confirmation attempt"}
+	invalidNameOrPwdErr                   = &Error{Code: 8, Msg: "invalid name or password"}
+	incorrectPwdErr                       = &Error{Code: 9, Msg: "password incorrect"}
+	userNotActivatedErr                   = &Error{Code: 10, Msg: "user not activated"}
+	emailAlreadyInUseErr                  = &Error{Code: 11, Msg: "email already in use"}
+	accountNameAlreadyInUseErr            = &Error{Code: 12, Msg: "account already in use"}
+	emailConfirmationCodeErr              = &Error{Code: 13, Msg: "email confirmation code is of zero length"}
+	noNewEmailRegisteredErr               = &Error{Code: 14, Msg: "no new email registered"}
+	insufficientPermissionsErr            = &Error{Code: 15, Msg: "insufficient permissions"}
+	maxEntityCountExceededErr             = &Error{Code: 16, Msg: "max entity count exceeded"}
+	onlyOwnerMemberErr                    = &Error{Code: 17, Msg: "can't delete user who is the only owner of an org"}
+	invalidAvatarShapeErr                 = &Error{Code: 18, Msg: "avatar images must be square"}
 )
 
 func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newNamedEntity GenNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
@@ -170,7 +169,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 	err = a.store.createUser(
 		&fullUserInfo{
 			me: me{
-				user: user{
+				account: account{
 					NamedEntity: *userCore,
 					Region:      region,
 					Shard:       -1,
@@ -434,7 +433,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) (Id, err
 func (a *api) GetAccount(name string) (*account, error) {
 	a.log.Location()
 
-	acc, err := a.store.getAccountByCiName(name)
+	acc, err := a.store.getAccountByCiName(strings.Trim(name, " "))
 	if err != nil {
 		return acc, a.log.ErrorErr(err)
 	}
@@ -442,150 +441,33 @@ func (a *api) GetAccount(name string) (*account, error) {
 	return acc, err
 }
 
-func (a *api) GetUsers(ids []Id) ([]*user, error) {
+func (a *api) GetAccounts(ids []Id) ([]*account, error) {
 	a.log.Location()
 
 	if len(ids) > a.maxGetEntityCount {
 		return nil, a.log.InfoErr(maxEntityCountExceededErr)
 	}
 
-	users, err := a.store.getUsers(ids)
+	accounts, err := a.store.getAccounts(ids)
 	if err != nil {
 		return nil, a.log.ErrorErr(err)
 	}
 
-	return users, nil
+	return accounts, nil
 }
 
-func (a *api) GetOrgs(ids []Id) ([]*org, error) {
+func (a *api) GetMe(myId Id) (*me, error) {
 	a.log.Location()
-
-	if len(ids) > a.maxGetEntityCount {
-		return nil, a.log.InfoErr(maxEntityCountExceededErr)
-	}
-
-	orgs, err := a.store.getOrgs(ids)
-	if err != nil {
-		return nil, a.log.ErrorErr(err)
-	}
-
-	return orgs, nil
-}
-
-func (a *api) SetMyName(myId Id, newName string) error {
-	a.log.Location()
-
-	newName = strings.Trim(newName, " ")
-	if err := ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		return a.log.InfoErr(err)
-	}
-
-	if exists, err := a.store.accountWithCiNameExists(newName); exists || err != nil {
-		if err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		} else {
-			return a.log.InfoUserErr(myId, accountNameAlreadyInUseErr)
-		}
-	}
 
 	user, err := a.store.getUserById(myId)
 	if err != nil {
-		return a.log.ErrorUserErr(myId, err)
+		return nil, a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return a.log.InfoUserErr(myId, noSuchUserErr)
+		return nil, a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
-	user.Name = newName
-	if err = a.store.updateUser(user); err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-
-	for offset, total := 0, 1; offset < total; {
-		var orgs []*org
-		orgs, total, err = a.store.getUsersOrgs(myId, offset, 100)
-		if err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		offset += len(orgs)
-		for _, org := range orgs {
-			if !a.internalRegionClient.IsValidRegion(org.Region) {
-				return a.log.ErrorUserErr(myId, regionGoneErr)
-			}
-			if err := a.internalRegionClient.RenameMember(org.Region, org.Shard, org.Id, myId, newName); err != nil {
-				return a.log.ErrorUserErr(myId, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadCloser) error {
-	a.log.Location()
-
-	if avatarImageData != nil {
-		avatarImageData.Close()
-	}
-
-	user, err := a.store.getUserById(myId)
-	if err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-	if user == nil {
-		return a.log.InfoUserErr(myId, noSuchUserErr)
-	}
-
-	if !myId.Equal(accountId) {
-		org, err := a.store.getOrgById(accountId)
-		if err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		if org == nil {
-			return a.log.InfoUserErr(myId, noSuchOrgErr)
-		}
-
-		if !a.internalRegionClient.IsValidRegion(org.Region) {
-			return a.log.ErrorUserErr(myId, regionGoneErr)
-		}
-
-		can, err := a.internalRegionClient.UserIsOrgOwner(org.Region, org.Shard, accountId, myId)
-		if err != nil {
-			return a.log.ErrorUserErr(myId, regionGoneErr)
-		}
-		if !can {
-			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
-		}
-	}
-
-	if avatarImageData != nil {
-		avatarImage, _, err := image.Decode(avatarImageData)
-		if err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		bounds := avatarImage.Bounds()
-		if bounds.Max.X - bounds.Min.X != bounds.Max.Y - bounds.Min.Y { //if it  isn't square, then error
-			return a.log.InfoUserErr(myId, invalidAvatarShapeErr)
-		}
-		if  uint(bounds.Max.X - bounds.Min.X) > a.maxAvatarDim { // if it is larger than allowed then resize
-			avatarImage = resize.Resize(a.maxAvatarDim, a.maxAvatarDim, avatarImage, resize.NearestNeighbor)
-		}
-		buff := &bytes.Buffer{}
-		if err := jpeg.Encode(buff, avatarImage, nil); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		data := buff.Bytes()
-		readerSeeker := bytes.NewReader(data)
-		if err := a.avatarStore.put(myId.String(), "image/jpeg", int64(len(data)), readerSeeker); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-	} else {
-		if err := a.avatarStore.delete(myId.String()); err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-	}
-
-	return nil
+	return &user.me, nil
 }
 
 func (a *api) SetMyPwd(myId Id, oldPwd, newPwd string) error {
@@ -600,7 +482,7 @@ func (a *api) SetMyPwd(myId Id, oldPwd, newPwd string) error {
 		return a.log.ErrorUserErr(myId, err)
 	}
 	if pwdInfo == nil {
-		return a.log.InfoUserErr(myId, noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
 	scryptPwdTry, err := a.cryptoHelper.ScryptKey([]byte(oldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
@@ -657,7 +539,7 @@ func (a *api) SetMyEmail(myId Id, newEmail string) error {
 		return a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return a.log.InfoUserErr(myId, noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
 	confirmationCode, err := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
@@ -686,7 +568,7 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 		return a.log.ErrorUserErr(myId, err)
 	}
 	if user == nil {
-		return a.log.InfoUserErr(myId, noSuchUserErr)
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
 	// check the user has actually registered a new email
@@ -706,7 +588,154 @@ func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) error {
 	return nil
 }
 
-func (a *api) MigrateMe(myId Id, newRegion string) error {
+func (a *api) SetAccountName(myId, accountId Id, newName string) error {
+	a.log.Location()
+
+	newName = strings.Trim(newName, " ")
+	if err := ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
+		return a.log.InfoErr(err)
+	}
+
+	if exists, err := a.store.accountWithCiNameExists(newName); exists || err != nil {
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		} else {
+			return a.log.InfoUserErr(myId, accountNameAlreadyInUseErr)
+		}
+	}
+
+	acc, err := a.store.getAccount(accountId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if acc == nil {
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
+	}
+
+	if !myId.Equal(accountId) {
+		if acc.IsUser { // can't rename someone else's personal account
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+		//otherwise attempting to rename an org
+		if !a.internalRegionClient.IsValidRegion(acc.Region) {
+			return a.log.ErrorUserErr(myId, regionGoneErr)
+		}
+
+		can, err := a.internalRegionClient.UserIsOrgOwner(acc.Region, acc.Shard, accountId, myId)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if !can {
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+	}
+
+	//else user is setting their own name
+	acc.Name = newName
+	if err = a.store.updateAccount(acc); err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+
+	if myId.Equal(accountId) { // if i did rename my account, i need to update all the stored names in all the orgs Im a member of
+		for offset, total := 0, 1; offset < total; {
+			var orgs []*account
+			orgs, total, err = a.store.getUsersOrgs(myId, offset, 100)
+			if err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+			offset += len(orgs)
+			for _, org := range orgs {
+				if !a.internalRegionClient.IsValidRegion(org.Region) {
+					return a.log.ErrorUserErr(myId, regionGoneErr)
+				}
+				if err := a.internalRegionClient.RenameMember(org.Region, org.Shard, org.Id, myId, newName); err != nil {
+					return a.log.ErrorUserErr(myId, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadCloser) error {
+	a.log.Location()
+
+	if avatarImageData != nil {
+		defer avatarImageData.Close()
+	}
+
+	account, err := a.store.getAccount(accountId)
+	if err != nil {
+		return a.log.ErrorUserErr(myId, err)
+	}
+	if account == nil {
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
+	}
+
+	if !myId.Equal(accountId) {
+		if account.IsUser { // can't set avatar on someone else's personal account
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+		//otherwise attempting to set avatar on an org
+		if !a.internalRegionClient.IsValidRegion(account.Region) {
+			return a.log.ErrorUserErr(myId, regionGoneErr)
+		}
+
+		can, err := a.internalRegionClient.UserIsOrgOwner(account.Region, account.Shard, accountId, myId)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if !can {
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+	}
+
+	if avatarImageData != nil {
+		avatarImage, _, err := image.Decode(avatarImageData)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		bounds := avatarImage.Bounds()
+		if bounds.Max.X - bounds.Min.X != bounds.Max.Y - bounds.Min.Y { //if it  isn't square, then error
+			return a.log.InfoUserErr(myId, invalidAvatarShapeErr)
+		}
+		if  uint(bounds.Max.X - bounds.Min.X) > a.maxAvatarDim { // if it is larger than allowed then resize
+			avatarImage = resize.Resize(a.maxAvatarDim, a.maxAvatarDim, avatarImage, resize.NearestNeighbor)
+		}
+		buff := &bytes.Buffer{}
+		if err := jpeg.Encode(buff, avatarImage, nil); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		data := buff.Bytes()
+		readerSeeker := bytes.NewReader(data)
+		if err := a.avatarStore.put(myId.String(), "image/jpeg", int64(len(data)), readerSeeker); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if !account.HasAvatar {
+			//if account didn't previously have an avatar then lets update the store to reflect it's new state
+			account.HasAvatar = true
+			if err := a.store.updateAccount(account); err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+		}
+	} else {
+		if err := a.avatarStore.delete(myId.String()); err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if account.HasAvatar {
+			//if account did previously have an avatar then lets update the store to reflect it's new state
+			account.HasAvatar = false
+			if err := a.store.updateAccount(account); err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (a *api) MigrateAccount(myId, accountId Id, newRegion string) error {
 	a.log.Location()
 
 	//the next line is arbitrarily added in to get code coverage for isMigrating Func
@@ -716,80 +745,7 @@ func (a *api) MigrateMe(myId Id, newRegion string) error {
 	return a.log.InfoUserErr(myId, NotImplementedErr)
 }
 
-func (a *api) GetMe(myId Id) (*me, error) {
-	a.log.Location()
-
-	user, err := a.store.getUserById(myId)
-	if err != nil {
-		return nil, a.log.ErrorUserErr(myId, err)
-	}
-	if user == nil {
-		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
-	}
-
-	return &user.me, nil
-}
-
-func (a *api) DeleteMe(myId Id) error {
-	a.log.Location()
-
-	user, err := a.store.getUserById(myId)
-	if err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-	if user == nil {
-		return a.log.InfoUserErr(myId, noSuchUserErr)
-	}
-
-	for offset, total := 0, 1; offset < total; {
-		var orgs []*org
-		orgs, total, err = a.store.getUsersOrgs(myId, offset, 100)
-		if err != nil {
-			return a.log.ErrorUserErr(myId, err)
-		}
-		offset += len(orgs)
-		for _, org := range orgs {
-			if !a.internalRegionClient.IsValidRegion(org.Region) {
-				return a.log.ErrorUserErr(myId, regionGoneErr)
-			}
-			isOnlyOwner, err := a.internalRegionClient.MemberIsOnlyOwner(org.Region, org.Shard, org.Id, myId)
-			if err != nil {
-				return a.log.ErrorUserErr(myId, err)
-			}
-			if isOnlyOwner {
-				return a.log.InfoUserErr(myId, onlyOwnerMemberErr)
-			}
-		}
-		for _, org := range orgs {
-			if err := a.internalRegionClient.SetMemberDeleted(org.Region, org.Shard, org.Id, myId); err != nil {
-				return a.log.ErrorUserErr(myId, err)
-			}
-			if err := a.store.deleteMemberships(org.Id, []Id{myId}); err != nil {
-				return a.log.ErrorUserErr(myId, err)
-			}
-		}
-	}
-
-	if !a.internalRegionClient.IsValidRegion(user.Region) {
-		return a.log.ErrorUserErr(myId, regionGoneErr)
-	}
-
-	publicErr, err := a.internalRegionClient.DeleteTaskCenter(user.Region, user.Shard, myId, myId)
-	if err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-	if publicErr != nil {
-		return a.log.InfoUserErr(myId, publicErr)
-	}
-
-	if err := a.store.deleteUserAndAllAssociatedMemberships(myId); err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-
-	return nil
-}
-
-func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
+func (a *api) CreateOrg(myId Id, name, region string) (*account, error) {
 	a.log.Location()
 
 	name = strings.Trim(name, " ")
@@ -814,7 +770,7 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
-	org := &org{
+	org := &account{
 		NamedEntity: *orgCore,
 		Region:      region,
 		Shard:       -1,
@@ -829,80 +785,26 @@ func (a *api) CreateOrg(myId Id, name, region string) (*org, error) {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 	if owner == nil {
-		return nil, a.log.InfoUserErr(myId, noSuchUserErr)
+		return nil, a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
 	shard, err := a.internalRegionClient.CreateOrgTaskCenter(region, orgCore.Id, myId, owner.Name)
 	if err != nil {
-		if err := a.store.deleteOrgAndAllAssociatedMemberships(orgCore.Id); err != nil {
+		if err := a.store.deleteAccountAndAllAssociatedMemberships(orgCore.Id); err != nil {
 			return nil, a.log.ErrorUserErr(myId, err)
 		}
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
 	org.Shard = shard
-	if err := a.store.updateOrg(org); err != nil {
+	if err := a.store.updateAccount(org); err != nil {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
 	return org, nil
 }
 
-func (a *api) RenameOrg(myId, orgId Id, newName string) error {
-	a.log.Location()
-
-	newName = strings.Trim(newName, " ")
-	if err := ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers); err != nil {
-		return a.log.InfoErr(err)
-	}
-
-	if exists, err := a.store.accountWithCiNameExists(newName); exists || err != nil {
-		if err != nil {
-			return a.log.ErrorErr(err)
-		} else {
-			return a.log.InfoErr(accountNameAlreadyInUseErr)
-		}
-	}
-
-	org, err := a.store.getOrgById(orgId)
-	if err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-	if org == nil {
-		return a.log.InfoUserErr(myId, noSuchOrgErr)
-	}
-
-	if !a.internalRegionClient.IsValidRegion(org.Region) {
-		return a.log.ErrorUserErr(myId, regionGoneErr)
-	}
-
-	can, err := a.internalRegionClient.UserIsOrgOwner(org.Region, org.Shard, orgId, myId)
-	if err != nil {
-		return a.log.ErrorUserErr(myId, regionGoneErr)
-	}
-	if !can {
-		return a.log.InfoUserErr(myId, insufficientPermissionsErr)
-	}
-
-	org.Name = newName
-	if err := a.store.updateOrg(org); err != nil {
-		return a.log.ErrorUserErr(myId, err)
-	}
-
-	return nil
-}
-
-func (a *api) MigrateOrg(myId, orgId Id, newRegion string) error {
-	a.log.Location()
-
-	//the next line is arbitrarily added in to get code coverage for isMigrating Func
-	//which won't get used anywhere until the migration feature is worked on in the future
-	(&org{}).isMigrating()
-
-	return a.log.InfoUserErr(myId, NotImplementedErr)
-}
-
-func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
+func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*account, int, error) {
 	a.log.Location()
 
 	if limit < 1 || limit > a.maxGetEntityCount {
@@ -919,22 +821,37 @@ func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*org, int, error) {
 	return orgs, total, err
 }
 
-func (a *api) DeleteOrg(myId, orgId Id) error {
+func (a *api) DeleteAccount(myId, accountId Id) error {
 	a.log.Location()
 
-	org, err := a.store.getOrgById(orgId)
+	acc, err := a.store.getAccount(accountId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
-	if org == nil {
-		return a.log.InfoUserErr(myId, noSuchOrgErr)
+	if acc == nil {
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
-	if !a.internalRegionClient.IsValidRegion(org.Region) {
+	if !a.internalRegionClient.IsValidRegion(acc.Region) {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	publicErr, err := a.internalRegionClient.DeleteTaskCenter(org.Region, org.Shard, orgId, myId)
+	if !myId.Equal(accountId) {
+		if acc.IsUser { // can't delete someone else's personal account
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+		//otherwise attempting to delete an org
+		can, err := a.internalRegionClient.UserIsOrgOwner(acc.Region, acc.Shard, accountId, myId)
+		if err != nil {
+			return a.log.ErrorUserErr(myId, err)
+		}
+		if !can {
+			return a.log.InfoUserErr(myId, insufficientPermissionsErr)
+		}
+	}
+
+
+	publicErr, err := a.internalRegionClient.DeleteTaskCenter(acc.Region, acc.Shard, accountId, myId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
@@ -942,8 +859,36 @@ func (a *api) DeleteOrg(myId, orgId Id) error {
 		return a.log.InfoUserErr(myId, publicErr)
 	}
 
-	if err := a.store.deleteOrgAndAllAssociatedMemberships(orgId); err != nil {
+	if err := a.store.deleteAccountAndAllAssociatedMemberships(accountId); err != nil {
 		return a.log.ErrorUserErr(myId, err)
+	}
+
+	if myId.Equal(accountId) {
+		for offset, total := 0, 1; offset < total; {
+			var orgs []*account
+			orgs, total, err = a.store.getUsersOrgs(myId, offset, 100)
+			if err != nil {
+				return a.log.ErrorUserErr(myId, err)
+			}
+			offset += len(orgs)
+			for _, org := range orgs {
+				if !a.internalRegionClient.IsValidRegion(org.Region) {
+					return a.log.ErrorUserErr(myId, regionGoneErr)
+				}
+				isOnlyOwner, err := a.internalRegionClient.MemberIsOnlyOwner(org.Region, org.Shard, org.Id, myId)
+				if err != nil {
+					return a.log.ErrorUserErr(myId, err)
+				}
+				if isOnlyOwner {
+					return a.log.InfoUserErr(myId, onlyOwnerMemberErr)
+				}
+			}
+			for _, org := range orgs {
+				if err := a.internalRegionClient.SetMemberDeleted(org.Region, org.Shard, org.Id, myId); err != nil {
+					return a.log.ErrorUserErr(myId, err)
+				}
+			}
+		}
 	}
 
 	return nil
@@ -956,12 +901,12 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		return a.log.InfoUserErr(myId, maxEntityCountExceededErr)
 	}
 
-	org, err := a.store.getOrgById(orgId)
+	org, err := a.store.getAccount(orgId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 	if org == nil {
-		return a.log.InfoUserErr(myId, noSuchOrgErr)
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
 	if !a.internalRegionClient.IsValidRegion(org.Region) {
@@ -1000,12 +945,12 @@ func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) error {
 		return a.log.InfoUserErr(myId, maxEntityCountExceededErr)
 	}
 
-	org, err := a.store.getOrgById(orgId)
+	org, err := a.store.getAccount(orgId)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 	if org == nil {
-		return a.log.InfoUserErr(myId, noSuchOrgErr)
+		return a.log.InfoUserErr(myId, noSuchAccountErr)
 	}
 
 	if !a.internalRegionClient.IsValidRegion(org.Region) {
@@ -1040,16 +985,15 @@ type store interface {
 	getUserById(id Id) (*fullUserInfo, error)
 	getPwdInfo(id Id) (*pwdInfo, error)
 	updateUser(user *fullUserInfo) error
+	updateAccount(account *account) error
 	updatePwdInfo(id Id, pwdInfo *pwdInfo) error
-	deleteUserAndAllAssociatedMemberships(id Id) error
-	getUsers(ids []Id) ([]*user, error)
+	deleteAccountAndAllAssociatedMemberships(id Id) error
+	getAccount(id Id) (*account, error)
+	getAccounts(ids []Id) ([]*account, error)
+	getUsers(ids []Id) ([]*account, error)
 	//org
-	createOrgAndMembership(org *org, user Id) error
-	getOrgById(id Id) (*org, error)
-	updateOrg(org *org) error
-	deleteOrgAndAllAssociatedMemberships(id Id) error
-	getOrgs(ids []Id) ([]*org, error)
-	getUsersOrgs(userId Id, offset, limit int) ([]*org, int, error)
+	createOrgAndMembership(org *account, user Id) error
+	getUsersOrgs(userId Id, offset, limit int) ([]*account, int, error)
 	//members
 	createMemberships(org Id, users []Id) error
 	deleteMemberships(org Id, users []Id) error
@@ -1086,19 +1030,16 @@ type account struct {
 	Region    string  `json:"region"`
 	NewRegion *string `json:"newRegion,omitempty"`
 	Shard     int     `json:"shard"`
+	HasAvatar bool    `json:"hasAvatar"`
 	IsUser    bool    `json:"isUser"`
 }
 
-type org account
-
-func (o *org) isMigrating() bool {
-	return o.NewRegion != nil
+func (a *account) isMigrating() bool {
+	return a.NewRegion != nil
 }
 
-type user account
-
 type me struct {
-	user
+	account
 	Email    string  `json:"email"`
 	NewEmail *string `json:"newEmail,omitempty"`
 }
