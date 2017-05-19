@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
-	"time"
 )
 
 func Test_newInternalApiClient_nilRegionsPanic(t *testing.T) {
@@ -219,18 +218,7 @@ func Test_internalApiCreatePersonalTaskCenter_storeCreateAbstractTaskErr(t *test
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
-	store.On("createAbstractTask", &abstractTask{
-		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: myId,
-				},
-			},
-			Org:            myId,
-			Created:        nowTestVal,
-			IsAbstractTask: true,
-		},
-	}).Return(0, testErr)
+	store.On("registerPersonalAccount", myId).Return(0, testErr)
 
 	shard, err := iApi.CreatePersonalTaskCenter(myId)
 	assert.Zero(t, shard)
@@ -242,75 +230,20 @@ func Test_internalApiCreatePersonalTaskCenter_success(t *testing.T) {
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
-	store.On("createAbstractTask", &abstractTask{
-		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: myId,
-				},
-			},
-			Org:            myId,
-			Created:        nowTestVal,
-			IsAbstractTask: true,
-		},
-	}).Return(5, nil)
+	store.On("registerPersonalAccount", myId).Return(5, nil)
 
 	shard, err := iApi.CreatePersonalTaskCenter(myId)
 	assert.Equal(t, 5, shard)
 	assert.Nil(t, err)
 }
 
-func Test_internalApiCreateOrgTaskCenter_storeCreateAbstractTaskErr(t *testing.T) {
+func Test_internalApiCreateOrgTaskCenter_storeRegisterOrgOrgErr(t *testing.T) {
 	store := &mockStore{}
 	iApi := newInternalApi(store, NewLog(nil))
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("createAbstractTask", &abstractTask{
-		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: orgId,
-				},
-			},
-			Org:            orgId,
-			Created:        nowTestVal,
-			IsAbstractTask: true,
-		},
-	}).Return(0, testErr)
-
-	shard, err := iApi.CreateOrgTaskCenter(orgId, myId, "ali")
-	assert.Equal(t, 0, shard)
-	assert.Equal(t, testErr, err)
-}
-
-func Test_internalApiCreateOrgTaskCenter_storeCreateMemberErr(t *testing.T) {
-	store := &mockStore{}
-	iApi := newInternalApi(store, NewLog(nil))
-
-	myId, _ := NewId()
-	orgId, _ := NewId()
-	store.On("createAbstractTask", &abstractTask{
-		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: orgId,
-				},
-			},
-			Org:            orgId,
-			Created:        nowTestVal,
-			IsAbstractTask: true,
-		},
-	}).Return(5, nil)
-	store.On("createMember", 5, orgId, &member{
-		NamedEntity: NamedEntity{
-			Entity: Entity{
-				Id: myId,
-			},
-			Name: "ali",
-		},
-	}).Return(testErr)
-	store.On("deleteAccount", 5, orgId).Return(nil)
+	store.On("registerOrgAccount", orgId, myId, "ali").Return(0, testErr)
 
 	shard, err := iApi.CreateOrgTaskCenter(orgId, myId, "ali")
 	assert.Equal(t, 0, shard)
@@ -323,26 +256,7 @@ func Test_internalApiCreateOrgTaskCenter_success(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("createAbstractTask", &abstractTask{
-		task: task{
-			NamedEntity: NamedEntity{
-				Entity: Entity{
-					Id: orgId,
-				},
-			},
-			Org:            orgId,
-			Created:        nowTestVal,
-			IsAbstractTask: true,
-		},
-	}).Return(5, nil)
-	store.On("createMember", 5, orgId, &member{
-		NamedEntity: NamedEntity{
-			Entity: Entity{
-				Id: myId,
-			},
-			Name: "ali",
-		},
-	}).Return(nil)
+	store.On("registerOrgAccount", orgId, myId, "ali").Return(5, nil)
 
 	shard, err := iApi.CreateOrgTaskCenter(orgId, myId, "ali")
 	assert.Equal(t, 5, shard)
@@ -368,7 +282,7 @@ func Test_internalApiDeleteTaskCenter_insufficientPermissionErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 
 	publicErr, err := iApi.DeleteTaskCenter(5, orgId, myId)
 	assert.Equal(t, insufficientPermissionErr, publicErr)
@@ -381,7 +295,7 @@ func Test_internalApiDeleteTaskCenter_storeDeleteAccountErr(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Owner}, nil)
 	store.On("deleteAccount", 5, orgId).Return(testErr)
 
 	publicErr, err := iApi.DeleteTaskCenter(5, orgId, myId)
@@ -395,7 +309,7 @@ func Test_internalApiDeleteTaskCenter_success(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Owner}, nil)
 	store.On("deleteAccount", 5, orgId).Return(nil)
 
 	publicErr, err := iApi.DeleteTaskCenter(5, orgId, myId)
@@ -424,7 +338,7 @@ func Test_internalApiAddMembers_insufficientPermissionErr(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []*NamedEntity{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Writer}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Writer}, nil)
 
 	publicErr, err := iApi.AddMembers(5, orgId, myId, members)
 	assert.Equal(t, insufficientPermissionErr, publicErr)
@@ -440,7 +354,7 @@ func Test_internalApiAddMembers_storeGetMemberErr2(t *testing.T) {
 	newMemId, _ := NewId()
 	newMem := &NamedEntity{Entity: Entity{Id: newMemId}, Name: "bob"}
 	members := []*NamedEntity{newMem}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 	store.On("getMember", 5, orgId, newMemId).Return(nil, testErr)
 
 	publicErr, err := iApi.AddMembers(5, orgId, myId, members)
@@ -457,7 +371,7 @@ func Test_internalApiAddMembers_storeAddMembersErr(t *testing.T) {
 	newMemId, _ := NewId()
 	newMem := &NamedEntity{Entity: Entity{Id: newMemId}, Name: "bob"}
 	members := []*NamedEntity{newMem}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 	store.On("getMember", 5, orgId, newMemId).Return(nil, nil)
 	store.On("addMembers", 5, orgId, members).Return(testErr)
 
@@ -475,8 +389,8 @@ func Test_internalApiAddMembers_storeSetMembersActiveErr(t *testing.T) {
 	oldMemId, _ := NewId()
 	oldMem := &NamedEntity{Entity: Entity{Id: oldMemId}, Name: "bob"}
 	members := []*NamedEntity{oldMem}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
-	store.On("getMember", 5, orgId, oldMemId).Return(&member{}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, oldMemId).Return(&orgMember{}, nil)
 	store.On("setMembersActive", 5, orgId, members).Return(testErr)
 
 	publicErr, err := iApi.AddMembers(5, orgId, myId, members)
@@ -495,9 +409,9 @@ func Test_internalApiAddMembers_success(t *testing.T) {
 	newMem := &NamedEntity{Entity: Entity{Id: newMemId}, Name: "bob"}
 	oldMem := &NamedEntity{Entity: Entity{Id: oldMemId}, Name: "cat"}
 	members := []*NamedEntity{newMem, oldMem}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 	store.On("getMember", 5, orgId, newMemId).Return(nil, nil)
-	store.On("getMember", 5, orgId, oldMemId).Return(&member{}, nil)
+	store.On("getMember", 5, orgId, oldMemId).Return(&orgMember{}, nil)
 	store.On("addMembers", 5, orgId, []*NamedEntity{newMem}).Return(nil)
 	store.On("setMembersActive", 5, orgId, []*NamedEntity{oldMem}).Return(nil)
 
@@ -527,7 +441,7 @@ func Test_internalApiRemoveMembers_insufficientPermissionErr(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Writer}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Writer}, nil)
 
 	publicErr, err := iApi.RemoveMembers(5, orgId, myId, members)
 	assert.Equal(t, insufficientPermissionErr, publicErr)
@@ -541,7 +455,7 @@ func Test_internalApiRemoveMembers_owner_storeGetTotalOrgOwnerCountErr(t *testin
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Owner}, nil)
 	store.On("getTotalOrgOwnerCount", 5, orgId).Return(0, testErr)
 
 	publicErr, err := iApi.RemoveMembers(5, orgId, myId, members)
@@ -556,7 +470,7 @@ func Test_internalApiRemoveMembers_owner_storegetOwnerCountInSetErr(t *testing.T
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Owner}, nil)
 	store.On("getTotalOrgOwnerCount", 5, orgId).Return(3, nil)
 	store.On("getOwnerCountInSet", 5, orgId, members).Return(0, testErr)
 
@@ -572,7 +486,7 @@ func Test_internalApiRemoveMembers_owner_zeroOwnerCountErr(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Owner}, nil)
 	store.On("getTotalOrgOwnerCount", 5, orgId).Return(3, nil)
 	store.On("getOwnerCountInSet", 5, orgId, members).Return(3, nil)
 
@@ -588,7 +502,7 @@ func Test_internalApiRemoveMembers_admin_storegetOwnerCountInSetErr(t *testing.T
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 	store.On("getOwnerCountInSet", 5, orgId, members).Return(0, testErr)
 
 	publicErr, err := iApi.RemoveMembers(5, orgId, myId, members)
@@ -603,7 +517,7 @@ func Test_internalApiRemoveMembers_admin_insufficientPermissionErr(t *testing.T)
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 	store.On("getOwnerCountInSet", 5, orgId, members).Return(1, nil)
 
 	publicErr, err := iApi.RemoveMembers(5, orgId, myId, members)
@@ -618,7 +532,7 @@ func Test_internalApiRemoveMembers_storeSetMembersInactiveErr(t *testing.T) {
 	myId, _ := NewId()
 	orgId, _ := NewId()
 	members := []Id{}
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 	store.On("getOwnerCountInSet", 5, orgId, members).Return(0, nil)
 	store.On("setMembersInactive", 5, orgId, members).Return(testErr)
 
@@ -708,7 +622,7 @@ func Test_internalApiUserIsOrgOwner_true(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Owner}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Owner}, nil)
 
 	can, err := iApi.UserIsOrgOwner(5, orgId, myId)
 	assert.True(t, can)
@@ -721,7 +635,7 @@ func Test_internalApiUserIsOrgOwner_false(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	store.On("getMember", 5, orgId, myId).Return(&member{Role: Admin}, nil)
+	store.On("getMember", 5, orgId, myId).Return(&orgMember{Role: Admin}, nil)
 
 	can, err := iApi.UserIsOrgOwner(5, orgId, myId)
 	assert.False(t, can)
@@ -754,7 +668,6 @@ func Test_internalApiRenameMember_success(t *testing.T) {
 var (
 	testErr    = errors.New("test")
 	testErr2   = errors.New("test2")
-	nowTestVal = time.Now().UTC()
 )
 
 type mockSingluarInternalApi struct {
@@ -810,15 +723,14 @@ type mockStore struct {
 	mock.Mock
 }
 
-func (m *mockStore) createAbstractTask(ts *abstractTask) (int, error) {
-	ts.CreatedOn = nowTestVal
-	args := m.Called(ts)
+func (m *mockStore) registerPersonalAccount(id Id) (int, error) {
+	args := m.Called(id)
 	return args.Int(0), args.Error(1)
 }
 
-func (m *mockStore) createMember(shard int, org Id, member *member) error {
-	args := m.Called(shard, org, member)
-	return args.Error(0)
+func (m *mockStore) registerOrgAccount(id Id, ownerId Id, ownerName string) (int, error) {
+	args := m.Called(id, ownerId, ownerName)
+	return args.Int(0), args.Error(1)
 }
 
 func (m *mockStore) deleteAccount(shard int, account Id) error {
@@ -826,11 +738,11 @@ func (m *mockStore) deleteAccount(shard int, account Id) error {
 	return args.Error(0)
 }
 
-func (m *mockStore) getMember(shard int, org, memberId Id) (*member, error) {
+func (m *mockStore) getMember(shard int, org, memberId Id) (*orgMember, error) {
 	args := m.Called(shard, org, memberId)
 	mem := args.Get(0)
 	if mem != nil {
-		return mem.(*member), args.Error(1)
+		return mem.(*orgMember), args.Error(1)
 	}
 	return nil, args.Error(1)
 }

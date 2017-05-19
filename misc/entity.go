@@ -27,7 +27,6 @@ func (id Id) Copy() Id {
 
 type Entity struct {
 	Id        Id        `json:"id"`
-	CreatedOn time.Time `json:"createdOn"`
 }
 
 type GenEntity func() (*Entity, error)
@@ -39,7 +38,6 @@ func NewEntity() (*Entity, error) {
 	}
 	return &Entity{
 		Id:        id,
-		CreatedOn: time.Now().UTC(),
 	}, nil
 }
 
@@ -51,13 +49,41 @@ type NamedEntity struct {
 type GenNamedEntity func(name string) (*NamedEntity, error)
 
 func NewNamedEntity(name string) (*NamedEntity, error) {
-	entity, err := NewEntity()
+	id, err := NewId()
 	if err != nil {
 		return nil, err
 	}
 	return &NamedEntity{
-		Entity: *entity,
+		Entity: Entity{
+			Id: id,
+		},
 		Name:   name,
+	}, nil
+}
+
+type CreatedNamedEntity struct {
+	NamedEntity
+	CreatedOn time.Time `json:"createdOn"`
+}
+
+type GenCreatedNamedEntity func(name string) (*CreatedNamedEntity, error)
+
+func NewCreatedNamedEntity(name string) (*CreatedNamedEntity, error) {
+	id, err := NewId()
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &CreatedNamedEntity{
+		NamedEntity: NamedEntity{
+			Entity: Entity{
+				Id: id,
+			},
+			Name: name,
+		},
+		CreatedOn: time.Now().UTC(),
 	}, nil
 }
 

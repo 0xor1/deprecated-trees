@@ -119,53 +119,24 @@ type internalApi struct {
 }
 
 func (a *internalApi) CreatePersonalTaskCenter(user Id) (int, error) {
-	taskCore, err := NewNamedEntity("")
-	if err != nil {
-		return 0, err
-	}
-	shard, err := a.store.createAbstractTask(&abstractTask{
-		task: task{
-			NamedEntity:    *taskCore,
-			Org:            user,
-			IsAbstractTask: true,
-		},
-	})
+	a.log.Location()
+
+	shard, err := a.store.registerPersonalAccount(user)
+
 	return shard, a.log.InfoErr(err)
 }
 
 func (a *internalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
-	taskCore, err := NewNamedEntity("")
-	if err != nil {
-		return 0, err
-	}
-	shard, err := a.store.createAbstractTask(&abstractTask{
-		task: task{
-			NamedEntity:    *taskCore,
-			Org:            org,
-			IsAbstractTask: true,
-		},
-	})
-	if err != nil {
-		return shard, a.log.InfoErr(err)
-	}
+	a.log.Location()
 
-	err = a.store.createMember(shard, org, &member{
-		NamedEntity: NamedEntity{
-			Entity: Entity{
-				Id: owner,
-			},
-			Name: ownerName,
-		},
-	})
-	if err != nil {
-		a.store.deleteAccount(shard, org)
-		return 0, a.log.InfoErr(err)
-	}
+	shard, err := a.store.registerOrgAccount(org, owner, ownerName)
 
-	return shard, nil
+	return shard, a.log.InfoErr(err)
 }
 
 func (a *internalApi) DeleteTaskCenter(shard int, account, owner Id) (error, error) {
+	a.log.Location()
+
 	if !owner.Equal(account) {
 		member, err := a.store.getMember(shard, account, owner)
 		if err != nil {
@@ -179,6 +150,8 @@ func (a *internalApi) DeleteTaskCenter(shard int, account, owner Id) (error, err
 }
 
 func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntity) (error, error) {
+	a.log.Location()
+
 	member, err := a.store.getMember(shard, org, admin)
 	if err != nil {
 		return nil, a.log.InfoErr(err)
@@ -216,6 +189,8 @@ func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntit
 }
 
 func (a *internalApi) RemoveMembers(shard int, org, admin Id, members []Id) (error, error) {
+	a.log.Location()
+
 	member, err := a.store.getMember(shard, org, admin)
 	if err != nil {
 		return nil, a.log.InfoErr(err)
@@ -254,19 +229,27 @@ func (a *internalApi) RemoveMembers(shard int, org, admin Id, members []Id) (err
 }
 
 func (a *internalApi) SetMemberDeleted(shard int, org, member Id) error {
+	a.log.Location()
+
 	return a.log.InfoErr(a.store.setMemberDeleted(shard, org, member))
 }
 
 func (a *internalApi) MemberIsOnlyOwner(shard int, org, member Id) (bool, error) {
+	a.log.Location()
+
 	is, err := a.store.memberIsOnlyOwner(shard, org, member)
 	return is, a.log.InfoErr(err)
 }
 
 func (a *internalApi) RenameMember(shard int, org, member Id, newName string) error {
+	a.log.Location()
+
 	return a.log.InfoErr(a.store.renameMember(shard, org, member, newName))
 }
 
 func (a *internalApi) UserIsOrgOwner(shard int, org, user Id) (bool, error) {
+	a.log.Location()
+
 	if !user.Equal(org) {
 		member, err := a.store.getMember(shard, org, user)
 		if err != nil {
@@ -284,10 +267,10 @@ func (a *internalApi) UserIsOrgOwner(shard int, org, user Id) (bool, error) {
 type role uint8
 
 type store interface {
-	createAbstractTask(*abstractTask) (int, error)
-	createMember(shard int, org Id, member *member) error
+	registerPersonalAccount(id Id) (int, error)
+	registerOrgAccount(id, ownerId Id, ownerName string) (int, error)
 	deleteAccount(shard int, account Id) error
-	getMember(shard int, org, member Id) (*member, error)
+	getMember(shard int, org, member Id) (*orgMember, error)
 	addMembers(shard int, org Id, members []*NamedEntity) error
 	setMembersActive(shard int, org Id, members []*NamedEntity) error
 	getTotalOrgOwnerCount(shard int, org Id) (int, error)
@@ -326,9 +309,9 @@ type abstractTask struct {
 	ArchivedSubFileSize     uint64 `json:"archivedSubFileSize"`
 }
 
-type member struct {
+type orgMember struct {
 	NamedEntity
-	AccessTask         Id     `json:"accessTask"`
+	Org 		   Id	  `json:"org"`
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
 	IsActive           bool   `json:"isActive"`

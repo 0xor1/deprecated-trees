@@ -23,23 +23,33 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
-var query_createAbstractTask = `CALL createAbstractTask(?, ?, ?, ?)`
+var query_registerPersonalAccount = `INSERT INTO orgs (id) VALUES (?);`
 
-func (s *sqlStore) createAbstractTask(at *abstractTask) (int, error) {
+func (s *sqlStore) registerPersonalAccount(id Id) (int, error) {
 	shardId := rand.Intn(len(s.shards))
-	_, err := s.shards[shardId].Exec(query_createAbstractTask, at.Org, nil, at.Org, at.Id, at.Name, at.User, at.TotalRemainingTime, at.TotalLoggedTime, at.ChatCount, at.FileCount, at.FileSize, at.CreatedOn, true, at.MinimumRemainingTime, at.IsParallel, at.ChildCount, at.DescendantCount, at.LeafCount, at.SubFileCount, at.SubFileSize, at.ArchivedChildCount, at.ArchivedDescendantCount, at.ArchivedLeafCount, at.ArchivedSubFileCount, at.ArchivedSubFileSize)
+	_, err := s.shards[shardId].Exec(query_registerPersonalAccount, []byte(id))
 	return shardId, err
 }
 
-func (s *sqlStore) createMember(shard int, org Id, member *member) error {
+var query_registerOrgAccount = `CALL registerOrgAccount(?, ?, ?);`
 
+func (s *sqlStore) registerOrgAccount(id Id, ownerId Id, ownerName string) (int, error) {
+	shardId := rand.Intn(len(s.shards))
+	_, err := s.shards[shardId].Exec(query_registerOrgAccount, []byte(id), []byte(ownerId), ownerName)
+	return shardId, err
 }
+
+var query_deleteAccount = `CALL deleteAccount(?);`
 
 func (s *sqlStore) deleteAccount(shard int, account Id) error {
-
+	if s.shards[shard] == nil {
+		return invalidShardIdErr
+	}
+	_, err := s.shards[shard].Exec(query_deleteAccount, []byte(account))
+	return err
 }
 
-func (s *sqlStore) getMember(shard int, org, member Id) (*member, error) {
+func (s *sqlStore) getMember(shard int, org, member Id) (*orgMember, error) {
 
 }
 

@@ -33,7 +33,7 @@ var (
 	invalidAvatarShapeErr                 = &Error{Code: 18, Msg: "avatar images must be square"}
 )
 
-func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newNamedEntity GenNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
+func newApi(store store, internalRegionClient internalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, log Log) Api {
 	if store == nil {
 		NilCriticalParamPanic("store")
 	}
@@ -46,8 +46,8 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 	if avatarStore == nil {
 		NilCriticalParamPanic("avatarStore")
 	}
-	if newNamedEntity == nil {
-		NilCriticalParamPanic("newNamedEntity")
+	if newCreatedNamedEntity == nil {
+		NilCriticalParamPanic("newCreatedNamedEntity")
 	}
 	if cryptoHelper == nil {
 		NilCriticalParamPanic("cryptoHelper")
@@ -60,7 +60,7 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 		internalRegionClient: internalRegionClient,
 		linkMailer:           linkMailer,
 		avatarStore:          avatarStore,
-		newNamedEntity:       newNamedEntity,
+		newCreatedNamedEntity:       newCreatedNamedEntity,
 		cryptoHelper:         cryptoHelper,
 		nameRegexMatchers:    append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
 		pwdRegexMatchers:     append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
@@ -81,27 +81,27 @@ func newApi(store store, internalRegionClient internalRegionClient, linkMailer l
 }
 
 type api struct {
-	store                store
-	internalRegionClient internalRegionClient
-	linkMailer           linkMailer
-	avatarStore          avatarStore
-	newNamedEntity       GenNamedEntity
-	cryptoHelper         CryptoHelper
-	nameRegexMatchers    []string
-	pwdRegexMatchers     []string
-	maxAvatarDim         uint
-	nameMinRuneCount     int
-	nameMaxRuneCount     int
-	pwdMinRuneCount      int
-	pwdMaxRuneCount      int
-	maxGetEntityCount    int
-	cryptoCodeLen        int
-	saltLen              int
-	scryptN              int
-	scryptR              int
-	scryptP              int
-	scryptKeyLen         int
-	log                  Log
+	store                 store
+	internalRegionClient  internalRegionClient
+	linkMailer            linkMailer
+	avatarStore           avatarStore
+	newCreatedNamedEntity GenCreatedNamedEntity
+	cryptoHelper          CryptoHelper
+	nameRegexMatchers     []string
+	pwdRegexMatchers      []string
+	maxAvatarDim          uint
+	nameMinRuneCount      int
+	nameMaxRuneCount      int
+	pwdMinRuneCount       int
+	pwdMaxRuneCount       int
+	maxGetEntityCount     int
+	cryptoCodeLen         int
+	saltLen               int
+	scryptN               int
+	scryptR               int
+	scryptP               int
+	scryptKeyLen          int
+	log                   Log
 }
 
 func (a *api) GetRegions() []string {
@@ -161,7 +161,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		return a.log.ErrorErr(err)
 	}
 
-	userCore, err := a.newNamedEntity(name)
+	userCore, err := a.newCreatedNamedEntity(name)
 	if err != nil {
 		return a.log.ErrorErr(err)
 	}
@@ -170,7 +170,7 @@ func (a *api) Register(name, email, pwd, region string) error {
 		&fullUserInfo{
 			me: me{
 				account: account{
-					NamedEntity: *userCore,
+					CreatedNamedEntity: *userCore,
 					Region:      region,
 					Shard:       -1,
 					IsUser:      true,
@@ -765,13 +765,13 @@ func (a *api) CreateOrg(myId Id, name, region string) (*account, error) {
 		}
 	}
 
-	orgCore, err := a.newNamedEntity(name)
+	orgCore, err := a.newCreatedNamedEntity(name)
 	if err != nil {
 		return nil, a.log.ErrorUserErr(myId, err)
 	}
 
 	org := &account{
-		NamedEntity: *orgCore,
+		CreatedNamedEntity: *orgCore,
 		Region:      region,
 		Shard:       -1,
 		IsUser:      false,
@@ -1026,7 +1026,7 @@ type avatarStore interface {
 }
 
 type account struct {
-	NamedEntity
+	CreatedNamedEntity
 	Region    string  `json:"region"`
 	NewRegion *string `json:"newRegion,omitempty"`
 	Shard     int     `json:"shard"`

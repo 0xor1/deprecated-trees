@@ -49,7 +49,7 @@ func Test_newApi_nilAvatarStorePanic(t *testing.T) {
 	newApi(store, internalRegionClient, linkMailer, nil, nil, nil, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
 }
 
-func Test_newApi_nilNewNamedEntityPanic(t *testing.T) {
+func Test_newApi_nilnewCreatedNamedEntityPanic(t *testing.T) {
 	defer func() {
 		err := recover().(error)
 		assert.IsType(t, &Error{}, err)
@@ -64,7 +64,7 @@ func Test_newApi_nilCryptoHelperPanic(t *testing.T) {
 		assert.IsType(t, &Error{}, err)
 	}()
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}
-	newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, nil, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
+	newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, nil, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
 }
 
 func Test_newApi_nilLogPanic(t *testing.T) {
@@ -73,19 +73,19 @@ func Test_newApi_nilLogPanic(t *testing.T) {
 		assert.IsType(t, &Error{}, err)
 	}()
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}
-	newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
+	newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, nil)
 }
 
 func Test_newApi_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	assert.NotNil(t, api)
 }
 
 func Test_api_GetRegions_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	expectedRegions := []string{"us-w", "us-e", "ch", "au"}
 	internalRegionClient.On("GetRegions").Return(expectedRegions)
@@ -95,7 +95,7 @@ func Test_api_GetRegions_success(t *testing.T) {
 
 func Test_api_Register_invalidNameParam(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	err := api.Register("a", "email@email.email", "P@ss-W0rd", "us").(*InvalidStringParamErr)
 	assert.Equal(t, "name", err.ParamPurpose)
@@ -104,7 +104,7 @@ func Test_api_Register_invalidNameParam(t *testing.T) {
 
 func Test_api_Register_invalidEmailParam(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	err := api.Register("ali", "invalidEmail", "P@ss-W0rd", "us").(*InvalidStringParamErr)
 	assert.Equal(t, "email", err.ParamPurpose)
@@ -112,7 +112,7 @@ func Test_api_Register_invalidEmailParam(t *testing.T) {
 
 func Test_api_Register_invalidPwdParam(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	err := api.Register("ali", "email@email.com", "p", "us").(*InvalidStringParamErr)
 	assert.Equal(t, "password", err.ParamPurpose)
@@ -120,7 +120,7 @@ func Test_api_Register_invalidPwdParam(t *testing.T) {
 
 func Test_api_Register_invalidRegionParam(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(false)
 
@@ -130,7 +130,7 @@ func Test_api_Register_invalidRegionParam(t *testing.T) {
 
 func Test_api_Register_storeAccountWithNameExistsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, testErr)
@@ -141,7 +141,7 @@ func Test_api_Register_storeAccountWithNameExistsErr(t *testing.T) {
 
 func Test_api_Register_storeAccountWithNameExists_true(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(true, nil)
@@ -152,7 +152,7 @@ func Test_api_Register_storeAccountWithNameExists_true(t *testing.T) {
 
 func Test_api_Register_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -164,7 +164,7 @@ func Test_api_Register_storeGetUserByEmailErr(t *testing.T) {
 
 func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAccountPolicyEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -177,7 +177,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAcco
 
 func Test_api_Register_storeGetUserByEmailNoneNilUser_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -190,7 +190,7 @@ func Test_api_Register_storeGetUserByEmailNoneNilUser_success(t *testing.T) {
 
 func Test_api_Register_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -203,7 +203,7 @@ func Test_api_Register_cryptoHelperBytesErr(t *testing.T) {
 
 func Test_api_Register_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -218,7 +218,7 @@ func Test_api_Register_cryptoHelperScryptKeyErr(t *testing.T) {
 
 func Test_api_Register_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -233,9 +233,9 @@ func Test_api_Register_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	assert.IsType(t, &ErrorRef{}, err)
 }
 
-func Test_api_Register_gennewNamedEntityErr(t *testing.T) {
+func Test_api_Register_gennewCreatedNamedEntityErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -245,7 +245,7 @@ func Test_api_Register_gennewNamedEntityErr(t *testing.T) {
 	cryptoHelper.On("Bytes", 128).Return(salt, nil)
 	cryptoHelper.On("ScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
 	cryptoHelper.On("UrlSafeString", 40).Return("test", nil)
-	miscFuncs.On("newNamedEntity", "ali").Return(nil, testErr)
+	miscFuncs.On("newCreatedNamedEntity", "ali").Return(nil, testErr)
 
 	err := api.Register("ali", "email@email.com", "P@ss-W0rd", "us")
 	assert.IsType(t, &ErrorRef{}, err)
@@ -253,7 +253,7 @@ func Test_api_Register_gennewNamedEntityErr(t *testing.T) {
 
 func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -264,15 +264,15 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 	cryptoHelper.On("ScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
 	activationCode := "test"
 	cryptoHelper.On("UrlSafeString", 40).Return(activationCode, nil)
-	accountCore, _ := NewNamedEntity("ali")
+	accountCore, _ := NewCreatedNamedEntity("ali")
 	accountCore.CreatedOn = timeNowReplacement
-	miscFuncs.On("newNamedEntity", "ali").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "ali").Return(accountCore, nil)
 	store.On(
 		"createUser",
 		&fullUserInfo{
 			me: me{
 				account: account{
-					NamedEntity: *accountCore,
+					CreatedNamedEntity: *accountCore,
 					Region:      "us",
 					Shard:       -1,
 					IsUser:      true,
@@ -296,7 +296,7 @@ func Test_api_Register_storeCreateNewUserErr(t *testing.T) {
 
 func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -307,15 +307,15 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 	cryptoHelper.On("ScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
 	activationCode := "test"
 	cryptoHelper.On("UrlSafeString", 40).Return(activationCode, nil)
-	accountCore, _ := NewNamedEntity("ali")
+	accountCore, _ := NewCreatedNamedEntity("ali")
 	accountCore.CreatedOn = timeNowReplacement
-	miscFuncs.On("newNamedEntity", "ali").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "ali").Return(accountCore, nil)
 	store.On(
 		"createUser",
 		&fullUserInfo{
 			me: me{
 				account: account{
-					NamedEntity: *accountCore,
+					CreatedNamedEntity: *accountCore,
 					Region:      "us",
 					Shard:       -1,
 					IsUser:      true,
@@ -340,7 +340,7 @@ func Test_api_Register_linkMailerSendActivationLinkErr(t *testing.T) {
 
 func Test_api_Register_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "ali").Return(false, nil)
@@ -351,15 +351,15 @@ func Test_api_Register_success(t *testing.T) {
 	cryptoHelper.On("ScryptKey", pwd, salt, 16384, 8, 1, 32).Return(pwd, nil)
 	activationCode := "test"
 	cryptoHelper.On("UrlSafeString", 40).Return(activationCode, nil)
-	accountCore, _ := NewNamedEntity("ali")
+	accountCore, _ := NewCreatedNamedEntity("ali")
 	accountCore.CreatedOn = timeNowReplacement
-	miscFuncs.On("newNamedEntity", "ali").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "ali").Return(accountCore, nil)
 	store.On(
 		"createUser",
 		&fullUserInfo{
 			me: me{
 				account: account{
-					NamedEntity: *accountCore,
+					CreatedNamedEntity: *accountCore,
 					Region:      "us",
 					Shard:       -1,
 					IsUser:      true,
@@ -384,7 +384,7 @@ func Test_api_Register_success(t *testing.T) {
 
 func Test_api_ResendActivationEmail_storeGetUseByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
@@ -394,7 +394,7 @@ func Test_api_ResendActivationEmail_storeGetUseByEmailErr(t *testing.T) {
 
 func Test_api_ResendActivationEmail_storeGetUseByEmailNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 
@@ -404,7 +404,7 @@ func Test_api_ResendActivationEmail_storeGetUseByEmailNilUser(t *testing.T) {
 
 func Test_api_ResendActivationEmail_storeGetUseByEmailActivatedUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activated := time.Now().UTC()
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{activated: &activated}, nil)
@@ -415,7 +415,7 @@ func Test_api_ResendActivationEmail_storeGetUseByEmailActivatedUser(t *testing.T
 
 func Test_api_ResendActivationEmail_linkMailerSendActivationLinkErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	code := "test"
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{activationCode: &code}, nil)
@@ -427,7 +427,7 @@ func Test_api_ResendActivationEmail_linkMailerSendActivationLinkErr(t *testing.T
 
 func Test_api_ResendActivationEmail_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	code := "test"
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{activationCode: &code}, nil)
@@ -439,7 +439,7 @@ func Test_api_ResendActivationEmail_success(t *testing.T) {
 
 func Test_api_Activate_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
@@ -450,7 +450,7 @@ func Test_api_Activate_storeGetUserByEmailErr(t *testing.T) {
 
 func Test_api_Activate_storeGetUserByActivationCodeNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 
@@ -461,7 +461,7 @@ func Test_api_Activate_storeGetUserByActivationCodeNilUser(t *testing.T) {
 
 func Test_api_Activate_storeGetUserByActivationCode_activationCodeMismatch(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationCode := "not-the-activation-code"
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{activationCode: &activationCode}, nil)
@@ -473,7 +473,7 @@ func Test_api_Activate_storeGetUserByActivationCode_activationCodeMismatch(t *te
 
 func Test_api_Activate_invalidUserRegion(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationCode := "activationCode"
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{activationCode: &activationCode, me: me{account: account{Region: "us"}}}, nil)
@@ -486,7 +486,7 @@ func Test_api_Activate_invalidUserRegion(t *testing.T) {
 
 func Test_api_Activate_internalRegionalApiCreatePersonalTaskCenterErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	userId, _ := NewId()
 	activationCode := "test"
@@ -494,9 +494,11 @@ func Test_api_Activate_internalRegionalApiCreatePersonalTaskCenterErr(t *testing
 		me: me{
 			account: account{
 				Region: "us",
-				NamedEntity: NamedEntity{
-					Entity: Entity{
-						Id: userId,
+				CreatedNamedEntity: CreatedNamedEntity{
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: userId,
+						},
 					},
 				},
 				Shard: -1,
@@ -515,7 +517,7 @@ func Test_api_Activate_internalRegionalApiCreatePersonalTaskCenterErr(t *testing
 
 func Test_api_Activate_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	userId, _ := NewId()
 	activationCode := "test"
@@ -523,9 +525,11 @@ func Test_api_Activate_storeUpdateUserErr(t *testing.T) {
 		me: me{
 			account: account{
 				Region: "us",
-				NamedEntity: NamedEntity{
-					Entity: Entity{
-						Id: userId,
+				CreatedNamedEntity: CreatedNamedEntity{
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: userId,
+						},
 					},
 				},
 				Shard: -1,
@@ -545,7 +549,7 @@ func Test_api_Activate_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_Activate_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	userId, _ := NewId()
 	activationCode := "test"
@@ -553,9 +557,11 @@ func Test_api_Activate_success(t *testing.T) {
 		me: me{
 			account: account{
 				Region: "us",
-				NamedEntity: NamedEntity{
-					Entity: Entity{
-						Id: userId,
+				CreatedNamedEntity: CreatedNamedEntity{
+					NamedEntity: NamedEntity{
+						Entity: Entity{
+							Id: userId,
+						},
 					},
 				},
 				Shard: -1,
@@ -578,7 +584,7 @@ func Test_api_Activate_success(t *testing.T) {
 
 func Test_api_Authenticate_storeGetUserByNameErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByCiName", "name").Return(nil, testErr)
 
@@ -589,7 +595,7 @@ func Test_api_Authenticate_storeGetUserByNameErr(t *testing.T) {
 
 func Test_api_Authenticate_storeGetUserByNameNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByCiName", "name").Return(nil, nil)
 
@@ -600,7 +606,7 @@ func Test_api_Authenticate_storeGetUserByNameNilUser(t *testing.T) {
 
 func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{activated: &activationTime}
@@ -614,7 +620,7 @@ func Test_api_Authenticate_storeGetPwdInfoErr(t *testing.T) {
 
 func Test_api_Authenticate_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{activated: &activationTime}
@@ -629,7 +635,7 @@ func Test_api_Authenticate_cryptoHelperScryptKeyErr(t *testing.T) {
 
 func Test_api_Authenticate_incorrectPwdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	user := &fullUserInfo{activated: &activationTime}
@@ -644,7 +650,7 @@ func Test_api_Authenticate_incorrectPwdErr(t *testing.T) {
 
 func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	user := &fullUserInfo{}
 	store.On("getUserByCiName", "name").Return(user, nil)
@@ -658,7 +664,7 @@ func Test_api_Authenticate_storeGetUserByName_userNotActivatedErr(t *testing.T) 
 
 func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
@@ -675,7 +681,7 @@ func Test_api_Authenticate_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_Authenticate_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
@@ -693,7 +699,7 @@ func Test_api_Authenticate_cryptoHelperBytesErr(t *testing.T) {
 
 func Test_api_Authenticate_genScryptKey2Err(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
@@ -712,7 +718,7 @@ func Test_api_Authenticate_genScryptKey2Err(t *testing.T) {
 
 func Test_api_Authenticate_storeUpdatePwdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
@@ -733,12 +739,12 @@ func Test_api_Authenticate_storeUpdatePwdErr(t *testing.T) {
 
 func Test_api_Authenticate_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	activationTime := time.Now().UTC()
 	resetPwdCode := "resetPwdCode"
 	id, _ := NewId()
-	user := &fullUserInfo{activated: &activationTime, resetPwdCode: &resetPwdCode, me: me{account: account{NamedEntity: NamedEntity{Entity: Entity{Id: id}}}}}
+	user := &fullUserInfo{activated: &activationTime, resetPwdCode: &resetPwdCode, me: me{account: account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: id}}}}}}
 	store.On("getUserByCiName", "name").Return(user, nil)
 	pwdInfo := &pwdInfo{pwd: []byte("P@ss-W0rd")}
 	store.On("getPwdInfo", id).Return(pwdInfo, nil)
@@ -755,7 +761,7 @@ func Test_api_Authenticate_success(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "currentEmail@currentEmail.com").Return(nil, testErr)
 
@@ -766,7 +772,7 @@ func Test_api_ConfirmNewEmail_storeGetUserByEmailErr(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_storeGetUserByEmaiNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "currentEmail@currentEmail.com").Return(nil, nil)
 
@@ -777,7 +783,7 @@ func Test_api_ConfirmNewEmail_storeGetUserByEmaiNilUser(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_mismatchNewEmail(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
@@ -792,7 +798,7 @@ func Test_api_ConfirmNewEmail_mismatchNewEmail(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_mismatchConfirmationCode(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
@@ -807,7 +813,7 @@ func Test_api_ConfirmNewEmail_mismatchConfirmationCode(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_storeGetUserByEmail2Err(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
@@ -823,7 +829,7 @@ func Test_api_ConfirmNewEmail_storeGetUserByEmail2Err(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_storeGetUserByEmail2NoneNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
@@ -839,7 +845,7 @@ func Test_api_ConfirmNewEmail_storeGetUserByEmail2NoneNilUser(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
@@ -856,13 +862,13 @@ func Test_api_ConfirmNewEmail_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_ConfirmNewEmail_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	confirmationCode := "confirmationCode"
 	newEmail := "new@email.com"
 	currentEmail := "currentEmail@currentEmail.com"
 	id, _ := NewId()
-	user := &fullUserInfo{newEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail, account: account{NamedEntity: NamedEntity{Entity: Entity{Id: id}}}}}
+	user := &fullUserInfo{newEmailConfirmationCode: &confirmationCode, me: me{NewEmail: &newEmail, Email: currentEmail, account: account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: id}}}}}}
 	store.On("getUserByEmail", currentEmail).Return(user, nil)
 	store.On("getUserByEmail", newEmail).Return(nil, nil)
 	store.On("updateUser", user).Return(nil)
@@ -877,7 +883,7 @@ func Test_api_ConfirmNewEmail_success(t *testing.T) {
 
 func Test_api_ResetPwd_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
 	store.On("getUserByEmail", email).Return(nil, testErr)
@@ -888,7 +894,7 @@ func Test_api_ResetPwd_storeGetUserByEmailErr(t *testing.T) {
 
 func Test_api_ResetPwd_storeGetUserByEmailNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
 	store.On("getUserByEmail", email).Return(nil, nil)
@@ -899,7 +905,7 @@ func Test_api_ResetPwd_storeGetUserByEmailNilUser(t *testing.T) {
 
 func Test_api_ResetPwd_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
 	store.On("getUserByEmail", email).Return(&fullUserInfo{}, nil)
@@ -911,7 +917,7 @@ func Test_api_ResetPwd_cryptoHelperUrlSafeStringErr(t *testing.T) {
 
 func Test_api_ResetPwd_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
 	user := &fullUserInfo{}
@@ -925,7 +931,7 @@ func Test_api_ResetPwd_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_ResetPwd_linkMailerSendPwdResetLinkErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
 	user := &fullUserInfo{}
@@ -940,7 +946,7 @@ func Test_api_ResetPwd_linkMailerSendPwdResetLinkErr(t *testing.T) {
 
 func Test_api_ResetPwd_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	email := "email@email.com"
 	user := &fullUserInfo{}
@@ -955,7 +961,7 @@ func Test_api_ResetPwd_success(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_invalidNewPwd(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, err := api.SetNewPwdFromPwdReset("yo", "email@email.com", "resetCode")
 	assert.Nil(t, id)
@@ -964,7 +970,7 @@ func Test_api_SetNewPwdFromPwdReset_invalidNewPwd(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "email@email.com").Return(nil, testErr)
 
@@ -975,7 +981,7 @@ func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailErr(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getUserByEmail", "email@email.com").Return(nil, nil)
 
@@ -986,7 +992,7 @@ func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmailNilUser(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmail_resetPwdCodeMismatch(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "not-the-correct-code"
 	store.On("getUserByEmail", "email@email.com").Return(&fullUserInfo{resetPwdCode: &resetCode}, nil)
@@ -998,7 +1004,7 @@ func Test_api_SetNewPwdFromPwdReset_storeGetUserByEmail_resetPwdCodeMismatch(t *
 
 func Test_api_SetNewPwdFromPwdReset_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	user := &fullUserInfo{resetPwdCode: &resetCode}
@@ -1012,7 +1018,7 @@ func Test_api_SetNewPwdFromPwdReset_cryptoHelperBytesErr(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	user := &fullUserInfo{resetPwdCode: &resetCode}
@@ -1029,7 +1035,7 @@ func Test_api_SetNewPwdFromPwdReset_cryptoHelperScryptKeyErr(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_regionGoneErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us"}}}
@@ -1047,11 +1053,11 @@ func Test_api_SetNewPwdFromPwdReset_regionGoneErr(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_internalRegionClientCreatePersonalTaskCenterErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
+	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1067,11 +1073,11 @@ func Test_api_SetNewPwdFromPwdReset_internalRegionClientCreatePersonalTaskCenter
 
 func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
+	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1091,11 +1097,11 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_storeUpdatePwdInfoErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
+	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1113,11 +1119,11 @@ func Test_api_SetNewPwdFromPwdReset_storeUpdatePwdInfoErr(t *testing.T) {
 
 func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	resetCode := "resetCode"
 	myId, _ := NewId()
-	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
+	user := &fullUserInfo{resetPwdCode: &resetCode, activationCode: &resetCode, me: me{account: account{Region: "us", CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}}
 	store.On("getUserByEmail", "email@email.com").Return(user, nil)
 	salt := []byte("salt")
 	newPwd := []byte("P@ss-W0rd")
@@ -1135,7 +1141,7 @@ func Test_api_SetNewPwdFromPwdReset_success(t *testing.T) {
 
 func Test_api_GetAccount_storeGetAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	store.On("getAccountByCiName", "ali").Return(nil, testErr)
 
@@ -1146,7 +1152,7 @@ func Test_api_GetAccount_storeGetAccountErr(t *testing.T) {
 
 func Test_api_GetAccount_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	acc := &account{}
 	store.On("getAccountByCiName", "ali").Return(acc, nil)
@@ -1158,7 +1164,7 @@ func Test_api_GetAccount_success(t *testing.T) {
 
 func Test_api_GetAccounts_maxEntityCountExceededErri(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	ids := make([]Id, 101, 101)
 
@@ -1169,7 +1175,7 @@ func Test_api_GetAccounts_maxEntityCountExceededErri(t *testing.T) {
 
 func Test_api_GetAccounts_storeGetUsersErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id1, _ := NewId()
 	id2, _ := NewId()
@@ -1183,7 +1189,7 @@ func Test_api_GetAccounts_storeGetUsersErr(t *testing.T) {
 
 func Test_api_GetAccounts_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id1, _ := NewId()
 	id2, _ := NewId()
@@ -1198,7 +1204,7 @@ func Test_api_GetAccounts_success(t *testing.T) {
 
 func Test_api_GetMe_storeGetUserByIdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserById", myId).Return(nil, testErr)
@@ -1210,7 +1216,7 @@ func Test_api_GetMe_storeGetUserByIdErr(t *testing.T) {
 
 func Test_api_GetMe_storeGetUserByIdNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserById", myId).Return(nil, nil)
@@ -1222,10 +1228,10 @@ func Test_api_GetMe_storeGetUserByIdNilUser(t *testing.T) {
 
 func Test_api_GetMe_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	user := &fullUserInfo{me: me{account: account{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}
+	user := &fullUserInfo{me: me{account: account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: myId}}}}}}
 	store.On("getUserById", myId).Return(user, nil)
 
 	me, err := api.GetMe(myId)
@@ -1235,7 +1241,7 @@ func Test_api_GetMe_success(t *testing.T) {
 
 func Test_api_SetMyPwd_invalidStringParam(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 
@@ -1245,7 +1251,7 @@ func Test_api_SetMyPwd_invalidStringParam(t *testing.T) {
 
 func Test_api_SetMyPwd_storeGetPwdInfoErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getPwdInfo", myId).Return(nil, testErr)
@@ -1256,7 +1262,7 @@ func Test_api_SetMyPwd_storeGetPwdInfoErr(t *testing.T) {
 
 func Test_api_SetMyPwd_storeGetPwdInfoNilPwdInfo(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getPwdInfo", myId).Return(nil, nil)
@@ -1267,7 +1273,7 @@ func Test_api_SetMyPwd_storeGetPwdInfoNilPwdInfo(t *testing.T) {
 
 func Test_api_SetMyPwd_cryptoHelperScryptKeyErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	pwdInfo := &pwdInfo{}
@@ -1280,7 +1286,7 @@ func Test_api_SetMyPwd_cryptoHelperScryptKeyErr(t *testing.T) {
 
 func Test_api_SetMyPwd_incorrectPwdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	pwdInfo := &pwdInfo{}
@@ -1293,7 +1299,7 @@ func Test_api_SetMyPwd_incorrectPwdErr(t *testing.T) {
 
 func Test_api_SetMyPwd_cryptoHelperBytesErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	oldPwd := []byte("0ld-P@ss-W0rd")
@@ -1308,7 +1314,7 @@ func Test_api_SetMyPwd_cryptoHelperBytesErr(t *testing.T) {
 
 func Test_api_SetMyPwd_cryptoHelperScryptKey2Err(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	oldPwd := []byte("0ld-P@ss-W0rd")
@@ -1326,7 +1332,7 @@ func Test_api_SetMyPwd_cryptoHelperScryptKey2Err(t *testing.T) {
 
 func Test_api_SetMyPwd_storeUpdatePwdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	oldPwd := []byte("0ld-P@ss-W0rd")
@@ -1351,7 +1357,7 @@ func Test_api_SetMyPwd_storeUpdatePwdErr(t *testing.T) {
 
 func Test_api_SetMyPwd_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	oldPwd := []byte("0ld-P@ss-W0rd")
@@ -1370,7 +1376,7 @@ func Test_api_SetMyPwd_success(t *testing.T) {
 
 func Test_api_SetMyEmail_invalidStringParamErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 
@@ -1380,7 +1386,7 @@ func Test_api_SetMyEmail_invalidStringParamErr(t *testing.T) {
 
 func Test_api_SetMyEmail_storeGetUserByEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(nil, testErr)
@@ -1391,7 +1397,7 @@ func Test_api_SetMyEmail_storeGetUserByEmailErr(t *testing.T) {
 
 func Test_api_SetMyEmail_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAccountPolicyEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(&fullUserInfo{me: me{Email: "test@expected.com"}}, nil)
@@ -1403,7 +1409,7 @@ func Test_api_SetMyEmail_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAc
 
 func Test_api_SetMyEmail_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAccountPolicyEmailSuccess(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(&fullUserInfo{me: me{Email: "test@expected.com"}}, nil)
@@ -1415,7 +1421,7 @@ func Test_api_SetMyEmail_storeGetUserByEmailNoneNilUser_linkMailerSendMultipleAc
 
 func Test_api_SetMyEmail_storeGetUserByIdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(nil, nil)
@@ -1427,7 +1433,7 @@ func Test_api_SetMyEmail_storeGetUserByIdErr(t *testing.T) {
 
 func Test_api_SetMyEmail_storeGetUserByIdNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserByEmail", "new@email.com").Return(nil, nil)
@@ -1439,7 +1445,7 @@ func Test_api_SetMyEmail_storeGetUserByIdNilUser(t *testing.T) {
 
 func Test_api_SetMyEmail_cryptoHelperUrlSafeStringErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &fullUserInfo{}
@@ -1453,7 +1459,7 @@ func Test_api_SetMyEmail_cryptoHelperUrlSafeStringErr(t *testing.T) {
 
 func Test_api_SetMyEmail_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &fullUserInfo{}
@@ -1470,7 +1476,7 @@ func Test_api_SetMyEmail_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_SetMyEmail_linkMailerSendNewEmailConfirmationLinkErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &fullUserInfo{me: me{Email: "current@email.com"}}
@@ -1486,7 +1492,7 @@ func Test_api_SetMyEmail_linkMailerSendNewEmailConfirmationLinkErr(t *testing.T)
 
 func Test_api_SetMyEmail_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &fullUserInfo{me: me{Email: "current@email.com"}}
@@ -1502,7 +1508,7 @@ func Test_api_SetMyEmail_success(t *testing.T) {
 
 func Test_api_ResendMyNewEmailConfirmationEmail_storeGetUserByIdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserById", myId).Return(nil, testErr)
@@ -1513,7 +1519,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_storeGetUserByIdErr(t *testing.T
 
 func Test_api_ResendMyNewEmailConfirmationEmail_storeGetUserByIdNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserById", myId).Return(nil, nil)
@@ -1524,7 +1530,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_storeGetUserByIdNilUser(t *testi
 
 func Test_api_ResendMyNewEmailConfirmationEmail_noNewEmailRegisteredEmailErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUserById", myId).Return(&fullUserInfo{}, nil)
@@ -1535,7 +1541,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_noNewEmailRegisteredEmailErr(t *
 
 func Test_api_ResendMyNewEmailConfirmationEmail_emailConfirmationCodeErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	newEmail := "new@email.com"
@@ -1547,7 +1553,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_emailConfirmationCodeErr(t *test
 
 func Test_api_ResendMyNewEmailConfirmationEmail_linkMailerSendNewEmailConfirmationLinkErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	newEmail := "new@email.com"
@@ -1561,7 +1567,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_linkMailerSendNewEmailConfirmati
 
 func Test_api_ResendMyNewEmailConfirmationEmail_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	newEmail := "new@email.com"
@@ -1575,7 +1581,7 @@ func Test_api_ResendMyNewEmailConfirmationEmail_success(t *testing.T) {
 
 func Test_api_SetAccountName_invalidStringParamErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 
@@ -1585,7 +1591,7 @@ func Test_api_SetAccountName_invalidStringParamErr(t *testing.T) {
 
 func Test_api_SetAccountName_storeAccountWithCiNameExistsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	store.On("accountWithCiNameExists", "test").Return(false, testErr)
@@ -1596,7 +1602,7 @@ func Test_api_SetAccountName_storeAccountWithCiNameExistsErr(t *testing.T) {
 
 func Test_api_SetAccountName_storeAccountWithCiNameExistsTrue(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	store.On("accountWithCiNameExists", "test").Return(true, nil)
@@ -1607,7 +1613,7 @@ func Test_api_SetAccountName_storeAccountWithCiNameExistsTrue(t *testing.T) {
 
 func Test_api_SetAccountName_storeGetUserByIdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	store.On("accountWithCiNameExists", "test").Return(false, nil)
@@ -1619,7 +1625,7 @@ func Test_api_SetAccountName_storeGetUserByIdErr(t *testing.T) {
 
 func Test_api_SetAccountName_storeGetUserByIdNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	store.On("accountWithCiNameExists", "test").Return(false, nil)
@@ -1631,7 +1637,7 @@ func Test_api_SetAccountName_storeGetUserByIdNilUser(t *testing.T) {
 
 func Test_api_SetAccountName_storeUpdateUserErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1647,7 +1653,7 @@ func Test_api_SetAccountName_storeUpdateUserErr(t *testing.T) {
 
 func Test_api_SetAccountName_storeGetUsersOrgsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1664,7 +1670,7 @@ func Test_api_SetAccountName_storeGetUsersOrgsErr(t *testing.T) {
 
 func Test_api_SetAccountName_regionGoneErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1681,7 +1687,7 @@ func Test_api_SetAccountName_regionGoneErr(t *testing.T) {
 
 func Test_api_SetAccountName_internalRegionClientRenameMemberErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	orgId, _ := NewId()
@@ -1690,7 +1696,7 @@ func Test_api_SetAccountName_internalRegionClientRenameMemberErr(t *testing.T) {
 	store.On("accountWithCiNameExists", "test").Return(false, nil)
 	store.On("getAccount", id).Return(user, nil)
 	store.On("updateAccount", user).Return(nil)
-	store.On("getUsersOrgs", id, 0, 100).Return([]*account{&account{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
+	store.On("getUsersOrgs", id, 0, 100).Return([]*account{&account{Region: "us", CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}}, 1, nil)
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	internalRegionClient.On("RenameMember", "us", 0, orgId, id, "test").Return(testErr)
 
@@ -1700,7 +1706,7 @@ func Test_api_SetAccountName_internalRegionClientRenameMemberErr(t *testing.T) {
 
 func Test_api_SetAccountName_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	orgId, _ := NewId()
@@ -1709,7 +1715,7 @@ func Test_api_SetAccountName_success(t *testing.T) {
 	store.On("accountWithCiNameExists", "test").Return(false, nil)
 	store.On("getAccount", id).Return(user, nil)
 	store.On("updateAccount", user).Return(nil)
-	store.On("getUsersOrgs", id, 0, 100).Return([]*account{&account{Region: "us", NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
+	store.On("getUsersOrgs", id, 0, 100).Return([]*account{&account{Region: "us", CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}}, 1, nil)
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	internalRegionClient.On("RenameMember", "us", 0, orgId, id, "test").Return(nil)
 
@@ -1719,7 +1725,7 @@ func Test_api_SetAccountName_success(t *testing.T) {
 
 func Test_api_SetAccountName_invalidNameErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, []string{`\[^*]+`}, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, []string{`\[^*]+`}, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1731,7 +1737,7 @@ func Test_api_SetAccountName_invalidNameErr(t *testing.T) {
 
 func Test_api_SetAccountName_storegetAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1744,7 +1750,7 @@ func Test_api_SetAccountName_storegetAccountErr(t *testing.T) {
 
 func Test_api_SetAccountName_storegetAccountNilOrg(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1757,7 +1763,7 @@ func Test_api_SetAccountName_storegetAccountNilOrg(t *testing.T) {
 
 func Test_api_SetAccountName_internalRegionClientUserIsOrgOwnerErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1774,7 +1780,7 @@ func Test_api_SetAccountName_internalRegionClientUserIsOrgOwnerErr(t *testing.T)
 
 func Test_api_SetAccountName_insufficientPermissionsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1791,7 +1797,7 @@ func Test_api_SetAccountName_insufficientPermissionsErr(t *testing.T) {
 
 func Test_api_SetAccountName_storeupdateAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1809,7 +1815,7 @@ func Test_api_SetAccountName_storeupdateAccountErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_storeGetUserByIdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	store.On("getAccount", id).Return(nil, testErr)
@@ -1820,7 +1826,7 @@ func Test_api_SetAccountAvatar_storeGetUserByIdErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_storeGetUserByIdNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	store.On("getAccount", id).Return(nil, nil)
@@ -1831,7 +1837,7 @@ func Test_api_SetAccountAvatar_storeGetUserByIdNilUser(t *testing.T) {
 
 func Test_api_SetAccountAvatar_avatarStoreDeleteErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1845,7 +1851,7 @@ func Test_api_SetAccountAvatar_avatarStoreDeleteErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_invalidAvatarDataErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1858,7 +1864,7 @@ func Test_api_SetAccountAvatar_invalidAvatarDataErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_invalidAvatarShapeErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1872,7 +1878,7 @@ func Test_api_SetAccountAvatar_invalidAvatarShapeErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_avatarStorePutErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1887,7 +1893,7 @@ func Test_api_SetAccountAvatar_avatarStorePutErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_storeUpdateAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1903,7 +1909,7 @@ func Test_api_SetAccountAvatar_storeUpdateAccountErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_personalSuccess(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	id, _ := NewId()
 	user := &account{}
@@ -1919,7 +1925,7 @@ func Test_api_SetAccountAvatar_personalSuccess(t *testing.T) {
 
 func Test_api_SetAccountAvatar_regionGoneErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1934,7 +1940,7 @@ func Test_api_SetAccountAvatar_regionGoneErr(t *testing.T) {
 
 func Test_api_SetAccountAvatar_internalRegionClientUserIsOrgOwnerErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1952,7 +1958,7 @@ func Test_api_SetAccountAvatar_internalRegionClientUserIsOrgOwnerErr(t *testing.
 
 func Test_api_SetAccountAvatar_internalRegionClientUserIsOrgOwnerFalse(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1970,7 +1976,7 @@ func Test_api_SetAccountAvatar_internalRegionClientUserIsOrgOwnerFalse(t *testin
 
 func Test_api_SetAccountAvatar_orgSuccess(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -1991,7 +1997,7 @@ func Test_api_SetAccountAvatar_orgSuccess(t *testing.T) {
 
 func Test_api_MigrateAccount_NotImplementedErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 
@@ -2001,7 +2007,7 @@ func Test_api_MigrateAccount_NotImplementedErr(t *testing.T) {
 
 func Test_api_DeleteAccount_storeGetAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getAccount", myId).Return(nil, testErr)
@@ -2012,7 +2018,7 @@ func Test_api_DeleteAccount_storeGetAccountErr(t *testing.T) {
 
 func Test_api_DeleteAccount_storeGetAccountNilAccount(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getAccount", myId).Return(nil, nil)
@@ -2023,7 +2029,7 @@ func Test_api_DeleteAccount_storeGetAccountNilAccount(t *testing.T) {
 
 func Test_api_DeleteAccount_regionGoneErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2037,7 +2043,7 @@ func Test_api_DeleteAccount_regionGoneErr(t *testing.T) {
 
 func Test_api_DeleteAccount_internalRegionClientDeleteTaskCenterErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2052,7 +2058,7 @@ func Test_api_DeleteAccount_internalRegionClientDeleteTaskCenterErr(t *testing.T
 
 func Test_api_DeleteAccount_internalRegionClientDeleteTaskCenterPublicErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2067,7 +2073,7 @@ func Test_api_DeleteAccount_internalRegionClientDeleteTaskCenterPublicErr(t *tes
 
 func Test_api_DeleteAccount_storeDeleteAccountAndAllAssociatedMembershipsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2083,7 +2089,7 @@ func Test_api_DeleteAccount_storeDeleteAccountAndAllAssociatedMembershipsErr(t *
 
 func Test_api_DeleteAccount_storeGetUsersOrgsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2100,7 +2106,7 @@ func Test_api_DeleteAccount_storeGetUsersOrgsErr(t *testing.T) {
 
 func Test_api_DeleteAccount_internalRegionClientMemberIsOnlyOwnerErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2110,7 +2116,7 @@ func Test_api_DeleteAccount_internalRegionClientMemberIsOnlyOwnerErr(t *testing.
 	internalRegionClient.On("DeleteTaskCenter", "us", 2, myId, myId).Return(nil, nil)
 	store.On("deleteAccountAndAllAssociatedMemberships", myId).Return(nil)
 	orgId, _ := NewId()
-	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{Region: "us", Shard: 4, CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}}, 1, nil)
 	internalRegionClient.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(false, testErr)
 
 	err := api.DeleteAccount(myId, myId)
@@ -2119,7 +2125,7 @@ func Test_api_DeleteAccount_internalRegionClientMemberIsOnlyOwnerErr(t *testing.
 
 func Test_api_DeleteAccount_internalRegionClientMemberIsOnlyOwnerTrue(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2129,7 +2135,7 @@ func Test_api_DeleteAccount_internalRegionClientMemberIsOnlyOwnerTrue(t *testing
 	internalRegionClient.On("DeleteTaskCenter", "us", 2, myId, myId).Return(nil, nil)
 	store.On("deleteAccountAndAllAssociatedMemberships", myId).Return(nil)
 	orgId, _ := NewId()
-	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{Region: "us", Shard: 4, CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}}, 1, nil)
 	internalRegionClient.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(true, nil)
 
 	err := api.DeleteAccount(myId, myId)
@@ -2138,7 +2144,7 @@ func Test_api_DeleteAccount_internalRegionClientMemberIsOnlyOwnerTrue(t *testing
 
 func Test_api_DeleteAccount_internalRegionClientSetMemberDeletedErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2148,7 +2154,7 @@ func Test_api_DeleteAccount_internalRegionClientSetMemberDeletedErr(t *testing.T
 	internalRegionClient.On("DeleteTaskCenter", "us", 2, myId, myId).Return(nil, nil)
 	store.On("deleteAccountAndAllAssociatedMemberships", myId).Return(nil)
 	orgId, _ := NewId()
-	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{Region: "us", Shard: 4, NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}, 1, nil)
+	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{Region: "us", Shard: 4, CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Entity: Entity{Id: orgId}}}}}, 1, nil)
 	internalRegionClient.On("MemberIsOnlyOwner", "us", 4, orgId, myId).Return(false, nil)
 	internalRegionClient.On("SetMemberDeleted", "us", 4, orgId, myId).Return(testErr)
 
@@ -2158,7 +2164,7 @@ func Test_api_DeleteAccount_internalRegionClientSetMemberDeletedErr(t *testing.T
 
 func Test_api_DeleteAccount_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	user := &account{Shard: 2, Region: "us"}
@@ -2175,7 +2181,7 @@ func Test_api_DeleteAccount_success(t *testing.T) {
 
 func Test_api_DeleteAccount_storegetAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2187,7 +2193,7 @@ func Test_api_DeleteAccount_storegetAccountErr(t *testing.T) {
 
 func Test_api_DeleteAccount_storegetAccountNilOrg(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2199,7 +2205,7 @@ func Test_api_DeleteAccount_storegetAccountNilOrg(t *testing.T) {
 
 func Test_api_CreateOrg_invalidStringParamErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 
@@ -2210,7 +2216,7 @@ func Test_api_CreateOrg_invalidStringParamErr(t *testing.T) {
 
 func Test_api_CreateOrg_noSuchRegionErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	internalRegionClient.On("IsValidRegion", "us").Return(false)
@@ -2222,7 +2228,7 @@ func Test_api_CreateOrg_noSuchRegionErr(t *testing.T) {
 
 func Test_api_CreateOrg_storeAccountWithNameExistsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
@@ -2235,7 +2241,7 @@ func Test_api_CreateOrg_storeAccountWithNameExistsErr(t *testing.T) {
 
 func Test_api_CreateOrg_storeAccountWithNameExists_true(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
@@ -2246,14 +2252,14 @@ func Test_api_CreateOrg_storeAccountWithNameExists_true(t *testing.T) {
 	assert.Equal(t, accountNameAlreadyInUseErr, err)
 }
 
-func Test_api_CreateOrg_newNamedEntityErr(t *testing.T) {
+func Test_api_CreateOrg_newCreatedNamedEntityErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(nil, testErr)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(nil, testErr)
 
 	org, err := api.CreateOrg(myId, "newOrg", "us")
 	assert.Nil(t, org)
@@ -2262,16 +2268,16 @@ func Test_api_CreateOrg_newNamedEntityErr(t *testing.T) {
 
 func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2284,16 +2290,16 @@ func Test_api_CreateOrg_storeCreateOrgAndMembershipErr(t *testing.T) {
 
 func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2307,16 +2313,16 @@ func Test_api_CreateOrg_storeGetUserByIdErr(t *testing.T) {
 
 func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2330,16 +2336,16 @@ func Test_api_CreateOrg_storeGetUserByIdNilUser(t *testing.T) {
 
 func Test_api_CreateOrg_internalRegionClientCreateOrgTaskCenterErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2358,16 +2364,16 @@ func Test_api_CreateOrg_internalRegionClientCreateOrgTaskCenterErr(t *testing.T)
 
 func Test_api_CreateOrg_DeleteAccountAndAllAssociatedMembershipsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2386,16 +2392,16 @@ func Test_api_CreateOrg_DeleteAccountAndAllAssociatedMembershipsErr(t *testing.T
 
 func Test_api_CreateOrg_updateAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2407,7 +2413,7 @@ func Test_api_CreateOrg_updateAccountErr(t *testing.T) {
 	internalRegionClient.On("CreateOrgTaskCenter", "us", accountCore.Id, myId, "bob").Return(8, nil)
 	store.On("deleteAccountAndAllAssociatedMemberships", accountCore.Id).Return(nil)
 	store.On("updateAccount", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       8,
 		IsUser:      false,
@@ -2420,16 +2426,16 @@ func Test_api_CreateOrg_updateAccountErr(t *testing.T) {
 
 func Test_api_CreateOrg_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
-	accountCore, _ := NewNamedEntity("newOrg")
+	accountCore, _ := NewCreatedNamedEntity("newOrg")
 	accountCore.CreatedOn = timeNowReplacement
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	store.On("accountWithCiNameExists", "newOrg").Return(false, nil)
-	miscFuncs.On("newNamedEntity", "newOrg").Return(accountCore, nil)
+	miscFuncs.On("newCreatedNamedEntity", "newOrg").Return(accountCore, nil)
 	store.On("createOrgAndMembership", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       -1,
 		IsUser:      false,
@@ -2441,7 +2447,7 @@ func Test_api_CreateOrg_success(t *testing.T) {
 	internalRegionClient.On("CreateOrgTaskCenter", "us", accountCore.Id, myId, "bob").Return(8, nil)
 	store.On("deleteAccountAndAllAssociatedMemberships", accountCore.Id).Return(nil)
 	store.On("updateAccount", &account{
-		NamedEntity: *accountCore,
+		CreatedNamedEntity: *accountCore,
 		Region:      "us",
 		Shard:       8,
 		IsUser:      false,
@@ -2457,7 +2463,7 @@ func Test_api_CreateOrg_success(t *testing.T) {
 
 func Test_api_GetMyOrgs_storeGetUsersOrgsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return(nil, 0, testErr)
@@ -2470,7 +2476,7 @@ func Test_api_GetMyOrgs_storeGetUsersOrgsErr(t *testing.T) {
 
 func Test_api_GetMyOrgs_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	store.On("getUsersOrgs", myId, 0, 100).Return([]*account{&account{}, &account{}}, 2, nil)
@@ -2483,7 +2489,7 @@ func Test_api_GetMyOrgs_success(t *testing.T) {
 
 func Test_api_AddMembers_maxEntityCountExceededErri(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2495,7 +2501,7 @@ func Test_api_AddMembers_maxEntityCountExceededErri(t *testing.T) {
 
 func Test_api_AddMembers_storegetAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2510,7 +2516,7 @@ func Test_api_AddMembers_storegetAccountErr(t *testing.T) {
 
 func Test_api_AddMembers_storegetAccountNilOrg(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2525,7 +2531,7 @@ func Test_api_AddMembers_storegetAccountNilOrg(t *testing.T) {
 
 func Test_api_AddMembers_regionGoneErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2541,7 +2547,7 @@ func Test_api_AddMembers_regionGoneErr(t *testing.T) {
 
 func Test_api_AddMembers_storeGetUsersErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2558,7 +2564,7 @@ func Test_api_AddMembers_storeGetUsersErr(t *testing.T) {
 
 func Test_api_AddMembers_internalRegionClientAddMemberErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2567,7 +2573,7 @@ func Test_api_AddMembers_internalRegionClientAddMemberErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, testErr)
 
@@ -2577,7 +2583,7 @@ func Test_api_AddMembers_internalRegionClientAddMemberErr(t *testing.T) {
 
 func Test_api_AddMembers_internalRegionClientAddMemberPublicErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2586,7 +2592,7 @@ func Test_api_AddMembers_internalRegionClientAddMemberPublicErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(testErr, nil)
 
@@ -2596,7 +2602,7 @@ func Test_api_AddMembers_internalRegionClientAddMemberPublicErr(t *testing.T) {
 
 func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2605,7 +2611,7 @@ func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, nil)
 	store.On("createMemberships", orgId, members).Return(testErr)
@@ -2616,7 +2622,7 @@ func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
 
 func Test_api_AddMembers_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2625,7 +2631,7 @@ func Test_api_AddMembers_success(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, nil)
 	store.On("createMemberships", orgId, members).Return(nil)
@@ -2636,7 +2642,7 @@ func Test_api_AddMembers_success(t *testing.T) {
 
 func Test_api_RemoveMembers_maxEntityCountExceededErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2648,7 +2654,7 @@ func Test_api_RemoveMembers_maxEntityCountExceededErr(t *testing.T) {
 
 func Test_api_RemoveMembers_storegetAccountErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2663,7 +2669,7 @@ func Test_api_RemoveMembers_storegetAccountErr(t *testing.T) {
 
 func Test_api_RemoveMembers_storegetAccountNilOrg(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2678,7 +2684,7 @@ func Test_api_RemoveMembers_storegetAccountNilOrg(t *testing.T) {
 
 func Test_api_RemoveMembers_regionGoneErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2694,7 +2700,7 @@ func Test_api_RemoveMembers_regionGoneErr(t *testing.T) {
 
 func Test_api_RemoveMembers_internalRegionClientRemoveMemberErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2703,7 +2709,7 @@ func Test_api_RemoveMembers_internalRegionClientRemoveMemberErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("RemoveMembers", "us", 0, orgId, myId, members).Return(nil, testErr)
 
@@ -2713,7 +2719,7 @@ func Test_api_RemoveMembers_internalRegionClientRemoveMemberErr(t *testing.T) {
 
 func Test_api_RemoveMembers_internalRegionClientRemoveMemberPublicErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2722,7 +2728,7 @@ func Test_api_RemoveMembers_internalRegionClientRemoveMemberPublicErr(t *testing
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("RemoveMembers", "us", 0, orgId, myId, members).Return(testErr, nil)
 
@@ -2732,7 +2738,7 @@ func Test_api_RemoveMembers_internalRegionClientRemoveMemberPublicErr(t *testing
 
 func Test_api_RemoveMembers_storeDeleteAccountMembershipsErr(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2741,7 +2747,7 @@ func Test_api_RemoveMembers_storeDeleteAccountMembershipsErr(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("RemoveMembers", "us", 0, orgId, myId, members).Return(nil, nil)
 	store.On("deleteMemberships", orgId, members).Return(testErr)
@@ -2752,7 +2758,7 @@ func Test_api_RemoveMembers_storeDeleteAccountMembershipsErr(t *testing.T) {
 
 func Test_api_RemoveMembers_success(t *testing.T) {
 	store, internalRegionClient, linkMailer, avatarStore, miscFuncs, cryptoHelper, log := &mockStore{}, &mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, &mockMiscFuncs{}, &mockCryptoHelper{}, NewLog(nil)
-	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
+	api := newApi(store, internalRegionClient, linkMailer, avatarStore, miscFuncs.newCreatedNamedEntity, cryptoHelper, nil, nil, 0, 3, 20, 3, 20, 100, 40, 128, 16384, 8, 1, 32, log)
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
@@ -2761,7 +2767,7 @@ func Test_api_RemoveMembers_success(t *testing.T) {
 	m1, _ := NewId()
 	m2, _ := NewId()
 	members := []Id{m1, m2}
-	users := []*account{&account{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}, &account{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}
+	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
 	store.On("getUsers", members).Return(users, nil)
 	internalRegionClient.On("RemoveMembers", "us", 0, orgId, myId, members).Return(nil, nil)
 	store.On("deleteMemberships", orgId, members).Return(nil)
@@ -3003,12 +3009,12 @@ type mockMiscFuncs struct {
 	mock.Mock
 }
 
-func (m *mockMiscFuncs) newNamedEntity(name string) (*NamedEntity, error) {
+func (m *mockMiscFuncs) newCreatedNamedEntity(name string) (*CreatedNamedEntity, error) {
 	args := m.Called(name)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*NamedEntity), args.Error(1)
+	return args.Get(0).(*CreatedNamedEntity), args.Error(1)
 }
 
 type mockCryptoHelper struct {
