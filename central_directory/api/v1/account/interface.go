@@ -31,7 +31,7 @@ type Api interface {
 	GetMyOrgs(myId Id, offset, limit int) ([]*account, int, error)
 	DeleteAccount(myId, accountId Id) error
 	//member centric - must be an owner or admin
-	AddMembers(myId, orgId Id, newMembers []Id) error
+	AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) error
 	RemoveMembers(myId, orgId Id, existingMembers []Id) error
 }
 

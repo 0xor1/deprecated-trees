@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+const (
+	Owner  = Role(0)
+	Admin  = Role(1)
+	Writer = Role(2)
+	Reader = Role(3)
+)
+
+type Role uint8
+
 type Id UUID
 
 func (id Id) String() string {
@@ -44,6 +53,16 @@ func NewEntity() (*Entity, error) {
 type NamedEntity struct {
 	Entity
 	Name string `json:"name"`
+}
+
+type AddMemberInternal struct {
+	NamedEntity
+	Role Role `json:"role"`
+}
+
+type AddMemberExternal struct {
+	Entity
+	Role Role `json:"role"`
 }
 
 type GenNamedEntity func(name string) (*NamedEntity, error)

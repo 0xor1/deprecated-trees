@@ -4,6 +4,7 @@ import (
 	. "bitbucket.org/robsix/task_center/misc"
 	"github.com/robsix/isql"
 	"math/rand"
+	"bytes"
 )
 
 var (
@@ -49,16 +50,61 @@ func (s *sqlStore) deleteAccount(shard int, account Id) error {
 	return err
 }
 
-func (s *sqlStore) getMember(shard int, org, member Id) (*orgMember, error) {
+var query_getMember = `SELECT org, id, name, totalRemainingTime, totalLoggedTime, isActive, isDeleted, role FROM orgMembers WHERE org=? AND id=?`
 
+func (s *sqlStore) getMember(shard int, org, member Id) (*orgMember, error) {
+	if s.shards[shard] == nil {
+		return invalidShardIdErr
+	}
+	row := s.shards[shard].QueryRow(query_getMember, []byte(org), []byte(member))
+	res := orgMember{}
+	err := row.Scan(&res.Org, &res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.IsDeleted, &res.Role)
+	if err == nil {
+		return &res, nil
+	}
+	return nil, err
 }
+
+var query_addMembers = `INSERT INTO orgMembers (org, id, name, role) VALUES `
 
 func (s *sqlStore) addMembers(shard int, org Id, members []*NamedEntity) error {
-
+	if s.shards[shard] == nil {
+		return invalidShardIdErr
+	}
+	var query bytes.Buffer
+	queryArgs := make([]interface{}, 0, 3*len(members))
+	query.WriteString(query_addMembers)
+	for i, mem := range members {
+		if i == 0 {
+			query.WriteString(`(?, ?, ?)`)
+		} else {
+			query.WriteString(`, (?, ?, ?)`)
+		}
+		queryArgs = append(queryArgs, []byte(org), []byte(mem.Id), mem.Name, Reader)
+	}
+	_, err := s.shards[shard].Exec(query_deleteAccount, []byte(org), )
+	return err
 }
 
-func (s *sqlStore) setMembersActive(shard int, org Id, members []*NamedEntity) error {
+var query_setMembersActive = `UPDATE orgMembers name=?, role`
 
+func (s *sqlStore) setMembersActive(shard int, org Id, members []*NamedEntity) error {
+	if s.shards[shard] == nil {
+		return invalidShardIdErr
+	}
+	var query bytes.Buffer
+	queryArgs := make([]interface{}, 0, 3*len(members))
+	query.WriteString(query_setMembersActive)
+	for i, mem := range members {
+		if i == 0 {
+			query.WriteString(`(?, ?, ?)`)
+		} else {
+			query.WriteString(`, (?, ?, ?)`)
+		}
+		queryArgs = append(queryArgs, []byte(org), []byte(mem.Id), mem.Name, Reader)
+	}
+	_, err := s.shards[shard].Exec(query_deleteAccount, []byte(org), )
+	return err
 }
 
 func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) (int, error) {

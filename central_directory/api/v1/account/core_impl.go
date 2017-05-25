@@ -894,7 +894,7 @@ func (a *api) DeleteAccount(myId, accountId Id) error {
 	return nil
 }
 
-func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
+func (a *api) AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) error {
 	a.log.Location()
 
 	if len(newMembers) > a.maxGetEntityCount {
@@ -913,14 +913,25 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		return a.log.ErrorUserErr(myId, regionGoneErr)
 	}
 
-	users, err := a.store.getUsers(newMembers)
+	ids := make([]Id, 0, len(newMembers))
+	addMembersMap := map[string]*AddMemberExternal{}
+	for _, member := range newMembers {
+		ids = append(ids, member.Id)
+		addMembersMap[member.Id.String()] = member
+	}
+
+	users, err := a.store.getUsers(ids)
 	if err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
-	entities := make([]*NamedEntity, 0, len(users))
+	entities := make([]*AddMemberInternal, 0, len(users))
 	for _, user := range users {
-		entities = append(entities, &user.NamedEntity)
+		ami := &AddMemberInternal{}
+		ami.Id = user.Id
+		ami.Role = addMembersMap[user.Id.String()].Role
+		ami.Name = user.Name
+		entities = append(entities, ami)
 	}
 
 	publicErr, err := a.internalRegionClient.AddMembers(org.Region, org.Shard, orgId, myId, entities)
@@ -931,7 +942,7 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []Id) error {
 		return a.log.InfoUserErr(myId, publicErr)
 	}
 
-	if err := a.store.createMemberships(orgId, newMembers); err != nil {
+	if err := a.store.createMemberships(orgId, ids); err != nil {
 		return a.log.ErrorUserErr(myId, err)
 	}
 
@@ -1005,7 +1016,7 @@ type internalRegionClient interface {
 	CreatePersonalTaskCenter(region string, user Id) (int, error)
 	CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error)
 	DeleteTaskCenter(region string, shard int, account, owner Id) (public error, private error)
-	AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (public error, private error)
+	AddMembers(region string, shard int, org, admin Id, members []*AddMemberInternal) (public error, private error)
 	RemoveMembers(region string, shard int, org, admin Id, members []Id) (public error, private error)
 	SetMemberDeleted(region string, shard int, org, member Id) error
 	MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error)

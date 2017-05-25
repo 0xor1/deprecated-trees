@@ -264,8 +264,6 @@ func (a *internalApi) UserIsOrgOwner(shard int, org, user Id) (bool, error) {
 	return false, invalidTaskCenterTypeErr
 }
 
-type role uint8
-
 type store interface {
 	registerPersonalAccount(id Id) (int, error)
 	registerOrgAccount(id, ownerId Id, ownerName string) (int, error)
@@ -316,5 +314,5 @@ type orgMember struct {
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
 	IsActive           bool   `json:"isActive"`
 	IsDeleted          bool   `json:"isDeleted"`
-	Role               role   `json:"role"`
+	Role               Role   `json:"role"`
 }

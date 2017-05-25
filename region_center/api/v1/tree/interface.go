@@ -4,13 +4,6 @@ import (
 	. "bitbucket.org/robsix/task_center/misc"
 )
 
-const (
-	Owner  = role(0)
-	Admin  = role(1)
-	Writer = role(2)
-	Reader = role(3)
-)
-
 type InternalApiClient interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool

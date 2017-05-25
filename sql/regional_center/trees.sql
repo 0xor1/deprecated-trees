@@ -13,11 +13,11 @@ CREATE TABLE orgMembers(
 	org BINARY(16) NOT NULL,
 	id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
-    totalRemainingTime BIGINT UNSIGNED NOT NULL,
-    totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    isActive BOOL NOT NULL,
-    isDeleted BOOL NOT NULL,
-    role TINYINT UNSIGNED NOT NULL, #0 owner, 1 admin, 2 standard member
+    totalRemainingTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    totalLoggedTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    isActive BOOL NOT NULL DEFAULT TRUE,
+    isDeleted BOOL NOT NULL DEFAULT FALSE,
+    role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 standard member
     PRIMARY KEY (org, isActive, role, name),
     UNIQUE INDEX (org, id)
 );
@@ -38,7 +38,7 @@ CREATE TABLE projectMembers(
     id BINARY(16) NOT NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    role TINYINT UNSIGNED NOT NULL, #0 owner, 1 admin, 2 standard member
+    role TINYINT UNSIGNED NOT NULL, #0 owner, 1 admin, 2 writer, 3 reader
     PRIMARY KEY (org, role, id),
     UNIQUE INDEX (org, id)
 );
@@ -49,6 +49,18 @@ CREATE PROCEDURE registerOrgAccount(_id BINARY(16), _ownerId BINARY(16), _ownerN
 BEGIN
 	INSERT INTO orgs (id) VALUES (_id);
     INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, isDeleted, role) VALUES (_id, _ownerId, _ownerName, 0, 0, true, false, 0);
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS deleteAccount;
+DELIMITER $$
+CREATE PROCEDURE deleteAccount(_id BINARY(16))
+BEGIN
+	DELETE FROM orgs WHERE id =_id;
+	DELETE FROM orgMembers WHERE org =_id;
+	DELETE FROM projects WHERE org =_id;
+	DELETE FROM projectMembers WHERE org =_id;
 END;
 $$
 DELIMITER ;

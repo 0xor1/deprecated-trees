@@ -2493,7 +2493,7 @@ func Test_api_AddMembers_maxEntityCountExceededErri(t *testing.T) {
 
 	myId, _ := NewId()
 	orgId, _ := NewId()
-	members := make([]Id, 101, 101)
+	members := make([]*AddMemberExternal, 101, 101)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.Equal(t, maxEntityCountExceededErr, err)
@@ -2508,7 +2508,7 @@ func Test_api_AddMembers_storegetAccountErr(t *testing.T) {
 	store.On("getAccount", orgId).Return(nil, testErr)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2523,7 +2523,7 @@ func Test_api_AddMembers_storegetAccountNilOrg(t *testing.T) {
 	store.On("getAccount", orgId).Return(nil, nil)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.Equal(t, noSuchAccountErr, err)
@@ -2539,7 +2539,7 @@ func Test_api_AddMembers_regionGoneErr(t *testing.T) {
 	internalRegionClient.On("IsValidRegion", "us").Return(false)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2555,8 +2555,8 @@ func Test_api_AddMembers_storeGetUsersErr(t *testing.T) {
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
-	store.On("getUsers", members).Return(nil, testErr)
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
+	store.On("getUsers", []Id{m1, m2}).Return(nil, testErr)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2572,10 +2572,10 @@ func Test_api_AddMembers_internalRegionClientAddMemberErr(t *testing.T) {
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
-	store.On("getUsers", members).Return(users, nil)
-	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, testErr)
+	store.On("getUsers", []Id{m1, m2}).Return(users, nil)
+	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*AddMemberInternal{{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, Role: Admin}, {NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}, Role: Admin}}).Return(nil, testErr)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2591,10 +2591,10 @@ func Test_api_AddMembers_internalRegionClientAddMemberPublicErr(t *testing.T) {
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
-	store.On("getUsers", members).Return(users, nil)
-	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(testErr, nil)
+	store.On("getUsers", []Id{m1, m2}).Return(users, nil)
+	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*AddMemberInternal{{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, Role: Admin}, {NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}, Role: Admin}}).Return(testErr, nil)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.Equal(t, testErr, err)
@@ -2610,11 +2610,11 @@ func Test_api_AddMembers_storeCreateMembershipErr(t *testing.T) {
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
-	store.On("getUsers", members).Return(users, nil)
-	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, nil)
-	store.On("createMemberships", orgId, members).Return(testErr)
+	store.On("getUsers", []Id{m1, m2}).Return(users, nil)
+	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*AddMemberInternal{{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, Role: Admin}, {NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}, Role: Admin}}).Return(nil, nil)
+	store.On("createMemberships", orgId, []Id{m1, m2}).Return(testErr)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.IsType(t, &ErrorRef{}, err)
@@ -2630,11 +2630,11 @@ func Test_api_AddMembers_success(t *testing.T) {
 	internalRegionClient.On("IsValidRegion", "us").Return(true)
 	m1, _ := NewId()
 	m2, _ := NewId()
-	members := []Id{m1, m2}
+	members := []*AddMemberExternal{{Entity:Entity{Id:m1},Role:Admin}, {Entity:Entity{Id:m2},Role:Admin}}
 	users := []*account{&account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}}}, &account{CreatedNamedEntity: CreatedNamedEntity{NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}}}
-	store.On("getUsers", members).Return(users, nil)
-	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*NamedEntity{&NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, &NamedEntity{Name: "test2", Entity: Entity{Id: m2}}}).Return(nil, nil)
-	store.On("createMemberships", orgId, members).Return(nil)
+	store.On("getUsers", []Id{m1, m2}).Return(users, nil)
+	internalRegionClient.On("AddMembers", "us", 0, orgId, myId, []*AddMemberInternal{{NamedEntity: NamedEntity{Name: "test1", Entity: Entity{Id: m1}}, Role: Admin}, {NamedEntity: NamedEntity{Name: "test2", Entity: Entity{Id: m2}}, Role: Admin}}).Return(nil, nil)
+	store.On("createMemberships", orgId, []Id{m1, m2}).Return(nil)
 
 	err := api.AddMembers(myId, orgId, members)
 	assert.Nil(t, err)
@@ -2975,7 +2975,7 @@ func (m *mockInternalRegionClient) DeleteTaskCenter(region string, shard int, ac
 	return args.Error(0), args.Error(1)
 }
 
-func (m *mockInternalRegionClient) AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (error, error) {
+func (m *mockInternalRegionClient) AddMembers(region string, shard int, org, admin Id, members []*AddMemberInternal) (error, error) {
 	args := m.Called(region, shard, org, admin, members)
 	return args.Error(0), args.Error(1)
 }
