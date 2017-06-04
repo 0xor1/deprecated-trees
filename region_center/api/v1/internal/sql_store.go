@@ -1,4 +1,4 @@
-package tree
+package internal
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
@@ -67,7 +67,7 @@ func (s *sqlStore) getMember(shard int, org, member Id) (*orgMember, error) {
 
 var query_addMembers = `INSERT INTO orgMembers (org, id, name, role) VALUES `
 
-func (s *sqlStore) addMembers(shard int, org Id, members []*NamedEntity) error {
+func (s *sqlStore) addMembers(shard int, org Id, members []*AddMemberInternal) error {
 	if s.shards[shard] == nil {
 		return invalidShardIdErr
 	}
@@ -80,39 +80,56 @@ func (s *sqlStore) addMembers(shard int, org Id, members []*NamedEntity) error {
 		} else {
 			query.WriteString(`, (?, ?, ?)`)
 		}
-		queryArgs = append(queryArgs, []byte(org), []byte(mem.Id), mem.Name, Reader)
+		queryArgs = append(queryArgs, []byte(org), []byte(mem.Id), mem.Name, mem.Role)
 	}
-	_, err := s.shards[shard].Exec(query_deleteAccount, []byte(org), )
+	_, err := s.shards[shard].Exec(query_addMembers, queryArgs...)
 	return err
 }
 
-var query_setMembersActive = `UPDATE orgMembers name=?, role`
+var query_updateMembers = `UPDATE orgMembers name=?, role=?, isActive=true WHERE org=? AND id=?`
 
-func (s *sqlStore) setMembersActive(shard int, org Id, members []*NamedEntity) error {
+func (s *sqlStore) updateMembers(shard int, org Id, members []*AddMemberInternal) error {
 	if s.shards[shard] == nil {
 		return invalidShardIdErr
 	}
-	var query bytes.Buffer
-	queryArgs := make([]interface{}, 0, 3*len(members))
-	query.WriteString(query_setMembersActive)
-	for i, mem := range members {
-		if i == 0 {
-			query.WriteString(`(?, ?, ?)`)
-		} else {
-			query.WriteString(`, (?, ?, ?)`)
+	for _, mem := range members {
+		if _, err := s.shards[shard].Exec(query_updateMembers, mem.Name, mem.Role, []byte(org), []byte(mem.Id)); err != nil {
+			return err
 		}
-		queryArgs = append(queryArgs, []byte(org), []byte(mem.Id), mem.Name, Reader)
 	}
-	_, err := s.shards[shard].Exec(query_deleteAccount, []byte(org), )
-	return err
+	return nil
 }
+
+var query_getTotalOrgOwnerCount = `SELECT COUNT(*) WHERE org=? AND isActive=true AND role=0`
 
 func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) (int, error) {
-
+	if s.shards[shard] == nil {
+		return invalidShardIdErr
+	}
+	var count int
+	err := s.shards[shard].QueryRow(query_getTotalOrgOwnerCount, []byte(org)).Scan(&count)
+	return count, err
 }
 
-func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) (int, error) {
+var query_getOwnerCountInSet = `SELECT COUNT(*) WHERE org=? AND isActive=true AND role=0 AND id IN (`
 
+func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) (int, error) {
+	queryArgs := make([]interface{}, 0, len(members)+1)
+	queryArgs = append(queryArgs, []byte(org))
+	var query bytes.Buffer
+	query.WriteString(query_getOwnerCountInSet)
+	for i, mem := range members {
+		if i == 0 {
+			query.WriteString(`?`)
+		} else {
+			query.WriteString(`, ?`)
+		}
+		queryArgs = append(queryArgs, []byte(mem))
+	}
+	query.WriteString(`);`)
+	var count int
+	err := s.shards[shard].QueryRow(query.String(), queryArgs...).Scan(&count)
+	return count, err
 }
 
 func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) error {

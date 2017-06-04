@@ -37,14 +37,19 @@ func Test_IdCopy(t *testing.T) {
 
 func Test_NewEntity(t *testing.T) {
 	e, err := NewEntity()
-	now := time.Now().UTC()
 	assert.Nil(t, err)
 	assert.NotNil(t, e.Id)
-	assert.True(t, now.Add(-1*time.Millisecond).Before(e.CreatedOn) && now.Add(1*time.Millisecond).After(e.CreatedOn))
 }
 
 func Test_NewNamedEntity(t *testing.T) {
 	e, err := NewNamedEntity("ali")
+	assert.Nil(t, err)
+	assert.NotNil(t, e.Id)
+	assert.Equal(t, "ali", e.Name)
+}
+
+func Test_NewCreatedNamedEntity(t *testing.T) {
+	e, err := NewCreatedNamedEntity("ali")
 	now := time.Now().UTC()
 	assert.Nil(t, err)
 	assert.NotNil(t, e.Id)

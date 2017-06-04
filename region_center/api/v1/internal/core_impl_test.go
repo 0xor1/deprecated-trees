@@ -1,4 +1,4 @@
-package tree
+package internal
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"

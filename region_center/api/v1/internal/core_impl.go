@@ -1,4 +1,4 @@
-package tree
+package internal
 
 import (
 	. "bitbucket.org/robsix/task_center/misc"
@@ -57,7 +57,7 @@ func (a *internalApiClient) DeleteTaskCenter(region string, shard int, account, 
 	return a.regions[region].DeleteTaskCenter(shard, account, owner)
 }
 
-func (a *internalApiClient) AddMembers(region string, shard int, org, admin Id, members []*NamedEntity) (error, error) {
+func (a *internalApiClient) AddMembers(region string, shard int, org, admin Id, members []*AddMemberExternal) (error, error) {
 	if !a.IsValidRegion(region) {
 		return nil, invalidRegionErr
 	}
@@ -149,27 +149,33 @@ func (a *internalApi) DeleteTaskCenter(shard int, account, owner Id) (error, err
 	return nil, a.log.InfoErr(a.store.deleteAccount(shard, account))
 }
 
-func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntity) (error, error) {
+func (a *internalApi) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) (error, error) {
 	a.log.Location()
 
-	member, err := a.store.getMember(shard, org, admin)
+	actor, err := a.store.getMember(shard, org, actorId)
 	if err != nil {
 		return nil, a.log.InfoErr(err)
 	}
-	if member == nil || (member.Role != Owner && member.Role != Admin) {
-		return insufficientPermissionErr, nil
+	if actor == nil || (actor.Role != Owner && actor.Role != Admin) {
+		return insufficientPermissionErr, nil //only owners and admins can add new org members
 	}
 
-	pastMembers := make([]*NamedEntity, 0, len(members))
-	newMembers := make([]*NamedEntity, 0, len(members))
+	pastMembers := make([]*AddMemberInternal, 0, len(members))
+	newMembers := make([]*AddMemberInternal, 0, len(members))
 	for _, mem := range members {
+		if mem.Role != Owner && mem.Role != Admin {
+			mem.Role = Reader //at org level users are either owners, admins or nothing, we use reader to signify this as the lowest permission level
+		}
+		if mem.Role == Owner && actor.Role != Owner {
+			return insufficientPermissionErr, nil //only owners can add owners
+		}
 		existingMember, err := a.store.getMember(shard, org, mem.Id)
 		if err != nil {
 			return nil, a.log.InfoErr(err)
 		}
 		if existingMember == nil {
 			newMembers = append(newMembers, mem)
-		} else if !existingMember.IsActive {
+		} else if !existingMember.IsActive || existingMember.Role != mem.Role {
 			pastMembers = append(pastMembers, mem)
 		}
 	}
@@ -180,7 +186,7 @@ func (a *internalApi) AddMembers(shard int, org, admin Id, members []*NamedEntit
 		}
 	}
 	if len(pastMembers) > 0 {
-		if err := a.store.setMembersActive(shard, org, pastMembers); err != nil { //has to be NamedEntity in case the user changed their name whilst they were inactive on the org
+		if err := a.store.updateMembers(shard, org, pastMembers); err != nil { //has to be AddMemberInternal in case the user changed their name whilst they were inactive on the org, or if they were
 			return nil, a.log.InfoErr(err)
 		}
 	}
@@ -269,8 +275,8 @@ type store interface {
 	registerOrgAccount(id, ownerId Id, ownerName string) (int, error)
 	deleteAccount(shard int, account Id) error
 	getMember(shard int, org, member Id) (*orgMember, error)
-	addMembers(shard int, org Id, members []*NamedEntity) error
-	setMembersActive(shard int, org Id, members []*NamedEntity) error
+	addMembers(shard int, org Id, members []*AddMemberInternal) error
+	updateMembers(shard int, org Id, members []*AddMemberInternal) error
 	getTotalOrgOwnerCount(shard int, org Id) (int, error)
 	getOwnerCountInSet(shard int, org Id, members []Id) (int, error)
 	setMembersInactive(shard int, org Id, members []Id) error
@@ -279,40 +285,39 @@ type store interface {
 	renameMember(shard int, org Id, member Id, newName string) error
 }
 
-type task struct {
-	NamedEntity
-	Org                Id     `json:"org"`
-	User               Id     `json:"user"`
-	TotalRemainingTime uint64 `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
-	ChatCount          uint64 `json:"chatCount"`
-	FileCount          uint64 `json:"fileCount"`
-	FileSize           uint64 `json:"fileSize"`
-	IsAbstractTask     bool   `json:"isAbstractTask"`
-}
-
-type abstractTask struct {
-	task
-	MinimumRemainingTime    uint64 `json:"minimumRemainingTime"`
-	IsParallel              bool   `json:"isParallel"`
-	ChildCount              uint64 `json:"childCount"`
-	DescendantCount         uint64 `json:"descendantCount"`
-	LeafCount               uint64 `json:"leafCount"`
-	SubFileCount            uint64 `json:"subFileCount"`
-	SubFileSize             uint64 `json:"subFileSize"`
-	ArchivedChildCount      uint64 `json:"archivedChildCount"`
-	ArchivedDescendantCount uint64 `json:"archivedDescendantCount"`
-	ArchivedLeafCount       uint64 `json:"archivedLeafCount"`
-	ArchivedSubFileCount    uint64 `json:"archivedSubFileCount"`
-	ArchivedSubFileSize     uint64 `json:"archivedSubFileSize"`
-}
+//type task struct {
+//	NamedEntity
+//	Org                Id     `json:"org"`
+//	User               Id     `json:"user"`
+//	TotalRemainingTime uint64 `json:"totalRemainingTime"`
+//	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+//	ChatCount          uint64 `json:"chatCount"`
+//	FileCount          uint64 `json:"fileCount"`
+//	FileSize           uint64 `json:"fileSize"`
+//	IsAbstractTask     bool   `json:"isAbstractTask"`
+//}
+//
+//type abstractTask struct {
+//	task
+//	MinimumRemainingTime    uint64 `json:"minimumRemainingTime"`
+//	IsParallel              bool   `json:"isParallel"`
+//	ChildCount              uint64 `json:"childCount"`
+//	DescendantCount         uint64 `json:"descendantCount"`
+//	LeafCount               uint64 `json:"leafCount"`
+//	SubFileCount            uint64 `json:"subFileCount"`
+//	SubFileSize             uint64 `json:"subFileSize"`
+//	ArchivedChildCount      uint64 `json:"archivedChildCount"`
+//	ArchivedDescendantCount uint64 `json:"archivedDescendantCount"`
+//	ArchivedLeafCount       uint64 `json:"archivedLeafCount"`
+//	ArchivedSubFileCount    uint64 `json:"archivedSubFileCount"`
+//	ArchivedSubFileSize     uint64 `json:"archivedSubFileSize"`
+//}
 
 type orgMember struct {
-	NamedEntity
+	AddMemberInternal
 	Org 		   Id	  `json:"org"`
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
 	IsActive           bool   `json:"isActive"`
 	IsDeleted          bool   `json:"isDeleted"`
-	Role               Role   `json:"role"`
 }
