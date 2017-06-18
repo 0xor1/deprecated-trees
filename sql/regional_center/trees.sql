@@ -16,7 +16,6 @@ CREATE TABLE orgMembers(
     totalRemainingTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
     totalLoggedTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
     isActive BOOL NOT NULL DEFAULT TRUE,
-    isDeleted BOOL NOT NULL DEFAULT FALSE,
     role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 standard member
     PRIMARY KEY (org, isActive, role, name),
     UNIQUE INDEX (org, id)
@@ -48,7 +47,7 @@ DELIMITER $$
 CREATE PROCEDURE registerOrgAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50))
 BEGIN
 	INSERT INTO orgs (id) VALUES (_id);
-    INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, isDeleted, role) VALUES (_id, _ownerId, _ownerName, 0, 0, true, false, 0);
+    INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (_id, _ownerId, _ownerName, 0, 0, true, 0);
 END;
 $$
 DELIMITER ;

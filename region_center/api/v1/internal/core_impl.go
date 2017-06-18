@@ -63,10 +63,6 @@ func (c *internalRegionClient) RemoveMembers(region string, shard int, org, admi
 	c.getRegion(region).RemoveMembers(shard, org, admin, members)
 }
 
-func (c *internalRegionClient) SetMemberDeleted(region string, shard int, org, member Id) {
-	c.getRegion(region).SetMemberDeleted(shard, org, member)
-}
-
 func (c *internalRegionClient) MemberIsOnlyOwner(region string, shard int, org, member Id) bool {
 	return c.getRegion(region).MemberIsOnlyOwner(shard, org, member)
 }
@@ -160,14 +156,14 @@ func (a *internalApi) RemoveMembers(shard int, org, admin Id, members []Id) {
 	default:
 		panic(insufficientPermissionErr)
 	}
-}
 
-func (a *internalApi) SetMemberDeleted(shard int, org, member Id) {
-	a.store.setMemberDeleted(shard, org, member)
+	a.store.setMembersInactive(shard, org, members)
 }
 
 func (a *internalApi) MemberIsOnlyOwner(shard int, org, member Id) bool {
-	return a.store.memberIsOnlyOwner(shard, org, member)
+	totalOrgOwnerCount := a.store.getTotalOrgOwnerCount(shard, org)
+	ownerCount := a.store.getOwnerCountInSet(shard, org, []Id{member})
+	return totalOrgOwnerCount == 1 && ownerCount == 1
 }
 
 func (a *internalApi) RenameMember(shard int, org, member Id, newName string) {
@@ -196,8 +192,6 @@ type store interface {
 	getTotalOrgOwnerCount(shard int, org Id) int
 	getOwnerCountInSet(shard int, org Id, members []Id) int
 	setMembersInactive(shard int, org Id, members []Id)
-	memberIsOnlyOwner(shard int, org, member Id) bool
-	setMemberDeleted(shard int, org Id, member Id)
 	renameMember(shard int, org Id, member Id, newName string)
 }
 
@@ -235,5 +229,4 @@ type orgMember struct {
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
 	IsActive           bool   `json:"isActive"`
-	IsDeleted          bool   `json:"isDeleted"`
 }

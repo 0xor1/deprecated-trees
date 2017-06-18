@@ -518,7 +518,7 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 				}
 			}
 			for _, org := range orgs {
-				a.internalRegionClient.SetMemberDeleted(org.Region, org.Shard, org.Id, myId)
+				a.internalRegionClient.RemoveMembers(org.Region, org.Shard, org.Id, []Id{myId})
 			}
 		}
 	}

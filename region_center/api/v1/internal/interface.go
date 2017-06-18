@@ -10,7 +10,6 @@ type Api interface {
 	DeleteTaskCenter(shard int, account, owner Id)
 	AddMembers(shard int, org, admin Id, members []*AddMemberInternal)
 	RemoveMembers(shard int, org, admin Id, members []Id)
-	SetMemberDeleted(shard int, org, member Id)
 	MemberIsOnlyOwner(shard int, org, member Id) bool
 	RenameMember(shard int, org, member Id, newName string)
 	UserIsOrgOwner(shard int, org, user Id) bool

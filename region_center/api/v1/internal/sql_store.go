@@ -53,12 +53,12 @@ func (s *sqlStore) deleteAccount(shard int, account Id) {
 	}
 }
 
-var query_getMember = `SELECT org, id, name, totalRemainingTime, totalLoggedTime, isActive, isDeleted, role FROM orgMembers WHERE org=? AND id=?`
+var query_getMember = `SELECT org, id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`
 
 func (s *sqlStore) getMember(shard int, org, member Id) *orgMember {
 	row := s.shards[shard].QueryRow(query_getMember, []byte(org), []byte(member))
 	res := orgMember{}
-	if err := row.Scan(&res.Org, &res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.IsDeleted, &res.Role); err != nil {
+	if err := row.Scan(&res.Org, &res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -135,18 +135,31 @@ func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) int {
 	return count
 }
 
+var query_setMembersInactive = `UPDATE orgMembers SET isActive=false WHERE org=? AND id IN (`
+
 func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) {
-
+	queryArgs := make([]interface{}, 0, len(members)+1)
+	queryArgs = append(queryArgs, []byte(org))
+	var query bytes.Buffer
+	query.WriteString(query_setMembersInactive)
+	for i, mem := range members {
+		if i == 0 {
+			query.WriteString(`?`)
+		} else {
+			query.WriteString(`, ?`)
+		}
+		queryArgs = append(queryArgs, []byte(mem))
+	}
+	query.WriteString(`);`)
+	if _, err := s.shards[shard].Exec(query.String(), queryArgs...); err != nil {
+		panic(err)
+	}
 }
 
-func (s *sqlStore) memberIsOnlyOwner(shard int, org, member Id) bool {
-	return false
-}
-
-func (s *sqlStore) setMemberDeleted(shard int, org Id, member Id) {
-
-}
+var query_renameMember = `UPDATE orgMembers SET name=? WHERE org=? AND id=?`
 
 func (s *sqlStore) renameMember(shard int, org Id, member Id, newName string) {
-
+	if _, err := s.shards[shard].Exec(query_renameMember, newName, []byte(org), []byte(member)); err != nil {
+		panic(err)
+	}
 }

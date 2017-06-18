@@ -195,10 +195,6 @@ func (m *mockInternalRegionClient) RemoveMembers(region string, shard int, org, 
 	m.Called(region, shard, org, admin, members)
 }
 
-func (m *mockInternalRegionClient) SetMemberDeleted(region string, shard int, org, member Id) {
-	m.Called(region, shard, org, member)
-}
-
 func (m *mockInternalRegionClient) MemberIsOnlyOwner(region string, shard int, org, member Id) bool {
 	args := m.Called(region, shard, org, member)
 	return args.Bool(0)
