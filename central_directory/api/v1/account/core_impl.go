@@ -15,7 +15,6 @@ import (
 
 var (
 	noSuchRegionErr                       = &Error{Code: 2, Msg: "no such region", IsPublic: true}
-	regionGoneErr                         = &Error{Code: 3, Msg: "region no longer exists", IsPublic: false}
 	noSuchAccountErr                      = &Error{Code: 4, Msg: "no such account", IsPublic: true}
 	invalidActivationAttemptErr           = &Error{Code: 5, Msg: "invalid activation attempt", IsPublic: true}
 	invalidResetPwdAttemptErr             = &Error{Code: 6, Msg: "invalid reset password attempt", IsPublic: true}
