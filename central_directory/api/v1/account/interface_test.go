@@ -12,7 +12,7 @@ func Test_NewApi_success(t *testing.T) {
 	assert.NotNil(t, api)
 }
 
-func Test_NewLogLinkMailer_nilLogPanic(t *testing.T) {
+func Test_NewLogLinkMailer_nilCriticalParamErr(t *testing.T) {
 	defer func() {
 		err := recover().(error)
 		assert.IsType(t, &Error{}, err)
