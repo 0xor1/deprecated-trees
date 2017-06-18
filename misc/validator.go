@@ -26,22 +26,25 @@ func newInvalidStringParamErr(paramPurpose string, minRuneCount, maxRuneCount in
 	}
 }
 
-func ValidateStringParam(paramPurpose, param string, minRuneCount, maxRuneCount int, regexMatchers []string) error {
+func ValidateStringParam(paramPurpose, param string, minRuneCount, maxRuneCount int, regexMatchers []string) {
 	valRuneCount := utf8.RuneCountInString(param)
 	if valRuneCount < minRuneCount || valRuneCount > maxRuneCount {
-		return newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers)
+		panic(newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers))
 	}
 	for _, regex := range regexMatchers {
 		if matches, err := regexp.MatchString(regex, param); !matches || err != nil {
 			if err != nil {
-				return err
+				panic(err)
 			}
-			return newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers)
+			panic(newInvalidStringParamErr(paramPurpose, minRuneCount, maxRuneCount, regexMatchers))
 		}
 	}
-	return nil
 }
 
-func ValidateEmail(email string) error {
-	return ValidateStringParam("email", email, 6, 254, []string{`.+@.+\..+`})
+func ValidateEmail(email string) {
+	ValidateStringParam("email", email, 6, 254, []string{`.+@.+\..+`})
+}
+
+func IsPrivate() bool {
+	return false
 }

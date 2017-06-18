@@ -7,26 +7,25 @@ import (
 )
 
 func Test_NewId(t *testing.T) {
-	id, err := NewId()
+	id := NewId()
 	assert.IsType(t, Id{}, id)
-	assert.Nil(t, err)
 }
 
 func Test_IdEqual(t *testing.T) {
-	id1, _ := NewId()
-	id2, _ := NewId()
+	id1 := NewId()
+	id2 := NewId()
 	assert.True(t, id1.Equal(id1))
 	assert.False(t, id1.Equal(id2))
 }
 
 func Test_IdGreaterThanOrEqualTo(t *testing.T) {
-	id1, _ := NewId()
-	id2, _ := NewId()
+	id1 := NewId()
+	id2 := NewId()
 	assert.True(t, id2.GreaterThanOrEqualTo(id1))
 }
 
 func Test_IdCopy(t *testing.T) {
-	id1, _ := NewId()
+	id1 := NewId()
 	id2 := id1.Copy()
 	assert.True(t, id1.Equal(id2))
 	tmp := []byte(id2)[0]
@@ -36,22 +35,19 @@ func Test_IdCopy(t *testing.T) {
 }
 
 func Test_NewEntity(t *testing.T) {
-	e, err := NewEntity()
-	assert.Nil(t, err)
+	e := NewEntity()
 	assert.NotNil(t, e.Id)
 }
 
 func Test_NewNamedEntity(t *testing.T) {
-	e, err := NewNamedEntity("ali")
-	assert.Nil(t, err)
+	e := NewNamedEntity("ali")
 	assert.NotNil(t, e.Id)
 	assert.Equal(t, "ali", e.Name)
 }
 
 func Test_NewCreatedNamedEntity(t *testing.T) {
-	e, err := NewCreatedNamedEntity("ali")
+	e := NewCreatedNamedEntity("ali")
 	now := time.Now().UTC()
-	assert.Nil(t, err)
 	assert.NotNil(t, e.Id)
 	assert.True(t, now.Add(-1*time.Millisecond).Before(e.CreatedOn) && now.Add(1*time.Millisecond).After(e.CreatedOn))
 	assert.Equal(t, "ali", e.Name)

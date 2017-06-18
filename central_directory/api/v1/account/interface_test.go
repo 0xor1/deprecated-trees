@@ -1,14 +1,14 @@
 package account
 
 import (
-	. "bitbucket.org/robsix/task_center/misc"
-	"github.com/robsix/isql"
+	. "bitbucket.org/0xor1/task_center/misc"
+	"github.com/0xor1/isql"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func Test_NewApi_success(t *testing.T) {
-	api := NewApi(&mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, &isql.MockDB{}, &isql.MockDB{}, NewLog(nil))
+	api := NewApi(&mockInternalRegionClient{}, &mockLinkMailer{}, &mockAvatarStore{}, nil, nil, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, &isql.MockDB{}, &isql.MockDB{})
 	assert.NotNil(t, api)
 }
 

@@ -60,7 +60,7 @@ func Test_log_DebugErr(t *testing.T) {
 
 func Test_log_DebugUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
-	id, _ := NewId()
+	id := NewId()
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
@@ -99,7 +99,7 @@ func Test_log_InfoErr(t *testing.T) {
 
 func Test_log_InfoUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
-	id, _ := NewId()
+	id := NewId()
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
@@ -128,8 +128,8 @@ func Test_log_WarnErr(t *testing.T) {
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	id, _ := NewId()
-	miscFuncs.On("GenId").Return(id, nil)
+	id := NewId()
+	miscFuncs.On("GenId").Return(id)
 	inErr := errors.New("test")
 	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
@@ -141,12 +141,12 @@ func Test_log_WarnErr(t *testing.T) {
 
 func Test_log_WarnUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
-	id, _ := NewId()
+	id := NewId()
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	errId, _ := NewId()
-	miscFuncs.On("GenId").Return(errId, nil)
+	errId := NewId()
+	miscFuncs.On("GenId").Return(errId)
 	expectedErr := errors.New("test")
 	logger.On("Log", zap.WarnLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
@@ -173,8 +173,8 @@ func Test_log_ErrorErr(t *testing.T) {
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	id, _ := NewId()
-	miscFuncs.On("GenId").Return(id, nil)
+	id := NewId()
+	miscFuncs.On("GenId").Return(id)
 	inErr := errors.New("test")
 	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
@@ -185,12 +185,12 @@ func Test_log_ErrorErr(t *testing.T) {
 
 func Test_log_ErrorUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
-	id, _ := NewId()
+	id := NewId()
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	errId, _ := NewId()
-	miscFuncs.On("GenId").Return(errId, nil)
+	errId := NewId()
+	miscFuncs.On("GenId").Return(errId)
 	expectedErr := errors.New("test")
 	logger.On("Log", zap.ErrorLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
@@ -217,8 +217,8 @@ func Test_log_PanicErr(t *testing.T) {
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	id, _ := NewId()
-	miscFuncs.On("GenId").Return(id, nil)
+	id := NewId()
+	miscFuncs.On("GenId").Return(id)
 	inErr := errors.New("test")
 	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
@@ -229,12 +229,12 @@ func Test_log_PanicErr(t *testing.T) {
 
 func Test_log_PanicUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
-	id, _ := NewId()
+	id := NewId()
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	errId, _ := NewId()
-	miscFuncs.On("GenId").Return(errId, nil)
+	errId := NewId()
+	miscFuncs.On("GenId").Return(errId)
 	expectedErr := errors.New("test")
 	logger.On("Log", zap.PanicLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
@@ -261,8 +261,8 @@ func Test_log_FatalErr(t *testing.T) {
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	id, _ := NewId()
-	miscFuncs.On("GenId").Return(id, nil)
+	id := NewId()
+	miscFuncs.On("GenId").Return(id)
 	inErr := errors.New("test")
 	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("errorRef", id.String()), zap.Error(inErr)).Return()
 
@@ -273,12 +273,12 @@ func Test_log_FatalErr(t *testing.T) {
 
 func Test_log_FatalUserErr(t *testing.T) {
 	logger, miscFuncs := &mockLogger{}, &mockMiscFuncs{}
-	id, _ := NewId()
+	id := NewId()
 	l := newLog(logger, miscFuncs.GenId)
 	pc, _, line, _ := runtime.Caller(0)
 	f := runtime.FuncForPC(pc)
-	errId, _ := NewId()
-	miscFuncs.On("GenId").Return(errId, nil)
+	errId := NewId()
+	miscFuncs.On("GenId").Return(errId)
 	expectedErr := errors.New("test")
 	logger.On("Log", zap.FatalLevel, "", zap.String("func", f.Name()), zap.Int("line", line+7), zap.String("user", id.String()), zap.String("errorRef", errId.String()), zap.Error(expectedErr)).Return()
 
@@ -307,7 +307,7 @@ type mockMiscFuncs struct {
 	mock.Mock
 }
 
-func (m *mockMiscFuncs) GenId() (Id, error) {
+func (m *mockMiscFuncs) GenId() Id {
 	args := m.Called()
-	return args.Get(0).(Id), args.Error(1)
+	return args.Get(0).(Id)
 }

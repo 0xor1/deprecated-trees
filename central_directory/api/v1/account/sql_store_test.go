@@ -1,10 +1,10 @@
 package account
 
 import (
-	. "bitbucket.org/robsix/task_center/misc"
+	. "bitbucket.org/0xor1/task_center/misc"
 	"database/sql"
+	"github.com/0xor1/isql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/robsix/isql"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -42,7 +42,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	str := "str"
 	now := time.Now()
 	user1 := &fullUserInfo{}
-	user1.Id, _ = NewId()
+	user1.Id = NewId()
 	user1.Name = "ali"
 	user1.CreatedOn = time.Now().UTC()
 	user1.Region = "use"
@@ -65,14 +65,12 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	pwdInfo1.p = 10
 	pwdInfo1.keyLen = 10
 
-	err := store.createUser(user1, pwdInfo1)
-	assert.Nil(t, err)
+	store.createUser(user1, pwdInfo1)
 
-	val, err := store.accountWithCiNameExists("ali")
+	val := store.accountWithCiNameExists("ali")
 	assert.True(t, val)
-	assert.Nil(t, err)
 
-	user1Dup1, err := store.getAccountByCiName("ali")
+	user1Dup1 := store.getAccountByCiName("ali")
 	assert.Equal(t, user1.Id, user1Dup1.Id)
 	assert.Equal(t, user1.Name, user1Dup1.Name)
 	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup1.CreatedOn.Unix())
@@ -81,26 +79,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Shard, user1Dup1.Shard)
 	assert.Equal(t, user1.HasAvatar, user1Dup1.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup1.IsUser)
-	assert.Nil(t, err)
 
-	user1Dup2, err := store.getUserByCiName("ali")
-	assert.Equal(t, user1.Id, user1Dup2.Id)
-	assert.Equal(t, user1.Name, user1Dup2.Name)
-	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup2.CreatedOn.Unix())
-	assert.Equal(t, user1.Region, user1Dup2.Region)
-	assert.Equal(t, user1.NewRegion, user1Dup2.NewRegion)
-	assert.Equal(t, user1.Shard, user1Dup2.Shard)
-	assert.Equal(t, user1.HasAvatar, user1Dup2.HasAvatar)
-	assert.Equal(t, user1.IsUser, user1Dup2.IsUser)
-	assert.Equal(t, user1.Email, user1Dup2.Email)
-	assert.Equal(t, user1.NewEmail, user1Dup2.NewEmail)
-	assert.Equal(t, user1.activationCode, user1Dup2.activationCode)
-	assert.Equal(t, user1.activated.Unix(), user1Dup2.activated.Unix())
-	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup2.newEmailConfirmationCode)
-	assert.Equal(t, user1.resetPwdCode, user1Dup2.resetPwdCode)
-	assert.Nil(t, err)
-
-	user1Dup3, err := store.getUserByEmail("ali@ali.com")
+	user1Dup3 := store.getUserByEmail("ali@ali.com")
 	assert.Equal(t, user1.Id, user1Dup3.Id)
 	assert.Equal(t, user1.Name, user1Dup3.Name)
 	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup3.CreatedOn.Unix())
@@ -115,9 +95,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.activated.Unix(), user1Dup3.activated.Unix())
 	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup3.newEmailConfirmationCode)
 	assert.Equal(t, user1.resetPwdCode, user1Dup3.resetPwdCode)
-	assert.Nil(t, err)
 
-	user1Dup4, err := store.getUserById(user1.Id)
+	user1Dup4 := store.getUserById(user1.Id)
 	assert.Equal(t, user1.Id, user1Dup4.Id)
 	assert.Equal(t, user1.Name, user1Dup4.Name)
 	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup4.CreatedOn.Unix())
@@ -132,24 +111,21 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.activated.Unix(), user1Dup4.activated.Unix())
 	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup4.newEmailConfirmationCode)
 	assert.Equal(t, user1.resetPwdCode, user1Dup4.resetPwdCode)
-	assert.Nil(t, err)
 
-	pwdInfo1Dup1, err := store.getPwdInfo(user1.Id)
+	pwdInfo1Dup1 := store.getPwdInfo(user1.Id)
 	assert.Equal(t, pwdInfo1.salt, pwdInfo1Dup1.salt)
 	assert.Equal(t, pwdInfo1.pwd, pwdInfo1Dup1.pwd)
 	assert.Equal(t, pwdInfo1.n, pwdInfo1Dup1.n)
 	assert.Equal(t, pwdInfo1.r, pwdInfo1Dup1.r)
 	assert.Equal(t, pwdInfo1.p, pwdInfo1Dup1.p)
 	assert.Equal(t, pwdInfo1.keyLen, pwdInfo1Dup1.keyLen)
-	assert.Nil(t, err)
 
 	user1.Name = "bob"
 	user1.Email = "bob@bob.com"
-	err = store.updateUser(user1)
+	store.updateUser(user1)
 	assert.Equal(t, pwdInfo1.salt, pwdInfo1Dup1.salt)
-	assert.Nil(t, err)
 
-	user1Dup5, err := store.getUserByEmail("bob@bob.com")
+	user1Dup5 := store.getUserByEmail("bob@bob.com")
 	assert.Equal(t, user1.Id, user1Dup5.Id)
 	assert.Equal(t, user1.Name, user1Dup5.Name)
 	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup5.CreatedOn.Unix())
@@ -164,7 +140,6 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.activated.Unix(), user1Dup5.activated.Unix())
 	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup5.newEmailConfirmationCode)
 	assert.Equal(t, user1.resetPwdCode, user1Dup5.resetPwdCode)
-	assert.Nil(t, err)
 
 	pwdInfo1.salt = []byte("salt_update")
 	pwdInfo1.pwd = []byte("pwd_update")
@@ -172,19 +147,17 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	pwdInfo1.r = 5
 	pwdInfo1.p = 5
 	pwdInfo1.keyLen = 5
-	err = store.updatePwdInfo(user1.Id, pwdInfo1)
-	assert.Nil(t, err)
+	store.updatePwdInfo(user1.Id, pwdInfo1)
 
-	pwdInfo1Dup2, err := store.getPwdInfo(user1.Id)
+	pwdInfo1Dup2 := store.getPwdInfo(user1.Id)
 	assert.Equal(t, pwdInfo1.salt, pwdInfo1Dup2.salt)
 	assert.Equal(t, pwdInfo1.pwd, pwdInfo1Dup2.pwd)
 	assert.Equal(t, pwdInfo1.n, pwdInfo1Dup2.n)
 	assert.Equal(t, pwdInfo1.r, pwdInfo1Dup2.r)
 	assert.Equal(t, pwdInfo1.p, pwdInfo1Dup2.p)
 	assert.Equal(t, pwdInfo1.keyLen, pwdInfo1Dup2.keyLen)
-	assert.Nil(t, err)
 
-	users1, err := store.getUsers([]Id{user1.Id})
+	users1 := store.getUsers([]Id{user1.Id})
 	assert.Equal(t, 1, len(users1))
 	assert.Equal(t, user1.Id, users1[0].Id)
 	assert.Equal(t, user1.Name, users1[0].Name)
@@ -194,10 +167,9 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.Shard, users1[0].Shard)
 	assert.Equal(t, user1.HasAvatar, users1[0].HasAvatar)
 	assert.Equal(t, user1.IsUser, users1[0].IsUser)
-	assert.Nil(t, err)
 
 	org1 := &account{}
-	org1.Id, _ = NewId()
+	org1.Id = NewId()
 	org1.Name = "org1"
 	org1.CreatedOn = time.Now().UTC()
 	org1.Region = "use"
@@ -205,10 +177,9 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	org1.Shard = 4
 	org1.HasAvatar = true
 	org1.IsUser = false
-	err = store.createOrgAndMembership(org1, user1.Id)
-	assert.Nil(t, err)
+	store.createOrgAndMembership(org1, user1.Id)
 
-	org1Dup1, err := store.getAccount(org1.Id)
+	org1Dup1 := store.getAccount(org1.Id)
 	assert.Equal(t, org1.Id, org1Dup1.Id)
 	assert.Equal(t, org1.Name, org1Dup1.Name)
 	assert.Equal(t, org1.CreatedOn.Unix(), org1Dup1.CreatedOn.Unix())
@@ -217,13 +188,11 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org1.Shard, org1Dup1.Shard)
 	assert.Equal(t, org1.HasAvatar, org1Dup1.HasAvatar)
 	assert.Equal(t, org1.IsUser, org1Dup1.IsUser)
-	assert.Nil(t, err)
 
 	org1.Name = "org1_updated"
-	err = store.updateAccount(org1)
-	assert.Nil(t, err)
+	store.updateAccount(org1)
 
-	orgs1, err := store.getAccounts([]Id{org1.Id})
+	orgs1 := store.getAccounts([]Id{org1.Id})
 	assert.Equal(t, 1, len(orgs1))
 	assert.Equal(t, org1.Id, orgs1[0].Id)
 	assert.Equal(t, org1.Name, orgs1[0].Name)
@@ -233,10 +202,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org1.Shard, orgs1[0].Shard)
 	assert.Equal(t, org1.HasAvatar, orgs1[0].HasAvatar)
 	assert.Equal(t, org1.IsUser, orgs1[0].IsUser)
-	assert.Nil(t, err)
 
-	orgs2, total, err := store.getUsersOrgs(user1.Id, 0, 50)
-	assert.Nil(t, err)
+	orgs2, total := store.getUsersOrgs(user1.Id, 0, 50)
 	assert.Equal(t, 1, len(orgs2))
 	assert.Equal(t, 1, total)
 	assert.Equal(t, org1.Id, orgs2[0].Id)
@@ -247,10 +214,9 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org1.Shard, orgs2[0].Shard)
 	assert.Equal(t, org1.HasAvatar, orgs2[0].HasAvatar)
 	assert.Equal(t, org1.IsUser, orgs2[0].IsUser)
-	assert.Nil(t, err)
 
 	user2 := &fullUserInfo{}
-	user2.Id, _ = NewId()
+	user2.Id = NewId()
 	user2.Name = "cat"
 	user2.CreatedOn = time.Now().UTC()
 	user2.Region = "use"
@@ -264,11 +230,10 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user2.activated = &now
 	user2.newEmailConfirmationCode = &str
 	user2.resetPwdCode = &str
-	err = store.createUser(user2, pwdInfo1)
-	assert.Nil(t, err)
+	store.createUser(user2, pwdInfo1)
 
 	user3 := &fullUserInfo{}
-	user3.Id, _ = NewId()
+	user3.Id = NewId()
 	user3.Name = "dan"
 	user3.CreatedOn = time.Now().UTC()
 	user3.Region = "use"
@@ -282,11 +247,10 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user3.activated = &now
 	user3.newEmailConfirmationCode = &str
 	user3.resetPwdCode = &str
-	err = store.createUser(user3, pwdInfo1)
-	assert.Nil(t, err)
+	store.createUser(user3, pwdInfo1)
 
 	org2 := &account{}
-	org2.Id, _ = NewId()
+	org2.Id = NewId()
 	org2.Name = "org2"
 	org2.CreatedOn = time.Now().UTC()
 	org2.Region = "use"
@@ -294,13 +258,11 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	org2.Shard = 4
 	org2.HasAvatar = true
 	org2.IsUser = false
-	err = store.createOrgAndMembership(org2, user1.Id)
-	assert.Nil(t, err)
+	store.createOrgAndMembership(org2, user1.Id)
 
-	err = store.createMemberships(org2.Id, []Id{user2.Id, user3.Id})
-	assert.Nil(t, err)
+	store.createMemberships(org2.Id, []Id{user2.Id, user3.Id})
 
-	orgs3, total, err := store.getUsersOrgs(user2.Id, 0, 50)
+	orgs3, total := store.getUsersOrgs(user2.Id, 0, 50)
 	assert.Equal(t, 1, len(orgs3))
 	assert.Equal(t, 1, total)
 	assert.Equal(t, org2.Id, orgs3[0].Id)
@@ -311,28 +273,22 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, org2.Shard, orgs3[0].Shard)
 	assert.Equal(t, org2.HasAvatar, orgs3[0].HasAvatar)
 	assert.Equal(t, org2.IsUser, orgs3[0].IsUser)
-	assert.Nil(t, err)
 
-	err = store.deleteMemberships(org2.Id, []Id{user2.Id, user3.Id})
-	assert.Nil(t, err)
+	store.deleteMemberships(org2.Id, []Id{user2.Id, user3.Id})
 
-	orgs4, total, err := store.getUsersOrgs(user2.Id, 0, 50)
+	orgs4, total := store.getUsersOrgs(user2.Id, 0, 50)
 	assert.Equal(t, 0, len(orgs4))
 	assert.Equal(t, 0, total)
 
-	err = store.deleteAccountAndAllAssociatedMemberships(org2.Id)
-	assert.Nil(t, err)
+	store.deleteAccountAndAllAssociatedMemberships(org2.Id)
 
-	orgs5, total, err := store.getUsersOrgs(user1.Id, 0, 50)
-	assert.Nil(t, err)
+	orgs5, total := store.getUsersOrgs(user1.Id, 0, 50)
 	assert.Equal(t, 1, len(orgs5))
 	assert.Equal(t, 1, total)
 
-	err = store.deleteAccountAndAllAssociatedMemberships(user1.Id)
-	assert.Nil(t, err)
+	store.deleteAccountAndAllAssociatedMemberships(user1.Id)
 
-	orgs6, total, err := store.getUsersOrgs(user1.Id, 0, 50)
-	assert.Nil(t, err)
+	orgs6, total := store.getUsersOrgs(user1.Id, 0, 50)
 	assert.Equal(t, 0, len(orgs6))
 	assert.Equal(t, 0, total)
 

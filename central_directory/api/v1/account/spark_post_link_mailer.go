@@ -9,18 +9,14 @@ const (
 type sparkPostMailer struct {
 }
 
-func (l *sparkPostMailer) sendMultipleAccountPolicyEmail(address string) error {
-	return nil
+func (l *sparkPostMailer) sendMultipleAccountPolicyEmail(address string) {
 }
 
-func (l *sparkPostMailer) sendActivationLink(address, activationCode string) error {
-	return nil
+func (l *sparkPostMailer) sendActivationLink(address, activationCode string) {
 }
 
-func (l *sparkPostMailer) sendPwdResetLink(address, resetCode string) error {
-	return nil
+func (l *sparkPostMailer) sendPwdResetLink(address, resetCode string) {
 }
 
-func (l *sparkPostMailer) sendNewEmailConfirmationLink(currentAddress, newAddress, confirmationCode string) error {
-	return nil
+func (l *sparkPostMailer) sendNewEmailConfirmationLink(currentAddress, newAddress, confirmationCode string) {
 }

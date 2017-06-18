@@ -35,16 +35,16 @@ func NewLog(logger zapLogger) Log {
 	return newLog(logger, NewId)
 }
 
-func newLog(logger zapLogger, genId GenId) Log {
+func newLog(logger zapLogger, newId GenId) Log {
 	return &log{
 		logger: logger,
-		genId:  genId,
+		newId:  newId,
 	}
 }
 
 type log struct {
 	logger zapLogger
-	genId  GenId
+	newId  GenId
 }
 
 func (l *log) log(callerDepth int, level zap.Level, fields ...zap.Field) {
@@ -66,7 +66,7 @@ func (l *log) logErr(level zap.Level, err error) error {
 		l.log(3, level, zap.Error(err))
 		return err
 	} else {
-		id, _ := l.genId()
+		id := l.newId()
 		l.log(3, level, zap.String("errorRef", id.String()), zap.Error(err))
 		return &ErrorRef{Id: id}
 	}
@@ -80,7 +80,7 @@ func (l *log) logUserErr(level zap.Level, userId Id, err error) error {
 		l.log(3, level, zap.String("user", userId.String()), zap.Error(err))
 		return err
 	} else {
-		id, _ := l.genId()
+		id := l.newId()
 		l.log(3, level, zap.String("user", userId.String()), zap.String("errorRef", id.String()), zap.Error(err))
 		return &ErrorRef{Id: id}
 	}

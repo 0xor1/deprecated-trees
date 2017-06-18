@@ -1,163 +1,118 @@
 package internal
 
 import (
-	. "bitbucket.org/robsix/task_center/misc"
+	. "bitbucket.org/0xor1/task_center/misc"
 )
 
 var (
-	invalidRegionErr          = &Error{Code: 19, Msg: "invalid region"}
-	insufficientPermissionErr = &Error{Code: 20, Msg: "insufficient permission"}
-	zeroOwnerCountErr         = &Error{Code: 21, Msg: "zero owner count"}
-	invalidTaskCenterTypeErr  = &Error{Code: 22, Msg: "invalid task center type"}
+	invalidRegionErr          = &Error{Code: 19, Msg: "invalid region", IsPublic: false}
+	insufficientPermissionErr = &Error{Code: 20, Msg: "insufficient permission", IsPublic: true}
+	zeroOwnerCountErr         = &Error{Code: 21, Msg: "zero owner count", IsPublic: true}
+	invalidTaskCenterTypeErr  = &Error{Code: 22, Msg: "invalid task center type", IsPublic: true}
 )
 
-func newInternalApiClient(regions map[string]InternalApi) InternalApiClient {
+func newInternalRegionClient(regions map[string]Api) InternalRegionClient {
 	if regions == nil {
-		NilCriticalParamPanic("regions")
+		panic(NilCriticalParamErr)
 	}
-	return &internalApiClient{
+	return &internalRegionClient{
 		regions: regions,
 	}
 }
 
-type internalApiClient struct {
-	regions map[string]InternalApi
+type internalRegionClient struct {
+	regions map[string]Api
 }
 
-func (a *internalApiClient) GetRegions() []string {
-	regions := make([]string, 0, len(a.regions))
-	for k := range a.regions {
+func (c *internalRegionClient) GetRegions() []string {
+	regions := make([]string, 0, len(c.regions))
+	for k := range c.regions {
 		regions = append(regions, k)
 	}
 	return regions
 }
 
-func (a *internalApiClient) IsValidRegion(region string) bool {
-	return a.regions[region] != nil
-}
-
-func (a *internalApiClient) CreatePersonalTaskCenter(region string, user Id) (int, error) {
-	if !a.IsValidRegion(region) {
-		return 0, invalidRegionErr
+func (c *internalRegionClient) getRegion(region string) Api {
+	if !c.IsValidRegion(region) {
+		panic(invalidRegionErr)
 	}
-	return a.regions[region].CreatePersonalTaskCenter(user)
+	return c.getRegion(region)
 }
 
-func (a *internalApiClient) CreateOrgTaskCenter(region string, org, owner Id, ownerName string) (int, error) {
-	if !a.IsValidRegion(region) {
-		return 0, invalidRegionErr
-	}
-	return a.regions[region].CreateOrgTaskCenter(org, owner, ownerName)
+func (c *internalRegionClient) IsValidRegion(region string) bool {
+	return c.getRegion(region) != nil
 }
 
-func (a *internalApiClient) DeleteTaskCenter(region string, shard int, account, owner Id) (error, error) {
-	if !a.IsValidRegion(region) {
-		return nil, invalidRegionErr
-	}
-	return a.regions[region].DeleteTaskCenter(shard, account, owner)
+func (c *internalRegionClient) CreatePersonalTaskCenter(region string, user Id) int {
+	return c.getRegion(region).CreatePersonalTaskCenter(user)
 }
 
-func (a *internalApiClient) AddMembers(region string, shard int, org, admin Id, members []*AddMemberExternal) (error, error) {
-	if !a.IsValidRegion(region) {
-		return nil, invalidRegionErr
-	}
-	return a.regions[region].AddMembers(shard, org, admin, members)
+func (c *internalRegionClient) CreateOrgTaskCenter(region string, org, owner Id, ownerName string) int {
+	return c.getRegion(region).CreateOrgTaskCenter(org, owner, ownerName)
 }
 
-func (a *internalApiClient) RemoveMembers(region string, shard int, org, admin Id, members []Id) (error, error) {
-	if !a.IsValidRegion(region) {
-		return nil, invalidRegionErr
-	}
-	return a.regions[region].RemoveMembers(shard, org, admin, members)
+func (c *internalRegionClient) DeleteTaskCenter(region string, shard int, account, owner Id) {
+	c.getRegion(region).DeleteTaskCenter(shard, account, owner)
 }
 
-func (a *internalApiClient) SetMemberDeleted(region string, shard int, org, member Id) error {
-	if !a.IsValidRegion(region) {
-		return invalidRegionErr
-	}
-	return a.regions[region].SetMemberDeleted(shard, org, member)
+func (c *internalRegionClient) AddMembers(region string, shard int, org, admin Id, members []*AddMemberInternal) {
+	c.getRegion(region).AddMembers(shard, org, admin, members)
 }
 
-func (a *internalApiClient) MemberIsOnlyOwner(region string, shard int, org, member Id) (bool, error) {
-	if !a.IsValidRegion(region) {
-		return false, invalidRegionErr
-	}
-
-	return a.regions[region].MemberIsOnlyOwner(shard, org, member)
+func (c *internalRegionClient) RemoveMembers(region string, shard int, org, admin Id, members []Id) {
+	c.getRegion(region).RemoveMembers(shard, org, admin, members)
 }
 
-func (a *internalApiClient) RenameMember(region string, shard int, org, member Id, newName string) error {
-	if !a.IsValidRegion(region) {
-		return invalidRegionErr
-	}
-	return a.regions[region].RenameMember(shard, org, member, newName)
+func (c *internalRegionClient) SetMemberDeleted(region string, shard int, org, member Id) {
+	c.getRegion(region).SetMemberDeleted(shard, org, member)
 }
 
-func (a *internalApiClient) UserIsOrgOwner(region string, shard int, org, user Id) (bool, error) {
-	if !a.IsValidRegion(region) {
-		return false, invalidRegionErr
-	}
-	return a.regions[region].UserIsOrgOwner(shard, org, user)
+func (c *internalRegionClient) MemberIsOnlyOwner(region string, shard int, org, member Id) bool {
+	return c.getRegion(region).MemberIsOnlyOwner(shard, org, member)
 }
 
-func newInternalApi(store store, log Log) InternalApi {
+func (c *internalRegionClient) RenameMember(region string, shard int, org, member Id, newName string) {
+	c.getRegion(region).RenameMember(shard, org, member, newName)
+}
+
+func (c *internalRegionClient) UserIsOrgOwner(region string, shard int, org, user Id) bool {
+	return c.getRegion(region).UserIsOrgOwner(shard, org, user)
+}
+
+func newInternalApi(store store) Api {
 	if store == nil {
-		NilCriticalParamPanic("store")
-	}
-	if log == nil {
-		NilCriticalParamPanic("log")
+		panic(NilCriticalParamErr)
 	}
 	return &internalApi{
 		store: store,
-		log:   log,
 	}
 }
 
 type internalApi struct {
 	store store
-	log   Log
 }
 
-func (a *internalApi) CreatePersonalTaskCenter(user Id) (int, error) {
-	a.log.Location()
-
-	shard, err := a.store.registerPersonalAccount(user)
-
-	return shard, a.log.InfoErr(err)
+func (a *internalApi) CreatePersonalTaskCenter(user Id) int {
+	return a.store.registerPersonalAccount(user)
 }
 
-func (a *internalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) (int, error) {
-	a.log.Location()
-
-	shard, err := a.store.registerOrgAccount(org, owner, ownerName)
-
-	return shard, a.log.InfoErr(err)
+func (a *internalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) int {
+	return a.store.registerOrgAccount(org, owner, ownerName)
 }
 
-func (a *internalApi) DeleteTaskCenter(shard int, account, owner Id) (error, error) {
-	a.log.Location()
-
+func (a *internalApi) DeleteTaskCenter(shard int, account, owner Id) {
 	if !owner.Equal(account) {
-		member, err := a.store.getMember(shard, account, owner)
-		if err != nil {
-			return nil, a.log.InfoErr(err)
-		}
+		member := a.store.getMember(shard, account, owner)
 		if member == nil || member.Role != Owner {
-			return insufficientPermissionErr, nil
+			panic(insufficientPermissionErr)
 		}
 	}
-	return nil, a.log.InfoErr(a.store.deleteAccount(shard, account))
 }
 
-func (a *internalApi) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) (error, error) {
-	a.log.Location()
-
-	actor, err := a.store.getMember(shard, org, actorId)
-	if err != nil {
-		return nil, a.log.InfoErr(err)
-	}
+func (a *internalApi) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) {
+	actor := a.store.getMember(shard, org, actorId)
 	if actor == nil || (actor.Role != Owner && actor.Role != Admin) {
-		return insufficientPermissionErr, nil //only owners and admins can add new org members
+		panic(insufficientPermissionErr) //only owners and admins can add new org members
 	}
 
 	pastMembers := make([]*AddMemberInternal, 0, len(members))
@@ -167,12 +122,9 @@ func (a *internalApi) AddMembers(shard int, org, actorId Id, members []*AddMembe
 			mem.Role = Reader //at org level users are either owners, admins or nothing, we use reader to signify this as the lowest permission level
 		}
 		if mem.Role == Owner && actor.Role != Owner {
-			return insufficientPermissionErr, nil //only owners can add owners
+			panic(insufficientPermissionErr) //only owners can add owners
 		}
-		existingMember, err := a.store.getMember(shard, org, mem.Id)
-		if err != nil {
-			return nil, a.log.InfoErr(err)
-		}
+		existingMember := a.store.getMember(shard, org, mem.Id)
 		if existingMember == nil {
 			newMembers = append(newMembers, mem)
 		} else if !existingMember.IsActive || existingMember.Role != mem.Role {
@@ -181,108 +133,72 @@ func (a *internalApi) AddMembers(shard int, org, actorId Id, members []*AddMembe
 	}
 
 	if len(newMembers) > 0 {
-		if err := a.store.addMembers(shard, org, newMembers); err != nil {
-			return nil, a.log.InfoErr(err)
-		}
+		a.store.addMembers(shard, org, newMembers)
 	}
 	if len(pastMembers) > 0 {
-		if err := a.store.updateMembers(shard, org, pastMembers); err != nil { //has to be AddMemberInternal in case the user changed their name whilst they were inactive on the org, or if they were
-			return nil, a.log.InfoErr(err)
-		}
+		a.store.updateMembers(shard, org, pastMembers) //has to be AddMemberInternal in case the user changed their name whilst they were inactive on the org, or if they were
 	}
-
-	return nil, nil
 }
 
-func (a *internalApi) RemoveMembers(shard int, org, admin Id, members []Id) (error, error) {
-	a.log.Location()
-
-	member, err := a.store.getMember(shard, org, admin)
-	if err != nil {
-		return nil, a.log.InfoErr(err)
-	}
+func (a *internalApi) RemoveMembers(shard int, org, admin Id, members []Id) {
+	member := a.store.getMember(shard, org, admin)
 
 	switch member.Role {
 	case Owner:
-		totalOrgOwnerCount, err := a.store.getTotalOrgOwnerCount(shard, org)
-		if err != nil {
-			return nil, a.log.InfoErr(err)
-		}
-
-		ownerCountInRemoveSet, err := a.store.getOwnerCountInSet(shard, org, members)
-		if err != nil {
-			return nil, a.log.InfoErr(err)
-		}
-
+		totalOrgOwnerCount := a.store.getTotalOrgOwnerCount(shard, org)
+		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, org, members)
 		if totalOrgOwnerCount == ownerCountInRemoveSet {
-			return zeroOwnerCountErr, nil
+			panic(zeroOwnerCountErr)
 		}
 
 	case Admin:
-		ownerCountInRemoveSet, err := a.store.getOwnerCountInSet(shard, org, members)
-		if err != nil {
-			return nil, a.log.InfoErr(err)
-		}
+		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, org, members)
 		if ownerCountInRemoveSet > 0 {
-			return insufficientPermissionErr, nil
+			panic(insufficientPermissionErr)
 		}
 
 	default:
-		return insufficientPermissionErr, nil
+		panic(insufficientPermissionErr)
 	}
-
-	return nil, a.log.InfoErr(a.store.setMembersInactive(shard, org, members))
 }
 
-func (a *internalApi) SetMemberDeleted(shard int, org, member Id) error {
-	a.log.Location()
-
-	return a.log.InfoErr(a.store.setMemberDeleted(shard, org, member))
+func (a *internalApi) SetMemberDeleted(shard int, org, member Id) {
+	a.store.setMemberDeleted(shard, org, member)
 }
 
-func (a *internalApi) MemberIsOnlyOwner(shard int, org, member Id) (bool, error) {
-	a.log.Location()
-
-	is, err := a.store.memberIsOnlyOwner(shard, org, member)
-	return is, a.log.InfoErr(err)
+func (a *internalApi) MemberIsOnlyOwner(shard int, org, member Id) bool {
+	return a.store.memberIsOnlyOwner(shard, org, member)
 }
 
-func (a *internalApi) RenameMember(shard int, org, member Id, newName string) error {
-	a.log.Location()
-
-	return a.log.InfoErr(a.store.renameMember(shard, org, member, newName))
+func (a *internalApi) RenameMember(shard int, org, member Id, newName string) {
+	a.store.renameMember(shard, org, member, newName)
 }
 
-func (a *internalApi) UserIsOrgOwner(shard int, org, user Id) (bool, error) {
-	a.log.Location()
-
+func (a *internalApi) UserIsOrgOwner(shard int, org, user Id) bool {
 	if !user.Equal(org) {
-		member, err := a.store.getMember(shard, org, user)
-		if err != nil {
-			return false, a.log.InfoErr(err)
-		}
+		member := a.store.getMember(shard, org, user)
 		if member != nil && member.Role == Owner {
-			return true, nil
+			return true
 		} else {
-			return false, nil
+			return false
 		}
 	}
-	return false, invalidTaskCenterTypeErr
+	panic(invalidTaskCenterTypeErr)
 }
 
 type store interface {
-	registerPersonalAccount(id Id) (int, error)
-	registerOrgAccount(id, ownerId Id, ownerName string) (int, error)
-	deleteAccount(shard int, account Id) error
-	getMember(shard int, org, member Id) (*orgMember, error)
-	addMembers(shard int, org Id, members []*AddMemberInternal) error
-	updateMembers(shard int, org Id, members []*AddMemberInternal) error
-	getTotalOrgOwnerCount(shard int, org Id) (int, error)
-	getOwnerCountInSet(shard int, org Id, members []Id) (int, error)
-	setMembersInactive(shard int, org Id, members []Id) error
-	memberIsOnlyOwner(shard int, org, member Id) (bool, error)
-	setMemberDeleted(shard int, org Id, member Id) error
-	renameMember(shard int, org Id, member Id, newName string) error
+	registerPersonalAccount(id Id) int
+	registerOrgAccount(id, ownerId Id, ownerName string) int
+	deleteAccount(shard int, account Id)
+	getMember(shard int, org, member Id) *orgMember
+	addMembers(shard int, org Id, members []*AddMemberInternal)
+	updateMembers(shard int, org Id, members []*AddMemberInternal)
+	getTotalOrgOwnerCount(shard int, org Id) int
+	getOwnerCountInSet(shard int, org Id, members []Id) int
+	setMembersInactive(shard int, org Id, members []Id)
+	memberIsOnlyOwner(shard int, org, member Id) bool
+	setMemberDeleted(shard int, org Id, member Id)
+	renameMember(shard int, org Id, member Id, newName string)
 }
 
 //type task struct {
@@ -315,7 +231,7 @@ type store interface {
 
 type orgMember struct {
 	AddMemberInternal
-	Org 		   Id	  `json:"org"`
+	Org                Id     `json:"org"`
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
 	IsActive           bool   `json:"isActive"`

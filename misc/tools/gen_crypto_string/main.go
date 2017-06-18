@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/robsix/task_center/misc"
+	"bitbucket.org/0xor1/task_center/misc"
 	"flag"
 	"fmt"
 )

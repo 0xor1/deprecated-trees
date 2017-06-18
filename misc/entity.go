@@ -35,19 +35,15 @@ func (id Id) Copy() Id {
 }
 
 type Entity struct {
-	Id        Id        `json:"id"`
+	Id Id `json:"id"`
 }
 
 type GenEntity func() (*Entity, error)
 
-func NewEntity() (*Entity, error) {
-	id, err := NewId()
-	if err != nil {
-		return nil, err
-	}
+func NewEntity() *Entity {
 	return &Entity{
-		Id:        id,
-	}, nil
+		Id: NewId(),
+	}
 }
 
 type NamedEntity struct {
@@ -65,19 +61,15 @@ type AddMemberExternal struct {
 	Role Role `json:"role"`
 }
 
-type GenNamedEntity func(name string) (*NamedEntity, error)
+type GenNamedEntity func(name string) *NamedEntity
 
-func NewNamedEntity(name string) (*NamedEntity, error) {
-	id, err := NewId()
-	if err != nil {
-		return nil, err
-	}
+func NewNamedEntity(name string) *NamedEntity {
 	return &NamedEntity{
 		Entity: Entity{
-			Id: id,
+			Id: NewId(),
 		},
-		Name:   name,
-	}, nil
+		Name: name,
+	}
 }
 
 type CreatedNamedEntity struct {
@@ -85,34 +77,27 @@ type CreatedNamedEntity struct {
 	CreatedOn time.Time `json:"createdOn"`
 }
 
-type GenCreatedNamedEntity func(name string) (*CreatedNamedEntity, error)
+type GenCreatedNamedEntity func(name string) *CreatedNamedEntity
 
-func NewCreatedNamedEntity(name string) (*CreatedNamedEntity, error) {
-	id, err := NewId()
-	if err != nil {
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
+func NewCreatedNamedEntity(name string) *CreatedNamedEntity {
 	return &CreatedNamedEntity{
 		NamedEntity: NamedEntity{
 			Entity: Entity{
-				Id: id,
+				Id: NewId(),
 			},
 			Name: name,
 		},
 		CreatedOn: time.Now().UTC(),
-	}, nil
+	}
 }
 
-type GenId func() (Id, error)
+type GenId func() Id
 
 //returns version 1 uuid as a byte slice
-func NewId() (Id, error) {
+func NewId() Id {
 	id := NewUUID()
 	if id == nil {
-		return nil, idGenerationErr
+		panic(idGenerationErr)
 	}
-	return Id(id), nil
+	return Id(id)
 }

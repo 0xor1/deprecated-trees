@@ -5,21 +5,27 @@ import (
 )
 
 var (
-	NotImplementedErr = &Error{Code: -1, Msg: "not implemented"}
-	idGenerationErr   = &Error{Code: 1, Msg: "Failed to generate id"}
+	NotImplementedErr   = &Error{Code: -1, Msg: "not implemented", IsPublic: false}
+	NilCriticalParamErr = &Error{Code: 0, Msg: "nil critical param", IsPublic: false}
+	idGenerationErr     = &Error{Code: 1, Msg: "Failed to generate id", IsPublic: false}
 )
 
-func NilCriticalParamPanic(paramName string) {
-	panic(&Error{Code: 0, Msg: fmt.Sprintf("nil %s", paramName)})
+type PermissionedError interface {
+	IsPrivate() bool
 }
 
 type Error struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
+	Code     int    `json:"code"`
+	Msg      string `json:"msg"`
+	IsPublic bool   `json:"-"`
 }
 
 func (e *Error) Error() string {
 	return fmt.Sprintf("code: %d, msg: %s", e.Code, e.Msg)
+}
+
+func (e *Error) IsPrivate() bool {
+	return !e.IsPublic
 }
 
 type ErrorRef struct {
