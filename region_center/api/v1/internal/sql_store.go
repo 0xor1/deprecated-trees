@@ -75,28 +75,28 @@ func (s *sqlStore) addMembers(shard int, org Id, members []*AddMemberInternal) {
 	query.WriteString(query_addMembers)
 	for i, mem := range members {
 		if i == 0 {
-			query.WriteString(`(?, ?, ?)`)
+			query.WriteString(`(?, ?, ?, ?)`)
 		} else {
-			query.WriteString(`, (?, ?, ?)`)
+			query.WriteString(`, (?, ?, ?, ?)`)
 		}
 		queryArgs = append(queryArgs, []byte(org), []byte(mem.Id), mem.Name, mem.Role)
 	}
-	if _, err := s.shards[shard].Exec(query_addMembers, queryArgs...); err != nil {
+	if _, err := s.shards[shard].Exec(query.String(), queryArgs...); err != nil {
 		panic(err)
 	}
 }
 
-var query_updateMembers = `UPDATE orgMembers name=?, role=?, isActive=true WHERE org=? AND id=?`
+var query_updateMembersAndSetActive = `UPDATE orgMembers SET name=?, role=?, isActive=true WHERE org=? AND id=?`
 
-func (s *sqlStore) updateMembers(shard int, org Id, members []*AddMemberInternal) {
+func (s *sqlStore) updateMembersAndSetActive(shard int, org Id, members []*AddMemberInternal) {
 	for _, mem := range members {
-		if _, err := s.shards[shard].Exec(query_updateMembers, mem.Name, mem.Role, []byte(org), []byte(mem.Id)); err != nil {
+		if _, err := s.shards[shard].Exec(query_updateMembersAndSetActive, mem.Name, mem.Role, []byte(org), []byte(mem.Id)); err != nil {
 			panic(err)
 		}
 	}
 }
 
-var query_getTotalOrgOwnerCount = `SELECT COUNT(*) WHERE org=? AND isActive=true AND role=0`
+var query_getTotalOrgOwnerCount = `SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true AND role=0`
 
 func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) int {
 	var count int
@@ -109,7 +109,7 @@ func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) int {
 	return count
 }
 
-var query_getOwnerCountInSet = `SELECT COUNT(*) WHERE org=? AND isActive=true AND role=0 AND id IN (`
+var query_getOwnerCountInSet = `SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true AND role=0 AND id IN (`
 
 func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
@@ -135,7 +135,7 @@ func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) int {
 	return count
 }
 
-var query_setMembersInactive = `UPDATE orgMembers SET isActive=false WHERE org=? AND id IN (`
+var query_setMembersInactive = `UPDATE orgMembers SET isActive=false, role=3 WHERE org=? AND id IN (`
 
 func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) {
 	queryArgs := make([]interface{}, 0, len(members)+1)

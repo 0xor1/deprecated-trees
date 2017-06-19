@@ -132,7 +132,7 @@ func (a *internalApi) AddMembers(shard int, org, actorId Id, members []*AddMembe
 		a.store.addMembers(shard, org, newMembers)
 	}
 	if len(pastMembers) > 0 {
-		a.store.updateMembers(shard, org, pastMembers) //has to be AddMemberInternal in case the user changed their name whilst they were inactive on the org, or if they were
+		a.store.updateMembersAndSetActive(shard, org, pastMembers) //has to be AddMemberInternal in case the user changed their name whilst they were inactive on the org, or if they were
 	}
 }
 
@@ -152,9 +152,10 @@ func (a *internalApi) RemoveMembers(shard int, org, admin Id, members []Id) {
 		if ownerCountInRemoveSet > 0 {
 			panic(insufficientPermissionErr)
 		}
-
 	default:
-		panic(insufficientPermissionErr)
+		if len(members) != 1 || !members[0].Equal(admin) { //user can remove themselves
+			panic(insufficientPermissionErr)
+		}
 	}
 
 	a.store.setMembersInactive(shard, org, members)
@@ -188,7 +189,7 @@ type store interface {
 	deleteAccount(shard int, account Id)
 	getMember(shard int, org, member Id) *orgMember
 	addMembers(shard int, org Id, members []*AddMemberInternal)
-	updateMembers(shard int, org Id, members []*AddMemberInternal)
+	updateMembersAndSetActive(shard int, org Id, members []*AddMemberInternal)
 	getTotalOrgOwnerCount(shard int, org Id) int
 	getOwnerCountInSet(shard int, org Id, members []Id) int
 	setMembersInactive(shard int, org Id, members []Id)

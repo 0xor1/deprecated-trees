@@ -16,7 +16,7 @@ CREATE TABLE orgMembers(
     totalRemainingTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
     totalLoggedTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
     isActive BOOL NOT NULL DEFAULT TRUE,
-    role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 standard member
+    role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 3 standard member
     PRIMARY KEY (org, isActive, role, name),
     UNIQUE INDEX (org, id)
 );
