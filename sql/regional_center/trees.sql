@@ -16,7 +16,7 @@ CREATE TABLE orgMembers(
     totalRemainingTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
     totalLoggedTime BIGINT UNSIGNED NOT NULL DEFAULT 0,
     isActive BOOL NOT NULL DEFAULT TRUE,
-    role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 3 standard member
+    role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 memberOfAllProjects, 3 memberOfOnlySpecificProjects
     PRIMARY KEY (org, isActive, role, name),
     UNIQUE INDEX (org, id)
 );
@@ -26,9 +26,17 @@ CREATE TABLE projects(
 	org BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
 	name VARCHAR(250) NOT NULL,
+    createdOn DATETIME NOT NULL,
+    archivedOn DateTime NULL,
+    startOn DATETIME NULL,
+    dueOn DATETIME NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    PRIMARY KEY (org, id)
+    PRIMARY KEY (org, id),
+    INDEX(org, archivedOn, name, createdOn, id),
+    INDEX(org, archivedOn, createdOn, name, id),
+    INDEX(org, archivedOn, startOn, name, id),
+    INDEX(org, archivedOn, dueOn, name, id)
 );
 
 DROP TABLE IF EXISTS projectMembers;
@@ -37,7 +45,7 @@ CREATE TABLE projectMembers(
     id BINARY(16) NOT NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    role TINYINT UNSIGNED NOT NULL, #0 owner, 1 admin, 2 writer, 3 reader
+    role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
     PRIMARY KEY (org, role, id),
     UNIQUE INDEX (org, id)
 );

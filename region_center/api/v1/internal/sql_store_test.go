@@ -36,7 +36,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 
 	mem1 := store.getMember(orgShard, orgId, personalId)
 	assert.Equal(t, personalId, mem1.Id)
-	assert.Equal(t, Owner, mem1.Role)
+	assert.Equal(t, OrgOwner, mem1.Role)
 	assert.Equal(t, "ali", mem1.Name)
 	assert.Equal(t, uint64(0), mem1.TotalRemainingTime)
 	assert.Equal(t, uint64(0), mem1.TotalLoggedTime)
@@ -45,14 +45,14 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	bob := &AddMemberInternal{}
 	bob.Id = NewId()
 	bob.Name = "bob"
-	bob.Role = Admin
+	bob.Role = OrgAdmin
 	cat := &AddMemberInternal{}
 	cat.Id = NewId()
 	cat.Name = "cat"
-	cat.Role = Reader
+	cat.Role = OrgMemberOfOnlySpecificProjects
 	store.addMembers(orgShard, orgId, []*AddMemberInternal{bob, cat})
 
-	cat.Role = Owner
+	cat.Role = OrgOwner
 	store.updateMembersAndSetActive(orgShard, orgId, []*AddMemberInternal{cat})
 
 	totalOwnerCount := store.getTotalOrgOwnerCount(orgShard, orgId)
@@ -71,7 +71,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	store.renameMember(orgShard, orgId, bob.Id, "jimbob")
 	mem2 := store.getMember(orgShard, orgId, bob.Id)
 	assert.Equal(t, bob.Id, mem2.Id)
-	assert.Equal(t, Admin, mem2.Role)
+	assert.Equal(t, OrgAdmin, mem2.Role)
 	assert.Equal(t, "jimbob", mem2.Name)
 	assert.Equal(t, uint64(0), mem2.TotalRemainingTime)
 	assert.Equal(t, uint64(0), mem2.TotalLoggedTime)
@@ -79,7 +79,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 
 	mem3 := store.getMember(orgShard, orgId, cat.Id)
 	assert.Equal(t, cat.Id, mem3.Id)
-	assert.Equal(t, Reader, mem3.Role)
+	assert.Equal(t, OrgMemberOfOnlySpecificProjects, mem3.Role)
 	assert.Equal(t, "cat", mem3.Name)
 	assert.Equal(t, uint64(0), mem3.TotalRemainingTime)
 	assert.Equal(t, uint64(0), mem3.TotalLoggedTime)

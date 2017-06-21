@@ -8,13 +8,19 @@ import (
 )
 
 const (
-	Owner  = Role(0)
-	Admin  = Role(1)
-	Writer = Role(2)
-	Reader = Role(3)
+	OrgOwner = OrgRole(0)
+	OrgAdmin = OrgRole(1)
+	OrgMemberOfAllProjects = OrgRole(2)
+	OrgMemberOfOnlySpecificProjects = OrgRole(3)
+
+	ProjectAdmin = ProjectRole(0)
+	ProjectWriter = ProjectRole(1)
+	ProjectReader = ProjectRole(2)
 )
 
-type Role uint8
+type OrgRole uint8
+
+type ProjectRole uint8
 
 type Id UUID
 
@@ -53,12 +59,12 @@ type NamedEntity struct {
 
 type AddMemberInternal struct {
 	NamedEntity
-	Role Role `json:"role"`
+	Role OrgRole `json:"orgRole"`
 }
 
 type AddMemberExternal struct {
 	Entity
-	Role Role `json:"role"`
+	Role OrgRole `json:"orgRole"`
 }
 
 type GenNamedEntity func(name string) *NamedEntity

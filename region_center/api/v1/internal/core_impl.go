@@ -99,7 +99,7 @@ func (a *api) CreateOrgTaskCenter(org, owner Id, ownerName string) int {
 func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
 	if !owner.Equal(account) {
 		member := a.store.getMember(shard, account, owner)
-		if member == nil || member.Role != Owner {
+		if member == nil || member.Role != OrgOwner {
 			panic(insufficientPermissionErr)
 		}
 	}
@@ -107,17 +107,14 @@ func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
 
 func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) {
 	actor := a.store.getMember(shard, org, actorId)
-	if actor == nil || (actor.Role != Owner && actor.Role != Admin) {
+	if actor == nil || (actor.Role != OrgOwner && actor.Role != OrgAdmin) {
 		panic(insufficientPermissionErr) //only owners and admins can add new org members
 	}
 
 	pastMembers := make([]*AddMemberInternal, 0, len(members))
 	newMembers := make([]*AddMemberInternal, 0, len(members))
 	for _, mem := range members {
-		if mem.Role != Owner && mem.Role != Admin {
-			mem.Role = Reader //at org level users are either owners, admins or nothing, we use reader to signify this as the lowest permission level
-		}
-		if mem.Role == Owner && actor.Role != Owner {
+		if mem.Role == OrgOwner && actor.Role != OrgOwner {
 			panic(insufficientPermissionErr) //only owners can add owners
 		}
 		existingMember := a.store.getMember(shard, org, mem.Id)
@@ -140,14 +137,14 @@ func (a *api) RemoveMembers(shard int, org, admin Id, members []Id) {
 	member := a.store.getMember(shard, org, admin)
 
 	switch member.Role {
-	case Owner:
+	case OrgOwner:
 		totalOrgOwnerCount := a.store.getTotalOrgOwnerCount(shard, org)
 		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, org, members)
 		if totalOrgOwnerCount == ownerCountInRemoveSet {
 			panic(zeroOwnerCountErr)
 		}
 
-	case Admin:
+	case OrgAdmin:
 		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, org, members)
 		if ownerCountInRemoveSet > 0 {
 			panic(insufficientPermissionErr)
@@ -174,7 +171,7 @@ func (a *api) RenameMember(shard int, org, member Id, newName string) {
 func (a *api) UserIsOrgOwner(shard int, org, user Id) bool {
 	if !user.Equal(org) {
 		member := a.store.getMember(shard, org, user)
-		if member != nil && member.Role == Owner {
+		if member != nil && member.Role == OrgOwner {
 			return true
 		} else {
 			return false
@@ -215,13 +212,6 @@ type store interface {
 //	ChildCount              uint64 `json:"childCount"`
 //	DescendantCount         uint64 `json:"descendantCount"`
 //	LeafCount               uint64 `json:"leafCount"`
-//	SubFileCount            uint64 `json:"subFileCount"`
-//	SubFileSize             uint64 `json:"subFileSize"`
-//	ArchivedChildCount      uint64 `json:"archivedChildCount"`
-//	ArchivedDescendantCount uint64 `json:"archivedDescendantCount"`
-//	ArchivedLeafCount       uint64 `json:"archivedLeafCount"`
-//	ArchivedSubFileCount    uint64 `json:"archivedSubFileCount"`
-//	ArchivedSubFileSize     uint64 `json:"archivedSubFileSize"`
 //}
 
 type orgMember struct {
