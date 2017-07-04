@@ -21,17 +21,52 @@ CREATE TABLE orgMembers(
     UNIQUE INDEX (org, id)
 );
 
+DROP TABLE IF EXISTS projectMembers;
+CREATE TABLE projectMembers(
+	org BINARY(16) NOT NULL,
+	project BINARY(16) NOT NULL,
+    member BINARY(16) NOT NULL,
+    totalRemainingTime BIGINT UNSIGNED NOT NULL,
+    totalLoggedTime BIGINT UNSIGNED NOT NULL,
+    role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
+    PRIMARY KEY (org, project, role, member),
+    UNIQUE INDEX (org, member)
+);
+
+DROP TABLE IF EXISTS projectActivities;
+CREATE TABLE projectActivities(
+	org BINARY(16) NOT NULL,
+    project BINARY(16) NOT NULL,
+    occuredOn DATETIME NOT NULL,
+    item BINARY(16) NOT NULL,
+    member BINARY(16) NOT NULL,
+    itemType VARCHAR(100) NOT NULL,
+    itemName VARCHAR(250) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    PRIMARY KEY (org, project, occuredOn, item, member),
+    UNIQUE INDEX (org, project, item, occuredOn, member),
+    UNIQUE INDEX (org, project, member, occuredOn, item),
+    UNIQUE INDEX (org, occuredOn, project, item, member)
+);
+
 DROP TABLE IF EXISTS projects;
 CREATE TABLE projects(
 	org BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
 	name VARCHAR(250) NOT NULL,
+	description VARCHAR(1250) NOT NULL,
     createdOn DATETIME NOT NULL,
     archivedOn DateTime NULL,
     startOn DATETIME NULL,
     dueOn DATETIME NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
+    minimumRemainingTime BIGINT UNSIGNED NOT NULL,
+    fileCount BIGINT UNSIGNED NOT NULL,
+    fileSize BIGINT UNSIGNED NOT NULL,
+    linkedFileCount BIGINT UNSIGNED NOT NULL,
+    chatCount BIGINT UNSIGNED NOT NULL,
+    isParallel BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (org, id),
     INDEX(org, archivedOn, name, createdOn, id),
     INDEX(org, archivedOn, createdOn, name, id),
@@ -39,15 +74,27 @@ CREATE TABLE projects(
     INDEX(org, archivedOn, dueOn, name, id)
 );
 
-DROP TABLE IF EXISTS projectMembers;
-CREATE TABLE projectMembers(
+DROP TABLE IF EXISTS nodes;
+CREATE TABLE nodes(
 	org BINARY(16) NOT NULL,
+	project BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
+    parent BINARY(16) NOT NULL,
+    firstChild BINARY(16) NULL,
+    nextSibling BINARY(16) NULL,
+    isAbstract BOOL NOT NULL,
+	name VARCHAR(250) NOT NULL,
+	description VARCHAR(1250) NOT NULL,
+    createdOn DATETIME NOT NULL,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
-    PRIMARY KEY (org, role, id),
-    UNIQUE INDEX (org, id)
+    minimumRemainingTime BIGINT UNSIGNED NULL,
+    linkedFileCount INT UNSIGNED NOT NULL,
+    chatCount BIGINT UNSIGNED NOT NULL,
+    isParallel BOOL NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (org, project, id),
+    INDEX(org, name, createdOn, id),
+    INDEX(org, createdOn, name, id)
 );
 
 DROP PROCEDURE IF EXISTS registerOrgAccount;
@@ -66,8 +113,9 @@ CREATE PROCEDURE deleteAccount(_id BINARY(16))
 BEGIN
 	DELETE FROM orgs WHERE id =_id;
 	DELETE FROM orgMembers WHERE org =_id;
-	DELETE FROM projects WHERE org =_id;
 	DELETE FROM projectMembers WHERE org =_id;
+	DELETE FROM projectActivities WHERE org =_id;
+	DELETE FROM projects WHERE org =_id;
 END;
 $$
 DELIMITER ;

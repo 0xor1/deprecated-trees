@@ -1,4 +1,4 @@
-package internal
+package project
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -135,32 +135,23 @@ func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) int {
 	return count
 }
 
-var query_setMembersInactive_1 = `UPDATE orgMembers SET isActive=false, role=3 WHERE org=? AND id IN (`
-var query_setMembersInactive_2 = `DELETE FROM projectMembers WHERE org=? AND member IN (`
+var query_setMembersInactive = `UPDATE orgMembers SET isActive=false, role=3 WHERE org=? AND id IN (`
 
 func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, []byte(org))
-	var query1 bytes.Buffer
-	query1.WriteString(query_setMembersInactive_1)
-	var query2 bytes.Buffer
-	query2.WriteString(query_setMembersInactive_2)
+	var query bytes.Buffer
+	query.WriteString(query_setMembersInactive)
 	for i, mem := range members {
 		if i == 0 {
-			query1.WriteString(`?`)
-			query2.WriteString(`?`)
+			query.WriteString(`?`)
 		} else {
-			query1.WriteString(`, ?`)
-			query2.WriteString(`, ?`)
+			query.WriteString(`, ?`)
 		}
 		queryArgs = append(queryArgs, []byte(mem))
 	}
-	query1.WriteString(`);`)
-	query2.WriteString(`);`)
-	if _, err := s.shards[shard].Exec(query1.String(), queryArgs...); err != nil {
-		panic(err)
-	}
-	if _, err := s.shards[shard].Exec(query2.String(), queryArgs...); err != nil {
+	query.WriteString(`);`)
+	if _, err := s.shards[shard].Exec(query.String(), queryArgs...); err != nil {
 		panic(err)
 	}
 }

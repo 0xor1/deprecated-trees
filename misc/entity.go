@@ -16,11 +16,16 @@ const (
 	ProjectAdmin = ProjectRole(0)
 	ProjectWriter = ProjectRole(1)
 	ProjectReader = ProjectRole(2)
+
+	AbstractTask = NodeType(0)
+	Task = NodeType(1)
 )
 
 type OrgRole uint8
 
 type ProjectRole uint8
+
+type NodeType uint8
 
 type Id UUID
 
@@ -106,4 +111,19 @@ func NewId() Id {
 		panic(idGenerationErr)
 	}
 	return Id(id)
+}
+
+type CommonNodeProps struct{
+	CreatedNamedEntity
+	Org Id `json:"org"`
+	Description string `json:"description"`
+	TotalRemainingTime uint64 `json:"totalRemainingTime"`
+	TotalLoggedTime uint64 `json:"totalLoggedTime"`
+	LinkedFilesCount uint64 `json:"linkedFilesCount"`
+	ChatCount uint64 `json:"chatCount"`
+}
+
+type CommonAbstractNodeProps struct{
+	MinimumRemainingTime    uint64 `json:"minimumRemainingTime"`
+	IsParallel              bool   `json:"isParallel"`
 }

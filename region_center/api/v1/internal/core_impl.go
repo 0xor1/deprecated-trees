@@ -193,27 +193,6 @@ type store interface {
 	renameMember(shard int, org Id, member Id, newName string)
 }
 
-//type task struct {
-//	NamedEntity
-//	Org                Id     `json:"org"`
-//	User               Id     `json:"user"`
-//	TotalRemainingTime uint64 `json:"totalRemainingTime"`
-//	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
-//	ChatCount          uint64 `json:"chatCount"`
-//	FileCount          uint64 `json:"fileCount"`
-//	FileSize           uint64 `json:"fileSize"`
-//	IsAbstractTask     bool   `json:"isAbstractTask"`
-//}
-//
-//type abstractTask struct {
-//	task
-//	MinimumRemainingTime    uint64 `json:"minimumRemainingTime"`
-//	IsParallel              bool   `json:"isParallel"`
-//	ChildCount              uint64 `json:"childCount"`
-//	DescendantCount         uint64 `json:"descendantCount"`
-//	LeafCount               uint64 `json:"leafCount"`
-//}
-
 type orgMember struct {
 	AddMemberInternal
 	Org                Id     `json:"org"`
