@@ -8,10 +8,6 @@ import (
 	"math/rand"
 )
 
-var (
-	invalidShardIdErr = &Error{Code: 23, Msg: "invalid shard id", IsPublic: false}
-)
-
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
 	if len(shards) == 0 {
 		panic(NilCriticalParamErr)
@@ -25,19 +21,9 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
-var query_registerPersonalAccount = `INSERT INTO orgs (id) VALUES (?);`
-
-func (s *sqlStore) registerPersonalAccount(id Id) int {
-	shardId := rand.Intn(len(s.shards))
-	if _, err := s.shards[shardId].Exec(query_registerPersonalAccount, []byte(id)); err != nil {
-		panic(err)
-	}
-	return shardId
-}
-
 var query_registerOrgAccount = `CALL registerOrgAccount(?, ?, ?);`
 
-func (s *sqlStore) registerOrgAccount(id Id, ownerId Id, ownerName string) int {
+func (s *sqlStore) registerAccount(id Id, ownerId Id, ownerName string) int {
 	shardId := rand.Intn(len(s.shards))
 	if _, err := s.shards[shardId].Exec(query_registerOrgAccount, []byte(id), []byte(ownerId), ownerName); err != nil {
 		panic(err)

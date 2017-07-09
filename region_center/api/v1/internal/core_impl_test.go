@@ -15,12 +15,7 @@ type mockSingluarInternalApi struct {
 	mock.Mock
 }
 
-func (m *mockSingluarInternalApi) CreatePersonalTaskCenter(user Id) int {
-	args := m.Called(user)
-	return args.Int(0)
-}
-
-func (m *mockSingluarInternalApi) CreateOrgTaskCenter(org, owner Id, ownerName string) int {
+func (m *mockSingluarInternalApi) CreateTaskCenter(org, owner Id, ownerName string) int {
 	args := m.Called(org, owner, ownerName)
 	return args.Int(0)
 }
@@ -59,12 +54,7 @@ type mockStore struct {
 	mock.Mock
 }
 
-func (m *mockStore) registerPersonalAccount(id Id) int {
-	args := m.Called(id)
-	return args.Int(0)
-}
-
-func (m *mockStore) registerOrgAccount(id Id, ownerId Id, ownerName string) int {
+func (m *mockStore) registerAccount(id Id, ownerId Id, ownerName string) int {
 	args := m.Called(id, ownerId, ownerName)
 	return args.Int(0)
 }

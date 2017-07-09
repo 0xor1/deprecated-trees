@@ -27,11 +27,11 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	store := newSqlStore(map[int]isql.ReplicaSet{0:treeDb})
 
 	personalId := NewId()
-	personalShard := store.registerPersonalAccount(personalId)
+	personalShard := store.registerAccount(personalId, personalId, "ali")
 	assert.Equal(t, 0, personalShard)
 
 	orgId := NewId()
-	orgShard := store.registerOrgAccount(orgId, personalId, "ali")
+	orgShard := store.registerAccount(orgId, personalId, "ali")
 	assert.Equal(t, 0, orgShard)
 
 	mem1 := store.getMember(orgShard, orgId, personalId)

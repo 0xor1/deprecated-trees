@@ -3,8 +3,7 @@ package misc
 type InternalRegionClient interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool
-	CreatePersonalTaskCenter(region string, user Id) int
-	CreateOrgTaskCenter(region string, org, owner Id, ownerName string) int
+	CreateTaskCenter(region string, org, owner Id, ownerName string) int
 	DeleteTaskCenter(region string, shard int, account, owner Id)
 	AddMembers(region string, shard int, org, admin Id, members []*AddMemberInternal)
 	RemoveMembers(region string, shard int, org, admin Id, members []Id)

@@ -5,8 +5,7 @@ import (
 )
 
 type Api interface {
-	CreatePersonalTaskCenter(user Id) int
-	CreateOrgTaskCenter(org, owner Id, ownerName string) int
+	CreateTaskCenter(org, owner Id, ownerName string) int
 	DeleteTaskCenter(shard int, account, owner Id)
 	AddMembers(shard int, org, admin Id, members []*AddMemberInternal)
 	RemoveMembers(shard int, org, admin Id, members []Id)

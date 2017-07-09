@@ -173,12 +173,7 @@ func (m *mockInternalRegionClient) IsValidRegion(region string) bool {
 	return args.Bool(0)
 }
 
-func (m *mockInternalRegionClient) CreatePersonalTaskCenter(region string, userId Id) int {
-	args := m.Called(region, userId)
-	return args.Int(0)
-}
-
-func (m *mockInternalRegionClient) CreateOrgTaskCenter(region string, orgId, ownerId Id, ownerName string) int {
+func (m *mockInternalRegionClient) CreateTaskCenter(region string, orgId, ownerId Id, ownerName string) int {
 	args := m.Called(region, orgId, ownerId, ownerName)
 	return args.Int(0)
 }

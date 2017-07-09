@@ -146,7 +146,7 @@ func (a *api) Activate(email, activationCode string) {
 		panic(invalidActivationAttemptErr)
 	}
 
-	shard := a.internalRegionClient.CreatePersonalTaskCenter(user.Region, user.Id)
+	shard := a.internalRegionClient.CreateTaskCenter(user.Region, user.Id, user.Id, user.Name)
 
 	user.Shard = shard
 	user.activationCode = nil
@@ -236,7 +236,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) {
 	scryptPwd := a.cryptoHelper.ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 
 	if user.activationCode != nil {
-		shard := a.internalRegionClient.CreatePersonalTaskCenter(user.Region, user.Id)
+		shard := a.internalRegionClient.CreateTaskCenter(user.Region, user.Id, user.Id, user.Name)
 		user.Shard = shard
 	}
 
@@ -470,7 +470,7 @@ func (a *api) CreateOrg(myId Id, name, region string) *account {
 			panic(r)
 		}
 	}()
-	shard := a.internalRegionClient.CreateOrgTaskCenter(region, orgCore.Id, myId, owner.Name)
+	shard := a.internalRegionClient.CreateTaskCenter(region, orgCore.Id, myId, owner.Name)
 
 	org.Shard = shard
 	a.store.updateAccount(org)

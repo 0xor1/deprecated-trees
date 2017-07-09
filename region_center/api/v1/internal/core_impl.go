@@ -43,12 +43,8 @@ func (c *client) IsValidRegion(region string) bool {
 	return c.getRegion(region) != nil
 }
 
-func (c *client) CreatePersonalTaskCenter(region string, user Id) int {
-	return c.getRegion(region).CreatePersonalTaskCenter(user)
-}
-
-func (c *client) CreateOrgTaskCenter(region string, org, owner Id, ownerName string) int {
-	return c.getRegion(region).CreateOrgTaskCenter(org, owner, ownerName)
+func (c *client) CreateTaskCenter(region string, org, owner Id, ownerName string) int {
+	return c.getRegion(region).CreateTaskCenter(org, owner, ownerName)
 }
 
 func (c *client) DeleteTaskCenter(region string, shard int, account, owner Id) {
@@ -88,12 +84,8 @@ type api struct {
 	store store
 }
 
-func (a *api) CreatePersonalTaskCenter(user Id) int {
-	return a.store.registerPersonalAccount(user)
-}
-
-func (a *api) CreateOrgTaskCenter(org, owner Id, ownerName string) int {
-	return a.store.registerOrgAccount(org, owner, ownerName)
+func (a *api) CreateTaskCenter(org, owner Id, ownerName string) int {
+	return a.store.registerAccount(org, owner, ownerName)
 }
 
 func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
@@ -181,8 +173,7 @@ func (a *api) UserIsOrgOwner(shard int, org, user Id) bool {
 }
 
 type store interface {
-	registerPersonalAccount(id Id) int
-	registerOrgAccount(id, ownerId Id, ownerName string) int
+	registerAccount(id, ownerId Id, ownerName string) int
 	deleteAccount(shard int, account Id)
 	getMember(shard int, org, member Id) *orgMember
 	addMembers(shard int, org Id, members []*AddMemberInternal)
