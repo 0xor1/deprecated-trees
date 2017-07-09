@@ -11,6 +11,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"regexp"
 )
 
 var (
@@ -36,6 +37,15 @@ func newApi(store store, internalRegionClient InternalRegionClient, linkMailer l
 	if store == nil || internalRegionClient == nil || linkMailer == nil || avatarStore == nil || newCreatedNamedEntity == nil || cryptoHelper == nil {
 		panic(NilCriticalParamErr)
 	}
+	//compile regexs
+	nameRegexes := make([]*regexp.Regexp, 0, len(nameRegexMatchers))
+	for _, val := range nameRegexMatchers {
+		nameRegexes = append(nameRegexes, regexp.MustCompile(val))
+	}
+	pwdRegexes := make([]*regexp.Regexp, 0, len(pwdRegexMatchers))
+	for _, val := range pwdRegexMatchers {
+		nameRegexes = append(nameRegexes, regexp.MustCompile(val))
+	}
 	return &api{
 		store:                 store,
 		internalRegionClient:  internalRegionClient,
@@ -43,8 +53,8 @@ func newApi(store store, internalRegionClient InternalRegionClient, linkMailer l
 		avatarStore:           avatarStore,
 		newCreatedNamedEntity: newCreatedNamedEntity,
 		cryptoHelper:          cryptoHelper,
-		nameRegexMatchers:     append(make([]string, 0, len(nameRegexMatchers)), nameRegexMatchers...),
-		pwdRegexMatchers:      append(make([]string, 0, len(pwdRegexMatchers)), pwdRegexMatchers...),
+		nameRegexMatchers:     nameRegexes,
+		pwdRegexMatchers:      pwdRegexes,
 		maxAvatarDim:          maxAvatarDim,
 		nameMinRuneCount:      nameMinRuneCount,
 		nameMaxRuneCount:      nameMaxRuneCount,
@@ -67,8 +77,8 @@ type api struct {
 	avatarStore           avatarStore
 	newCreatedNamedEntity GenCreatedNamedEntity
 	cryptoHelper          CryptoHelper
-	nameRegexMatchers     []string
-	pwdRegexMatchers      []string
+	nameRegexMatchers     []*regexp.Regexp
+	pwdRegexMatchers      []*regexp.Regexp
 	maxAvatarDim          uint
 	nameMinRuneCount      int
 	nameMaxRuneCount      int

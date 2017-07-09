@@ -93,13 +93,12 @@ CREATE TABLE nodes(
     chatCount BIGINT UNSIGNED NOT NULL,
     isParallel BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (org, project, id),
-    INDEX(org, name, createdOn, id),
-    INDEX(org, createdOn, name, id)
+    INDEX(org, project, parent, id)
 );
 
-DROP PROCEDURE IF EXISTS registerOrgAccount;
+DROP PROCEDURE IF EXISTS registerAccount;
 DELIMITER $$
-CREATE PROCEDURE registerOrgAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50))
+CREATE PROCEDURE registerAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50))
 BEGIN
 	INSERT INTO orgs (id) VALUES (_id);
     INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (_id, _ownerId, _ownerName, 0, 0, true, 0);

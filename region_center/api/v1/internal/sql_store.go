@@ -21,11 +21,11 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
-var query_registerOrgAccount = `CALL registerOrgAccount(?, ?, ?);`
+var query_registerAccount = `CALL registerAccount(?, ?, ?);`
 
 func (s *sqlStore) registerAccount(id Id, ownerId Id, ownerName string) int {
 	shardId := rand.Intn(len(s.shards))
-	if _, err := s.shards[shardId].Exec(query_registerOrgAccount, []byte(id), []byte(ownerId), ownerName); err != nil {
+	if _, err := s.shards[shardId].Exec(query_registerAccount, []byte(id), []byte(ownerId), ownerName); err != nil {
 		panic(err)
 	}
 	return shardId
