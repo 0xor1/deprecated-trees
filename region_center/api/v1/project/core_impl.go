@@ -30,4 +30,5 @@ type project struct {
 	DueOn *time.Time `json:"dueOn,omitempty"`
 	FileCount uint64 `json:"fileCount"`
 	FileSize uint64 `json:"fileSize"`
+	IsPublic bool `json:"isPublic"`
 }

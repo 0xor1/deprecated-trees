@@ -21,6 +21,20 @@ CREATE TABLE orgMembers(
     UNIQUE INDEX (org, id)
 );
 
+DROP TABLE IF EXISTS orgActivities;
+CREATE TABLE orgActivities(
+	org BINARY(16) NOT NULL,
+    occuredOn DATETIME NOT NULL,
+    item BINARY(16) NOT NULL,
+    member BINARY(16) NOT NULL,
+    itemType VARCHAR(100) NOT NULL,
+    itemName VARCHAR(250) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    PRIMARY KEY (org, occuredOn, item, member),
+    UNIQUE INDEX (org, item, occuredOn, member),
+    UNIQUE INDEX (org, member, occuredOn, item)
+);
+
 DROP TABLE IF EXISTS projectMembers;
 CREATE TABLE projectMembers(
 	org BINARY(16) NOT NULL,
@@ -67,6 +81,7 @@ CREATE TABLE projects(
     linkedFileCount BIGINT UNSIGNED NOT NULL,
     chatCount BIGINT UNSIGNED NOT NULL,
     isParallel BOOL NOT NULL DEFAULT FALSE,
+    isPublic BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (org, id),
     INDEX(org, archivedOn, name, createdOn, id),
     INDEX(org, archivedOn, createdOn, name, id),
