@@ -19,6 +19,9 @@ const (
 
 	AbstractTask = NodeType(0)
 	Task = NodeType(1)
+
+	SortAsc = SortDirection("asc")
+	SortDesc = SortDirection("desc")
 )
 
 type OrgRole uint8
@@ -26,6 +29,8 @@ type OrgRole uint8
 type ProjectRole uint8
 
 type NodeType uint8
+
+type SortDirection string
 
 type Id UUID
 

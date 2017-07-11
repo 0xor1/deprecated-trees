@@ -21,28 +21,22 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
-var query_registerAccount = `CALL registerAccount(?, ?, ?);`
-
 func (s *sqlStore) registerAccount(id Id, ownerId Id, ownerName string) int {
 	shardId := rand.Intn(len(s.shards))
-	if _, err := s.shards[shardId].Exec(query_registerAccount, []byte(id), []byte(ownerId), ownerName); err != nil {
+	if _, err := s.shards[shardId].Exec(`CALL registerAccount(?, ?, ?);`, []byte(id), []byte(ownerId), ownerName); err != nil {
 		panic(err)
 	}
 	return shardId
 }
 
-var query_deleteAccount = `CALL deleteAccount(?);`
-
 func (s *sqlStore) deleteAccount(shard int, account Id) {
-	if _, err := s.shards[shard].Exec(query_deleteAccount, []byte(account)); err != nil {
+	if _, err := s.shards[shard].Exec(`CALL deleteAccount(?);`, []byte(account)); err != nil {
 		panic(err)
 	}
 }
 
-var query_getMember = `SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`
-
 func (s *sqlStore) getMember(shard int, org, member Id) *Member {
-	row := s.shards[shard].QueryRow(query_getMember, []byte(org), []byte(member))
+	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`, []byte(org), []byte(member))
 	res := Member{}
 	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
 		if err == sql.ErrNoRows {
@@ -53,12 +47,10 @@ func (s *sqlStore) getMember(shard int, org, member Id) *Member {
 	return &res
 }
 
-var query_addMembers = `INSERT INTO orgMembers (org, id, name, role) VALUES `
-
 func (s *sqlStore) addMembers(shard int, org Id, members []*AddMemberInternal) {
 	var query bytes.Buffer
 	queryArgs := make([]interface{}, 0, 3*len(members))
-	query.WriteString(query_addMembers)
+	query.WriteString(`INSERT INTO orgMembers (org, id, name, role) VALUES `)
 	for i, mem := range members {
 		if i == 0 {
 			query.WriteString(`(?, ?, ?, ?)`)
@@ -72,21 +64,17 @@ func (s *sqlStore) addMembers(shard int, org Id, members []*AddMemberInternal) {
 	}
 }
 
-var query_updateMembersAndSetActive = `UPDATE orgMembers SET name=?, role=?, isActive=true WHERE org=? AND id=?`
-
 func (s *sqlStore) updateMembersAndSetActive(shard int, org Id, members []*AddMemberInternal) {
 	for _, mem := range members {
-		if _, err := s.shards[shard].Exec(query_updateMembersAndSetActive, mem.Name, mem.Role, []byte(org), []byte(mem.Id)); err != nil {
+		if _, err := s.shards[shard].Exec(`UPDATE orgMembers SET name=?, role=?, isActive=true WHERE org=? AND id=?`, mem.Name, mem.Role, []byte(org), []byte(mem.Id)); err != nil {
 			panic(err)
 		}
 	}
 }
 
-var query_getTotalOrgOwnerCount = `SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true AND role=0`
-
 func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) int {
 	var count int
-	if err := s.shards[shard].QueryRow(query_getTotalOrgOwnerCount, []byte(org)).Scan(&count); err != nil {
+	if err := s.shards[shard].QueryRow(`SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true AND role=0`, []byte(org)).Scan(&count); err != nil {
 		if err == sql.ErrNoRows {
 			return 0
 		}
@@ -95,13 +83,11 @@ func (s *sqlStore) getTotalOrgOwnerCount(shard int, org Id) int {
 	return count
 }
 
-var query_getOwnerCountInSet = `SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true AND role=0 AND id IN (`
-
 func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, []byte(org))
 	var query bytes.Buffer
-	query.WriteString(query_getOwnerCountInSet)
+	query.WriteString(`SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true AND role=0 AND id IN (`)
 	for i, mem := range members {
 		if i == 0 {
 			query.WriteString(`?`)
@@ -121,16 +107,13 @@ func (s *sqlStore) getOwnerCountInSet(shard int, org Id, members []Id) int {
 	return count
 }
 
-var query_setMembersInactive_1 = `UPDATE orgMembers SET isActive=false, role=3 WHERE org=? AND id IN (`
-var query_setMembersInactive_2 = `DELETE FROM projectMembers WHERE org=? AND member IN (`
-
 func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, []byte(org))
 	var query1 bytes.Buffer
-	query1.WriteString(query_setMembersInactive_1)
+	query1.WriteString(`UPDATE orgMembers SET isActive=false, role=3 WHERE org=? AND id IN (`)
 	var query2 bytes.Buffer
-	query2.WriteString(query_setMembersInactive_2)
+	query2.WriteString(`DELETE FROM projectMembers WHERE org=? AND member IN (`)
 	for i, mem := range members {
 		if i == 0 {
 			query1.WriteString(`?`)
@@ -151,10 +134,8 @@ func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) {
 	}
 }
 
-var query_renameMember = `UPDATE orgMembers SET name=? WHERE org=? AND id=?`
-
 func (s *sqlStore) renameMember(shard int, org Id, member Id, newName string) {
-	if _, err := s.shards[shard].Exec(query_renameMember, newName, []byte(org), []byte(member)); err != nil {
+	if _, err := s.shards[shard].Exec(`UPDATE orgMembers SET name=? WHERE org=? AND id=?`, newName, []byte(org), []byte(member)); err != nil {
 		panic(err)
 	}
 }
