@@ -24,6 +24,7 @@ CREATE TABLE orgMembers(
 DROP TABLE IF EXISTS orgActivities;
 CREATE TABLE orgActivities(
 	org BINARY(16) NOT NULL,
+    id BINARY(16) NOT NULL,
     occurredOn DATETIME NOT NULL,
     item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
