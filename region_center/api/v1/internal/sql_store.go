@@ -10,7 +10,7 @@ import (
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
 	if len(shards) == 0 {
-		panic(NilCriticalParamErr)
+		panic(NilOrInvalidCriticalParamErr)
 	}
 	return &sqlStore{
 		shards: shards,
@@ -39,12 +39,12 @@ func (s *sqlStore) deleteAccount(shard int, account Id) {
 	}
 }
 
-var query_getMember = `SELECT org, id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`
+var query_getMember = `SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`
 
-func (s *sqlStore) getMember(shard int, org, member Id) *orgMember {
+func (s *sqlStore) getMember(shard int, org, member Id) *Member {
 	row := s.shards[shard].QueryRow(query_getMember, []byte(org), []byte(member))
-	res := orgMember{}
-	if err := row.Scan(&res.Org, &res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
+	res := Member{}
+	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}

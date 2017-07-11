@@ -35,7 +35,7 @@ var (
 
 func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
 	if store == nil || internalRegionClient == nil || linkMailer == nil || avatarStore == nil || newCreatedNamedEntity == nil || cryptoHelper == nil {
-		panic(NilCriticalParamErr)
+		panic(NilOrInvalidCriticalParamErr)
 	}
 	//compile regexs
 	nameRegexes := make([]*regexp.Regexp, 0, len(nameRegexMatchers))

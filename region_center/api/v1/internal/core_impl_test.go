@@ -63,11 +63,11 @@ func (m *mockStore) deleteAccount(shard int, account Id) {
 	m.Called(shard, account)
 }
 
-func (m *mockStore) getMember(shard int, org, memberId Id) *orgMember {
+func (m *mockStore) getMember(shard int, org, memberId Id) *Member {
 	args := m.Called(shard, org, memberId)
 	mem := args.Get(0)
 	if mem != nil {
-		return mem.(*orgMember)
+		return mem.(*Member)
 	}
 	return nil
 }

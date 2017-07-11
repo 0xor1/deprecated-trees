@@ -13,7 +13,7 @@ var (
 
 func newClient(regions map[string]Api) InternalRegionClient {
 	if regions == nil {
-		panic(NilCriticalParamErr)
+		panic(NilOrInvalidCriticalParamErr)
 	}
 	return &client{
 		regions: regions,
@@ -73,7 +73,7 @@ func (c *client) UserIsOrgOwner(region string, shard int, org, user Id) bool {
 
 func newApi(store store) Api {
 	if store == nil {
-		panic(NilCriticalParamErr)
+		panic(NilOrInvalidCriticalParamErr)
 	}
 	return &api{
 		store: store,
@@ -175,19 +175,11 @@ func (a *api) UserIsOrgOwner(shard int, org, user Id) bool {
 type store interface {
 	registerAccount(id, ownerId Id, ownerName string) int
 	deleteAccount(shard int, account Id)
-	getMember(shard int, org, member Id) *orgMember
+	getMember(shard int, org, member Id) *Member
 	addMembers(shard int, org Id, members []*AddMemberInternal)
 	updateMembersAndSetActive(shard int, org Id, members []*AddMemberInternal)
 	getTotalOrgOwnerCount(shard int, org Id) int
 	getOwnerCountInSet(shard int, org Id, members []Id) int
 	setMembersInactive(shard int, org Id, members []Id)
 	renameMember(shard int, org Id, member Id, newName string)
-}
-
-type orgMember struct {
-	AddMemberInternal
-	Org                Id     `json:"org"`
-	TotalRemainingTime uint64 `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
-	IsActive           bool   `json:"isActive"`
 }

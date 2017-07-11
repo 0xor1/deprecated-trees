@@ -24,15 +24,15 @@ CREATE TABLE orgMembers(
 DROP TABLE IF EXISTS orgActivities;
 CREATE TABLE orgActivities(
 	org BINARY(16) NOT NULL,
-    occuredOn DATETIME NOT NULL,
+    occurredOn DATETIME NOT NULL,
     item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
     itemName VARCHAR(250) NOT NULL,
     action VARCHAR(100) NOT NULL,
-    PRIMARY KEY (org, occuredOn, item, member),
-    UNIQUE INDEX (org, item, occuredOn, member),
-    UNIQUE INDEX (org, member, occuredOn, item)
+    PRIMARY KEY (org, occurredOn, item, member),
+    UNIQUE INDEX (org, item, occurredOn, member),
+    UNIQUE INDEX (org, member, occurredOn, item)
 );
 
 DROP TABLE IF EXISTS projectMembers;
@@ -51,22 +51,23 @@ DROP TABLE IF EXISTS projectActivities;
 CREATE TABLE projectActivities(
 	org BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
-    occuredOn DATETIME NOT NULL,
+    occurredOn DATETIME NOT NULL,
     item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
     itemName VARCHAR(250) NOT NULL,
     action VARCHAR(100) NOT NULL,
-    PRIMARY KEY (org, project, occuredOn, item, member),
-    UNIQUE INDEX (org, project, item, occuredOn, member),
-    UNIQUE INDEX (org, project, member, occuredOn, item),
-    UNIQUE INDEX (org, occuredOn, project, item, member)
+    PRIMARY KEY (org, project, occurredOn, item, member),
+    UNIQUE INDEX (org, project, item, occurredOn, member),
+    UNIQUE INDEX (org, project, member, occurredOn, item),
+    UNIQUE INDEX (org, occurredOn, project, item, member)
 );
 
 DROP TABLE IF EXISTS projects;
 CREATE TABLE projects(
 	org BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
+    firstChild BINARY(16) NULL,
 	name VARCHAR(250) NOT NULL,
 	description VARCHAR(1250) NOT NULL,
     createdOn DATETIME NOT NULL,
@@ -107,8 +108,11 @@ CREATE TABLE nodes(
     linkedFileCount INT UNSIGNED NOT NULL,
     chatCount BIGINT UNSIGNED NOT NULL,
     isParallel BOOL NOT NULL DEFAULT FALSE,
+    member BINARY(16) NULL,
     PRIMARY KEY (org, project, id),
-    INDEX(org, project, parent, id)
+    UNIQUE INDEX(org, project, parent, id),
+    UNIQUE INDEX(org, member, project, id),
+    UNIQUE INDEX(org, project, member, id)
 );
 
 DROP PROCEDURE IF EXISTS registerAccount;

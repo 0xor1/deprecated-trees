@@ -1,4 +1,4 @@
-package project
+package org
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -10,7 +10,7 @@ import (
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
 	if len(shards) == 0 {
-		panic(NilCriticalParamErr)
+		panic(NilOrInvalidCriticalParamErr)
 	}
 	return &sqlStore{
 		shards: shards,

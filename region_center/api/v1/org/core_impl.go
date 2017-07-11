@@ -1,4 +1,4 @@
-package project
+package org
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -7,7 +7,7 @@ import (
 
 func newApi(store store) Api {
 	if store == nil {
-		panic(NilCriticalParamErr)
+		panic(NilOrInvalidCriticalParamErr)
 	}
 	return &api{
 		store: store,

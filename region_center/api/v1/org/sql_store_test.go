@@ -1,4 +1,4 @@
-package project
+package org
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
