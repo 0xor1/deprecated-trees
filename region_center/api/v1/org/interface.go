@@ -8,7 +8,7 @@ import (
 type Api interface {
 	//must be org owner/admin
 	//
-	GetMembers(shard int, orgId Id, myId Id, roleFilter *OrgRole, nameSearch *string, offset, limit int) ([]*Member, int)
+	GetMembers(shard int, orgId Id, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
 	//either one or both of OccurredAfter/Before must be nil
 	GetActivities(shard int, orgId Id, myId Id, item *Id, member *Id, OccurredAfter *time.Time, OccurredBefore *time.Time, limit int) []*Activity
 	//for anyone
