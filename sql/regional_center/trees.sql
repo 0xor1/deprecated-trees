@@ -44,7 +44,7 @@ CREATE TABLE projectMembers(
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
     role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
     PRIMARY KEY (org, project, role, member),
-    UNIQUE INDEX (org, member)
+    UNIQUE INDEX (org, project, member)
 );
 
 DROP TABLE IF EXISTS projectActivities;
@@ -127,6 +127,7 @@ CREATE PROCEDURE deleteAccount(_id BINARY(16))
 BEGIN
 	DELETE FROM orgs WHERE id =_id;
 	DELETE FROM orgMembers WHERE org =_id;
+	DELETE FROM orgActivities WHERE org =_id;
 	DELETE FROM projectMembers WHERE org =_id;
 	DELETE FROM projectActivities WHERE org =_id;
 	DELETE FROM projects WHERE org =_id;
