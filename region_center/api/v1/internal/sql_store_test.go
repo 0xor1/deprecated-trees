@@ -17,14 +17,14 @@ func Test_newSqlStore_NilCriticalParamErr(t *testing.T) {
 }
 
 func Test_newSqlStore_success(t *testing.T) {
-	store := newSqlStore(map[int]isql.ReplicaSet{0:&isql.MockDB{}})
+	store := newSqlStore(map[int]isql.ReplicaSet{0: &isql.MockDB{}})
 	assert.NotNil(t, store)
 }
 
 //this test tests everything using a real sql db, comment/uncomment as necessary
 func Test_sqlStore_adHoc(t *testing.T) {
 	treeDb, _ := isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)
-	store := newSqlStore(map[int]isql.ReplicaSet{0:treeDb})
+	store := newSqlStore(map[int]isql.ReplicaSet{0: treeDb})
 
 	aliId := NewId()
 	aliShard := store.registerAccount(aliId, aliId, "ali")

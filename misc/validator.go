@@ -47,3 +47,13 @@ func ValidateEmail(email string) {
 func IsPrivate() bool {
 	return false
 }
+
+func ValidateOffsetAndLimitParams(offset, limit, maxLimit int) (int, int) {
+	if limit < 1 || limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return offset, limit
+}

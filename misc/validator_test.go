@@ -2,8 +2,8 @@ package misc
 
 import (
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"regexp"
+	"testing"
 )
 
 func Test_ValidateStringParam_tooShort(t *testing.T) {

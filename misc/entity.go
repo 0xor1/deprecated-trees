@@ -8,19 +8,19 @@ import (
 )
 
 const (
-	OrgOwner = OrgRole(0)
-	OrgAdmin = OrgRole(1)
-	OrgMemberOfAllProjects = OrgRole(2)
+	OrgOwner                        = OrgRole(0)
+	OrgAdmin                        = OrgRole(1)
+	OrgMemberOfAllProjects          = OrgRole(2)
 	OrgMemberOfOnlySpecificProjects = OrgRole(3)
 
-	ProjectAdmin = ProjectRole(0)
+	ProjectAdmin  = ProjectRole(0)
 	ProjectWriter = ProjectRole(1)
 	ProjectReader = ProjectRole(2)
 
 	AbstractTask = NodeType(0)
-	Task = NodeType(1)
+	Task         = NodeType(1)
 
-	SortAsc = SortDirection("asc")
+	SortAsc  = SortDirection("asc")
 	SortDesc = SortDirection("desc")
 )
 
@@ -122,18 +122,18 @@ func NewId() Id {
 	return Id(id)
 }
 
-type CommonNodeProps struct{
+type CommonNodeProps struct {
 	CreatedNamedEntity
-	Description string `json:"description"`
+	Description        string `json:"description"`
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
-	TotalLoggedTime uint64 `json:"totalLoggedTime"`
-	LinkedFilesCount uint64 `json:"linkedFilesCount"`
-	ChatCount uint64 `json:"chatCount"`
+	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+	LinkedFilesCount   uint64 `json:"linkedFilesCount"`
+	ChatCount          uint64 `json:"chatCount"`
 }
 
-type CommonAbstractNodeProps struct{
-	MinimumRemainingTime    uint64 `json:"minimumRemainingTime"`
-	IsParallel              bool   `json:"isParallel"`
+type CommonAbstractNodeProps struct {
+	MinimumRemainingTime uint64 `json:"minimumRemainingTime"`
+	IsParallel           bool   `json:"isParallel"`
 }
 
 type Member struct {
@@ -146,9 +146,9 @@ type Member struct {
 type Activity struct {
 	Entity
 	OccurredOn time.Time `json:"occurredOn"`
-	Item       Id `json:"item"`
-	Member     Id `json:"member"`
-	ItemType   string `json:"itemType"`
-	ItemName   string `json:"itemName"`
-	Action     string `json:"action"`
+	Item       Id        `json:"item"`
+	Member     Id        `json:"member"`
+	ItemType   string    `json:"itemType"`
+	ItemName   string    `json:"itemName"`
+	Action     string    `json:"action"`
 }

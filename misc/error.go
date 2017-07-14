@@ -5,9 +5,10 @@ import (
 )
 
 var (
-	NotImplementedErr   = &Error{Code: -1, Msg: "not implemented", IsPublic: false}
+	NotImplementedErr            = &Error{Code: -1, Msg: "not implemented", IsPublic: false}
 	NilOrInvalidCriticalParamErr = &Error{Code: 0, Msg: "nil or invalid critical param", IsPublic: false}
-	idGenerationErr     = &Error{Code: 1, Msg: "Failed to generate id", IsPublic: false}
+	idGenerationErr              = &Error{Code: 1, Msg: "Failed to generate id", IsPublic: false}
+	InsufficientPermissionErr    = &Error{Code: 2, Msg: "insufficient permissions", IsPublic: true}
 )
 
 type PermissionedError interface {

@@ -9,13 +9,13 @@ import (
 	"image/jpeg"
 	_ "image/png"
 	"io"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 )
 
 var (
-	noSuchRegionErr                       = &Error{Code: 2, Msg: "no such region", IsPublic: true}
+	noSuchRegionErr                       = &Error{Code: 3, Msg: "no such region", IsPublic: true}
 	noSuchAccountErr                      = &Error{Code: 4, Msg: "no such account", IsPublic: true}
 	invalidActivationAttemptErr           = &Error{Code: 5, Msg: "invalid activation attempt", IsPublic: true}
 	invalidResetPwdAttemptErr             = &Error{Code: 6, Msg: "invalid reset password attempt", IsPublic: true}
@@ -27,10 +27,9 @@ var (
 	accountNameAlreadyInUseErr            = &Error{Code: 12, Msg: "account already in use", IsPublic: true}
 	emailConfirmationCodeErr              = &Error{Code: 13, Msg: "email confirmation code is of zero length", IsPublic: false}
 	noNewEmailRegisteredErr               = &Error{Code: 14, Msg: "no new email registered", IsPublic: true}
-	insufficientPermissionsErr            = &Error{Code: 15, Msg: "insufficient permissions", IsPublic: true}
-	maxEntityCountExceededErr             = &Error{Code: 16, Msg: "max entity count exceeded", IsPublic: true}
-	onlyOwnerMemberErr                    = &Error{Code: 17, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
-	invalidAvatarShapeErr                 = &Error{Code: 18, Msg: "avatar images must be square", IsPublic: true}
+	maxEntityCountExceededErr             = &Error{Code: 15, Msg: "max entity count exceeded", IsPublic: true}
+	onlyOwnerMemberErr                    = &Error{Code: 16, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
+	invalidAvatarShapeErr                 = &Error{Code: 17, Msg: "avatar images must be square", IsPublic: true}
 )
 
 func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
@@ -362,11 +361,11 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 
 	if !myId.Equal(accountId) {
 		if acc.IsUser { // can't rename someone else's personal account
-			panic(insufficientPermissionsErr)
+			panic(InsufficientPermissionErr)
 		}
 
 		if !a.internalRegionClient.UserIsOrgOwner(acc.Region, acc.Shard, accountId, myId) {
-			panic(insufficientPermissionsErr)
+			panic(InsufficientPermissionErr)
 		}
 	}
 
@@ -398,11 +397,11 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 
 	if !myId.Equal(accountId) {
 		if account.IsUser { // can't set avatar on someone else's personal account
-			panic(insufficientPermissionsErr)
+			panic(InsufficientPermissionErr)
 		}
 
 		if !a.internalRegionClient.UserIsOrgOwner(account.Region, account.Shard, accountId, myId) {
-			panic(insufficientPermissionsErr)
+			panic(InsufficientPermissionErr)
 		}
 	}
 
@@ -488,13 +487,7 @@ func (a *api) CreateOrg(myId Id, name, region string) *account {
 }
 
 func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*account, int) {
-	if limit < 1 || limit > a.maxGetEntityCount {
-		limit = a.maxGetEntityCount
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
 	return a.store.getUsersOrgs(myId, offset, limit)
 }
 
@@ -506,11 +499,11 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 
 	if !myId.Equal(accountId) {
 		if acc.IsUser { // can't delete someone else's personal account
-			panic(insufficientPermissionsErr)
+			panic(InsufficientPermissionErr)
 		}
 		//otherwise attempting to delete an org
 		if !a.internalRegionClient.UserIsOrgOwner(acc.Region, acc.Shard, accountId, myId) {
-			panic(insufficientPermissionsErr)
+			panic(InsufficientPermissionErr)
 		}
 	}
 

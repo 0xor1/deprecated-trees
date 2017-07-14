@@ -6,10 +6,9 @@ import (
 )
 
 var (
-	invalidRegionErr          = &Error{Code: 19, Msg: "invalid region", IsPublic: false}
-	insufficientPermissionErr = &Error{Code: 20, Msg: "insufficient permission", IsPublic: true}
-	zeroOwnerCountErr         = &Error{Code: 21, Msg: "zero owner count", IsPublic: true}
-	invalidTaskCenterTypeErr  = &Error{Code: 22, Msg: "invalid task center type", IsPublic: true}
+	invalidRegionErr         = &Error{Code: 18, Msg: "invalid region", IsPublic: false}
+	zeroOwnerCountErr        = &Error{Code: 19, Msg: "zero owner count", IsPublic: true}
+	invalidTaskCenterTypeErr = &Error{Code: 20, Msg: "invalid task center type", IsPublic: true}
 )
 
 func newClient(regions map[string]Api) InternalRegionClient {
@@ -95,7 +94,7 @@ func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
 	if !owner.Equal(account) {
 		member := a.store.getMember(shard, account, owner)
 		if member == nil || member.Role != OrgOwner {
-			panic(insufficientPermissionErr)
+			panic(InsufficientPermissionErr)
 		}
 	}
 	//TODO delete s3 data, uploaded files etc
@@ -105,14 +104,14 @@ func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
 func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) {
 	actor := a.store.getMember(shard, org, actorId)
 	if actor == nil || (actor.Role != OrgOwner && actor.Role != OrgAdmin) {
-		panic(insufficientPermissionErr) //only owners and admins can add new org members
+		panic(InsufficientPermissionErr) //only owners and admins can add new org members
 	}
 
 	pastMembers := make([]*AddMemberInternal, 0, len(members))
 	newMembers := make([]*AddMemberInternal, 0, len(members))
 	for _, mem := range members {
 		if mem.Role == OrgOwner && actor.Role != OrgOwner {
-			panic(insufficientPermissionErr) //only owners can add owners
+			panic(InsufficientPermissionErr) //only owners can add owners
 		}
 		existingMember := a.store.getMember(shard, org, mem.Id)
 		if existingMember == nil {
@@ -150,11 +149,11 @@ func (a *api) RemoveMembers(shard int, org, admin Id, members []Id) {
 	case OrgAdmin:
 		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, org, members)
 		if ownerCountInRemoveSet > 0 {
-			panic(insufficientPermissionErr)
+			panic(InsufficientPermissionErr)
 		}
 	default:
 		if len(members) != 1 || !members[0].Equal(admin) { //user can remove themselves
-			panic(insufficientPermissionErr)
+			panic(InsufficientPermissionErr)
 		}
 	}
 

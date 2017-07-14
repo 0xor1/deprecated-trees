@@ -17,7 +17,7 @@ func Test_newSqlStore_NilCriticalParamErr(t *testing.T) {
 }
 
 func Test_newSqlStore_success(t *testing.T) {
-	store := newSqlStore(map[int]isql.ReplicaSet{0:&isql.MockDB{}})
+	store := newSqlStore(map[int]isql.ReplicaSet{0: &isql.MockDB{}})
 	assert.NotNil(t, store)
 }
 

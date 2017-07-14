@@ -5,6 +5,7 @@ USE trees;
 DROP TABLE IF EXISTS orgs;
 CREATE TABLE orgs(
 	id BINARY(16) NOT NULL,
+    publicProjectsAllowed BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (id)
 );
 
