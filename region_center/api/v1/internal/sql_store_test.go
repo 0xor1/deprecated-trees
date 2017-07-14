@@ -26,21 +26,21 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	treeDb, _ := isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)
 	store := newSqlStore(map[int]isql.ReplicaSet{0:treeDb})
 
-	personalId := NewId()
-	personalShard := store.registerAccount(personalId, personalId, "ali")
-	assert.Equal(t, 0, personalShard)
+	aliId := NewId()
+	aliShard := store.registerAccount(aliId, aliId, "ali")
+	assert.Equal(t, 0, aliShard)
 
 	orgId := NewId()
-	orgShard := store.registerAccount(orgId, personalId, "ali")
+	orgShard := store.registerAccount(orgId, aliId, "ali")
 	assert.Equal(t, 0, orgShard)
 
-	mem1 := store.getMember(orgShard, orgId, personalId)
-	assert.Equal(t, personalId, mem1.Id)
-	assert.Equal(t, OrgOwner, mem1.Role)
-	assert.Equal(t, "ali", mem1.Name)
-	assert.Equal(t, uint64(0), mem1.TotalRemainingTime)
-	assert.Equal(t, uint64(0), mem1.TotalLoggedTime)
-	assert.Equal(t, true, mem1.IsActive)
+	ali := store.getMember(orgShard, orgId, aliId)
+	assert.Equal(t, aliId, ali.Id)
+	assert.Equal(t, OrgOwner, ali.Role)
+	assert.Equal(t, "ali", ali.Name)
+	assert.Equal(t, uint64(0), ali.TotalRemainingTime)
+	assert.Equal(t, uint64(0), ali.TotalLoggedTime)
+	assert.Equal(t, true, ali.IsActive)
 
 	bob := &AddMemberInternal{}
 	bob.Id = NewId()
@@ -58,7 +58,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	totalOwnerCount := store.getTotalOrgOwnerCount(orgShard, orgId)
 	assert.Equal(t, 2, totalOwnerCount)
 
-	ownerCountInSet := store.getOwnerCountInSet(orgShard, orgId, []Id{personalId})
+	ownerCountInSet := store.getOwnerCountInSet(orgShard, orgId, []Id{aliId})
 	assert.Equal(t, 1, ownerCountInSet)
 
 	ownerCountInSet = store.getOwnerCountInSet(orgShard, orgId, []Id{bob.Id})
@@ -84,6 +84,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, uint64(0), mem3.TotalRemainingTime)
 	assert.Equal(t, uint64(0), mem3.TotalLoggedTime)
 	assert.Equal(t, false, mem3.IsActive)
+
+	store.logActivity(orgShard, orgId, Now(), cat.Id, ali.Id, "member", "added")
 
 	store.deleteAccount(orgShard, orgId)
 	totalOwnerCount = store.getTotalOrgOwnerCount(orgShard, orgId)

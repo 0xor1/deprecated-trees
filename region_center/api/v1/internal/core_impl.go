@@ -2,6 +2,7 @@ package internal
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
+	"time"
 )
 
 var (
@@ -85,7 +86,9 @@ type api struct {
 }
 
 func (a *api) CreateTaskCenter(org, owner Id, ownerName string) int {
-	return a.store.registerAccount(org, owner, ownerName)
+	shard := a.store.registerAccount(org, owner, ownerName)
+	a.store.logActivity(shard, org, Now(), org, owner, "org", "created")
+	return shard
 }
 
 func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
@@ -95,6 +98,8 @@ func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
 			panic(insufficientPermissionErr)
 		}
 	}
+	//TODO delete s3 data, uploaded files etc
+	a.store.deleteAccount(shard, account)
 }
 
 func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) {
@@ -119,9 +124,15 @@ func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInterna
 
 	if len(newMembers) > 0 {
 		a.store.addMembers(shard, org, newMembers)
+		for _, mem := range newMembers {
+			a.store.logActivity(shard, org, Now(), mem.Id, actorId, "member", "added")
+		}
 	}
 	if len(pastMembers) > 0 {
 		a.store.updateMembersAndSetActive(shard, org, pastMembers) //has to be AddMemberInternal in case the user changed their name whilst they were inactive on the org, or if they were
+		for _, mem := range pastMembers {
+			a.store.logActivity(shard, org, Now(), mem.Id, actorId, "member", "added")
+		}
 	}
 }
 
@@ -148,6 +159,9 @@ func (a *api) RemoveMembers(shard int, org, admin Id, members []Id) {
 	}
 
 	a.store.setMembersInactive(shard, org, members)
+	for _, mem := range members {
+		a.store.logActivity(shard, org, Now(), mem, admin, "member", "removed")
+	}
 }
 
 func (a *api) MemberIsOnlyOwner(shard int, org, member Id) bool {
@@ -182,4 +196,5 @@ type store interface {
 	getOwnerCountInSet(shard int, org Id, members []Id) int
 	setMembersInactive(shard int, org Id, members []Id)
 	renameMember(shard int, org Id, member Id, newName string)
+	logActivity(shard int, org Id, occurredOn time.Time, item, member Id, itemType, action string)
 }

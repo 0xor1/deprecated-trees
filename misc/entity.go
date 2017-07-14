@@ -50,6 +50,10 @@ func (id Id) Copy() Id {
 	return Id(append(make([]byte, 0, 16), []byte(id)...))
 }
 
+func Now() time.Time {
+	return time.Now().UTC()
+}
+
 type Entity struct {
 	Id Id `json:"id"`
 }
@@ -103,7 +107,7 @@ func NewCreatedNamedEntity(name string) *CreatedNamedEntity {
 			},
 			Name: name,
 		},
-		CreatedOn: time.Now().UTC(),
+		CreatedOn: Now(),
 	}
 }
 
@@ -141,7 +145,7 @@ type Member struct {
 
 type Activity struct {
 	Entity
-	OccurredOn time.Time `json:"occuredOn"`
+	OccurredOn time.Time `json:"occurredOn"`
 	Item       Id `json:"item"`
 	Member     Id `json:"member"`
 	ItemType   string `json:"itemType"`

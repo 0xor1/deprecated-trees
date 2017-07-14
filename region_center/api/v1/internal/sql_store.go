@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"github.com/0xor1/isql"
 	"math/rand"
+	"time"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -136,6 +137,12 @@ func (s *sqlStore) setMembersInactive(shard int, org Id, members []Id) {
 
 func (s *sqlStore) renameMember(shard int, org Id, member Id, newName string) {
 	if _, err := s.shards[shard].Exec(`UPDATE orgMembers SET name=? WHERE org=? AND id=?`, newName, []byte(org), []byte(member)); err != nil {
+		panic(err)
+	}
+}
+
+func (s *sqlStore) logActivity(shard int, org Id, occurredOn time.Time, item, member Id, itemType, action string) {
+	if _, err := s.shards[shard].Exec(`INSERT INTO orgACtivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (? , ?, ?, ?, ?, ?, ?)`, []byte(org), occurredOn, []byte(item), []byte(member), itemType, "", action); err != nil {
 		panic(err)
 	}
 }
