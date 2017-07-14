@@ -6,7 +6,7 @@ import (
 )
 
 type api struct {
-	store store
+	store             store
 	maxGetEntityCount int
 }
 
@@ -25,7 +25,6 @@ func (a *api) GetPublicProjectsEnabled(shard int, orgId Id, myId Id) bool {
 	}
 	return a.store.getPublicProjectsEnabled(shard, orgId)
 }
-
 
 func (a *api) GetMembers(shard int, orgId Id, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int) {
 	actor := a.store.getMember(shard, orgId, myId)

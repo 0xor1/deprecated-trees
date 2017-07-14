@@ -23,7 +23,7 @@ func NewApi(store store, maxGetEntityCount int) Api {
 		panic(NilOrInvalidCriticalParamErr)
 	}
 	return &api{
-		store: store,
+		store:             store,
 		maxGetEntityCount: maxGetEntityCount,
 	}
 }
