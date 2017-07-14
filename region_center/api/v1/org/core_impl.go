@@ -5,16 +5,6 @@ import (
 	"time"
 )
 
-func newApi(store store, maxGetEntityCount int) Api {
-	if store == nil {
-		panic(NilOrInvalidCriticalParamErr)
-	}
-	return &api{
-		store: store,
-		maxGetEntityCount: maxGetEntityCount,
-	}
-}
-
 type api struct {
 	store store
 	maxGetEntityCount int

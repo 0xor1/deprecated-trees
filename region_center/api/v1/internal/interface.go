@@ -13,3 +13,21 @@ type Api interface {
 	RenameMember(shard int, org, member Id, newName string)
 	UserIsOrgOwner(shard int, org, user Id) bool
 }
+
+func NewApi(store store) Api {
+	if store == nil {
+		panic(NilOrInvalidCriticalParamErr)
+	}
+	return &api{
+		store: store,
+	}
+}
+
+func NewClient(regions map[string]Api) InternalRegionClient {
+	if regions == nil {
+		panic(NilOrInvalidCriticalParamErr)
+	}
+	return &client{
+		regions: regions,
+	}
+}

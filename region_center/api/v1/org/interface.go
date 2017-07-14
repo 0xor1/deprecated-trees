@@ -17,3 +17,13 @@ type Api interface {
 	//for anyone
 	GetMe(shard int, orgId, myId Id) *Member
 }
+
+func NewApi(store store, maxGetEntityCount int) Api {
+	if store == nil {
+		panic(NilOrInvalidCriticalParamErr)
+	}
+	return &api{
+		store: store,
+		maxGetEntityCount: maxGetEntityCount,
+	}
+}

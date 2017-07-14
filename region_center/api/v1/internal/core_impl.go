@@ -11,15 +11,6 @@ var (
 	invalidTaskCenterTypeErr = &Error{Code: 20, Msg: "invalid task center type", IsPublic: true}
 )
 
-func newClient(regions map[string]Api) InternalRegionClient {
-	if regions == nil {
-		panic(NilOrInvalidCriticalParamErr)
-	}
-	return &client{
-		regions: regions,
-	}
-}
-
 type client struct {
 	regions map[string]Api
 }
@@ -69,15 +60,6 @@ func (c *client) RenameMember(region string, shard int, org, member Id, newName 
 
 func (c *client) UserIsOrgOwner(region string, shard int, org, user Id) bool {
 	return c.getRegion(region).UserIsOrgOwner(shard, org, user)
-}
-
-func newApi(store store) Api {
-	if store == nil {
-		panic(NilOrInvalidCriticalParamErr)
-	}
-	return &api{
-		store: store,
-	}
 }
 
 type api struct {
