@@ -3,6 +3,7 @@ package org
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
 	"time"
+	"github.com/0xor1/isql"
 )
 
 type Api interface {
@@ -18,12 +19,9 @@ type Api interface {
 	GetMe(shard int, orgId, myId Id) *Member
 }
 
-func NewApi(store store, maxGetEntityCount int) Api {
-	if store == nil {
-		panic(InvalidArgumentsErr)
-	}
+func NewApi(shards map[int]isql.ReplicaSet, maxGetEntityCount int) Api {
 	return &api{
-		store:             store,
+		store:             newSqlStore(shards),
 		maxGetEntityCount: maxGetEntityCount,
 	}
 }

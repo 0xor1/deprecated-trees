@@ -2,6 +2,7 @@ package internal
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
+	"github.com/0xor1/isql"
 )
 
 type Api interface {
@@ -14,12 +15,9 @@ type Api interface {
 	UserIsOrgOwner(shard int, org, user Id) bool
 }
 
-func NewApi(store store) Api {
-	if store == nil {
-		panic(InvalidArgumentsErr)
-	}
+func NewApi(shards map[int]isql.ReplicaSet) Api {
 	return &api{
-		store: store,
+		store: newSqlStore(shards),
 	}
 }
 

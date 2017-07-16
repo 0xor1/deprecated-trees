@@ -7,7 +7,7 @@ import (
 	"github.com/0xor1/isql"
 )
 
-func newSqlStore(accountsDB, pwdsDB isql.DB) store {
+func newSqlStore(accountsDB, pwdsDB isql.ReplicaSet) store {
 	if accountsDB == nil || pwdsDB == nil {
 		panic(InvalidArgumentsErr)
 	}
@@ -18,8 +18,8 @@ func newSqlStore(accountsDB, pwdsDB isql.DB) store {
 }
 
 type sqlStore struct {
-	accountsDB isql.DB
-	pwdsDB     isql.DB
+	accountsDB isql.ReplicaSet
+	pwdsDB     isql.ReplicaSet
 }
 
 func (s *sqlStore) accountWithCiNameExists(name string) bool {
