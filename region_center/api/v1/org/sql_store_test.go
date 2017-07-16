@@ -25,7 +25,7 @@ func Test_newSqlStore_success(t *testing.T) {
 //this test tests everything using a real sql db, comment/uncomment as necessary
 func Test_sqlStore_adHoc(t *testing.T) {
 	treeDb, _ := isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)
-	store := newSqlStore(map[int]isql.ReplicaSet{0:treeDb})
+	store := newSqlStore(map[int]isql.ReplicaSet{0: treeDb})
 
 	orgId := NewId()
 	treeDb.Exec(`INSERT INTO orgs (id, publicProjectsEnabled) VALUES (?, ?)`, []byte(orgId), false)
@@ -105,7 +105,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	activity1.Action = "testAction1"
 	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity1.OccurredOn, []byte(activity1.Item), []byte(activity1.Member), activity1.ItemType, activity1.ItemName, activity1.Action)
 	activity2 := Activity{}
-	activity2.OccurredOn = activity1.OccurredOn.Add(1*time.Second)
+	activity2.OccurredOn = activity1.OccurredOn.Add(1 * time.Second)
 	activity2.Item = activity1.Item
 	activity2.Member = bob.Id
 	activity2.ItemType = "testType2"
@@ -113,7 +113,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	activity2.Action = "testAction2"
 	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity2.OccurredOn, []byte(activity2.Item), []byte(activity2.Member), activity2.ItemType, activity2.ItemName, activity2.Action)
 	activity3 := Activity{}
-	activity3.OccurredOn = activity2.OccurredOn.Add(1*time.Second)
+	activity3.OccurredOn = activity2.OccurredOn.Add(1 * time.Second)
 	activity3.Item = NewId()
 	activity3.Member = cat.Id
 	activity3.ItemType = "testType3"

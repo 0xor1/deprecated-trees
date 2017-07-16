@@ -15,21 +15,21 @@ import (
 )
 
 var (
-	noSuchRegionErr                       = &Error{Code: 3, Msg: "no such region", IsPublic: true}
-	noSuchAccountErr                      = &Error{Code: 4, Msg: "no such account", IsPublic: true}
-	invalidActivationAttemptErr           = &Error{Code: 5, Msg: "invalid activation attempt", IsPublic: true}
-	invalidResetPwdAttemptErr             = &Error{Code: 6, Msg: "invalid reset password attempt", IsPublic: true}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: 7, Msg: "invalid new email confirmation attempt", IsPublic: true}
-	invalidNameOrPwdErr                   = &Error{Code: 8, Msg: "invalid name or password", IsPublic: true}
-	incorrectPwdErr                       = &Error{Code: 9, Msg: "password incorrect", IsPublic: true}
-	userNotActivatedErr                   = &Error{Code: 10, Msg: "user not activated", IsPublic: true}
-	emailAlreadyInUseErr                  = &Error{Code: 11, Msg: "email already in use", IsPublic: true}
-	accountNameAlreadyInUseErr            = &Error{Code: 12, Msg: "account already in use", IsPublic: true}
-	emailConfirmationCodeErr              = &Error{Code: 13, Msg: "email confirmation code is of zero length", IsPublic: false}
-	noNewEmailRegisteredErr               = &Error{Code: 14, Msg: "no new email registered", IsPublic: true}
-	maxEntityCountExceededErr             = &Error{Code: 15, Msg: "max entity count exceeded", IsPublic: true}
-	onlyOwnerMemberErr                    = &Error{Code: 16, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
-	invalidAvatarShapeErr                 = &Error{Code: 17, Msg: "avatar images must be square", IsPublic: true}
+	noSuchRegionErr                       = &Error{Code: 4, Msg: "no such region", IsPublic: true}
+	noSuchAccountErr                      = &Error{Code: 5, Msg: "no such account", IsPublic: true}
+	invalidActivationAttemptErr           = &Error{Code: 6, Msg: "invalid activation attempt", IsPublic: true}
+	invalidResetPwdAttemptErr             = &Error{Code: 7, Msg: "invalid reset password attempt", IsPublic: true}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: 8, Msg: "invalid new email confirmation attempt", IsPublic: true}
+	invalidNameOrPwdErr                   = &Error{Code: 9, Msg: "invalid name or password", IsPublic: true}
+	incorrectPwdErr                       = &Error{Code: 10, Msg: "password incorrect", IsPublic: true}
+	userNotActivatedErr                   = &Error{Code: 11, Msg: "user not activated", IsPublic: true}
+	emailAlreadyInUseErr                  = &Error{Code: 12, Msg: "email already in use", IsPublic: true}
+	accountNameAlreadyInUseErr            = &Error{Code: 13, Msg: "account already in use", IsPublic: true}
+	emailConfirmationCodeErr              = &Error{Code: 14, Msg: "email confirmation code is of zero length", IsPublic: false}
+	noNewEmailRegisteredErr               = &Error{Code: 15, Msg: "no new email registered", IsPublic: true}
+	maxEntityCountExceededErr             = &Error{Code: 16, Msg: "max entity count exceeded", IsPublic: true}
+	onlyOwnerMemberErr                    = &Error{Code: 17, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
+	invalidAvatarShapeErr                 = &Error{Code: 18, Msg: "avatar images must be square", IsPublic: true}
 )
 
 func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
@@ -528,6 +528,9 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 }
 
 func (a *api) AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) {
+	if orgId.Equal(myId) {
+		panic(InvalidOperationErr)
+	}
 	if len(newMembers) > a.maxGetEntityCount {
 		panic(maxEntityCountExceededErr)
 	}
@@ -560,6 +563,9 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) {
 }
 
 func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) {
+	if orgId.Equal(myId) {
+		panic(InvalidOperationErr)
+	}
 	if len(existingMembers) > a.maxGetEntityCount {
 		panic(maxEntityCountExceededErr)
 	}

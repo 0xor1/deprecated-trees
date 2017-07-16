@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	invalidRegionErr         = &Error{Code: 18, Msg: "invalid region", IsPublic: false}
-	zeroOwnerCountErr        = &Error{Code: 19, Msg: "zero owner count", IsPublic: true}
-	invalidTaskCenterTypeErr = &Error{Code: 20, Msg: "invalid task center type", IsPublic: true}
+	invalidRegionErr         = &Error{Code: 19, Msg: "invalid region", IsPublic: false}
+	zeroOwnerCountErr        = &Error{Code: 20, Msg: "zero owner count", IsPublic: true}
+	invalidTaskCenterTypeErr = &Error{Code: 21, Msg: "invalid task center type", IsPublic: true}
 )
 
 type client struct {
@@ -84,6 +84,9 @@ func (a *api) DeleteTaskCenter(shard int, account, owner Id) {
 }
 
 func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInternal) {
+	if org.Equal(actorId) {
+		panic(InvalidOperationErr)
+	}
 	actor := a.store.getMember(shard, org, actorId)
 	if actor == nil || (actor.Role != OrgOwner && actor.Role != OrgAdmin) {
 		panic(InsufficientPermissionErr) //only owners and admins can add new org members
@@ -118,6 +121,9 @@ func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInterna
 }
 
 func (a *api) RemoveMembers(shard int, org, admin Id, members []Id) {
+	if org.Equal(admin) {
+		panic(InvalidOperationErr)
+	}
 	member := a.store.getMember(shard, org, admin)
 
 	switch member.Role {
@@ -146,6 +152,9 @@ func (a *api) RemoveMembers(shard int, org, admin Id, members []Id) {
 }
 
 func (a *api) MemberIsOnlyOwner(shard int, org, member Id) bool {
+	if org.Equal(member) {
+		return true
+	}
 	totalOrgOwnerCount := a.store.getTotalOrgOwnerCount(shard, org)
 	ownerCount := a.store.getOwnerCountInSet(shard, org, []Id{member})
 	return totalOrgOwnerCount == 1 && ownerCount == 1
@@ -164,7 +173,7 @@ func (a *api) UserIsOrgOwner(shard int, org, user Id) bool {
 			return false
 		}
 	}
-	panic(invalidTaskCenterTypeErr)
+	return true
 }
 
 type store interface {

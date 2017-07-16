@@ -9,6 +9,7 @@ var (
 	InvalidArgumentsErr       = &Error{Code: 0, Msg: "invalid arguments", IsPublic: false}
 	idGenerationErr           = &Error{Code: 1, Msg: "Failed to generate id", IsPublic: false}
 	InsufficientPermissionErr = &Error{Code: 2, Msg: "insufficient permissions", IsPublic: true}
+	InvalidOperationErr       = &Error{Code: 3, Msg: "invalid operation", IsPublic: true}
 )
 
 type PermissionedError interface {
