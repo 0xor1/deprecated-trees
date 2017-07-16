@@ -42,7 +42,7 @@ func NewApi(internalRegionClient InternalRegionClient, linkMailer linkMailer, av
 
 func NewLogLinkMailer(log Log) linkMailer {
 	if log == nil {
-		panic(NilOrInvalidCriticalParamErr)
+		panic(InvalidArgumentsErr)
 	}
 	return &logLinkMailer{
 		log: log,

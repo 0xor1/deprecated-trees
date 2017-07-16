@@ -9,7 +9,7 @@ import (
 
 func newSqlStore(accountsDB, pwdsDB isql.DB) store {
 	if accountsDB == nil || pwdsDB == nil {
-		panic(NilOrInvalidCriticalParamErr)
+		panic(InvalidArgumentsErr)
 	}
 	return &sqlStore{
 		accountsDB: accountsDB,

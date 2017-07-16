@@ -20,7 +20,7 @@ type Api interface {
 
 func NewApi(store store, maxGetEntityCount int) Api {
 	if store == nil {
-		panic(NilOrInvalidCriticalParamErr)
+		panic(InvalidArgumentsErr)
 	}
 	return &api{
 		store:             store,

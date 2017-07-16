@@ -16,7 +16,7 @@ type Api interface {
 
 func NewApi(store store) Api {
 	if store == nil {
-		panic(NilOrInvalidCriticalParamErr)
+		panic(InvalidArgumentsErr)
 	}
 	return &api{
 		store: store,
@@ -25,7 +25,7 @@ func NewApi(store store) Api {
 
 func NewClient(regions map[string]Api) InternalRegionClient {
 	if regions == nil {
-		panic(NilOrInvalidCriticalParamErr)
+		panic(InvalidArgumentsErr)
 	}
 	return &client{
 		regions: regions,

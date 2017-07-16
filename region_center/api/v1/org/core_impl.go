@@ -18,7 +18,7 @@ func (a *api) SetPublicProjectsEnabled(shard int, orgId, myId Id, publicProjects
 	a.store.setPublicProjectsEnabled(shard, orgId, publicProjectsEnabled)
 }
 
-func (a *api) GetPublicProjectsEnabled(shard int, orgId Id, myId Id) bool {
+func (a *api) GetPublicProjectsEnabled(shard int, orgId, myId Id) bool {
 	actor := a.store.getMember(shard, orgId, myId)
 	if actor.Role != OrgOwner && actor.Role != OrgAdmin {
 		panic(InsufficientPermissionErr)
@@ -26,7 +26,7 @@ func (a *api) GetPublicProjectsEnabled(shard int, orgId Id, myId Id) bool {
 	return a.store.getPublicProjectsEnabled(shard, orgId)
 }
 
-func (a *api) GetMembers(shard int, orgId Id, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int) {
+func (a *api) GetMembers(shard int, orgId, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int) {
 	actor := a.store.getMember(shard, orgId, myId)
 	if actor.Role != OrgOwner && actor.Role != OrgAdmin {
 		panic(InsufficientPermissionErr)
@@ -35,7 +35,10 @@ func (a *api) GetMembers(shard int, orgId Id, myId Id, role *OrgRole, nameContai
 	return a.store.getMembers(shard, orgId, role, nameContains, offset, limit)
 }
 
-func (a *api) GetActivities(shard int, orgId Id, myId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity {
+func (a *api) GetActivities(shard int, orgId, myId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity {
+	if occurredBefore != nil && occurredAfter != nil {
+		panic(InvalidArgumentsErr)
+	}
 	actor := a.store.getMember(shard, orgId, myId)
 	if actor.Role != OrgOwner && actor.Role != OrgAdmin {
 		panic(InsufficientPermissionErr)
@@ -52,7 +55,7 @@ type store interface {
 	setPublicProjectsEnabled(shard int, orgId Id, publicProjectsEnabled bool)
 	getPublicProjectsEnabled(shard int, orgId Id) bool
 	getMember(shard int, org, member Id) *Member
-	getMembers(shard int, org, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
+	getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
 	getActivities(shard int, orgId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity
 }
 

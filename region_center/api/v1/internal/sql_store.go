@@ -11,7 +11,7 @@ import (
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
 	if len(shards) == 0 {
-		panic(NilOrInvalidCriticalParamErr)
+		panic(InvalidArgumentsErr)
 	}
 	return &sqlStore{
 		shards: shards,

@@ -144,7 +144,6 @@ type Member struct {
 }
 
 type Activity struct {
-	Entity
 	OccurredOn time.Time `json:"occurredOn"`
 	Item       Id        `json:"item"`
 	Member     Id        `json:"member"`

@@ -5,7 +5,7 @@ USE trees;
 DROP TABLE IF EXISTS orgs;
 CREATE TABLE orgs(
 	id BINARY(16) NOT NULL,
-    publicProjectsAllowed BOOL NOT NULL DEFAULT FALSE,
+    publicProjectsEnabled BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (id)
 );
 
@@ -19,6 +19,7 @@ CREATE TABLE orgMembers(
     isActive BOOL NOT NULL DEFAULT TRUE,
     role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 memberOfAllProjects, 3 memberOfOnlySpecificProjects
     PRIMARY KEY (org, isActive, role, name),
+    UNIQUE INDEX (org, isActive, name, role),
     UNIQUE INDEX (org, id)
 );
 
@@ -120,7 +121,7 @@ DROP PROCEDURE IF EXISTS registerAccount;
 DELIMITER $$
 CREATE PROCEDURE registerAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50))
 BEGIN
-	INSERT INTO orgs (id) VALUES (_id);
+	INSERT INTO orgs (id, publicProjectsEnabled) VALUES (_id, false);
     INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (_id, _ownerId, _ownerName, 0, 0, true, 0);
 END;
 $$
@@ -136,6 +137,7 @@ BEGIN
 	DELETE FROM projectMembers WHERE org =_id;
 	DELETE FROM projectActivities WHERE org =_id;
 	DELETE FROM projects WHERE org =_id;
+	DELETE FROM nodes WHERE org =_id;
 END;
 $$
 DELIMITER ;
