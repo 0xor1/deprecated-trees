@@ -20,6 +20,8 @@ DROP TABLE IF EXISTS users;
 CREATE TABLE users(
 	id       BINARY(16) NOT NULL,
 	email    VARCHAR(250) NOT NULL,
+	language    VARCHAR(50) NOT NULL,
+	theme    TINYINT UNSIGNED NOT NULL,
 	newEmail VARCHAR(250) NULL,
 	activationCode VARCHAR(100) NULL,
 	activated DATETIME NULL,
@@ -42,20 +44,20 @@ CREATE TABLE memberships(
 
 DROP PROCEDURE IF EXISTS createUser;
 DELIMITER $$
-CREATE PROCEDURE createUser(_id BINARY(16), _name VARCHAR(50), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _isUser BOOL, _email VARCHAR(250), _newEmail VARCHAR(250), _activationCode VARCHAR(100), _activated DATETIME, _newEmailConfirmationCode VARCHAR(100), _resetPwdCode VARCHAR(100)) 
+CREATE PROCEDURE createUser(_id BINARY(16), _name VARCHAR(50), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _isUser BOOL, _email VARCHAR(250), _language VARCHAR(50), _theme TINYINT UNSIGNED, _newEmail VARCHAR(250), _activationCode VARCHAR(100), _activated DATETIME, _newEmailConfirmationCode VARCHAR(100), _resetPwdCode VARCHAR(100)) 
 BEGIN
 	INSERT INTO accounts (id, name, createdOn, region, newRegion, shard, hasAvatar, isUser) VALUES (_id, _name, _createdOn, _region, _newRegion, _shard, _hasAvatar, _isUser);
-    INSERT INTO users (id, email, newEmail, activationCode, activated, newEmailConfirmationCode, resetPwdCode) VALUES (_id, _email, _newEmail, _activationCode, _activated, _newEmailConfirmationCode, _resetPwdCode);
+    INSERT INTO users (id, email, language, theme, newEmail, activationCode, activated, newEmailConfirmationCode, resetPwdCode) VALUES (_id, _email, _language, _theme, _newEmail, _activationCode, _activated, _newEmailConfirmationCode, _resetPwdCode);
 END;
 $$
 DELIMITER ;
 
 DROP PROCEDURE IF EXISTS updateUser;
 DELIMITER $$
-CREATE PROCEDURE updateUser(_id BINARY(16), _name VARCHAR(50), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _email VARCHAR(250), _newEmail VARCHAR(250), _activationCode VARCHAR(100), _activated DATETIME, _newEmailConfirmationCode VARCHAR(100), _resetPwdCode VARCHAR(100)) 
+CREATE PROCEDURE updateUser(_id BINARY(16), _name VARCHAR(50), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _email VARCHAR(250), _language VARCHAR(50), _theme TINYINT UNSIGNED, _newEmail VARCHAR(250), _activationCode VARCHAR(100), _activated DATETIME, _newEmailConfirmationCode VARCHAR(100), _resetPwdCode VARCHAR(100)) 
 BEGIN
 	UPDATE accounts SET name=_name, createdOn=_createdOn, region=_region, newRegion=_newRegion, shard=_shard, hasAvatar=_hasAvatar WHERE id = _id;
-    UPDATE users SET email=_email, newEmail=_newEmail, activationCode=_activationCode, activated=_activated, newEmailConfirmationCode=_newEmailConfirmationCode, resetPwdCode=_resetPwdCode WHERE id = _id;
+    UPDATE users SET email=_email, language=_language, theme=_theme, newEmail=_newEmail, activationCode=_activationCode, activated=_activated, newEmailConfirmationCode=_newEmailConfirmationCode, resetPwdCode=_resetPwdCode WHERE id = _id;
 END;
 $$
 DELIMITER ;

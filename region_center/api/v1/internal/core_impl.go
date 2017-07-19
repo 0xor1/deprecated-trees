@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	invalidRegionErr         = &Error{Code: 19, Msg: "invalid region", IsPublic: false}
-	zeroOwnerCountErr        = &Error{Code: 20, Msg: "zero owner count", IsPublic: true}
-	invalidTaskCenterTypeErr = &Error{Code: 21, Msg: "invalid task center type", IsPublic: true}
+	invalidRegionErr         = &Error{Code: 300, Msg: "invalid region", IsPublic: false}
+	zeroOwnerCountErr        = &Error{Code: 301, Msg: "zero owner count", IsPublic: true}
+	invalidTaskCenterTypeErr = &Error{Code: 302, Msg: "invalid task center type", IsPublic: true}
 )
 
 type client struct {
@@ -95,6 +95,7 @@ func (a *api) AddMembers(shard int, org, actorId Id, members []*AddMemberInterna
 	pastMembers := make([]*AddMemberInternal, 0, len(members))
 	newMembers := make([]*AddMemberInternal, 0, len(members))
 	for _, mem := range members {
+		mem.Role.Validate()
 		if mem.Role == OrgOwner && actor.Role != OrgOwner {
 			panic(InsufficientPermissionErr) //only owners can add owners
 		}

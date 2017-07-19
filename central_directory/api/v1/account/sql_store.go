@@ -45,7 +45,7 @@ func (s *sqlStore) getAccountByCiName(name string) *account {
 
 func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) {
 	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(`CALL createUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.IsUser, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+	if _, err := s.accountsDB.Exec(`CALL createUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.IsUser, user.Email, user.Language, user.Theme, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
 		panic(err)
 	}
 	if _, err := s.pwdsDB.Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?);`, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen); err != nil {
@@ -54,9 +54,9 @@ func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) {
 }
 
 func (s *sqlStore) getUserByEmail(email string) *fullUserInfo {
-	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE u.email = ?;`, email)
+	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.language, u.theme, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE u.email = ?;`, email)
 	user := fullUserInfo{}
-	if err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode); err != nil {
+	if err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.Language, &user.Theme, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -66,9 +66,9 @@ func (s *sqlStore) getUserByEmail(email string) *fullUserInfo {
 }
 
 func (s *sqlStore) getUserById(id Id) *fullUserInfo {
-	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.id = ?;`, []byte(id))
+	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.language, u.theme, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.id = ?;`, []byte(id))
 	user := fullUserInfo{}
-	if err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode); err != nil {
+	if err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.Language, &user.Theme, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -91,7 +91,7 @@ func (s *sqlStore) getPwdInfo(id Id) *pwdInfo {
 
 func (s *sqlStore) updateUser(user *fullUserInfo) {
 	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(`CALL updateUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.Email, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+	if _, err := s.accountsDB.Exec(`CALL updateUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.Email, user.Language, user.Theme, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
 		panic(err)
 	}
 }

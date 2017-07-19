@@ -1,4 +1,4 @@
-package org
+package project
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -35,12 +35,6 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, orgId Id) bool {
 		panic(err)
 	}
 	return res
-}
-
-func (s *sqlStore) setUserRole(shard int, orgId, userId Id, role OrgRole) {
-	if _, err := s.shards[shard].Exec(`UPDATE orgMembers SET role=? WHERE org=? AND id=?`, role, []byte(orgId), []byte(userId)); err != nil {
-		panic(err)
-	}
 }
 
 func (s *sqlStore) getMember(shard int, orgId, memberId Id) *Member {

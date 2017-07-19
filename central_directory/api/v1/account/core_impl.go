@@ -15,21 +15,21 @@ import (
 )
 
 var (
-	noSuchRegionErr                       = &Error{Code: 4, Msg: "no such region", IsPublic: true}
-	noSuchAccountErr                      = &Error{Code: 5, Msg: "no such account", IsPublic: true}
-	invalidActivationAttemptErr           = &Error{Code: 6, Msg: "invalid activation attempt", IsPublic: true}
-	invalidResetPwdAttemptErr             = &Error{Code: 7, Msg: "invalid reset password attempt", IsPublic: true}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: 8, Msg: "invalid new email confirmation attempt", IsPublic: true}
-	invalidNameOrPwdErr                   = &Error{Code: 9, Msg: "invalid name or password", IsPublic: true}
-	incorrectPwdErr                       = &Error{Code: 10, Msg: "password incorrect", IsPublic: true}
-	userNotActivatedErr                   = &Error{Code: 11, Msg: "user not activated", IsPublic: true}
-	emailAlreadyInUseErr                  = &Error{Code: 12, Msg: "email already in use", IsPublic: true}
-	accountNameAlreadyInUseErr            = &Error{Code: 13, Msg: "account already in use", IsPublic: true}
-	emailConfirmationCodeErr              = &Error{Code: 14, Msg: "email confirmation code is of zero length", IsPublic: false}
-	noNewEmailRegisteredErr               = &Error{Code: 15, Msg: "no new email registered", IsPublic: true}
-	maxEntityCountExceededErr             = &Error{Code: 16, Msg: "max entity count exceeded", IsPublic: true}
-	onlyOwnerMemberErr                    = &Error{Code: 17, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
-	invalidAvatarShapeErr                 = &Error{Code: 18, Msg: "avatar images must be square", IsPublic: true}
+	noSuchRegionErr                       = &Error{Code: 200, Msg: "no such region", IsPublic: true}
+	noSuchAccountErr                      = &Error{Code: 201, Msg: "no such account", IsPublic: true}
+	invalidActivationAttemptErr           = &Error{Code: 202, Msg: "invalid activation attempt", IsPublic: true}
+	invalidResetPwdAttemptErr             = &Error{Code: 203, Msg: "invalid reset password attempt", IsPublic: true}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: 204, Msg: "invalid new email confirmation attempt", IsPublic: true}
+	invalidNameOrPwdErr                   = &Error{Code: 205, Msg: "invalid name or password", IsPublic: true}
+	incorrectPwdErr                       = &Error{Code: 206, Msg: "password incorrect", IsPublic: true}
+	userNotActivatedErr                   = &Error{Code: 207, Msg: "user not activated", IsPublic: true}
+	emailAlreadyInUseErr                  = &Error{Code: 208, Msg: "email already in use", IsPublic: true}
+	nameAlreadyInUseErr                   = &Error{Code: 209, Msg: "name already in use", IsPublic: true}
+	emailConfirmationCodeErr              = &Error{Code: 210, Msg: "email confirmation code is of zero length", IsPublic: false}
+	noNewEmailRegisteredErr               = &Error{Code: 211, Msg: "no new email registered", IsPublic: true}
+	maxEntityCountExceededErr             = &Error{Code: 212, Msg: "max entity count exceeded", IsPublic: true}
+	onlyOwnerMemberErr                    = &Error{Code: 213, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
+	invalidAvatarShapeErr                 = &Error{Code: 214, Msg: "avatar images must be square", IsPublic: true}
 )
 
 func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
@@ -96,19 +96,21 @@ func (a *api) GetRegions() []string {
 	return a.internalRegionClient.GetRegions()
 }
 
-func (a *api) Register(name, email, pwd, region string) {
+func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 	name = strings.Trim(name, " ")
 	ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 	email = strings.Trim(email, " ")
 	ValidateEmail(email)
 	ValidateStringParam("password", pwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers)
+	language = strings.Trim(language, " ") // may need more validation than this at some point to check it is a language we support and not a junk value, but it isnt critical right now
+	theme.Validate()
 
 	if !a.internalRegionClient.IsValidRegion(region) {
 		panic(noSuchRegionErr)
 	}
 
 	if exists := a.store.accountWithCiNameExists(name); exists {
-		panic(accountNameAlreadyInUseErr)
+		panic(nameAlreadyInUseErr)
 	}
 
 	if user := a.store.getUserByEmail(email); user != nil {
@@ -123,6 +125,8 @@ func (a *api) Register(name, email, pwd, region string) {
 	user.Shard = -1
 	user.IsUser = true
 	user.Email = email
+	user.Language = language
+	user.Theme = theme
 	user.activationCode = &activationCode
 
 	pwdInfo := &pwdInfo{}
@@ -351,7 +355,7 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 	ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 
 	if exists := a.store.accountWithCiNameExists(newName); exists {
-		panic(accountNameAlreadyInUseErr)
+		panic(nameAlreadyInUseErr)
 	}
 
 	acc := a.store.getAccount(accountId)
@@ -454,7 +458,7 @@ func (a *api) CreateOrg(myId Id, name, region string) *account {
 	}
 
 	if exists := a.store.accountWithCiNameExists(name); exists {
-		panic(accountNameAlreadyInUseErr)
+		panic(nameAlreadyInUseErr)
 	}
 
 	orgCore := a.newCreatedNamedEntity(name)
@@ -551,9 +555,11 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) {
 
 	entities := make([]*AddMemberInternal, 0, len(users))
 	for _, user := range users {
+		role := addMembersMap[user.Id.String()].Role
+		role.Validate()
 		ami := &AddMemberInternal{}
 		ami.Id = user.Id
-		ami.Role = addMembersMap[user.Id.String()].Role
+		ami.Role = role
 		ami.Name = user.Name
 		entities = append(entities, ami)
 	}
@@ -633,6 +639,8 @@ func (a *account) isMigrating() bool {
 type me struct {
 	account
 	Email    string  `json:"email"`
+	Language string  `json:"language"`
+	Theme    Theme   `json:"theme"`
 	NewEmail *string `json:"newEmail,omitempty"`
 }
 

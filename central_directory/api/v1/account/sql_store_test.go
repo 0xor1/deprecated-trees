@@ -51,6 +51,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user1.HasAvatar = true
 	user1.IsUser = true
 	user1.Email = "ali@ali.com"
+	user1.Language = "en"
+	user1.Theme = LightTheme
 	user1.NewEmail = &str
 	user1.activationCode = &str
 	user1.activated = &now
@@ -90,6 +92,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.HasAvatar, user1Dup3.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup3.IsUser)
 	assert.Equal(t, user1.Email, user1Dup3.Email)
+	assert.Equal(t, user1.Language, user1Dup3.Language)
+	assert.Equal(t, user1.Theme, user1Dup3.Theme)
 	assert.Equal(t, user1.NewEmail, user1Dup3.NewEmail)
 	assert.Equal(t, user1.activationCode, user1Dup3.activationCode)
 	assert.Equal(t, user1.activated.Unix(), user1Dup3.activated.Unix())
@@ -106,6 +110,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.HasAvatar, user1Dup4.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup4.IsUser)
 	assert.Equal(t, user1.Email, user1Dup4.Email)
+	assert.Equal(t, user1.Language, user1Dup4.Language)
+	assert.Equal(t, user1.Theme, user1Dup4.Theme)
 	assert.Equal(t, user1.NewEmail, user1Dup4.NewEmail)
 	assert.Equal(t, user1.activationCode, user1Dup4.activationCode)
 	assert.Equal(t, user1.activated.Unix(), user1Dup4.activated.Unix())
@@ -135,6 +141,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, user1.HasAvatar, user1Dup5.HasAvatar)
 	assert.Equal(t, user1.IsUser, user1Dup5.IsUser)
 	assert.Equal(t, user1.Email, user1Dup5.Email)
+	assert.Equal(t, user1.Language, user1Dup5.Language)
+	assert.Equal(t, user1.Theme, user1Dup5.Theme)
 	assert.Equal(t, user1.NewEmail, user1Dup5.NewEmail)
 	assert.Equal(t, user1.activationCode, user1Dup5.activationCode)
 	assert.Equal(t, user1.activated.Unix(), user1Dup5.activated.Unix())
@@ -225,6 +233,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user2.HasAvatar = false
 	user2.IsUser = true
 	user2.Email = "cat@cat.com"
+	user2.Language = "de"
+	user2.Theme = DarkTheme
 	user2.NewEmail = &str
 	user2.activationCode = &str
 	user2.activated = &now
@@ -242,6 +252,8 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	user3.HasAvatar = true
 	user3.IsUser = true
 	user3.Email = "dan@dan.com"
+	user3.Language = "fr"
+	user3.Theme = ColorBlindTheme
 	user3.NewEmail = &str
 	user3.activationCode = &str
 	user3.activated = &now

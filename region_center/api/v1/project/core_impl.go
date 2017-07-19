@@ -1,4 +1,4 @@
-package org
+package project
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -24,15 +24,6 @@ func (a *api) GetPublicProjectsEnabled(shard int, orgId, myId Id) bool {
 		panic(InsufficientPermissionErr)
 	}
 	return a.store.getPublicProjectsEnabled(shard, orgId)
-}
-
-func (a *api) SetUserRole(shard int, orgId, myId, userId Id, role OrgRole) {
-	actor := a.store.getMember(shard, orgId, myId)
-	role.Validate()
-	if (role == OrgOwner && actor.Role != OrgOwner) || actor.Role != OrgAdmin {
-		panic(InsufficientPermissionErr)
-	}
-	a.store.setUserRole(shard, orgId, userId, role)
 }
 
 func (a *api) GetMembers(shard int, orgId, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int) {
@@ -63,7 +54,6 @@ func (a *api) GetMe(shard int, orgId Id, myId Id) *Member {
 type store interface {
 	setPublicProjectsEnabled(shard int, orgId Id, publicProjectsEnabled bool)
 	getPublicProjectsEnabled(shard int, orgId Id) bool
-	setUserRole(shard int, orgId, userId Id, role OrgRole)
 	getMember(shard int, org, member Id) *Member
 	getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
 	getActivities(shard int, orgId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity

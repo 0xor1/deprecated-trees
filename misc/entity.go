@@ -7,31 +7,6 @@ import (
 	"time"
 )
 
-const (
-	OrgOwner                        = OrgRole(0)
-	OrgAdmin                        = OrgRole(1)
-	OrgMemberOfAllProjects          = OrgRole(2)
-	OrgMemberOfOnlySpecificProjects = OrgRole(3)
-
-	ProjectAdmin  = ProjectRole(0)
-	ProjectWriter = ProjectRole(1)
-	ProjectReader = ProjectRole(2)
-
-	AbstractTask = NodeType(0)
-	Task         = NodeType(1)
-
-	SortAsc  = SortDirection("asc")
-	SortDesc = SortDirection("desc")
-)
-
-type OrgRole uint8
-
-type ProjectRole uint8
-
-type NodeType uint8
-
-type SortDirection string
-
 type Id UUID
 
 func (id Id) String() string {

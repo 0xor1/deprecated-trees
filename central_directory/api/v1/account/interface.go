@@ -10,7 +10,7 @@ import (
 type Api interface {
 	//accessible outside of active session
 	GetRegions() []string
-	Register(name, email, pwd, region string)
+	Register(name, email, pwd, region, language string, theme Theme)
 	ResendActivationEmail(email string)
 	Activate(email, activationCode string)
 	Authenticate(username, pwd string) Id
