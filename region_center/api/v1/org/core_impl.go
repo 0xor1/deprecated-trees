@@ -68,14 +68,3 @@ type store interface {
 	getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
 	getActivities(shard int, orgId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity
 }
-
-type project struct {
-	CommonNodeProps
-	CommonAbstractNodeProps
-	ArchivedOn *time.Time `json:"archivedOn,omitempty"`
-	StartOn    *time.Time `json:"startOn,omitempty"`
-	DueOn      *time.Time `json:"dueOn,omitempty"`
-	FileCount  uint64     `json:"fileCount"`
-	FileSize   uint64     `json:"fileSize"`
-	IsPublic   bool       `json:"isPublic"`
-}
