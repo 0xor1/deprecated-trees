@@ -103,7 +103,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	activity1.ItemType = "testType1"
 	activity1.ItemName = "testName1"
 	activity1.Action = "testAction1"
-	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity1.OccurredOn, []byte(activity1.Item), []byte(activity1.Member), activity1.ItemType, activity1.ItemName, activity1.Action)
+	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity1.OccurredOn.UnixNano()/1000000, []byte(activity1.Item), []byte(activity1.Member), activity1.ItemType, activity1.ItemName, activity1.Action)
 	activity2 := Activity{}
 	activity2.OccurredOn = activity1.OccurredOn.Add(1 * time.Second)
 	activity2.Item = activity1.Item
@@ -111,7 +111,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	activity2.ItemType = "testType2"
 	activity2.ItemName = "testName2"
 	activity2.Action = "testAction2"
-	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity2.OccurredOn, []byte(activity2.Item), []byte(activity2.Member), activity2.ItemType, activity2.ItemName, activity2.Action)
+	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity2.OccurredOn.UnixNano()/1000000, []byte(activity2.Item), []byte(activity2.Member), activity2.ItemType, activity2.ItemName, activity2.Action)
 	activity3 := Activity{}
 	activity3.OccurredOn = activity2.OccurredOn.Add(1 * time.Second)
 	activity3.Item = NewId()
@@ -119,13 +119,14 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	activity3.ItemType = "testType3"
 	activity3.ItemName = "testName3"
 	activity3.Action = "testAction3"
-	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity3.OccurredOn, []byte(activity3.Item), []byte(activity3.Member), activity3.ItemType, activity3.ItemName, activity3.Action)
+	treeDb.Exec(`INSERT INTO orgActivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), activity3.OccurredOn.UnixNano()/1000000, []byte(activity3.Item), []byte(activity3.Member), activity3.ItemType, activity3.ItemName, activity3.Action)
 
 	activities1 := store.getActivities(0, orgId, nil, nil, nil, nil, 100)
 	assert.Equal(t, 3, len(activities1))
 	assert.Equal(t, activity3.ItemName, activities1[0].ItemName)
 	assert.Equal(t, activity2.ItemName, activities1[1].ItemName)
 	assert.Equal(t, activity1.ItemName, activities1[2].ItemName)
+	assert.Equal(t, activity1.OccurredOn.Unix(), activities1[2].OccurredOn.Unix())
 
 	activities2 := store.getActivities(0, orgId, &activity1.Item, nil, nil, nil, 100)
 	assert.Equal(t, 2, len(activities2))

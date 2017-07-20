@@ -26,7 +26,7 @@ CREATE TABLE orgMembers(
 DROP TABLE IF EXISTS orgActivities;
 CREATE TABLE orgActivities(
 	org BINARY(16) NOT NULL,
-    occurredOn DATETIME NOT NULL,
+    occurredOn BIGINT NOT NULL, #unix millisecs timestamp
     item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
@@ -53,7 +53,7 @@ DROP TABLE IF EXISTS projectActivities;
 CREATE TABLE projectActivities(
 	org BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
-    occurredOn DATETIME NOT NULL,
+    occurredOn BIGINT NOT NULL, #unix millisecs timestamp
     item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
@@ -63,6 +63,13 @@ CREATE TABLE projectActivities(
     UNIQUE INDEX (org, project, item, occurredOn, member),
     UNIQUE INDEX (org, project, member, occurredOn, item),
     UNIQUE INDEX (org, occurredOn, project, item, member)
+);
+
+DROP TABLE IF EXISTS projectLocks;
+CREATE TABLE projectLocks(
+	org BINARY(16) NOT NULL,
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY(org, id)
 );
 
 DROP TABLE IF EXISTS projects;
@@ -89,7 +96,8 @@ CREATE TABLE projects(
     INDEX(org, archivedOn, name, createdOn, id),
     INDEX(org, archivedOn, createdOn, name, id),
     INDEX(org, archivedOn, startOn, name, id),
-    INDEX(org, archivedOn, dueOn, name, id)
+    INDEX(org, archivedOn, dueOn, name, id),
+    INDEX(org, archivedOn, isPublic, name, createdOn, id)
 );
 
 DROP TABLE IF EXISTS nodes;
@@ -136,6 +144,7 @@ BEGIN
 	DELETE FROM orgActivities WHERE org =_id;
 	DELETE FROM projectMembers WHERE org =_id;
 	DELETE FROM projectActivities WHERE org =_id;
+    DELETE FROM projectLocks WHERE org = _id;
 	DELETE FROM projects WHERE org =_id;
 	DELETE FROM nodes WHERE org =_id;
 END;

@@ -142,7 +142,8 @@ func (s *sqlStore) renameMember(shard int, org Id, member Id, newName string) {
 }
 
 func (s *sqlStore) logActivity(shard int, org Id, occurredOn time.Time, item, member Id, itemType, action string) {
-	if _, err := s.shards[shard].Exec(`INSERT INTO orgACtivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (? , ?, ?, ?, ?, ?, ?)`, []byte(org), occurredOn, []byte(item), []byte(member), itemType, "", action); err != nil {
+	unixMilli := occurredOn.UnixNano()/1000000
+	if _, err := s.shards[shard].Exec(`INSERT INTO orgACtivities (org, occurredOn, item, member, itemType, itemName, action) VALUES (? , ?, ?, ?, ?, ?, ?)`, []byte(org), unixMilli, []byte(item), []byte(member), itemType, "", action); err != nil {
 		panic(err)
 	}
 }

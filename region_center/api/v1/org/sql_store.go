@@ -110,11 +110,11 @@ func (s *sqlStore) getActivities(shard int, orgId Id, item *Id, member *Id, occu
 	}
 	if occurredAfter != nil {
 		query.WriteString(` AND occurredOn>? ORDER BY occurredOn ASC`)
-		args = append(args, occurredAfter)
+		args = append(args, occurredAfter.UnixNano()/1000000)
 	}
 	if occurredBefore != nil {
 		query.WriteString(` AND occurredOn<? ORDER BY occurredOn DESC`)
-		args = append(args, occurredBefore)
+		args = append(args, occurredBefore.UnixNano()/1000000)
 	}
 	if occurredBefore == nil && occurredAfter == nil {
 		query.WriteString(` ORDER BY occurredOn DESC`)
@@ -132,9 +132,11 @@ func (s *sqlStore) getActivities(shard int, orgId Id, item *Id, member *Id, occu
 	res := make([]*Activity, 0, limit)
 	for rows.Next() {
 		act := Activity{}
-		if err := rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action); err != nil {
+		unixMilli := int64(0)
+		if err := rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action); err != nil {
 			panic(err)
 		}
+		act.OccurredOn = time.Unix(unixMilli/1000, (unixMilli%1000)*1000000).UTC()
 		res = append(res, &act)
 	}
 	return res
