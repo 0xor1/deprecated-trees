@@ -13,6 +13,12 @@ type api struct {
 type store interface {
 }
 
+type projectMember struct{
+	Member Id `json:"member"`
+	CommonTimeProps
+	Role ProjectRole `json:"role"`
+}
+
 type project struct {
 	CommonNodeProps
 	CommonAbstractNodeProps

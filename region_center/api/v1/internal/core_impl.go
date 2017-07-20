@@ -180,7 +180,7 @@ func (a *api) UserIsOrgOwner(shard int, org, user Id) bool {
 type store interface {
 	registerAccount(id, ownerId Id, ownerName string) int
 	deleteAccount(shard int, account Id)
-	getMember(shard int, org, member Id) *Member
+	getMember(shard int, org, member Id) *OrgMember
 	addMembers(shard int, org Id, members []*AddMemberInternal)
 	updateMembersAndSetActive(shard int, org Id, members []*AddMemberInternal)
 	getTotalOrgOwnerCount(shard int, org Id) int

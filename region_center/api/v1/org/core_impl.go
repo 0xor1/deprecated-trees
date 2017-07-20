@@ -35,7 +35,7 @@ func (a *api) SetUserRole(shard int, orgId, myId, userId Id, role OrgRole) {
 	a.store.setUserRole(shard, orgId, userId, role)
 }
 
-func (a *api) GetMembers(shard int, orgId, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int) {
+func (a *api) GetMembers(shard int, orgId, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*OrgMember, int) {
 	actor := a.store.getMember(shard, orgId, myId)
 	if actor.Role != OrgOwner && actor.Role != OrgAdmin {
 		panic(InsufficientPermissionErr)
@@ -56,7 +56,7 @@ func (a *api) GetActivities(shard int, orgId, myId Id, item *Id, member *Id, occ
 	return a.store.getActivities(shard, orgId, item, member, occurredAfter, occurredBefore, limit)
 }
 
-func (a *api) GetMe(shard int, orgId Id, myId Id) *Member {
+func (a *api) GetMe(shard int, orgId Id, myId Id) *OrgMember {
 	return a.store.getMember(shard, orgId, myId)
 }
 
@@ -64,7 +64,7 @@ type store interface {
 	setPublicProjectsEnabled(shard int, orgId Id, publicProjectsEnabled bool)
 	getPublicProjectsEnabled(shard int, orgId Id) bool
 	setUserRole(shard int, orgId, userId Id, role OrgRole)
-	getMember(shard int, org, member Id) *Member
-	getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
+	getMember(shard int, org, member Id) *OrgMember
+	getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*OrgMember, int)
 	getActivities(shard int, orgId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity
 }

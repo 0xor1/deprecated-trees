@@ -37,7 +37,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	publicProjectsEnabled = store.getPublicProjectsEnabled(0, orgId)
 	assert.True(t, publicProjectsEnabled)
 
-	ali := Member{}
+	ali := OrgMember{}
 	ali.Id = NewId()
 	ali.Name = "ali"
 	ali.TotalRemainingTime = 7
@@ -46,7 +46,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	ali.Role = OrgOwner
 	treeDb.Exec(`INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), []byte(ali.Id), ali.Name, ali.TotalRemainingTime, ali.TotalLoggedTime, ali.IsActive, ali.Role)
 
-	bob := Member{}
+	bob := OrgMember{}
 	bob.Id = NewId()
 	bob.Name = "bob"
 	bob.TotalRemainingTime = 5
@@ -55,7 +55,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	bob.Role = OrgAdmin
 	treeDb.Exec(`INSERT INTO orgMembers (org, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(orgId), []byte(bob.Id), bob.Name, bob.TotalRemainingTime, bob.TotalLoggedTime, bob.IsActive, bob.Role)
 
-	cat := Member{}
+	cat := OrgMember{}
 	cat.Id = NewId()
 	cat.Name = "cat"
 	cat.TotalRemainingTime = 8

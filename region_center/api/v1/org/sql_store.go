@@ -43,16 +43,16 @@ func (s *sqlStore) setUserRole(shard int, orgId, userId Id, role OrgRole) {
 	}
 }
 
-func (s *sqlStore) getMember(shard int, orgId, memberId Id) *Member {
+func (s *sqlStore) getMember(shard int, orgId, memberId Id) *OrgMember {
 	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`, []byte(orgId), []byte(memberId))
-	res := Member{}
+	res := OrgMember{}
 	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
 		panic(err)
 	}
 	return &res
 }
 
-func (s *sqlStore) getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int) {
+func (s *sqlStore) getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*OrgMember, int) {
 	countQuery := bytes.NewBufferString(`SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true`)
 	query := bytes.NewBufferString(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND isActive=true`)
 	args := make([]interface{}, 0, 3)
@@ -82,9 +82,9 @@ func (s *sqlStore) getMembers(shard int, orgId Id, role *OrgRole, nameContains *
 	if err != nil {
 		panic(err)
 	}
-	res := make([]*Member, 0, limit)
+	res := make([]*OrgMember, 0, limit)
 	for rows.Next() {
-		mem := Member{}
+		mem := OrgMember{}
 		if err := rows.Scan(&mem.Id, &mem.Name, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.IsActive, &mem.Role); err != nil {
 			panic(err)
 		}

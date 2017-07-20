@@ -36,9 +36,9 @@ func (s *sqlStore) deleteAccount(shard int, account Id) {
 	}
 }
 
-func (s *sqlStore) getMember(shard int, org, member Id) *Member {
+func (s *sqlStore) getMember(shard int, org, member Id) *OrgMember {
 	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`, []byte(org), []byte(member))
-	res := Member{}
+	res := OrgMember{}
 	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
 		if err == sql.ErrNoRows {
 			return nil

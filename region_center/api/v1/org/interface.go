@@ -14,11 +14,11 @@ type Api interface {
 	//must be org owner/admin
 	SetUserRole(shard int, orgId, myId, userId Id, role OrgRole)
 	//pointers are optional filters
-	GetMembers(shard int, orgId, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*Member, int)
+	GetMembers(shard int, orgId, myId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*OrgMember, int)
 	//either one or both of OccurredAfter/Before must be nil
 	GetActivities(shard int, orgId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 	//for anyone
-	GetMe(shard int, orgId, myId Id) *Member
+	GetMe(shard int, orgId, myId Id) *OrgMember
 }
 
 func NewApi(shards map[int]isql.ReplicaSet, maxGetEntityCount int) Api {

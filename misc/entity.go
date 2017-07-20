@@ -97,11 +97,15 @@ func NewId() Id {
 	return Id(id)
 }
 
-type CommonNodeProps struct {
-	CreatedNamedEntity
-	Description        string `json:"description"`
+type CommonTimeProps struct{
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+}
+
+type CommonNodeProps struct {
+	CreatedNamedEntity
+	CommonTimeProps
+	Description        string `json:"description"`
 	LinkedFilesCount   uint64 `json:"linkedFilesCount"`
 	ChatCount          uint64 `json:"chatCount"`
 }
@@ -111,10 +115,9 @@ type CommonAbstractNodeProps struct {
 	IsParallel           bool   `json:"isParallel"`
 }
 
-type Member struct {
+type OrgMember struct {
 	AddMemberInternal
-	TotalRemainingTime uint64 `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
+	CommonTimeProps
 	IsActive           bool   `json:"isActive"`
 }
 
