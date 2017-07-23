@@ -13,8 +13,13 @@ type api struct {
 type store interface {
 }
 
+type addProjectMember struct{
+	Entity
+	Role ProjectRole `json:"role"`
+}
+
 type projectMember struct{
-	Member Id `json:"member"`
+	Entity
 	CommonTimeProps
 	Role ProjectRole `json:"role"`
 }

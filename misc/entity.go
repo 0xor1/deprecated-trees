@@ -48,12 +48,12 @@ type NamedEntity struct {
 
 type AddMemberInternal struct {
 	NamedEntity
-	Role OrgRole `json:"orgRole"`
+	Role OrgRole `json:"role"`
 }
 
 type AddMemberExternal struct {
 	Entity
-	Role OrgRole `json:"orgRole"`
+	Role OrgRole `json:"role"`
 }
 
 type GenNamedEntity func(name string) *NamedEntity
