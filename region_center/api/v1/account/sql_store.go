@@ -97,7 +97,7 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	if occurredBefore != nil && occurredAfter != nil {
 		panic(InvalidArgumentsErr)
 	}
-	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action FROM accountActivities WHERE account=?`)
+	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action, newValue FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
 	args = append(args, []byte(accountId))
 	if item != nil {
@@ -133,7 +133,7 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	for rows.Next() {
 		act := Activity{}
 		unixMilli := int64(0)
-		if err := rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action); err != nil {
+		if err := rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action, &act.NewValue); err != nil {
 			panic(err)
 		}
 		act.OccurredOn = time.Unix(unixMilli/1000, (unixMilli%1000)*1000000).UTC()

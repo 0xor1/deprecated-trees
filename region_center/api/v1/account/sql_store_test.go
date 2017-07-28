@@ -146,8 +146,21 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 2, len(activities5))
 	assert.Equal(t, activity2.ItemName, activities5[0].ItemName)
 	assert.Equal(t, activity1.ItemName, activities5[1].ItemName)
+	assert.Nil(t, activities5[0].NewValue)
 
-	store.logActivity(0, accountId, Now(), ali.Id, accountId, "account", "setPublicProjectsEnabled", "true")
+	newItemId := NewId()
+	store.logActivity(0, accountId, Now(), ali.Id, newItemId, "account", "setPublicProjectsEnabled", "true")
+	activities6 := store.getActivities(0, accountId, &newItemId, &ali.Id, nil, &activity3.OccurredOn, 100)
+	assert.Equal(t, 1, len(activities6))
+	assert.True(t, activities6[0].Member.Equal(ali.Id))
+	assert.True(t, activities6[0].Item.Equal(newItemId))
+	assert.Equal(t, "account", activities6[0].ItemType)
+	assert.Equal(t, "setPublicProjectsEnabled", activities6[0].Action)
+	assert.Equal(t, "true", *activities6[0].NewValue)
+
+
+
+
 
 	treeDb.Exec(`CALL deleteAccount(?)`, []byte(accountId))
 }

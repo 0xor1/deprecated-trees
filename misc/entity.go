@@ -123,9 +123,10 @@ type AccountMember struct {
 
 type Activity struct {
 	OccurredOn time.Time `json:"occurredOn"`
-	Item       Id        `json:"item"`
 	Member     Id        `json:"member"`
+	Item       Id        `json:"item"`
 	ItemType   string    `json:"itemType"`
 	ItemName   string    `json:"itemName"`
 	Action     string    `json:"action"`
+	NewValue   *string   `json:"newValue,omitempty"`
 }

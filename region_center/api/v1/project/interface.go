@@ -8,7 +8,7 @@ import (
 
 type Api interface {
 	//must be account owner/admin
-	CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel bool, members []*addProjectMember) *project
+	CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addProjectMember) *project
 	//must be account owner/admin
 	SetName(shard int, accountId, projectId, myId Id, name string)
 	//must be account owner/admin
