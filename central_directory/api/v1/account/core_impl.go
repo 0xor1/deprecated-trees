@@ -15,21 +15,21 @@ import (
 )
 
 var (
-	noSuchRegionErr                       = &Error{Code: 200, Msg: "no such region", IsPublic: true}
-	noSuchAccountErr                      = &Error{Code: 201, Msg: "no such account", IsPublic: true}
-	invalidActivationAttemptErr           = &Error{Code: 202, Msg: "invalid activation attempt", IsPublic: true}
-	invalidResetPwdAttemptErr             = &Error{Code: 203, Msg: "invalid reset password attempt", IsPublic: true}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: 204, Msg: "invalid new email confirmation attempt", IsPublic: true}
-	invalidNameOrPwdErr                   = &Error{Code: 205, Msg: "invalid name or password", IsPublic: true}
-	incorrectPwdErr                       = &Error{Code: 206, Msg: "password incorrect", IsPublic: true}
-	userNotActivatedErr                   = &Error{Code: 207, Msg: "user not activated", IsPublic: true}
-	emailAlreadyInUseErr                  = &Error{Code: 208, Msg: "email already in use", IsPublic: true}
-	nameAlreadyInUseErr                   = &Error{Code: 209, Msg: "name already in use", IsPublic: true}
-	emailConfirmationCodeErr              = &Error{Code: 210, Msg: "email confirmation code is of zero length", IsPublic: false}
-	noNewEmailRegisteredErr               = &Error{Code: 211, Msg: "no new email registered", IsPublic: true}
-	maxEntityCountExceededErr             = &Error{Code: 212, Msg: "max entity count exceeded", IsPublic: true}
-	onlyOwnerMemberErr                    = &Error{Code: 213, Msg: "can't delete user who is the only owner of an org", IsPublic: true}
-	invalidAvatarShapeErr                 = &Error{Code: 214, Msg: "avatar images must be square", IsPublic: true}
+	noSuchRegionErr                       = &Error{Code: "cd_v1_acc_nsr", Msg: "no such region", IsPublic: true}
+	noSuchAccountErr                      = &Error{Code: "cd_v1_acc_nsa", Msg: "no such account", IsPublic: true}
+	invalidActivationAttemptErr           = &Error{Code: "cd_v1_acc_iaa", Msg: "invalid activation attempt", IsPublic: true}
+	invalidResetPwdAttemptErr             = &Error{Code: "cd_v1_acc_irpa", Msg: "invalid reset password attempt", IsPublic: true}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: "cd_v1_acc_ineca", Msg: "invalid new email confirmation attempt", IsPublic: true}
+	invalidNameOrPwdErr                   = &Error{Code: "cd_v1_acc_inop", Msg: "invalid name or password", IsPublic: true}
+	incorrectPwdErr                       = &Error{Code: "cd_v1_acc_ip", Msg: "password incorrect", IsPublic: true}
+	accountNotActivatedErr                = &Error{Code: "cd_v1_acc_ana", Msg: "account not activated", IsPublic: true}
+	emailAlreadyInUseErr                  = &Error{Code: "cd_v1_acc_eaiu", Msg: "email already in use", IsPublic: true}
+	nameAlreadyInUseErr                   = &Error{Code: "cd_v1_acc_naiu", Msg: "name already in use", IsPublic: true}
+	emailConfirmationCodeErr              = &Error{Code: "cd_v1_acc_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
+	noNewEmailRegisteredErr               = &Error{Code: "cd_v1_acc_nner", Msg: "no new email registered", IsPublic: true}
+	maxEntityCountExceededErr             = &Error{Code: "cd_v1_acc_mece", Msg: "max entity count exceeded", IsPublic: true}
+	onlyOwnerMemberErr                    = &Error{Code: "cd_v1_acc_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
+	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_acc_ias", Msg: "avatar images must be square", IsPublic: true}
 )
 
 func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
@@ -113,21 +113,21 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 		panic(nameAlreadyInUseErr)
 	}
 
-	if user := a.store.getUserByEmail(email); user != nil {
-		a.linkMailer.sendMultipleAccountPolicyEmail(user.Email)
+	if acc := a.store.getPersonalAccountByEmail(email); acc != nil {
+		a.linkMailer.sendMultipleAccountPolicyEmail(acc.Email)
 	}
 
-	userCore := a.newCreatedNamedEntity(name)
+	accCore := a.newCreatedNamedEntity(name)
 	activationCode := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
-	user := &fullUserInfo{}
-	user.CreatedNamedEntity = *userCore
-	user.Region = region
-	user.Shard = -1
-	user.IsUser = true
-	user.Email = email
-	user.Language = language
-	user.Theme = theme
-	user.activationCode = &activationCode
+	acc := &fullPersonalAccountInfo{}
+	acc.CreatedNamedEntity = *accCore
+	acc.Region = region
+	acc.Shard = -1
+	acc.IsPersonal = true
+	acc.Email = email
+	acc.Language = language
+	acc.Theme = theme
+	acc.activationCode = &activationCode
 
 	pwdInfo := &pwdInfo{}
 	pwdInfo.salt = a.cryptoHelper.Bytes(a.saltLen)
@@ -137,59 +137,59 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 	pwdInfo.p = a.scryptP
 	pwdInfo.keyLen = a.scryptKeyLen
 
-	a.store.createUser(user, pwdInfo)
+	a.store.createPersonalAccount(acc, pwdInfo)
 
-	a.linkMailer.sendActivationLink(email, *user.activationCode)
+	a.linkMailer.sendActivationLink(email, *acc.activationCode)
 }
 
 func (a *api) ResendActivationEmail(email string) {
 	email = strings.Trim(email, " ")
-	user := a.store.getUserByEmail(email)
-	if user == nil || user.isActivated() {
+	acc := a.store.getPersonalAccountByEmail(email)
+	if acc == nil || acc.isActivated() {
 		return
 	}
 
-	a.linkMailer.sendActivationLink(email, *user.activationCode)
+	a.linkMailer.sendActivationLink(email, *acc.activationCode)
 }
 
 func (a *api) Activate(email, activationCode string) {
 	activationCode = strings.Trim(activationCode, " ")
-	user := a.store.getUserByEmail(email)
-	if user == nil || user.activationCode == nil || activationCode != *user.activationCode {
+	acc := a.store.getPersonalAccountByEmail(email)
+	if acc == nil || acc.activationCode == nil || activationCode != *acc.activationCode {
 		panic(invalidActivationAttemptErr)
 	}
 
-	shard := a.internalRegionClient.CreateTaskCenter(user.Region, user.Id, user.Id, user.Name)
+	shard := a.internalRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
 
-	user.Shard = shard
-	user.activationCode = nil
+	acc.Shard = shard
+	acc.activationCode = nil
 	activationTime := time.Now().UTC()
-	user.activated = &activationTime
-	a.store.updateUser(user)
+	acc.activated = &activationTime
+	a.store.updatePersonalAccount(acc)
 }
 
 func (a *api) Authenticate(email, pwdTry string) Id {
 	email = strings.Trim(email, " ")
-	user := a.store.getUserByEmail(email)
-	if user == nil {
+	acc := a.store.getPersonalAccountByEmail(email)
+	if acc == nil {
 		panic(invalidNameOrPwdErr)
 	}
 
-	pwdInfo := a.store.getPwdInfo(user.Id)
+	pwdInfo := a.store.getPwdInfo(acc.Id)
 	scryptPwdTry := a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
 		panic(invalidNameOrPwdErr)
 	}
 
-	//must do this after checking the user has the correct pwd otherwise it allows anyone to fish for valid emails on the system
-	if !user.isActivated() {
-		panic(userNotActivatedErr)
+	//must do this after checking the acc has the correct pwd otherwise it allows anyone to fish for valid emails on the system
+	if !acc.isActivated() {
+		panic(accountNotActivatedErr)
 	}
 
-	//if there was an outstanding password reset on this user, remove it, they have since remembered their password
-	if len(*user.resetPwdCode) > 0 {
-		user.resetPwdCode = nil
-		a.store.updateUser(user)
+	//if there was an outstanding password reset on this acc, remove it, they have since remembered their password
+	if len(*acc.resetPwdCode) > 0 {
+		acc.resetPwdCode = nil
+		a.store.updatePersonalAccount(acc)
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 	if pwdInfo.n != a.scryptN || pwdInfo.r != a.scryptR || pwdInfo.p != a.scryptP || pwdInfo.keyLen != a.scryptKeyLen || len(pwdInfo.salt) < a.saltLen {
@@ -199,40 +199,40 @@ func (a *api) Authenticate(email, pwdTry string) Id {
 		pwdInfo.p = a.scryptP
 		pwdInfo.keyLen = a.scryptKeyLen
 		pwdInfo.pwd = a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
-		a.store.updatePwdInfo(user.Id, pwdInfo)
+		a.store.updatePwdInfo(acc.Id, pwdInfo)
 
 	}
 
-	return user.Id
+	return acc.Id
 }
 
 func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) {
-	user := a.store.getUserByEmail(currentEmail)
-	if user == nil || user.NewEmail == nil || newEmail != *user.NewEmail || user.newEmailConfirmationCode == nil || confirmationCode != *user.newEmailConfirmationCode {
+	acc := a.store.getPersonalAccountByEmail(currentEmail)
+	if acc == nil || acc.NewEmail == nil || newEmail != *acc.NewEmail || acc.newEmailConfirmationCode == nil || confirmationCode != *acc.newEmailConfirmationCode {
 		panic(invalidNewEmailConfirmationAttemptErr)
 	}
 
-	if user := a.store.getUserByEmail(newEmail); user != nil {
+	if acc := a.store.getPersonalAccountByEmail(newEmail); acc != nil {
 		panic(emailAlreadyInUseErr)
 	}
 
-	user.Email = newEmail
-	user.NewEmail = nil
-	user.newEmailConfirmationCode = nil
-	a.store.updateUser(user)
+	acc.Email = newEmail
+	acc.NewEmail = nil
+	acc.newEmailConfirmationCode = nil
+	a.store.updatePersonalAccount(acc)
 }
 
 func (a *api) ResetPwd(email string) {
 	email = strings.Trim(email, " ")
-	user := a.store.getUserByEmail(email)
-	if user == nil {
+	acc := a.store.getPersonalAccountByEmail(email)
+	if acc == nil {
 		return
 	}
 
 	resetPwdCode := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
 
-	user.resetPwdCode = &resetPwdCode
-	a.store.updateUser(user)
+	acc.resetPwdCode = &resetPwdCode
+	a.store.updatePersonalAccount(acc)
 
 	a.linkMailer.sendPwdResetLink(email, resetPwdCode)
 }
@@ -240,22 +240,22 @@ func (a *api) ResetPwd(email string) {
 func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) {
 	ValidateStringParam("password", newPwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers)
 
-	user := a.store.getUserByEmail(email)
-	if user == nil || user.resetPwdCode == nil || resetPwdCode != *user.resetPwdCode {
+	acc := a.store.getPersonalAccountByEmail(email)
+	if acc == nil || acc.resetPwdCode == nil || resetPwdCode != *acc.resetPwdCode {
 		panic(invalidResetPwdAttemptErr)
 	}
 
 	scryptSalt := a.cryptoHelper.Bytes(a.saltLen)
 	scryptPwd := a.cryptoHelper.ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 
-	if user.activationCode != nil {
-		shard := a.internalRegionClient.CreateTaskCenter(user.Region, user.Id, user.Id, user.Name)
-		user.Shard = shard
+	if acc.activationCode != nil {
+		shard := a.internalRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
+		acc.Shard = shard
 	}
 
-	user.activationCode = nil
-	user.resetPwdCode = nil
-	a.store.updateUser(user)
+	acc.activationCode = nil
+	acc.resetPwdCode = nil
+	a.store.updatePersonalAccount(acc)
 
 	pwdInfo := &pwdInfo{}
 	pwdInfo.pwd = scryptPwd
@@ -264,7 +264,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) {
 	pwdInfo.r = a.scryptR
 	pwdInfo.p = a.scryptP
 	pwdInfo.keyLen = a.scryptKeyLen
-	a.store.updatePwdInfo(user.Id, pwdInfo)
+	a.store.updatePwdInfo(acc.Id, pwdInfo)
 }
 
 func (a *api) GetAccount(name string) *account {
@@ -280,12 +280,12 @@ func (a *api) GetAccounts(ids []Id) []*account {
 }
 
 func (a *api) GetMe(myId Id) *me {
-	user := a.store.getUserById(myId)
-	if user == nil {
+	acc := a.store.getPersonalAccountById(myId)
+	if acc == nil {
 		panic(noSuchAccountErr)
 	}
 
-	return &user.me
+	return &acc.me
 }
 
 func (a *api) SetMyPwd(myId Id, oldPwd, newPwd string) {
@@ -315,39 +315,39 @@ func (a *api) SetMyEmail(myId Id, newEmail string) {
 	newEmail = strings.Trim(newEmail, " ")
 	ValidateEmail(newEmail)
 
-	if user := a.store.getUserByEmail(newEmail); user != nil {
-		a.linkMailer.sendMultipleAccountPolicyEmail(user.Email)
+	if acc := a.store.getPersonalAccountByEmail(newEmail); acc != nil {
+		a.linkMailer.sendMultipleAccountPolicyEmail(acc.Email)
 	}
 
-	user := a.store.getUserById(myId)
-	if user == nil {
+	acc := a.store.getPersonalAccountById(myId)
+	if acc == nil {
 		panic(noSuchAccountErr)
 	}
 
 	confirmationCode := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
 
-	user.NewEmail = &newEmail
-	user.newEmailConfirmationCode = &confirmationCode
-	a.store.updateUser(user)
-	a.linkMailer.sendNewEmailConfirmationLink(user.Email, newEmail, confirmationCode)
+	acc.NewEmail = &newEmail
+	acc.newEmailConfirmationCode = &confirmationCode
+	a.store.updatePersonalAccount(acc)
+	a.linkMailer.sendNewEmailConfirmationLink(acc.Email, newEmail, confirmationCode)
 }
 
 func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) {
-	user := a.store.getUserById(myId)
-	if user == nil {
+	acc := a.store.getPersonalAccountById(myId)
+	if acc == nil {
 		panic(noSuchAccountErr)
 	}
 
-	// check the user has actually registered a new email
-	if user.NewEmail == nil {
+	// check the acc has actually registered a new email
+	if acc.NewEmail == nil {
 		panic(noNewEmailRegisteredErr)
 	}
 	// just in case something has gone crazy wrong
-	if user.newEmailConfirmationCode == nil {
+	if acc.newEmailConfirmationCode == nil {
 		panic(emailConfirmationCodeErr)
 	}
 
-	a.linkMailer.sendNewEmailConfirmationLink(user.Email, *user.NewEmail, *user.newEmailConfirmationCode)
+	a.linkMailer.sendNewEmailConfirmationLink(acc.Email, *acc.NewEmail, *acc.newEmailConfirmationCode)
 }
 
 func (a *api) SetAccountName(myId, accountId Id, newName string) {
@@ -364,26 +364,25 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 	}
 
 	if !myId.Equal(accountId) {
-		if acc.IsUser { // can't rename someone else's personal account
+		if acc.IsPersonal { // can't rename someone else's personal account
 			panic(InsufficientPermissionErr)
 		}
 
-		if !a.internalRegionClient.UserIsOrgOwner(acc.Region, acc.Shard, accountId, myId) {
+		if !a.internalRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
 			panic(InsufficientPermissionErr)
 		}
 	}
 
-	//else user is setting their own name
 	acc.Name = newName
 	a.store.updateAccount(acc)
 
-	if myId.Equal(accountId) { // if i did rename my account, i need to update all the stored names in all the orgs Im a member of
+	if myId.Equal(accountId) { // if i did rename my personal account, i need to update all the stored names in all the accounts Im a member of
 		for offset, total := 0, 1; offset < total; {
-			var orgs []*account
-			orgs, total = a.store.getUsersOrgs(myId, offset, 100)
-			offset += len(orgs)
-			for _, org := range orgs {
-				a.internalRegionClient.RenameMember(org.Region, org.Shard, org.Id, myId, newName)
+			var accounts []*account
+			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
+			offset += len(accounts)
+			for _, account := range accounts {
+				a.internalRegionClient.RenameMember(account.Region, account.Shard, account.Id, myId, newName)
 			}
 		}
 	}
@@ -400,11 +399,11 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 	}
 
 	if !myId.Equal(accountId) {
-		if account.IsUser { // can't set avatar on someone else's personal account
+		if account.IsPersonal { // can't set avatar on someone else's personal account
 			panic(InsufficientPermissionErr)
 		}
 
-		if !a.internalRegionClient.UserIsOrgOwner(account.Region, account.Shard, accountId, myId) {
+		if !a.internalRegionClient.MemberIsAccountOwner(account.Region, account.Shard, accountId, myId) {
 			panic(InsufficientPermissionErr)
 		}
 	}
@@ -446,10 +445,10 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 func (a *api) MigrateAccount(myId, accountId Id, newRegion string) {
 	//the next line is arbitrarily added in to get code coverage for isMigrating Func
 	//which won't get used anywhere until the migration feature is worked on in the future
-	(&fullUserInfo{}).isMigrating()
+	(&fullPersonalAccountInfo{}).isMigrating()
 }
 
-func (a *api) CreateOrg(myId Id, name, region string) *account {
+func (a *api) CreateAccount(myId Id, name, region string) *account {
 	name = strings.Trim(name, " ")
 	ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 
@@ -461,17 +460,17 @@ func (a *api) CreateOrg(myId Id, name, region string) *account {
 		panic(nameAlreadyInUseErr)
 	}
 
-	orgCore := a.newCreatedNamedEntity(name)
+	accountCore := a.newCreatedNamedEntity(name)
 
-	org := &account{
-		CreatedNamedEntity: *orgCore,
+	account := &account{
+		CreatedNamedEntity: *accountCore,
 		Region:             region,
 		Shard:              -1,
-		IsUser:             false,
+		IsPersonal:         false,
 	}
-	a.store.createOrgAndMembership(org, myId)
+	a.store.createGroupAccountAndMembership(account, myId)
 
-	owner := a.store.getUserById(myId)
+	owner := a.store.getPersonalAccountById(myId)
 	if owner == nil {
 		panic(noSuchAccountErr)
 	}
@@ -479,20 +478,20 @@ func (a *api) CreateOrg(myId Id, name, region string) *account {
 	defer func() {
 		r := recover()
 		if r != nil {
-			a.store.deleteAccountAndAllAssociatedMemberships(orgCore.Id)
+			a.store.deleteAccountAndAllAssociatedMemberships(accountCore.Id)
 			panic(r)
 		}
 	}()
-	shard := a.internalRegionClient.CreateTaskCenter(region, orgCore.Id, myId, owner.Name)
+	shard := a.internalRegionClient.CreateAccount(region, accountCore.Id, myId, owner.Name)
 
-	org.Shard = shard
-	a.store.updateAccount(org)
-	return org
+	account.Shard = shard
+	a.store.updateAccount(account)
+	return account
 }
 
-func (a *api) GetMyOrgs(myId Id, offset, limit int) ([]*account, int) {
+func (a *api) GetMyAccounts(myId Id, offset, limit int) ([]*account, int) {
 	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
-	return a.store.getUsersOrgs(myId, offset, limit)
+	return a.store.getGroupAccounts(myId, offset, limit)
 }
 
 func (a *api) DeleteAccount(myId, accountId Id) {
@@ -502,45 +501,45 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 	}
 
 	if !myId.Equal(accountId) {
-		if acc.IsUser { // can't delete someone else's personal account
+		if acc.IsPersonal { // can't delete someone else's personal account
 			panic(InsufficientPermissionErr)
 		}
-		//otherwise attempting to delete an org
-		if !a.internalRegionClient.UserIsOrgOwner(acc.Region, acc.Shard, accountId, myId) {
+		//otherwise attempting to delete a group account
+		if !a.internalRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
 			panic(InsufficientPermissionErr)
 		}
 	}
 
-	a.internalRegionClient.DeleteTaskCenter(acc.Region, acc.Shard, accountId, myId)
+	a.internalRegionClient.DeleteAccount(acc.Region, acc.Shard, accountId, myId)
 	a.store.deleteAccountAndAllAssociatedMemberships(accountId)
 
 	if myId.Equal(accountId) {
 		for offset, total := 0, 1; offset < total; {
-			var orgs []*account
-			orgs, total = a.store.getUsersOrgs(myId, offset, 100)
-			offset += len(orgs)
-			for _, org := range orgs {
-				if a.internalRegionClient.MemberIsOnlyOwner(org.Region, org.Shard, org.Id, myId) {
+			var accounts []*account
+			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
+			offset += len(accounts)
+			for _, account := range accounts {
+				if a.internalRegionClient.MemberIsOnlyAccountOwner(account.Region, account.Shard, account.Id, myId) {
 					panic(onlyOwnerMemberErr)
 				}
 			}
-			for _, org := range orgs {
-				a.internalRegionClient.RemoveMembers(org.Region, org.Shard, org.Id, myId, []Id{myId})
+			for _, account := range accounts {
+				a.internalRegionClient.RemoveMembers(account.Region, account.Shard, account.Id, myId, []Id{myId})
 			}
 		}
 	}
 }
 
-func (a *api) AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) {
-	if orgId.Equal(myId) {
+func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberExternal) {
+	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
 	if len(newMembers) > a.maxGetEntityCount {
 		panic(maxEntityCountExceededErr)
 	}
 
-	org := a.store.getAccount(orgId)
-	if org == nil {
+	account := a.store.getAccount(accountId)
+	if account == nil {
 		panic(noSuchAccountErr)
 	}
 
@@ -551,64 +550,64 @@ func (a *api) AddMembers(myId, orgId Id, newMembers []*AddMemberExternal) {
 		addMembersMap[member.Id.String()] = member
 	}
 
-	users := a.store.getUsers(ids)
+	accs := a.store.getPersonalAccounts(ids)
 
-	entities := make([]*AddMemberInternal, 0, len(users))
-	for _, user := range users {
-		role := addMembersMap[user.Id.String()].Role
+	members := make([]*AddMemberInternal, 0, len(accs))
+	for _, acc := range accs {
+		role := addMembersMap[acc.Id.String()].Role
 		role.Validate()
 		ami := &AddMemberInternal{}
-		ami.Id = user.Id
+		ami.Id = acc.Id
 		ami.Role = role
-		ami.Name = user.Name
-		entities = append(entities, ami)
+		ami.Name = acc.Name
+		members = append(members, ami)
 	}
 
-	a.internalRegionClient.AddMembers(org.Region, org.Shard, orgId, myId, entities)
-	a.store.createMemberships(orgId, ids)
+	a.internalRegionClient.AddMembers(account.Region, account.Shard, accountId, myId, members)
+	a.store.createMemberships(accountId, ids)
 }
 
-func (a *api) RemoveMembers(myId, orgId Id, existingMembers []Id) {
-	if orgId.Equal(myId) {
+func (a *api) RemoveMembers(myId, accountId Id, existingMembers []Id) {
+	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
 	if len(existingMembers) > a.maxGetEntityCount {
 		panic(maxEntityCountExceededErr)
 	}
 
-	org := a.store.getAccount(orgId)
-	if org == nil {
+	account := a.store.getAccount(accountId)
+	if account == nil {
 		panic(noSuchAccountErr)
 	}
 
-	a.internalRegionClient.RemoveMembers(org.Region, org.Shard, orgId, myId, existingMembers)
-	a.store.deleteMemberships(orgId, existingMembers)
+	a.internalRegionClient.RemoveMembers(account.Region, account.Shard, accountId, myId, existingMembers)
+	a.store.deleteMemberships(accountId, existingMembers)
 }
 
 //internal helpers
 
 type store interface {
-	//user or org
+	//personal or group account
 	accountWithCiNameExists(name string) bool
 	getAccountByCiName(name string) *account
-	//user
-	createUser(user *fullUserInfo, pwdInfo *pwdInfo)
-	getUserByEmail(email string) *fullUserInfo
-	getUserById(id Id) *fullUserInfo
+	//personal account
+	createPersonalAccount(acc *fullPersonalAccountInfo, pwdInfo *pwdInfo)
+	getPersonalAccountByEmail(email string) *fullPersonalAccountInfo
+	getPersonalAccountById(id Id) *fullPersonalAccountInfo
 	getPwdInfo(id Id) *pwdInfo
-	updateUser(user *fullUserInfo)
+	updatePersonalAccount(acc *fullPersonalAccountInfo)
 	updateAccount(account *account)
 	updatePwdInfo(id Id, pwdInfo *pwdInfo)
 	deleteAccountAndAllAssociatedMemberships(id Id)
 	getAccount(id Id) *account
 	getAccounts(ids []Id) []*account
-	getUsers(ids []Id) []*account
-	//org
-	createOrgAndMembership(org *account, user Id)
-	getUsersOrgs(userId Id, offset, limit int) ([]*account, int)
+	getPersonalAccounts(ids []Id) []*account
+	//group account
+	createGroupAccountAndMembership(account *account, ownerId Id)
+	getGroupAccounts(myId Id, offset, limit int) ([]*account, int)
 	//members
-	createMemberships(org Id, users []Id)
-	deleteMemberships(org Id, users []Id)
+	createMemberships(accountId Id, members []Id)
+	deleteMemberships(accountId Id, members []Id)
 }
 
 type linkMailer interface {
@@ -625,11 +624,11 @@ type avatarStore interface {
 
 type account struct {
 	CreatedNamedEntity
-	Region    string  `json:"region"`
-	NewRegion *string `json:"newRegion,omitempty"`
-	Shard     int     `json:"shard"`
-	HasAvatar bool    `json:"hasAvatar"`
-	IsUser    bool    `json:"isUser"`
+	Region     string  `json:"region"`
+	NewRegion  *string `json:"newRegion,omitempty"`
+	Shard      int     `json:"shard"`
+	HasAvatar  bool    `json:"hasAvatar"`
+	IsPersonal bool    `json:"isPersonal"`
 }
 
 func (a *account) isMigrating() bool {
@@ -644,7 +643,7 @@ type me struct {
 	NewEmail *string `json:"newEmail,omitempty"`
 }
 
-type fullUserInfo struct {
+type fullPersonalAccountInfo struct {
 	me
 	activationCode           *string
 	activated                *time.Time
@@ -652,12 +651,8 @@ type fullUserInfo struct {
 	resetPwdCode             *string
 }
 
-func (u *fullUserInfo) isActivated() bool {
-	return u.activated != nil
-}
-
-func (u *fullUserInfo) isMigrating() bool {
-	return u.NewRegion != nil
+func (a *fullPersonalAccountInfo) isActivated() bool {
+	return a.activated != nil
 }
 
 type pwdInfo struct {

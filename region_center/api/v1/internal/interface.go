@@ -6,13 +6,13 @@ import (
 )
 
 type Api interface {
-	CreateTaskCenter(org, owner Id, ownerName string) int
-	DeleteTaskCenter(shard int, account, owner Id)
-	AddMembers(shard int, org, admin Id, members []*AddMemberInternal)
-	RemoveMembers(shard int, org, admin Id, members []Id)
-	MemberIsOnlyOwner(shard int, org, member Id) bool
-	RenameMember(shard int, org, member Id, newName string)
-	UserIsOrgOwner(shard int, org, user Id) bool
+	CreateAccount(accountId, myId Id, ownerName string) int
+	DeleteAccount(shard int, accountId, myId Id)
+	AddMembers(shard int, accountId, myId Id, members []*AddMemberInternal)
+	RemoveMembers(shard int, accountId, myId Id, members []Id)
+	MemberIsOnlyAccountOwner(shard int, accountId, memberId Id) bool
+	RenameMember(shard int, accountId, memberId Id, newName string)
+	MemberIsAccountOwner(shard int, accountId, memberId Id) bool
 }
 
 func NewApi(shards map[int]isql.ReplicaSet) Api {

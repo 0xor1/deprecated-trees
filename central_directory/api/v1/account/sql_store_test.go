@@ -41,23 +41,23 @@ func Test_sqlStore_adHoc(t *testing.T) {
 
 	str := "str"
 	now := time.Now()
-	user1 := &fullUserInfo{}
-	user1.Id = NewId()
-	user1.Name = "ali"
-	user1.CreatedOn = time.Now().UTC()
-	user1.Region = "use"
-	user1.NewRegion = nil
-	user1.Shard = 3
-	user1.HasAvatar = true
-	user1.IsUser = true
-	user1.Email = "ali@ali.com"
-	user1.Language = "en"
-	user1.Theme = LightTheme
-	user1.NewEmail = &str
-	user1.activationCode = &str
-	user1.activated = &now
-	user1.newEmailConfirmationCode = &str
-	user1.resetPwdCode = &str
+	personalAccount1 := &fullPersonalAccountInfo{}
+	personalAccount1.Id = NewId()
+	personalAccount1.Name = "ali"
+	personalAccount1.CreatedOn = time.Now().UTC()
+	personalAccount1.Region = "use"
+	personalAccount1.NewRegion = nil
+	personalAccount1.Shard = 3
+	personalAccount1.HasAvatar = true
+	personalAccount1.IsPersonal = true
+	personalAccount1.Email = "ali@ali.com"
+	personalAccount1.Language = "en"
+	personalAccount1.Theme = LightTheme
+	personalAccount1.NewEmail = &str
+	personalAccount1.activationCode = &str
+	personalAccount1.activated = &now
+	personalAccount1.newEmailConfirmationCode = &str
+	personalAccount1.resetPwdCode = &str
 
 	pwdInfo1 := &pwdInfo{}
 	pwdInfo1.salt = []byte("salt")
@@ -67,58 +67,58 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	pwdInfo1.p = 10
 	pwdInfo1.keyLen = 10
 
-	store.createUser(user1, pwdInfo1)
+	store.createPersonalAccount(personalAccount1, pwdInfo1)
 
 	val := store.accountWithCiNameExists("ali")
 	assert.True(t, val)
 
-	user1Dup1 := store.getAccountByCiName("ali")
-	assert.Equal(t, user1.Id, user1Dup1.Id)
-	assert.Equal(t, user1.Name, user1Dup1.Name)
-	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup1.CreatedOn.Unix())
-	assert.Equal(t, user1.Region, user1Dup1.Region)
-	assert.Equal(t, user1.NewRegion, user1Dup1.NewRegion)
-	assert.Equal(t, user1.Shard, user1Dup1.Shard)
-	assert.Equal(t, user1.HasAvatar, user1Dup1.HasAvatar)
-	assert.Equal(t, user1.IsUser, user1Dup1.IsUser)
+	personalAccount1Dup1 := store.getAccountByCiName("ali")
+	assert.Equal(t, personalAccount1.Id, personalAccount1Dup1.Id)
+	assert.Equal(t, personalAccount1.Name, personalAccount1Dup1.Name)
+	assert.Equal(t, personalAccount1.CreatedOn.Unix(), personalAccount1Dup1.CreatedOn.Unix())
+	assert.Equal(t, personalAccount1.Region, personalAccount1Dup1.Region)
+	assert.Equal(t, personalAccount1.NewRegion, personalAccount1Dup1.NewRegion)
+	assert.Equal(t, personalAccount1.Shard, personalAccount1Dup1.Shard)
+	assert.Equal(t, personalAccount1.HasAvatar, personalAccount1Dup1.HasAvatar)
+	assert.Equal(t, personalAccount1.IsPersonal, personalAccount1Dup1.IsPersonal)
 
-	user1Dup3 := store.getUserByEmail("ali@ali.com")
-	assert.Equal(t, user1.Id, user1Dup3.Id)
-	assert.Equal(t, user1.Name, user1Dup3.Name)
-	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup3.CreatedOn.Unix())
-	assert.Equal(t, user1.Region, user1Dup3.Region)
-	assert.Equal(t, user1.NewRegion, user1Dup3.NewRegion)
-	assert.Equal(t, user1.Shard, user1Dup3.Shard)
-	assert.Equal(t, user1.HasAvatar, user1Dup3.HasAvatar)
-	assert.Equal(t, user1.IsUser, user1Dup3.IsUser)
-	assert.Equal(t, user1.Email, user1Dup3.Email)
-	assert.Equal(t, user1.Language, user1Dup3.Language)
-	assert.Equal(t, user1.Theme, user1Dup3.Theme)
-	assert.Equal(t, user1.NewEmail, user1Dup3.NewEmail)
-	assert.Equal(t, user1.activationCode, user1Dup3.activationCode)
-	assert.Equal(t, user1.activated.Unix(), user1Dup3.activated.Unix())
-	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup3.newEmailConfirmationCode)
-	assert.Equal(t, user1.resetPwdCode, user1Dup3.resetPwdCode)
+	personalAccount1Dup3 := store.getPersonalAccountByEmail("ali@ali.com")
+	assert.Equal(t, personalAccount1.Id, personalAccount1Dup3.Id)
+	assert.Equal(t, personalAccount1.Name, personalAccount1Dup3.Name)
+	assert.Equal(t, personalAccount1.CreatedOn.Unix(), personalAccount1Dup3.CreatedOn.Unix())
+	assert.Equal(t, personalAccount1.Region, personalAccount1Dup3.Region)
+	assert.Equal(t, personalAccount1.NewRegion, personalAccount1Dup3.NewRegion)
+	assert.Equal(t, personalAccount1.Shard, personalAccount1Dup3.Shard)
+	assert.Equal(t, personalAccount1.HasAvatar, personalAccount1Dup3.HasAvatar)
+	assert.Equal(t, personalAccount1.IsPersonal, personalAccount1Dup3.IsPersonal)
+	assert.Equal(t, personalAccount1.Email, personalAccount1Dup3.Email)
+	assert.Equal(t, personalAccount1.Language, personalAccount1Dup3.Language)
+	assert.Equal(t, personalAccount1.Theme, personalAccount1Dup3.Theme)
+	assert.Equal(t, personalAccount1.NewEmail, personalAccount1Dup3.NewEmail)
+	assert.Equal(t, personalAccount1.activationCode, personalAccount1Dup3.activationCode)
+	assert.Equal(t, personalAccount1.activated.Unix(), personalAccount1Dup3.activated.Unix())
+	assert.Equal(t, personalAccount1.newEmailConfirmationCode, personalAccount1Dup3.newEmailConfirmationCode)
+	assert.Equal(t, personalAccount1.resetPwdCode, personalAccount1Dup3.resetPwdCode)
 
-	user1Dup4 := store.getUserById(user1.Id)
-	assert.Equal(t, user1.Id, user1Dup4.Id)
-	assert.Equal(t, user1.Name, user1Dup4.Name)
-	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup4.CreatedOn.Unix())
-	assert.Equal(t, user1.Region, user1Dup4.Region)
-	assert.Equal(t, user1.NewRegion, user1Dup4.NewRegion)
-	assert.Equal(t, user1.Shard, user1Dup4.Shard)
-	assert.Equal(t, user1.HasAvatar, user1Dup4.HasAvatar)
-	assert.Equal(t, user1.IsUser, user1Dup4.IsUser)
-	assert.Equal(t, user1.Email, user1Dup4.Email)
-	assert.Equal(t, user1.Language, user1Dup4.Language)
-	assert.Equal(t, user1.Theme, user1Dup4.Theme)
-	assert.Equal(t, user1.NewEmail, user1Dup4.NewEmail)
-	assert.Equal(t, user1.activationCode, user1Dup4.activationCode)
-	assert.Equal(t, user1.activated.Unix(), user1Dup4.activated.Unix())
-	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup4.newEmailConfirmationCode)
-	assert.Equal(t, user1.resetPwdCode, user1Dup4.resetPwdCode)
+	personalAccount1Dup4 := store.getPersonalAccountById(personalAccount1.Id)
+	assert.Equal(t, personalAccount1.Id, personalAccount1Dup4.Id)
+	assert.Equal(t, personalAccount1.Name, personalAccount1Dup4.Name)
+	assert.Equal(t, personalAccount1.CreatedOn.Unix(), personalAccount1Dup4.CreatedOn.Unix())
+	assert.Equal(t, personalAccount1.Region, personalAccount1Dup4.Region)
+	assert.Equal(t, personalAccount1.NewRegion, personalAccount1Dup4.NewRegion)
+	assert.Equal(t, personalAccount1.Shard, personalAccount1Dup4.Shard)
+	assert.Equal(t, personalAccount1.HasAvatar, personalAccount1Dup4.HasAvatar)
+	assert.Equal(t, personalAccount1.IsPersonal, personalAccount1Dup4.IsPersonal)
+	assert.Equal(t, personalAccount1.Email, personalAccount1Dup4.Email)
+	assert.Equal(t, personalAccount1.Language, personalAccount1Dup4.Language)
+	assert.Equal(t, personalAccount1.Theme, personalAccount1Dup4.Theme)
+	assert.Equal(t, personalAccount1.NewEmail, personalAccount1Dup4.NewEmail)
+	assert.Equal(t, personalAccount1.activationCode, personalAccount1Dup4.activationCode)
+	assert.Equal(t, personalAccount1.activated.Unix(), personalAccount1Dup4.activated.Unix())
+	assert.Equal(t, personalAccount1.newEmailConfirmationCode, personalAccount1Dup4.newEmailConfirmationCode)
+	assert.Equal(t, personalAccount1.resetPwdCode, personalAccount1Dup4.resetPwdCode)
 
-	pwdInfo1Dup1 := store.getPwdInfo(user1.Id)
+	pwdInfo1Dup1 := store.getPwdInfo(personalAccount1.Id)
 	assert.Equal(t, pwdInfo1.salt, pwdInfo1Dup1.salt)
 	assert.Equal(t, pwdInfo1.pwd, pwdInfo1Dup1.pwd)
 	assert.Equal(t, pwdInfo1.n, pwdInfo1Dup1.n)
@@ -126,28 +126,28 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, pwdInfo1.p, pwdInfo1Dup1.p)
 	assert.Equal(t, pwdInfo1.keyLen, pwdInfo1Dup1.keyLen)
 
-	user1.Name = "bob"
-	user1.Email = "bob@bob.com"
-	store.updateUser(user1)
+	personalAccount1.Name = "bob"
+	personalAccount1.Email = "bob@bob.com"
+	store.updatePersonalAccount(personalAccount1)
 	assert.Equal(t, pwdInfo1.salt, pwdInfo1Dup1.salt)
 
-	user1Dup5 := store.getUserByEmail("bob@bob.com")
-	assert.Equal(t, user1.Id, user1Dup5.Id)
-	assert.Equal(t, user1.Name, user1Dup5.Name)
-	assert.Equal(t, user1.CreatedOn.Unix(), user1Dup5.CreatedOn.Unix())
-	assert.Equal(t, user1.Region, user1Dup5.Region)
-	assert.Equal(t, user1.NewRegion, user1Dup5.NewRegion)
-	assert.Equal(t, user1.Shard, user1Dup5.Shard)
-	assert.Equal(t, user1.HasAvatar, user1Dup5.HasAvatar)
-	assert.Equal(t, user1.IsUser, user1Dup5.IsUser)
-	assert.Equal(t, user1.Email, user1Dup5.Email)
-	assert.Equal(t, user1.Language, user1Dup5.Language)
-	assert.Equal(t, user1.Theme, user1Dup5.Theme)
-	assert.Equal(t, user1.NewEmail, user1Dup5.NewEmail)
-	assert.Equal(t, user1.activationCode, user1Dup5.activationCode)
-	assert.Equal(t, user1.activated.Unix(), user1Dup5.activated.Unix())
-	assert.Equal(t, user1.newEmailConfirmationCode, user1Dup5.newEmailConfirmationCode)
-	assert.Equal(t, user1.resetPwdCode, user1Dup5.resetPwdCode)
+	personalAccount1Dup5 := store.getPersonalAccountByEmail("bob@bob.com")
+	assert.Equal(t, personalAccount1.Id, personalAccount1Dup5.Id)
+	assert.Equal(t, personalAccount1.Name, personalAccount1Dup5.Name)
+	assert.Equal(t, personalAccount1.CreatedOn.Unix(), personalAccount1Dup5.CreatedOn.Unix())
+	assert.Equal(t, personalAccount1.Region, personalAccount1Dup5.Region)
+	assert.Equal(t, personalAccount1.NewRegion, personalAccount1Dup5.NewRegion)
+	assert.Equal(t, personalAccount1.Shard, personalAccount1Dup5.Shard)
+	assert.Equal(t, personalAccount1.HasAvatar, personalAccount1Dup5.HasAvatar)
+	assert.Equal(t, personalAccount1.IsPersonal, personalAccount1Dup5.IsPersonal)
+	assert.Equal(t, personalAccount1.Email, personalAccount1Dup5.Email)
+	assert.Equal(t, personalAccount1.Language, personalAccount1Dup5.Language)
+	assert.Equal(t, personalAccount1.Theme, personalAccount1Dup5.Theme)
+	assert.Equal(t, personalAccount1.NewEmail, personalAccount1Dup5.NewEmail)
+	assert.Equal(t, personalAccount1.activationCode, personalAccount1Dup5.activationCode)
+	assert.Equal(t, personalAccount1.activated.Unix(), personalAccount1Dup5.activated.Unix())
+	assert.Equal(t, personalAccount1.newEmailConfirmationCode, personalAccount1Dup5.newEmailConfirmationCode)
+	assert.Equal(t, personalAccount1.resetPwdCode, personalAccount1Dup5.resetPwdCode)
 
 	pwdInfo1.salt = []byte("salt_update")
 	pwdInfo1.pwd = []byte("pwd_update")
@@ -155,9 +155,9 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	pwdInfo1.r = 5
 	pwdInfo1.p = 5
 	pwdInfo1.keyLen = 5
-	store.updatePwdInfo(user1.Id, pwdInfo1)
+	store.updatePwdInfo(personalAccount1.Id, pwdInfo1)
 
-	pwdInfo1Dup2 := store.getPwdInfo(user1.Id)
+	pwdInfo1Dup2 := store.getPwdInfo(personalAccount1.Id)
 	assert.Equal(t, pwdInfo1.salt, pwdInfo1Dup2.salt)
 	assert.Equal(t, pwdInfo1.pwd, pwdInfo1Dup2.pwd)
 	assert.Equal(t, pwdInfo1.n, pwdInfo1Dup2.n)
@@ -165,147 +165,147 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, pwdInfo1.p, pwdInfo1Dup2.p)
 	assert.Equal(t, pwdInfo1.keyLen, pwdInfo1Dup2.keyLen)
 
-	users1 := store.getUsers([]Id{user1.Id})
-	assert.Equal(t, 1, len(users1))
-	assert.Equal(t, user1.Id, users1[0].Id)
-	assert.Equal(t, user1.Name, users1[0].Name)
-	assert.Equal(t, user1.CreatedOn.Unix(), users1[0].CreatedOn.Unix())
-	assert.Equal(t, user1.Region, users1[0].Region)
-	assert.Equal(t, user1.NewRegion, users1[0].NewRegion)
-	assert.Equal(t, user1.Shard, users1[0].Shard)
-	assert.Equal(t, user1.HasAvatar, users1[0].HasAvatar)
-	assert.Equal(t, user1.IsUser, users1[0].IsUser)
+	personalAccounts1 := store.getPersonalAccounts([]Id{personalAccount1.Id})
+	assert.Equal(t, 1, len(personalAccounts1))
+	assert.Equal(t, personalAccount1.Id, personalAccounts1[0].Id)
+	assert.Equal(t, personalAccount1.Name, personalAccounts1[0].Name)
+	assert.Equal(t, personalAccount1.CreatedOn.Unix(), personalAccounts1[0].CreatedOn.Unix())
+	assert.Equal(t, personalAccount1.Region, personalAccounts1[0].Region)
+	assert.Equal(t, personalAccount1.NewRegion, personalAccounts1[0].NewRegion)
+	assert.Equal(t, personalAccount1.Shard, personalAccounts1[0].Shard)
+	assert.Equal(t, personalAccount1.HasAvatar, personalAccounts1[0].HasAvatar)
+	assert.Equal(t, personalAccount1.IsPersonal, personalAccounts1[0].IsPersonal)
 
-	org1 := &account{}
-	org1.Id = NewId()
-	org1.Name = "org1"
-	org1.CreatedOn = time.Now().UTC()
-	org1.Region = "use"
-	org1.NewRegion = nil
-	org1.Shard = 4
-	org1.HasAvatar = true
-	org1.IsUser = false
-	store.createOrgAndMembership(org1, user1.Id)
+	acc1 := &account{}
+	acc1.Id = NewId()
+	acc1.Name = "acc1"
+	acc1.CreatedOn = time.Now().UTC()
+	acc1.Region = "use"
+	acc1.NewRegion = nil
+	acc1.Shard = 4
+	acc1.HasAvatar = true
+	acc1.IsPersonal = false
+	store.createGroupAccountAndMembership(acc1, personalAccount1.Id)
 
-	org1Dup1 := store.getAccount(org1.Id)
-	assert.Equal(t, org1.Id, org1Dup1.Id)
-	assert.Equal(t, org1.Name, org1Dup1.Name)
-	assert.Equal(t, org1.CreatedOn.Unix(), org1Dup1.CreatedOn.Unix())
-	assert.Equal(t, org1.Region, org1Dup1.Region)
-	assert.Equal(t, org1.NewRegion, org1Dup1.NewRegion)
-	assert.Equal(t, org1.Shard, org1Dup1.Shard)
-	assert.Equal(t, org1.HasAvatar, org1Dup1.HasAvatar)
-	assert.Equal(t, org1.IsUser, org1Dup1.IsUser)
+	acc1Dup1 := store.getAccount(acc1.Id)
+	assert.Equal(t, acc1.Id, acc1Dup1.Id)
+	assert.Equal(t, acc1.Name, acc1Dup1.Name)
+	assert.Equal(t, acc1.CreatedOn.Unix(), acc1Dup1.CreatedOn.Unix())
+	assert.Equal(t, acc1.Region, acc1Dup1.Region)
+	assert.Equal(t, acc1.NewRegion, acc1Dup1.NewRegion)
+	assert.Equal(t, acc1.Shard, acc1Dup1.Shard)
+	assert.Equal(t, acc1.HasAvatar, acc1Dup1.HasAvatar)
+	assert.Equal(t, acc1.IsPersonal, acc1Dup1.IsPersonal)
 
-	org1.Name = "org1_updated"
-	store.updateAccount(org1)
+	acc1.Name = "acc1_updated"
+	store.updateAccount(acc1)
 
-	orgs1 := store.getAccounts([]Id{org1.Id})
-	assert.Equal(t, 1, len(orgs1))
-	assert.Equal(t, org1.Id, orgs1[0].Id)
-	assert.Equal(t, org1.Name, orgs1[0].Name)
-	assert.Equal(t, org1.CreatedOn.Unix(), orgs1[0].CreatedOn.Unix())
-	assert.Equal(t, org1.Region, orgs1[0].Region)
-	assert.Equal(t, org1.NewRegion, orgs1[0].NewRegion)
-	assert.Equal(t, org1.Shard, orgs1[0].Shard)
-	assert.Equal(t, org1.HasAvatar, orgs1[0].HasAvatar)
-	assert.Equal(t, org1.IsUser, orgs1[0].IsUser)
+	accs1 := store.getAccounts([]Id{acc1.Id})
+	assert.Equal(t, 1, len(accs1))
+	assert.Equal(t, acc1.Id, accs1[0].Id)
+	assert.Equal(t, acc1.Name, accs1[0].Name)
+	assert.Equal(t, acc1.CreatedOn.Unix(), accs1[0].CreatedOn.Unix())
+	assert.Equal(t, acc1.Region, accs1[0].Region)
+	assert.Equal(t, acc1.NewRegion, accs1[0].NewRegion)
+	assert.Equal(t, acc1.Shard, accs1[0].Shard)
+	assert.Equal(t, acc1.HasAvatar, accs1[0].HasAvatar)
+	assert.Equal(t, acc1.IsPersonal, accs1[0].IsPersonal)
 
-	orgs2, total := store.getUsersOrgs(user1.Id, 0, 50)
-	assert.Equal(t, 1, len(orgs2))
+	accs2, total := store.getGroupAccounts(personalAccount1.Id, 0, 50)
+	assert.Equal(t, 1, len(accs2))
 	assert.Equal(t, 1, total)
-	assert.Equal(t, org1.Id, orgs2[0].Id)
-	assert.Equal(t, org1.Name, orgs2[0].Name)
-	assert.Equal(t, org1.CreatedOn.Unix(), orgs2[0].CreatedOn.Unix())
-	assert.Equal(t, org1.Region, orgs2[0].Region)
-	assert.Equal(t, org1.NewRegion, orgs2[0].NewRegion)
-	assert.Equal(t, org1.Shard, orgs2[0].Shard)
-	assert.Equal(t, org1.HasAvatar, orgs2[0].HasAvatar)
-	assert.Equal(t, org1.IsUser, orgs2[0].IsUser)
+	assert.Equal(t, acc1.Id, accs2[0].Id)
+	assert.Equal(t, acc1.Name, accs2[0].Name)
+	assert.Equal(t, acc1.CreatedOn.Unix(), accs2[0].CreatedOn.Unix())
+	assert.Equal(t, acc1.Region, accs2[0].Region)
+	assert.Equal(t, acc1.NewRegion, accs2[0].NewRegion)
+	assert.Equal(t, acc1.Shard, accs2[0].Shard)
+	assert.Equal(t, acc1.HasAvatar, accs2[0].HasAvatar)
+	assert.Equal(t, acc1.IsPersonal, accs2[0].IsPersonal)
 
-	user2 := &fullUserInfo{}
-	user2.Id = NewId()
-	user2.Name = "cat"
-	user2.CreatedOn = time.Now().UTC()
-	user2.Region = "use"
-	user2.NewRegion = nil
-	user2.Shard = 3
-	user2.HasAvatar = false
-	user2.IsUser = true
-	user2.Email = "cat@cat.com"
-	user2.Language = "de"
-	user2.Theme = DarkTheme
-	user2.NewEmail = &str
-	user2.activationCode = &str
-	user2.activated = &now
-	user2.newEmailConfirmationCode = &str
-	user2.resetPwdCode = &str
-	store.createUser(user2, pwdInfo1)
+	personalAccount2 := &fullPersonalAccountInfo{}
+	personalAccount2.Id = NewId()
+	personalAccount2.Name = "cat"
+	personalAccount2.CreatedOn = time.Now().UTC()
+	personalAccount2.Region = "use"
+	personalAccount2.NewRegion = nil
+	personalAccount2.Shard = 3
+	personalAccount2.HasAvatar = false
+	personalAccount2.IsPersonal = true
+	personalAccount2.Email = "cat@cat.com"
+	personalAccount2.Language = "de"
+	personalAccount2.Theme = DarkTheme
+	personalAccount2.NewEmail = &str
+	personalAccount2.activationCode = &str
+	personalAccount2.activated = &now
+	personalAccount2.newEmailConfirmationCode = &str
+	personalAccount2.resetPwdCode = &str
+	store.createPersonalAccount(personalAccount2, pwdInfo1)
 
-	user3 := &fullUserInfo{}
-	user3.Id = NewId()
-	user3.Name = "dan"
-	user3.CreatedOn = time.Now().UTC()
-	user3.Region = "use"
-	user3.NewRegion = nil
-	user3.Shard = 3
-	user3.HasAvatar = true
-	user3.IsUser = true
-	user3.Email = "dan@dan.com"
-	user3.Language = "fr"
-	user3.Theme = ColorBlindTheme
-	user3.NewEmail = &str
-	user3.activationCode = &str
-	user3.activated = &now
-	user3.newEmailConfirmationCode = &str
-	user3.resetPwdCode = &str
-	store.createUser(user3, pwdInfo1)
+	personalAccount3 := &fullPersonalAccountInfo{}
+	personalAccount3.Id = NewId()
+	personalAccount3.Name = "dan"
+	personalAccount3.CreatedOn = time.Now().UTC()
+	personalAccount3.Region = "use"
+	personalAccount3.NewRegion = nil
+	personalAccount3.Shard = 3
+	personalAccount3.HasAvatar = true
+	personalAccount3.IsPersonal = true
+	personalAccount3.Email = "dan@dan.com"
+	personalAccount3.Language = "fr"
+	personalAccount3.Theme = ColorBlindTheme
+	personalAccount3.NewEmail = &str
+	personalAccount3.activationCode = &str
+	personalAccount3.activated = &now
+	personalAccount3.newEmailConfirmationCode = &str
+	personalAccount3.resetPwdCode = &str
+	store.createPersonalAccount(personalAccount3, pwdInfo1)
 
-	org2 := &account{}
-	org2.Id = NewId()
-	org2.Name = "org2"
-	org2.CreatedOn = time.Now().UTC()
-	org2.Region = "use"
-	org2.NewRegion = nil
-	org2.Shard = 4
-	org2.HasAvatar = true
-	org2.IsUser = false
-	store.createOrgAndMembership(org2, user1.Id)
+	acc2 := &account{}
+	acc2.Id = NewId()
+	acc2.Name = "acc2"
+	acc2.CreatedOn = time.Now().UTC()
+	acc2.Region = "use"
+	acc2.NewRegion = nil
+	acc2.Shard = 4
+	acc2.HasAvatar = true
+	acc2.IsPersonal = false
+	store.createGroupAccountAndMembership(acc2, personalAccount1.Id)
 
-	store.createMemberships(org2.Id, []Id{user2.Id, user3.Id})
+	store.createMemberships(acc2.Id, []Id{personalAccount2.Id, personalAccount3.Id})
 
-	orgs3, total := store.getUsersOrgs(user2.Id, 0, 50)
-	assert.Equal(t, 1, len(orgs3))
+	accs3, total := store.getGroupAccounts(personalAccount2.Id, 0, 50)
+	assert.Equal(t, 1, len(accs3))
 	assert.Equal(t, 1, total)
-	assert.Equal(t, org2.Id, orgs3[0].Id)
-	assert.Equal(t, org2.Name, orgs3[0].Name)
-	assert.Equal(t, org2.CreatedOn.Unix(), orgs3[0].CreatedOn.Unix())
-	assert.Equal(t, org2.Region, orgs3[0].Region)
-	assert.Equal(t, org2.NewRegion, orgs3[0].NewRegion)
-	assert.Equal(t, org2.Shard, orgs3[0].Shard)
-	assert.Equal(t, org2.HasAvatar, orgs3[0].HasAvatar)
-	assert.Equal(t, org2.IsUser, orgs3[0].IsUser)
+	assert.Equal(t, acc2.Id, accs3[0].Id)
+	assert.Equal(t, acc2.Name, accs3[0].Name)
+	assert.Equal(t, acc2.CreatedOn.Unix(), accs3[0].CreatedOn.Unix())
+	assert.Equal(t, acc2.Region, accs3[0].Region)
+	assert.Equal(t, acc2.NewRegion, accs3[0].NewRegion)
+	assert.Equal(t, acc2.Shard, accs3[0].Shard)
+	assert.Equal(t, acc2.HasAvatar, accs3[0].HasAvatar)
+	assert.Equal(t, acc2.IsPersonal, accs3[0].IsPersonal)
 
-	store.deleteMemberships(org2.Id, []Id{user2.Id, user3.Id})
+	store.deleteMemberships(acc2.Id, []Id{personalAccount2.Id, personalAccount3.Id})
 
-	orgs4, total := store.getUsersOrgs(user2.Id, 0, 50)
-	assert.Equal(t, 0, len(orgs4))
+	accs4, total := store.getGroupAccounts(personalAccount2.Id, 0, 50)
+	assert.Equal(t, 0, len(accs4))
 	assert.Equal(t, 0, total)
 
-	store.deleteAccountAndAllAssociatedMemberships(org2.Id)
+	store.deleteAccountAndAllAssociatedMemberships(acc2.Id)
 
-	orgs5, total := store.getUsersOrgs(user1.Id, 0, 50)
-	assert.Equal(t, 1, len(orgs5))
+	accs5, total := store.getGroupAccounts(personalAccount1.Id, 0, 50)
+	assert.Equal(t, 1, len(accs5))
 	assert.Equal(t, 1, total)
 
-	store.deleteAccountAndAllAssociatedMemberships(user1.Id)
+	store.deleteAccountAndAllAssociatedMemberships(personalAccount1.Id)
 
-	orgs6, total := store.getUsersOrgs(user1.Id, 0, 50)
-	assert.Equal(t, 0, len(orgs6))
+	accs6, total := store.getGroupAccounts(personalAccount1.Id, 0, 50)
+	assert.Equal(t, 0, len(accs6))
 	assert.Equal(t, 0, total)
 
 	// clean up left over test data
-	store.deleteAccountAndAllAssociatedMemberships(user2.Id)
-	store.deleteAccountAndAllAssociatedMemberships(user3.Id)
-	store.deleteAccountAndAllAssociatedMemberships(org1.Id)
+	store.deleteAccountAndAllAssociatedMemberships(personalAccount2.Id)
+	store.deleteAccountAndAllAssociatedMemberships(personalAccount3.Id)
+	store.deleteAccountAndAllAssociatedMemberships(acc1.Id)
 }

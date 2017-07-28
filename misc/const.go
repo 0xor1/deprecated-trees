@@ -10,10 +10,10 @@ const (
 	DarkTheme       = Theme(1)
 	ColorBlindTheme = Theme(2)
 
-	OrgOwner                        = OrgRole(0)
-	OrgAdmin                        = OrgRole(1)
-	OrgMemberOfAllProjects          = OrgRole(2)
-	OrgMemberOfOnlySpecificProjects = OrgRole(3)
+	AccountOwner                        = AccountRole(0)
+	AccountAdmin                        = AccountRole(1)
+	AccountMemberOfAllProjects          = AccountRole(2)
+	AccountMemberOfOnlySpecificProjects = AccountRole(3)
 
 	ProjectAdmin  = ProjectRole(0)
 	ProjectWriter = ProjectRole(1)
@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	invalidConstantValueErr = &Error{Code: 104, Msg: "invalid constant value", IsPublic: true}
+	invalidConstantValueErr = &Error{Code: "g_icv", Msg: "invalid constant value", IsPublic: true}
 )
 
 type Theme uint8
@@ -46,21 +46,21 @@ func (t *Theme) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-type OrgRole uint8
+type AccountRole uint8
 
-func (r *OrgRole) Validate() {
-	if r == nil || (*r != OrgOwner && *r != OrgAdmin && *r != OrgMemberOfAllProjects && *r != OrgMemberOfOnlySpecificProjects) {
-		*r = OrgMemberOfOnlySpecificProjects
+func (r *AccountRole) Validate() {
+	if r == nil || (*r != AccountOwner && *r != AccountAdmin && *r != AccountMemberOfAllProjects && *r != AccountMemberOfOnlySpecificProjects) {
+		*r = AccountMemberOfOnlySpecificProjects
 		panic(invalidConstantValueErr)
 	}
 }
 
-func (r *OrgRole) UnmarshalJSON(raw []byte) error {
+func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 	val, err := strconv.ParseUint(string(raw), 10, 8)
 	if err != nil {
 		return err
 	}
-	*r = OrgRole(val)
+	*r = AccountRole(val)
 	r.Validate()
 	return nil
 }

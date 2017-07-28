@@ -13,7 +13,7 @@ type Api interface {
 	Register(name, email, pwd, region, language string, theme Theme)
 	ResendActivationEmail(email string)
 	Activate(email, activationCode string)
-	Authenticate(username, pwd string) Id
+	Authenticate(name, pwd string) Id
 	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string)
 	ResetPwd(email string)
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string)
@@ -27,12 +27,12 @@ type Api interface {
 	SetAccountName(myId, accountId Id, newName string)
 	SetAccountAvatar(myId, accountId Id, avatarImage io.ReadCloser)
 	MigrateAccount(myId, accountId Id, newRegion string)
-	CreateOrg(myId Id, name, region string) *account
-	GetMyOrgs(myId Id, offset, limit int) ([]*account, int)
+	CreateAccount(myId Id, name, region string) *account
+	GetMyAccounts(myId Id, offset, limit int) ([]*account, int)
 	DeleteAccount(myId, accountId Id)
 	//member centric - must be an owner or admin
-	AddMembers(myId, orgId Id, newMembers []*AddMemberExternal)
-	RemoveMembers(myId, orgId Id, existingMembers []Id)
+	AddMembers(myId, accountId Id, newMembers []*AddMemberExternal)
+	RemoveMembers(myId, accountId Id, existingMembers []Id)
 }
 
 // Return a new account Api backed by sql storage and sending link emails via an email service

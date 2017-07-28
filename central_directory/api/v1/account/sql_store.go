@@ -32,9 +32,9 @@ func (s *sqlStore) accountWithCiNameExists(name string) bool {
 }
 
 func (s *sqlStore) getAccountByCiName(name string) *account {
-	row := s.accountsDB.QueryRow(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE name = ?;`, name)
+	row := s.accountsDB.QueryRow(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name = ?;`, name)
 	acc := account{}
-	if err := row.Scan(&acc.Id, &acc.Name, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsUser); err != nil {
+	if err := row.Scan(&acc.Id, &acc.Name, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -43,9 +43,9 @@ func (s *sqlStore) getAccountByCiName(name string) *account {
 	return &acc
 }
 
-func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) {
-	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(`CALL createUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.IsUser, user.Email, user.Language, user.Theme, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+func (s *sqlStore) createPersonalAccount(account *fullPersonalAccountInfo, pwdInfo *pwdInfo) {
+	id := []byte(account.Id)
+	if _, err := s.accountsDB.Exec(`CALL createPersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, account.Name, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal, account.Email, account.Language, account.Theme, account.NewEmail, account.activationCode, account.activated, account.newEmailConfirmationCode, account.resetPwdCode); err != nil {
 		panic(err)
 	}
 	if _, err := s.pwdsDB.Exec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?);`, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen); err != nil {
@@ -53,28 +53,28 @@ func (s *sqlStore) createUser(user *fullUserInfo, pwdInfo *pwdInfo) {
 	}
 }
 
-func (s *sqlStore) getUserByEmail(email string) *fullUserInfo {
-	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.language, u.theme, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE u.email = ?;`, email)
-	user := fullUserInfo{}
-	if err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.Language, &user.Theme, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode); err != nil {
+func (s *sqlStore) getPersonalAccountByEmail(email string) *fullPersonalAccountInfo {
+	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal, pai.email, pai.language, pai.theme, pai.newEmail, pai.activationCode, pai.activated, pai.newEmailConfirmationCode, pai.resetPwdCode FROM accounts AS a JOIN personalAccountInfo AS pai ON a.id = pai.id WHERE pai.email = ?;`, email)
+	account := fullPersonalAccountInfo{}
+	if err := row.Scan(&account.Id, &account.Name, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.IsPersonal, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activated, &account.newEmailConfirmationCode, &account.resetPwdCode); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
 		panic(err)
 	}
-	return &user
+	return &account
 }
 
-func (s *sqlStore) getUserById(id Id) *fullUserInfo {
-	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser, u.email, u.language, u.theme, u.newEmail, u.activationCode, u.activated, u.newEmailConfirmationCode, u.resetPwdCode FROM accounts AS a JOIN users AS u ON a.id = u.id WHERE a.id = ?;`, []byte(id))
-	user := fullUserInfo{}
-	if err := row.Scan(&user.Id, &user.Name, &user.CreatedOn, &user.Region, &user.NewRegion, &user.Shard, &user.HasAvatar, &user.IsUser, &user.Email, &user.Language, &user.Theme, &user.NewEmail, &user.activationCode, &user.activated, &user.newEmailConfirmationCode, &user.resetPwdCode); err != nil {
+func (s *sqlStore) getPersonalAccountById(id Id) *fullPersonalAccountInfo {
+	row := s.accountsDB.QueryRow(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal, pai.email, pai.language, pai.theme, pai.newEmail, pai.activationCode, pai.activated, pai.newEmailConfirmationCode, pai.resetPwdCode FROM accounts AS a JOIN personalAccountInfo AS pai ON a.id = pai.id WHERE a.id = ?;`, []byte(id))
+	account := fullPersonalAccountInfo{}
+	if err := row.Scan(&account.Id, &account.Name, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.IsPersonal, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activated, &account.newEmailConfirmationCode, &account.resetPwdCode); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
 		panic(err)
 	}
-	return &user
+	return &account
 }
 
 func (s *sqlStore) getPwdInfo(id Id) *pwdInfo {
@@ -89,15 +89,14 @@ func (s *sqlStore) getPwdInfo(id Id) *pwdInfo {
 	return &pwd
 }
 
-func (s *sqlStore) updateUser(user *fullUserInfo) {
-	id := []byte(user.Id)
-	if _, err := s.accountsDB.Exec(`CALL updateUser(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, id, user.Name, user.CreatedOn, user.Region, user.NewRegion, user.Shard, user.HasAvatar, user.Email, user.Language, user.Theme, user.NewEmail, user.activationCode, user.activated, user.newEmailConfirmationCode, user.resetPwdCode); err != nil {
+func (s *sqlStore) updatePersonalAccount(personalAccountInfo *fullPersonalAccountInfo) {
+	if _, err := s.accountsDB.Exec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`, []byte(personalAccountInfo.Id), personalAccountInfo.Name, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activated, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode); err != nil {
 		panic(err)
 	}
 }
 
 func (s *sqlStore) updateAccount(account *account) {
-	if _, err := s.accountsDB.Exec(`UPDATE accounts SET name=?, createdOn=?, region=?, newRegion=?, shard=?, hasAvatar=?, isUser=? WHERE id = ?;`, account.Name, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsUser, []byte(account.Id)); err != nil {
+	if _, err := s.accountsDB.Exec(`UPDATE accounts SET name=?, createdOn=?, region=?, newRegion=?, shard=?, hasAvatar=?, isPersonal=? WHERE id = ?;`, account.Name, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal, []byte(account.Id)); err != nil {
 		panic(err)
 	}
 }
@@ -119,9 +118,9 @@ func (s *sqlStore) deleteAccountAndAllAssociatedMemberships(id Id) {
 }
 
 func (s *sqlStore) getAccount(id Id) *account {
-	row := s.accountsDB.QueryRow(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE id = ?;`, []byte(id))
+	row := s.accountsDB.QueryRow(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id = ?;`, []byte(id))
 	a := account{}
-	if err := row.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsUser); err != nil {
+	if err := row.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -133,7 +132,7 @@ func (s *sqlStore) getAccount(id Id) *account {
 func (s *sqlStore) getAccounts(ids []Id) []*account {
 	castedIds := make([]interface{}, 0, len(ids))
 	var query bytes.Buffer
-	query.WriteString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE id IN (`)
+	query.WriteString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (`)
 	for i, id := range ids {
 		if i == 0 {
 			query.WriteString(`?`)
@@ -153,7 +152,7 @@ func (s *sqlStore) getAccounts(ids []Id) []*account {
 	res := make([]*account, 0, len(ids))
 	for rows.Next() {
 		a := account{}
-		err := rows.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsUser)
+		err := rows.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal)
 		if err != nil {
 			panic(err)
 		}
@@ -162,10 +161,10 @@ func (s *sqlStore) getAccounts(ids []Id) []*account {
 	return res
 }
 
-func (s *sqlStore) getUsers(ids []Id) []*account {
+func (s *sqlStore) getPersonalAccounts(ids []Id) []*account {
 	castedIds := make([]interface{}, 0, len(ids))
 	var query bytes.Buffer
-	query.WriteString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isUser FROM accounts WHERE isUser = true AND id IN (`)
+	query.WriteString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE isPersonal = true AND id IN (`)
 	for i, id := range ids {
 		if i == 0 {
 			query.WriteString(`?`)
@@ -185,7 +184,7 @@ func (s *sqlStore) getUsers(ids []Id) []*account {
 	res := make([]*account, 0, len(ids))
 	for rows.Next() {
 		u := account{}
-		err := rows.Scan(&u.Id, &u.Name, &u.CreatedOn, &u.Region, &u.NewRegion, &u.Shard, &u.HasAvatar, &u.IsUser)
+		err := rows.Scan(&u.Id, &u.Name, &u.CreatedOn, &u.Region, &u.NewRegion, &u.Shard, &u.HasAvatar, &u.IsPersonal)
 		if err != nil {
 			panic(err)
 		}
@@ -194,19 +193,19 @@ func (s *sqlStore) getUsers(ids []Id) []*account {
 	return res
 }
 
-func (s *sqlStore) createOrgAndMembership(org *account, user Id) {
-	if _, err := s.accountsDB.Exec(`CALL  createOrgAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?);`, []byte(org.Id), org.Name, org.CreatedOn, org.Region, org.NewRegion, org.Shard, org.HasAvatar, false, []byte(user)); err != nil {
+func (s *sqlStore) createGroupAccountAndMembership(account *account, memberId Id) {
+	if _, err := s.accountsDB.Exec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?);`, []byte(account.Id), account.Name, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, []byte(memberId)); err != nil {
 		panic(err)
 	}
 }
 
-func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*account, int) {
-	row := s.accountsDB.QueryRow(`SELECT COUNT(*) FROM memberships WHERE user = ?;`, []byte(user))
+func (s *sqlStore) getGroupAccounts(memberId Id, offset, limit int) ([]*account, int) {
+	row := s.accountsDB.QueryRow(`SELECT COUNT(*) FROM memberships WHERE member=?;`, []byte(memberId))
 	total := 0
 	if err := row.Scan(&total); err != nil {
 		panic(err)
 	}
-	rows, err := s.accountsDB.Query(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isUser FROM accounts AS a JOIN memberships AS m ON a.id = m.org WHERE m.user = ? ORDER BY a.name ASC LIMIT ?, ?;`, []byte(user), offset, limit)
+	rows, err := s.accountsDB.Query(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal FROM accounts AS a JOIN memberships AS m ON a.id = m.account WHERE m.member = ? ORDER BY a.name ASC LIMIT ?, ?;`, []byte(memberId), offset, limit)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -216,7 +215,7 @@ func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*account, int) {
 	res := make([]*account, 0, limit)
 	for rows.Next() {
 		a := account{}
-		rows.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsUser)
+		rows.Scan(&a.Id, &a.Name, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal)
 		if err != nil {
 			panic(err)
 		}
@@ -225,35 +224,35 @@ func (s *sqlStore) getUsersOrgs(user Id, offset, limit int) ([]*account, int) {
 	return res, total
 }
 
-func (s *sqlStore) createMemberships(org Id, users []Id) {
+func (s *sqlStore) createMemberships(accountId Id, members []Id) {
 	var query bytes.Buffer
-	args := make([]interface{}, 0, len(users)*2)
-	query.WriteString(`INSERT INTO memberships (org, user) VALUES `)
-	for i, id := range users {
+	args := make([]interface{}, 0, len(members)*2)
+	query.WriteString(`INSERT INTO memberships (account, member) VALUES `)
+	for i, member := range members {
 		if i == 0 {
 			query.WriteString(`(?, ?)`)
 		} else {
 			query.WriteString(`, (?, ?)`)
 		}
-		args = append(args, []byte(org), []byte(id))
+		args = append(args, []byte(accountId), []byte(member))
 	}
 	if _, err := s.accountsDB.Exec(query.String(), args...); err != nil {
 		panic(err)
 	}
 }
 
-func (s *sqlStore) deleteMemberships(org Id, users []Id) {
-	castedIds := make([]interface{}, 0, len(users)+1)
-	castedIds = append(castedIds, []byte(org))
+func (s *sqlStore) deleteMemberships(accountId Id, members []Id) {
+	castedIds := make([]interface{}, 0, len(members)+1)
+	castedIds = append(castedIds, []byte(accountId))
 	var query bytes.Buffer
-	query.WriteString(`DELETE FROM memberships WHERE org = ? AND user IN (`)
-	for i, id := range users {
+	query.WriteString(`DELETE FROM memberships WHERE account=? AND member IN (`)
+	for i, member := range members {
 		if i == 0 {
 			query.WriteString(`?`)
 		} else {
 			query.WriteString(`, ?`)
 		}
-		castedIds = append(castedIds, []byte(id))
+		castedIds = append(castedIds, []byte(member))
 	}
 	query.WriteString(`);`)
 	if _, err := s.accountsDB.Exec(query.String(), castedIds...); err != nil {

@@ -1,4 +1,4 @@
-package org
+package account
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -22,14 +22,14 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
-func (s *sqlStore) setPublicProjectsEnabled(shard int, orgId Id, publicProjectsEnabled bool) {
-	if _, err := s.shards[shard].Exec(`UPDATE orgs SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(orgId)); err != nil {
+func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId Id, publicProjectsEnabled bool) {
+	if _, err := s.shards[shard].Exec(`UPDATE accounts SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(accountId)); err != nil {
 		panic(err)
 	}
 }
 
-func (s *sqlStore) getPublicProjectsEnabled(shard int, orgId Id) bool {
-	row := s.shards[shard].QueryRow(`SELECT publicProjectsEnabled FROM orgs WHERE id=?`, []byte(orgId))
+func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
+	row := s.shards[shard].QueryRow(`SELECT publicProjectsEnabled FROM accounts WHERE id=?`, []byte(accountId))
 	res := false
 	if err := row.Scan(&res); err != nil {
 		panic(err)
@@ -37,26 +37,26 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, orgId Id) bool {
 	return res
 }
 
-func (s *sqlStore) setUserRole(shard int, orgId, userId Id, role OrgRole) {
-	if _, err := s.shards[shard].Exec(`UPDATE orgMembers SET role=? WHERE org=? AND id=?`, role, []byte(orgId), []byte(userId)); err != nil {
+func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role AccountRole) {
+	if _, err := s.shards[shard].Exec(`UPDATE accountMembers SET role=? WHERE account=? AND id=?`, role, []byte(accountId), []byte(memberId)); err != nil {
 		panic(err)
 	}
 }
 
-func (s *sqlStore) getMember(shard int, orgId, memberId Id) *OrgMember {
-	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND id=?`, []byte(orgId), []byte(memberId))
-	res := OrgMember{}
+func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
+	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	res := AccountMember{}
 	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
 		panic(err)
 	}
 	return &res
 }
 
-func (s *sqlStore) getMembers(shard int, orgId Id, role *OrgRole, nameContains *string, offset, limit int) ([]*OrgMember, int) {
-	countQuery := bytes.NewBufferString(`SELECT COUNT(*) FROM orgMembers WHERE org=? AND isActive=true`)
-	query := bytes.NewBufferString(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM orgMembers WHERE org=? AND isActive=true`)
+func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
+	countQuery := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true`)
+	query := bytes.NewBufferString(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
 	args := make([]interface{}, 0, 3)
-	args = append(args, []byte(orgId))
+	args = append(args, []byte(accountId))
 	if role != nil {
 		countQuery.WriteString(` AND role=?`)
 		query.WriteString(` AND role=?`)
@@ -82,9 +82,9 @@ func (s *sqlStore) getMembers(shard int, orgId Id, role *OrgRole, nameContains *
 	if err != nil {
 		panic(err)
 	}
-	res := make([]*OrgMember, 0, limit)
+	res := make([]*AccountMember, 0, limit)
 	for rows.Next() {
-		mem := OrgMember{}
+		mem := AccountMember{}
 		if err := rows.Scan(&mem.Id, &mem.Name, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.IsActive, &mem.Role); err != nil {
 			panic(err)
 		}
@@ -93,13 +93,13 @@ func (s *sqlStore) getMembers(shard int, orgId Id, role *OrgRole, nameContains *
 	return res, count
 }
 
-func (s *sqlStore) getActivities(shard int, orgId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity {
+func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity {
 	if occurredBefore != nil && occurredAfter != nil {
 		panic(InvalidArgumentsErr)
 	}
-	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action FROM orgActivities WHERE org=?`)
+	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
-	args = append(args, []byte(orgId))
+	args = append(args, []byte(accountId))
 	if item != nil {
 		query.WriteString(` AND item=?`)
 		args = append(args, []byte(*item))

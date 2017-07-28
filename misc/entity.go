@@ -48,12 +48,12 @@ type NamedEntity struct {
 
 type AddMemberInternal struct {
 	NamedEntity
-	Role OrgRole `json:"role"`
+	Role AccountRole `json:"role"`
 }
 
 type AddMemberExternal struct {
 	Entity
-	Role OrgRole `json:"role"`
+	Role AccountRole `json:"role"`
 }
 
 type GenNamedEntity func(name string) *NamedEntity
@@ -115,7 +115,7 @@ type CommonAbstractNodeProps struct {
 	IsParallel           bool   `json:"isParallel"`
 }
 
-type OrgMember struct {
+type AccountMember struct {
 	AddMemberInternal
 	CommonTimeProps
 	IsActive           bool   `json:"isActive"`
