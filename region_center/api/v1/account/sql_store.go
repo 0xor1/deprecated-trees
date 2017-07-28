@@ -141,3 +141,10 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	}
 	return res
 }
+
+func (s *sqlStore) logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue string) {
+	unixMilli := occurredOn.UnixNano()/1000000
+	if _, err := s.shards[shard].Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), unixMilli, []byte(member), []byte(item), itemType, "", action, newValue); err != nil {
+		panic(err)
+	}
+}

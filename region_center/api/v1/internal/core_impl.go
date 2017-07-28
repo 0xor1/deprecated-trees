@@ -67,7 +67,7 @@ type api struct {
 
 func (a *api) CreateAccount(accountId, ownerId Id, ownerName string) int {
 	shard := a.store.createAccount(accountId, ownerId, ownerName)
-	a.store.logActivity(shard, accountId, Now(), accountId, ownerId, "account", "created")
+	a.store.logActivity(shard, accountId, Now(), ownerId, accountId, "account", "created")
 	return shard
 }
 
@@ -109,13 +109,13 @@ func (a *api) AddMembers(shard int, accountId, actorId Id, members []*AddMemberI
 	if len(newMembers) > 0 {
 		a.store.addMembers(shard, accountId, newMembers)
 		for _, mem := range newMembers {
-			a.store.logActivity(shard, accountId, Now(), mem.Id, actorId, "member", "added")
+			a.store.logActivity(shard, accountId, Now(), actorId, mem.Id, "member", "added")
 		}
 	}
 	if len(pastMembers) > 0 {
 		a.store.updateMembersAndSetActive(shard, accountId, pastMembers) //has to be AddMemberInternal in case the member changed their name whilst they were inactive on the account
 		for _, mem := range pastMembers {
-			a.store.logActivity(shard, accountId, Now(), mem.Id, actorId, "member", "added")
+			a.store.logActivity(shard, accountId, Now(), actorId, mem.Id, "member", "added")
 		}
 	}
 }
@@ -147,7 +147,7 @@ func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
 
 	a.store.setMembersInactive(shard, accountId, members)
 	for _, mem := range members {
-		a.store.logActivity(shard, accountId, Now(), mem, admin, "member", "removed")
+		a.store.logActivity(shard, accountId, Now(), admin, mem, "member", "removed")
 	}
 }
 
@@ -186,5 +186,5 @@ type store interface {
 	getOwnerCountInSet(shard int, accountId Id, members []Id) int
 	setMembersInactive(shard int, accountId Id, members []Id)
 	renameMember(shard int, accountId Id, member Id, newName string)
-	logActivity(shard int, accountId Id, occurredOn time.Time, item, member Id, itemType, action string)
+	logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string)
 }

@@ -85,7 +85,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, uint64(0), mem3.TotalLoggedTime)
 	assert.Equal(t, false, mem3.IsActive)
 
-	store.logActivity(groupAccountShard, groupAccountId, Now(), cat.Id, ali.Id, "member", "added")
+	store.logActivity(groupAccountShard, groupAccountId, Now(), ali.Id, cat.Id, "member", "added")
 
 	store.deleteAccount(groupAccountShard, groupAccountId)
 	totalOwnerCount = store.getTotalOwnerCount(groupAccountShard, groupAccountId)

@@ -135,9 +135,9 @@ func (s *sqlStore) renameMember(shard int, accountId Id, member Id, newName stri
 	}
 }
 
-func (s *sqlStore) logActivity(shard int, accountId Id, occurredOn time.Time, item, member Id, itemType, action string) {
+func (s *sqlStore) logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string) {
 	unixMilli := occurredOn.UnixNano()/1000000
-	if _, err := s.shards[shard].Exec(`INSERT INTO accountActivities (account, occurredOn, item, member, itemType, itemName, action) VALUES (? , ?, ?, ?, ?, ?, ?)`, []byte(accountId), unixMilli, []byte(item), []byte(member), itemType, "", action); err != nil {
+	if _, err := s.shards[shard].Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), unixMilli, []byte(member), []byte(item), itemType, "", action, nil); err != nil {
 		panic(err)
 	}
 }

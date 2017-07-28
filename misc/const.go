@@ -36,6 +36,22 @@ func (t *Theme) Validate() {
 	}
 }
 
+func (t *Theme) String() string {
+	if t == nil {
+		return ""
+	}
+	switch *t {
+	case LightTheme:
+		return "light"
+	case DarkTheme:
+		return "dark"
+	case ColorBlindTheme:
+		return "colorBlind"
+	default:
+		panic(invalidConstantValueErr)
+	}
+}
+
 func (t *Theme) UnmarshalJSON(raw []byte) error {
 	val, err := strconv.ParseUint(string(raw), 10, 8)
 	if err != nil {
@@ -55,6 +71,24 @@ func (r *AccountRole) Validate() {
 	}
 }
 
+func (r *AccountRole) String() string {
+	if r == nil {
+		return ""
+	}
+	switch *r {
+	case AccountOwner:
+		return "accountOwner"
+	case AccountAdmin:
+		return "accountAdmin"
+	case AccountMemberOfAllProjects:
+		return "accountMemberOfAllProjects"
+	case AccountMemberOfOnlySpecificProjects:
+		return "accountMemberOfOnlySpecificProjects"
+	default:
+		panic(invalidConstantValueErr)
+	}
+}
+
 func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 	val, err := strconv.ParseUint(string(raw), 10, 8)
 	if err != nil {
@@ -70,6 +104,22 @@ type ProjectRole uint8
 func (r *ProjectRole) Validate() {
 	if r == nil || (*r != ProjectAdmin && *r != ProjectWriter && *r != ProjectReader) {
 		*r = ProjectReader
+		panic(invalidConstantValueErr)
+	}
+}
+
+func (r *ProjectRole) String() string {
+	if r == nil {
+		return ""
+	}
+	switch *r {
+	case ProjectAdmin:
+		return "projectAdmin"
+	case ProjectWriter:
+		return "projectWriter"
+	case ProjectReader:
+		return "projectReader"
+	default:
 		panic(invalidConstantValueErr)
 	}
 }

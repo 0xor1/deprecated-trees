@@ -27,11 +27,12 @@ DROP TABLE IF EXISTS accountActivities;
 CREATE TABLE accountActivities(
 	account BINARY(16) NOT NULL,
     occurredOn BIGINT NOT NULL, #unix millisecs timestamp
-    item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
+    item BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
     itemName VARCHAR(250) NOT NULL,
     action VARCHAR(100) NOT NULL,
+    newValue VARCHAR(1250) NULL,
     PRIMARY KEY (account, occurredOn, item, member),
     UNIQUE INDEX (account, item, occurredOn, member),
     UNIQUE INDEX (account, member, occurredOn, item)
@@ -55,11 +56,12 @@ CREATE TABLE projectActivities(
 	account BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
     occurredOn BIGINT NOT NULL, #unix millisecs timestamp
-    item BINARY(16) NOT NULL,
     member BINARY(16) NOT NULL,
+    item BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
     itemName VARCHAR(250) NOT NULL,
     action VARCHAR(100) NOT NULL,
+    newValue VARCHAR(1250) NULL,
     PRIMARY KEY (account, project, occurredOn, item, member),
     UNIQUE INDEX (account, project, item, occurredOn, member),
     UNIQUE INDEX (account, project, member, occurredOn, item),
