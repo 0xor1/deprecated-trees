@@ -40,35 +40,27 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	ali := AccountMember{}
 	ali.Id = NewId()
 	ali.Name = "ali"
-	ali.TotalRemainingTime = 7
-	ali.TotalLoggedTime = 3
 	ali.IsActive = true
 	ali.Role = AccountOwner
-	treeDb.Exec(`INSERT INTO accountMembers (account, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(ali.Id), ali.Name, ali.TotalRemainingTime, ali.TotalLoggedTime, ali.IsActive, ali.Role)
+	treeDb.Exec(`INSERT INTO accountMembers (account, id, name, isActive, role) VALUES (?, ?, ?, ?, ?)`, []byte(accountId), []byte(ali.Id), ali.Name, ali.IsActive, ali.Role)
 
 	bob := AccountMember{}
 	bob.Id = NewId()
 	bob.Name = "bob"
-	bob.TotalRemainingTime = 5
-	bob.TotalLoggedTime = 2
 	bob.IsActive = true
 	bob.Role = AccountAdmin
-	treeDb.Exec(`INSERT INTO accountMembers (account, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(bob.Id), bob.Name, bob.TotalRemainingTime, bob.TotalLoggedTime, bob.IsActive, bob.Role)
+	treeDb.Exec(`INSERT INTO accountMembers (account, id, name, isActive, role) VALUES (?, ?, ?, ?, ?)`, []byte(accountId), []byte(bob.Id), bob.Name, bob.IsActive, bob.Role)
 
 	cat := AccountMember{}
 	cat.Id = NewId()
 	cat.Name = "cat"
-	cat.TotalRemainingTime = 8
-	cat.TotalLoggedTime = 1
 	cat.IsActive = true
 	cat.Role = AccountMemberOfAllProjects
-	treeDb.Exec(`INSERT INTO accountMembers (account, id, name, totalRemainingTime, totalLoggedTime, isActive, role) VALUES (?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(cat.Id), cat.Name, cat.TotalRemainingTime, cat.TotalLoggedTime, cat.IsActive, cat.Role)
+	treeDb.Exec(`INSERT INTO accountMembers (account, id, name, isActive, role) VALUES (?, ?, ?, ?, ?)`, []byte(accountId), []byte(cat.Id), cat.Name, cat.IsActive, cat.Role)
 
 	ali2 := store.getMember(0, accountId, ali.Id)
 	assert.True(t, ali.Id.Equal(ali2.Id))
 	assert.Equal(t, ali.Name, ali2.Name)
-	assert.Equal(t, ali.TotalRemainingTime, ali2.TotalRemainingTime)
-	assert.Equal(t, ali.TotalLoggedTime, ali2.TotalLoggedTime)
 
 	members1, count := store.getMembers(0, accountId, nil, nil, 0, 10)
 	assert.Equal(t, 3, len(members1))

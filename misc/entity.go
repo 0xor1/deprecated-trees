@@ -117,7 +117,6 @@ type CommonAbstractNodeProps struct {
 
 type AccountMember struct {
 	AddMemberInternal
-	CommonTimeProps
 	IsActive           bool   `json:"isActive"`
 }
 

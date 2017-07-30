@@ -38,8 +38,6 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, aliId, ali.Id)
 	assert.Equal(t, AccountOwner, ali.Role)
 	assert.Equal(t, "ali", ali.Name)
-	assert.Equal(t, uint64(0), ali.TotalRemainingTime)
-	assert.Equal(t, uint64(0), ali.TotalLoggedTime)
 	assert.Equal(t, true, ali.IsActive)
 
 	bob := &AddMemberInternal{}
@@ -73,16 +71,12 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, bob.Id, mem2.Id)
 	assert.Equal(t, AccountAdmin, mem2.Role)
 	assert.Equal(t, "jimbob", mem2.Name)
-	assert.Equal(t, uint64(0), mem2.TotalRemainingTime)
-	assert.Equal(t, uint64(0), mem2.TotalLoggedTime)
 	assert.Equal(t, true, mem2.IsActive)
 
 	mem3 := store.getMember(groupAccountShard, groupAccountId, cat.Id)
 	assert.Equal(t, cat.Id, mem3.Id)
 	assert.Equal(t, AccountMemberOfOnlySpecificProjects, mem3.Role)
 	assert.Equal(t, "cat", mem3.Name)
-	assert.Equal(t, uint64(0), mem3.TotalRemainingTime)
-	assert.Equal(t, uint64(0), mem3.TotalLoggedTime)
 	assert.Equal(t, false, mem3.IsActive)
 
 	store.logActivity(groupAccountShard, groupAccountId, Now(), ali.Id, cat.Id, "member", "added")

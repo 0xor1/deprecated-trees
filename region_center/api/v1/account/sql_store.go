@@ -44,9 +44,9 @@ func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role Account
 }
 
 func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
-	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountMember{}
-	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
+	if err := row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role); err != nil {
 		panic(err)
 	}
 	return &res
@@ -54,7 +54,7 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
 
 func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
 	countQuery := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true`)
-	query := bytes.NewBufferString(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
+	query := bytes.NewBufferString(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
 	args := make([]interface{}, 0, 3)
 	args = append(args, []byte(accountId))
 	if role != nil {
@@ -85,7 +85,7 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 	res := make([]*AccountMember, 0, limit)
 	for rows.Next() {
 		mem := AccountMember{}
-		if err := rows.Scan(&mem.Id, &mem.Name, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.IsActive, &mem.Role); err != nil {
+		if err := rows.Scan(&mem.Id, &mem.Name, &mem.IsActive, &mem.Role); err != nil {
 			panic(err)
 		}
 		res = append(res, &mem)

@@ -37,9 +37,9 @@ func (s *sqlStore) deleteAccount(shard int, account Id) {
 }
 
 func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
-	row := s.shards[shard].QueryRow(`SELECT id, name, totalRemainingTime, totalLoggedTime, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountMember{}
-	if err := row.Scan(&res.Id, &res.Name, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.IsActive, &res.Role); err != nil {
+	if err := row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -103,34 +103,16 @@ func (s *sqlStore) getOwnerCountInSet(shard int, accountId Id, members []Id) int
 }
 
 func (s *sqlStore) setMembersInactive(shard int, accountId Id, members []Id) {
-	queryArgs := make([]interface{}, 0, len(members)+1)
-	queryArgs = append(queryArgs, []byte(accountId))
-	var query1 bytes.Buffer
-	query1.WriteString(`UPDATE accountMembers SET isActive=false, role=3 WHERE account=? AND id IN (`)
-	var query2 bytes.Buffer
-	query2.WriteString(`DELETE FROM projectMembers WHERE account=? AND member IN (`)
-	for i, mem := range members {
-		if i == 0 {
-			query1.WriteString(`?`)
-			query2.WriteString(`?`)
-		} else {
-			query1.WriteString(`, ?`)
-			query2.WriteString(`, ?`)
+	accountIdBytes := []byte(accountId)
+	for _, mem := range members {
+		if _, err := s.shards[shard].Exec(`CALL setMemberInactive(?, ?)`, accountIdBytes, []byte(mem)); err != nil {
+			panic(err)
 		}
-		queryArgs = append(queryArgs, []byte(mem))
-	}
-	query1.WriteString(`);`)
-	query2.WriteString(`);`)
-	if _, err := s.shards[shard].Exec(query1.String(), queryArgs...); err != nil {
-		panic(err)
-	}
-	if _, err := s.shards[shard].Exec(query2.String(), queryArgs...); err != nil {
-		panic(err)
 	}
 }
 
 func (s *sqlStore) renameMember(shard int, accountId Id, member Id, newName string) {
-	if _, err := s.shards[shard].Exec(`UPDATE accountMembers SET name=? WHERE account=? AND id=?`, newName, []byte(accountId), []byte(member)); err != nil {
+	if _, err := s.shards[shard].Exec(`CALL renameMember(?, ?, ?)`, []byte(accountId), []byte(member), newName); err != nil {
 		panic(err)
 	}
 }
