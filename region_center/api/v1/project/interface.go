@@ -17,16 +17,26 @@ type Api interface {
 	SetIsPublic(shard int, accountId, projectId, myId Id, isPublic bool)
 	//must be account owner/admin or project admin/writer
 	SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool)
+	//check project access permission per user
+	GetProject(shard int, accountId, projectId, myId Id) ([]*project, int)
+	//check project access permission per user
+	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isPublic *bool, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	//must be account owner/admin
+	ArchiveProject(shard int, accountId, projectId, myId Id)
+	//must be account owner/admin
+	UnarchiveProject(shard int, accountId, projectId, myId Id)
+	//must be account owner/admin
+	DeleteProject(shard int, accountId, projectId, myId Id)
 	//must be account owner/admin or project admin
 	AddMembers(shard int, accountId, projectId, myId Id, members []*addProjectMember)
 	//must be account owner/admin or project admin
 	RemoveMembers(shard int, accountId, projectId, myId Id, members []Id)
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
 	GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*projectMember, int)
-	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 	//for anyone
 	GetMe(shard int, accountId, projectId, myId Id) *projectMember
+	//either one or both of OccurredAfter/Before must be nil
+	GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 }
 
 func NewApi(shards map[int]isql.ReplicaSet, maxGetEntityCount int) Api {

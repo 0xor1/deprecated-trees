@@ -19,8 +19,12 @@ const (
 	ProjectWriter = ProjectRole(1)
 	ProjectReader = ProjectRole(2)
 
-	SortAsc  = SortDirection("asc")
-	SortDesc = SortDirection("desc")
+	SortByName = SortBy("name")
+	SortByStartOn = SortBy("starton")
+	SortByDueOn = SortBy("dueon")
+
+	SortDirAsc  = SortDir("asc")
+	SortDirDesc = SortDir("desc")
 )
 
 var (
@@ -134,18 +138,42 @@ func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
-type SortDirection string
+type SortDir string
 
-func (sd *SortDirection) Validate() {
-	if sd == nil || (*sd != SortAsc && *sd != SortDesc) {
-		*sd = SortAsc
+func (sd *SortDir) Validate() {
+	if sd == nil || (*sd != SortDirAsc && *sd != SortDirDesc) {
+		*sd = SortDirAsc
 		panic(invalidConstantValueErr)
 	}
 }
 
-func (sd *SortDirection) UnmarshalJSON(raw []byte) error {
+func (sd *SortDir) String() string {
+	return string(sd)
+}
+
+func (sd *SortDir) UnmarshalJSON(raw []byte) error {
 	val := strings.Trim(strings.ToLower(string(raw)), " ")
-	*sd = SortDirection(val)
+	*sd = SortDir(val)
 	sd.Validate()
+	return nil
+}
+
+type SortBy string
+
+func (sb *SortBy) Validate() {
+	if sb == nil || (*sb != SortByName && *sb != SortByStartOn && *sb != SortByDueOn) {
+		*sb = SortByName
+		panic(invalidConstantValueErr)
+	}
+}
+
+func (sb *SortBy) String() string {
+	return string(sb)
+}
+
+func (sb *SortBy) UnmarshalJSON(raw []byte) error {
+	val := strings.Trim(strings.ToLower(string(raw)), " ")
+	*sb = SortBy(val)
+	sb.Validate()
 	return nil
 }

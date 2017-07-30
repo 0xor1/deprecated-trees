@@ -17,6 +17,10 @@ func (e *InvalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.ParamPurpose, e.MinRuneCount, e.MaxRuneCount, e.RegexMatchers)
 }
 
+func (e *InvalidStringParamErr) IsPrivate() bool {
+	return false
+}
+
 func newInvalidStringParamErr(paramPurpose string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) *InvalidStringParamErr {
 	return &InvalidStringParamErr{
 		ParamPurpose:  paramPurpose,
@@ -42,10 +46,6 @@ var emailRegex = regexp.MustCompile(`.+@.+\..+`)
 
 func ValidateEmail(email string) {
 	ValidateStringParam("email", email, 6, 254, []*regexp.Regexp{emailRegex})
-}
-
-func IsPrivate() bool {
-	return false
 }
 
 func ValidateOffsetAndLimitParams(offset, limit, maxLimit int) (int, int) {
