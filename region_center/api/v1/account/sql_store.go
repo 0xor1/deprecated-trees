@@ -26,6 +26,11 @@ func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId Id, publicProje
 	if _, err := s.shards[shard].Exec(`UPDATE accounts SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(accountId)); err != nil {
 		panic(err)
 	}
+	if !publicProjectsEnabled {
+		if _, err := s.shards[shard].Exec(`UPDATE projects SET isPublic=false WHERE account=?`, []byte(accountId)); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
@@ -142,9 +147,6 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	return res
 }
 
-func (s *sqlStore) logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue string) {
-	unixMilli := occurredOn.UnixNano()/1000000
-	if _, err := s.shards[shard].Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), unixMilli, []byte(member), []byte(item), itemType, "", action, newValue); err != nil {
-		panic(err)
-	}
+func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string) {
+	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, &newValue)
 }

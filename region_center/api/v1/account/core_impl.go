@@ -17,7 +17,7 @@ func (a *api) SetPublicProjectsEnabled(shard int, accountId, myId Id, publicProj
 		panic(InsufficientPermissionErr)
 	}
 	a.store.setPublicProjectsEnabled(shard, accountId, publicProjectsEnabled)
-	a.store.logActivity(shard, accountId, Now(), myId, accountId, "account", "setPublicProjectsEnabled", fmt.Sprintf("%t", publicProjectsEnabled))
+	a.store.logActivity(shard, accountId, myId, accountId, "account", "setPublicProjectsEnabled", fmt.Sprintf("%t", publicProjectsEnabled))
 }
 
 func (a *api) GetPublicProjectsEnabled(shard int, accountId, myId Id) bool {
@@ -35,7 +35,7 @@ func (a *api) SetMemberRole(shard int, accountId, myId, memberId Id, role Accoun
 		panic(InsufficientPermissionErr)
 	}
 	a.store.setMemberRole(shard, accountId, memberId, role)
-	a.store.logActivity(shard, accountId, Now(), myId, memberId, "member", "setRole", role.String())
+	a.store.logActivity(shard, accountId, myId, memberId, "member", "setRole", role.String())
 }
 
 func (a *api) GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
@@ -70,5 +70,5 @@ type store interface {
 	getMember(shard int, accountId, memberId Id) *AccountMember
 	getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int)
 	getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity
-	logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue string)
+	logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string)
 }

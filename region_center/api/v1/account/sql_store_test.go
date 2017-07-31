@@ -141,7 +141,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Nil(t, activities5[0].NewValue)
 
 	newItemId := NewId()
-	store.logActivity(0, accountId, Now(), ali.Id, newItemId, "account", "setPublicProjectsEnabled", "true")
+	store.logActivity(0, accountId, ali.Id, newItemId, "account", "setPublicProjectsEnabled", "true")
 	activities6 := store.getActivities(0, accountId, &newItemId, &ali.Id, nil, &activity3.OccurredOn, 100)
 	assert.Equal(t, 1, len(activities6))
 	assert.True(t, activities6[0].Member.Equal(ali.Id))

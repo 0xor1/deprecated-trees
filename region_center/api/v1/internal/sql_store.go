@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"github.com/0xor1/isql"
 	"math/rand"
-	"time"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -40,6 +39,18 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
 	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountMember{}
 	if err := row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role); err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		panic(err)
+	}
+	return &res
+}
+
+func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRole {
+	row := s.shards[shard].QueryRow(`SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	res := AccountRole(3)
+	if err := row.Scan(&res); err != nil {
 		if err == sql.ErrNoRows {
 			return nil
 		}
@@ -117,9 +128,6 @@ func (s *sqlStore) renameMember(shard int, accountId Id, member Id, newName stri
 	}
 }
 
-func (s *sqlStore) logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string) {
-	unixMilli := occurredOn.UnixNano()/1000000
-	if _, err := s.shards[shard].Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), unixMilli, []byte(member), []byte(item), itemType, "", action, nil); err != nil {
-		panic(err)
-	}
+func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string) {
+	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil)
 }

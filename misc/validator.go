@@ -57,3 +57,33 @@ func ValidateOffsetAndLimitParams(offset, limit, maxLimit int) (int, int) {
 	}
 	return offset, limit
 }
+
+func ValidateMemberHasAccountOwnerAccess(accountRole *AccountRole) {
+	if accountRole == nil || *accountRole != AccountOwner {
+		panic(InsufficientPermissionErr)
+	}
+}
+
+func ValidateMemberHasAccountAdminAccess(accountRole *AccountRole) {
+	if accountRole == nil || (*accountRole != AccountOwner && *accountRole != AccountAdmin) {
+		panic(InsufficientPermissionErr)
+	}
+}
+
+func ValidateMemberHasProjectAdminAccess(accountRole *AccountRole, projectRole *ProjectRole) {
+	if accountRole == nil || ((*accountRole != AccountOwner && *accountRole != AccountAdmin) && (projectRole == nil || *projectRole != ProjectAdmin)) {
+		panic(InsufficientPermissionErr)
+	}
+}
+
+func ValidateMemberHasProjectWriteAccess(accountRole *AccountRole, projectRole *ProjectRole) {
+	if accountRole == nil || ((*accountRole != AccountOwner && *accountRole != AccountAdmin) && (projectRole == nil || (*projectRole != ProjectAdmin && *projectRole != ProjectWriter))) {
+		panic(InsufficientPermissionErr)
+	}
+}
+
+func ValidateMemberHasProjectReadAccess(accountRole *AccountRole, projectRole *ProjectRole, projectIsPublic bool) {
+	if !projectIsPublic && (accountRole == nil || ((*accountRole != AccountOwner && *accountRole != AccountAdmin) && (projectRole == nil || (*projectRole != ProjectAdmin && *projectRole != ProjectWriter && *projectRole != ProjectReader)))) {
+		panic(InsufficientPermissionErr)
+	}
+}

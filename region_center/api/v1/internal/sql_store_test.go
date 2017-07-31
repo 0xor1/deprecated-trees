@@ -35,10 +35,12 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 0, groupAccountShard)
 
 	ali := store.getMember(groupAccountShard, groupAccountId, aliId)
+	aliAccountRole := store.getAccountRole(groupAccountShard, groupAccountId, aliId)
 	assert.Equal(t, aliId, ali.Id)
 	assert.Equal(t, AccountOwner, ali.Role)
 	assert.Equal(t, "ali", ali.Name)
 	assert.Equal(t, true, ali.IsActive)
+	assert.Equal(t, AccountOwner, *aliAccountRole)
 
 	bob := &AddMemberInternal{}
 	bob.Id = NewId()
@@ -79,7 +81,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, "cat", mem3.Name)
 	assert.Equal(t, false, mem3.IsActive)
 
-	store.logActivity(groupAccountShard, groupAccountId, Now(), ali.Id, cat.Id, "member", "added")
+	store.logActivity(groupAccountShard, groupAccountId, ali.Id, cat.Id, "member", "added")
 
 	store.deleteAccount(groupAccountShard, groupAccountId)
 	totalOwnerCount = store.getTotalOwnerCount(groupAccountShard, groupAccountId)

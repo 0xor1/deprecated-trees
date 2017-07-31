@@ -20,7 +20,7 @@ type Api interface {
 	//check project access permission per user
 	GetProject(shard int, accountId, projectId, myId Id) ([]*project, int)
 	//check project access permission per user
-	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isPublic *bool, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
 	//must be account owner/admin
 	ArchiveProject(shard int, accountId, projectId, myId Id)
 	//must be account owner/admin

@@ -2,7 +2,6 @@ package internal
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
-	"time"
 )
 
 var (
@@ -67,16 +66,13 @@ type api struct {
 
 func (a *api) CreateAccount(accountId, ownerId Id, ownerName string) int {
 	shard := a.store.createAccount(accountId, ownerId, ownerName)
-	a.store.logActivity(shard, accountId, Now(), ownerId, accountId, "account", "created")
+	a.store.logActivity(shard, accountId, ownerId, accountId, "account", "created")
 	return shard
 }
 
 func (a *api) DeleteAccount(shard int, accountId, ownerId Id) {
 	if !ownerId.Equal(accountId) {
-		member := a.store.getMember(shard, accountId, ownerId)
-		if member == nil || member.Role != AccountOwner {
-			panic(InsufficientPermissionErr)
-		}
+		ValidateMemberHasAccountOwnerAccess(a.store.getAccountRole(shard, accountId, ownerId))
 	}
 	//TODO delete s3 data, uploaded files etc
 	a.store.deleteAccount(shard, accountId)
@@ -86,17 +82,15 @@ func (a *api) AddMembers(shard int, accountId, actorId Id, members []*AddMemberI
 	if accountId.Equal(actorId) {
 		panic(InvalidOperationErr)
 	}
-	actor := a.store.getMember(shard, accountId, actorId)
-	if actor == nil || (actor.Role != AccountOwner && actor.Role != AccountAdmin) {
-		panic(InsufficientPermissionErr) //only owners and admins can add new account members
-	}
+	accountRole := a.store.getAccountRole(shard, accountId, actorId)
+	ValidateMemberHasAccountAdminAccess(accountRole)
 
 	pastMembers := make([]*AddMemberInternal, 0, len(members))
 	newMembers := make([]*AddMemberInternal, 0, len(members))
 	for _, mem := range members {
 		mem.Role.Validate()
-		if mem.Role == AccountOwner && actor.Role != AccountOwner {
-			panic(InsufficientPermissionErr) //only owners can add owners
+		if mem.Role == AccountOwner {
+			ValidateMemberHasAccountOwnerAccess(accountRole)
 		}
 		existingMember := a.store.getMember(shard, accountId, mem.Id)
 		if existingMember == nil {
@@ -109,13 +103,13 @@ func (a *api) AddMembers(shard int, accountId, actorId Id, members []*AddMemberI
 	if len(newMembers) > 0 {
 		a.store.addMembers(shard, accountId, newMembers)
 		for _, mem := range newMembers {
-			a.store.logActivity(shard, accountId, Now(), actorId, mem.Id, "member", "added")
+			a.store.logActivity(shard, accountId, actorId, mem.Id, "member", "added")
 		}
 	}
 	if len(pastMembers) > 0 {
 		a.store.updateMembersAndSetActive(shard, accountId, pastMembers) //has to be AddMemberInternal in case the member changed their name whilst they were inactive on the account
 		for _, mem := range pastMembers {
-			a.store.logActivity(shard, accountId, Now(), actorId, mem.Id, "member", "added")
+			a.store.logActivity(shard, accountId, actorId, mem.Id, "member", "added")
 		}
 	}
 }
@@ -124,9 +118,9 @@ func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
 	if accountId.Equal(admin) {
 		panic(InvalidOperationErr)
 	}
-	member := a.store.getMember(shard, accountId, admin)
+	accountRole := a.store.getAccountRole(shard, accountId, admin)
 
-	switch member.Role {
+	switch *accountRole {
 	case AccountOwner:
 		totalOwnerCount := a.store.getTotalOwnerCount(shard, accountId)
 		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, accountId, members)
@@ -147,7 +141,7 @@ func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
 
 	a.store.setMembersInactive(shard, accountId, members)
 	for _, mem := range members {
-		a.store.logActivity(shard, accountId, Now(), admin, mem, "member", "removed")
+		a.store.logActivity(shard, accountId, admin, mem, "member", "removed")
 	}
 }
 
@@ -179,12 +173,13 @@ func (a *api) MemberIsAccountOwner(shard int, accountId, myId Id) bool {
 type store interface {
 	createAccount(id, ownerId Id, ownerName string) int
 	deleteAccount(shard int, account Id)
-	getMember(shard int, accountId, member Id) *AccountMember
+	getMember(shard int, accountId, memberId Id) *AccountMember
+	getAccountRole(shard int, accountId, memberId Id) *AccountRole
 	addMembers(shard int, accountId Id, members []*AddMemberInternal)
 	updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberInternal)
 	getTotalOwnerCount(shard int, accountId Id) int
 	getOwnerCountInSet(shard int, accountId Id, members []Id) int
 	setMembersInactive(shard int, accountId Id, members []Id)
 	renameMember(shard int, accountId Id, member Id, newName string)
-	logActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string)
+	logActivity(shard int, accountId Id, member, item Id, itemType, action string)
 }

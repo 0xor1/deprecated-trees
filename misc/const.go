@@ -148,7 +148,7 @@ func (sd *SortDir) Validate() {
 }
 
 func (sd *SortDir) String() string {
-	return string(sd)
+	return string(*sd)
 }
 
 func (sd *SortDir) UnmarshalJSON(raw []byte) error {
@@ -168,7 +168,7 @@ func (sb *SortBy) Validate() {
 }
 
 func (sb *SortBy) String() string {
-	return string(sb)
+	return string(*sb)
 }
 
 func (sb *SortBy) UnmarshalJSON(raw []byte) error {
