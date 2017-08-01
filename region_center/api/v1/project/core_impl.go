@@ -80,7 +80,14 @@ func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
 }
 
 func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
-	return a.store.getProjects(shard, accountId, myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+	myAccountRole := a.store.getAccountRole(shard, accountId, myId)
+	if myAccountRole == nil {
+		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+	}
+	if *myAccountRole != AccountOwner && *myAccountRole != AccountAdmin {
+		return a.store.getPublicAndSpecificAccessProjects(shard, accountId, myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+	}
+	return a.store.getAllProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
 }
 
 func (a *api) ArchiveProject(shard int, accountId, projectId, myId Id) {
@@ -138,9 +145,9 @@ type store interface {
 	setIsPublic(shard int, accountId, projectId Id, isPublic bool)
 	setIsParallel(shard int, accountId, projectId Id, isParallel bool)
 	getProject(shard int, accountId, projectId Id) *project
-	//must call stored proc to check all permissions as it would require too many inefficient db calls to do external permissions checks
-	//* remember to always return all public projects for any user, and then only additional projects for specific member account and project access permissions
-	getProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
 	setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time)
 	deleteProject(shard int, accountId, projectId Id)
 	getProjectMember(shard int, accountId, projectId, myId Id) *projectMember
