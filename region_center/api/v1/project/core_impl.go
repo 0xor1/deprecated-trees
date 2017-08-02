@@ -82,6 +82,7 @@ func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
 
 func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
 	myAccountRole := a.store.getAccountRole(shard, accountId, myId)
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
 	if myAccountRole == nil {
 		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
 	}
