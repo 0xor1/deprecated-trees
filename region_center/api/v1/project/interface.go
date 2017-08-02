@@ -18,7 +18,7 @@ type Api interface {
 	//must be account owner/admin or project admin/writer
 	SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool)
 	//check project access permission per user
-	GetProject(shard int, accountId, projectId, myId Id) ([]*project, int)
+	GetProject(shard int, accountId, projectId, myId Id) *project
 	//check project access permission per user
 	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
 	//must be account owner/admin

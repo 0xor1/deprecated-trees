@@ -97,7 +97,7 @@ func NewId() Id {
 	return Id(id)
 }
 
-type CommonTimeProps struct{
+type CommonTimeProps struct {
 	TotalRemainingTime uint64 `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
 }
@@ -105,9 +105,9 @@ type CommonTimeProps struct{
 type CommonNodeProps struct {
 	CreatedNamedEntity
 	CommonTimeProps
-	Description        string `json:"description"`
-	LinkedFilesCount   uint64 `json:"linkedFilesCount"`
-	ChatCount          uint64 `json:"chatCount"`
+	Description      string `json:"description"`
+	LinkedFilesCount uint64 `json:"linkedFilesCount"`
+	ChatCount        uint64 `json:"chatCount"`
 }
 
 type CommonAbstractNodeProps struct {
@@ -117,7 +117,7 @@ type CommonAbstractNodeProps struct {
 
 type AccountMember struct {
 	AddMemberInternal
-	IsActive           bool   `json:"isActive"`
+	IsActive bool `json:"isActive"`
 }
 
 type Activity struct {

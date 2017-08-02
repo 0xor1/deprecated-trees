@@ -19,9 +19,9 @@ const (
 	ProjectWriter = ProjectRole(1)
 	ProjectReader = ProjectRole(2)
 
-	SortByName = SortBy("name")
+	SortByName    = SortBy("name")
 	SortByStartOn = SortBy("starton")
-	SortByDueOn = SortBy("dueon")
+	SortByDueOn   = SortBy("dueon")
 
 	SortDirAsc  = SortDir("asc")
 	SortDirDesc = SortDir("desc")

@@ -150,9 +150,5 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, "setPublicProjectsEnabled", activities6[0].Action)
 	assert.Equal(t, "true", *activities6[0].NewValue)
 
-
-
-
-
 	treeDb.Exec(`CALL deleteAccount(?)`, []byte(accountId))
 }

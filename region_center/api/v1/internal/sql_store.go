@@ -131,3 +131,7 @@ func (s *sqlStore) renameMember(shard int, accountId Id, member Id, newName stri
 func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string) {
 	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil)
 }
+
+func (s *sqlStore) logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string) {
+	LogAccountBatchAddOrRemoveMembersActivity(s.shards[shard], accountId, member, members, action)
+}

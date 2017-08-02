@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	invalidRegionErr         = &Error{Code: "rc_v1_i_ir", Msg: "invalid region", IsPublic: false}
-	zeroOwnerCountErr        = &Error{Code: "rc_v1_i_zoc", Msg: "zero owner count", IsPublic: true}
+	invalidRegionErr  = &Error{Code: "rc_v1_i_ir", Msg: "invalid region", IsPublic: false}
+	zeroOwnerCountErr = &Error{Code: "rc_v1_i_zoc", Msg: "zero owner count", IsPublic: true}
 )
 
 type client struct {
@@ -87,6 +87,7 @@ func (a *api) AddMembers(shard int, accountId, actorId Id, members []*AddMemberI
 
 	pastMembers := make([]*AddMemberInternal, 0, len(members))
 	newMembers := make([]*AddMemberInternal, 0, len(members))
+	allIds := make([]Id, 0, len(members))
 	for _, mem := range members {
 		mem.Role.Validate()
 		if mem.Role == AccountOwner {
@@ -98,20 +99,16 @@ func (a *api) AddMembers(shard int, accountId, actorId Id, members []*AddMemberI
 		} else if !existingMember.IsActive || existingMember.Role != mem.Role {
 			pastMembers = append(pastMembers, mem)
 		}
+		allIds = append(allIds, mem.Id)
 	}
 
 	if len(newMembers) > 0 {
 		a.store.addMembers(shard, accountId, newMembers)
-		for _, mem := range newMembers {
-			a.store.logActivity(shard, accountId, actorId, mem.Id, "member", "added")
-		}
 	}
 	if len(pastMembers) > 0 {
 		a.store.updateMembersAndSetActive(shard, accountId, pastMembers) //has to be AddMemberInternal in case the member changed their name whilst they were inactive on the account
-		for _, mem := range pastMembers {
-			a.store.logActivity(shard, accountId, actorId, mem.Id, "member", "added")
-		}
 	}
+	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, actorId, allIds, "added")
 }
 
 func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
@@ -140,9 +137,7 @@ func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
 	}
 
 	a.store.setMembersInactive(shard, accountId, members)
-	for _, mem := range members {
-		a.store.logActivity(shard, accountId, admin, mem, "member", "removed")
-	}
+	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, admin, members, "removed")
 }
 
 func (a *api) MemberIsOnlyAccountOwner(shard int, accountId, member Id) bool {
@@ -182,4 +177,5 @@ type store interface {
 	setMembersInactive(shard int, accountId Id, members []Id)
 	renameMember(shard int, accountId Id, member Id, newName string)
 	logActivity(shard int, accountId Id, member, item Id, itemType, action string)
+	logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string)
 }

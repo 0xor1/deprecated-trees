@@ -2,13 +2,14 @@ package project
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
-	"time"
 	"fmt"
+	"time"
 )
 
-var(
+var (
 	publicProjectsDisabledErr = &Error{Code: "rc_v1_p_ppd", Msg: "public projects disabled", IsPublic: true}
 )
+
 type api struct {
 	store             store
 	maxGetEntityCount int
@@ -112,26 +113,40 @@ func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 }
 
 func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addProjectMember) {
-	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
+	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
+	ValidateMemberHasProjectAdminAccess(myAccountRole, myProjectRole)
+	a.store.addMembers(shard, accountId, projectId, members)
+	allIds := make([]Id, 0, len(members))
+	for _, mem := range members {
+		allIds = append(allIds, mem.Id)
+	}
+	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, allIds, "added")
 }
 
 func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []Id) {
-	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
+	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
+	ValidateMemberHasProjectAdminAccess(myAccountRole, myProjectRole)
+	a.store.removeMembers(shard, accountId, projectId, members)
+	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "added")
 }
 
 func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*projectMember, int) {
 	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
+	return a.store.getMembers(shard, accountId, projectId, role, nameContains, offset, limit)
 }
 
 func (a *api) GetMe(shard int, accountId, projectId, myId Id) *projectMember {
-	return a.store.getProjectMember(shard, accountId, projectId, myId)
+	return a.store.getMember(shard, accountId, projectId, myId)
 }
 
 func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
-
+	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
+	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
+	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxGetEntityCount)
+	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfter, occurredBefore, limit)
 }
-
 
 type store interface {
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole
@@ -150,17 +165,22 @@ type store interface {
 	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
 	setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time)
 	deleteProject(shard int, accountId, projectId Id)
-	getProjectMember(shard int, accountId, projectId, myId Id) *projectMember
+	addMembers(shard int, accountId, projectId Id, members []*addProjectMember)
+	removeMembers(shard int, accountId, projectId Id, members []Id)
+	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*projectMember, int)
+	getMember(shard int, accountId, projectId, members Id) *projectMember
 	logAccountActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string)
 	logProjectActivity(shard int, accountId, projectId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string)
+	logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string)
+	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 }
 
-type addProjectMember struct{
+type addProjectMember struct {
 	Entity
 	Role ProjectRole `json:"role"`
 }
 
-type projectMember struct{
+type projectMember struct {
 	Entity
 	CommonTimeProps
 	Role ProjectRole `json:"role"`
