@@ -82,8 +82,8 @@ func ValidateMemberHasProjectWriteAccess(accountRole *AccountRole, projectRole *
 	}
 }
 
-func ValidateMemberHasProjectReadAccess(accountRole *AccountRole, projectRole *ProjectRole, projectIsPublic bool) {
-	if !projectIsPublic && (accountRole == nil || ((*accountRole != AccountOwner && *accountRole != AccountAdmin) && (projectRole == nil || (*projectRole != ProjectAdmin && *projectRole != ProjectWriter && *projectRole != ProjectReader)))) {
+func ValidateMemberHasProjectReadAccess(accountRole *AccountRole, projectRole *ProjectRole, projectIsPublic *bool) {
+	if projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != AccountOwner && *accountRole != AccountAdmin) && (projectRole == nil || (*projectRole != ProjectAdmin && *projectRole != ProjectWriter && *projectRole != ProjectReader))))) {
 		panic(InsufficientPermissionErr)
 	}
 }

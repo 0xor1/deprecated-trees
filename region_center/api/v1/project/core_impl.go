@@ -17,6 +17,9 @@ type api struct {
 
 func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addProjectMember) *project {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
+	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
+		panic(publicProjectsDisabledErr)
+	}
 
 	project := &project{}
 	project.Id = NewId()
@@ -54,7 +57,7 @@ func (a *api) SetDescription(shard int, accountId, projectId, myId Id, descripti
 func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic bool) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
-	if a.store.getPublicProjectsEnabled(shard, accountId) {
+	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
 		panic(publicProjectsDisabledErr)
 	}
 
@@ -152,7 +155,7 @@ func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, memb
 type store interface {
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
-	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, bool)
+	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
 	getPublicProjectsEnabled(shard int, accountId Id) bool
 	//remember to create projectLocks db row
 	createProject(shard int, accountId Id, project *project)

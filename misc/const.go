@@ -20,6 +20,7 @@ const (
 	ProjectReader = ProjectRole(2)
 
 	SortByName    = SortBy("name")
+	SortByCreatedOn = SortBy("createdon")
 	SortByStartOn = SortBy("starton")
 	SortByDueOn   = SortBy("dueon")
 
@@ -161,7 +162,7 @@ func (sd *SortDir) UnmarshalJSON(raw []byte) error {
 type SortBy string
 
 func (sb *SortBy) Validate() {
-	if sb == nil || (*sb != SortByName && *sb != SortByStartOn && *sb != SortByDueOn) {
+	if sb == nil || (*sb != SortByName && *sb != SortByCreatedOn && *sb != SortByStartOn && *sb != SortByDueOn) {
 		*sb = SortByName
 		panic(invalidConstantValueErr)
 	}

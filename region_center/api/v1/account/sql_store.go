@@ -22,6 +22,10 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
+func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRole {
+	return GetAccountRole(s.shards[shard], accountId, memberId)
+}
+
 func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId Id, publicProjectsEnabled bool) {
 	if _, err := s.shards[shard].Exec(`UPDATE accounts SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(accountId)); err != nil {
 		panic(err)
@@ -34,12 +38,7 @@ func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId Id, publicProje
 }
 
 func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
-	row := s.shards[shard].QueryRow(`SELECT publicProjectsEnabled FROM accounts WHERE id=?`, []byte(accountId))
-	res := false
-	if err := row.Scan(&res); err != nil {
-		panic(err)
-	}
-	return res
+	return GetPublicProjectsEnabled(s.shards[shard], accountId)
 }
 
 func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role AccountRole) {
@@ -58,29 +57,30 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
 }
 
 func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
-	countQuery := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true`)
-	query := bytes.NewBufferString(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
+	query := bytes.NewBufferString(`SELECT %s FROM accountMembers WHERE account=? AND isActive=true`)
+	columns := ` id, name, isActive, role `
 	args := make([]interface{}, 0, 3)
 	args = append(args, []byte(accountId))
 	if role != nil {
-		countQuery.WriteString(` AND role=?`)
 		query.WriteString(` AND role=?`)
 		args = append(args, role)
 	}
 	if nameContains != nil {
-		countQuery.WriteString(` AND name LIKE ?`)
 		query.WriteString(` AND name LIKE ?`)
 		strVal := strings.Trim(*nameContains, " ")
 		args = append(args, fmt.Sprintf("%%%s%%", strVal))
 	}
 	count := 0
-	row := s.shards[shard].QueryRow(countQuery.String(), args...)
+	row := s.shards[shard].QueryRow(fmt.Sprintf(query.String(), ` COUNT(*) `), args...)
 	if err := row.Scan(&count); err != nil {
 		panic(err)
 	}
+	if count == 0 {
+		return nil, count
+	}
 	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ? OFFSET ?`)
 	args = append(args, limit, offset)
-	rows, err := s.shards[shard].Query(query.String(), args...)
+	rows, err := s.shards[shard].Query(fmt.Sprintf(query.String(), columns), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
