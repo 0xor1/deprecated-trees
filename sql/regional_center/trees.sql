@@ -187,6 +187,48 @@ END;
 $$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS setProjectIsParallel;
+DELIMITER $$
+CREATE PROCEDURE setProjectIsParallel(_accountId BINARY(16), _id BINARY(16), _isParallel BOOL)
+BEGIN
+	DECLARE projCount TINYINT DEFAULT 0;
+    DECLARE childCount INT UNSIGNED DEFAULT 0;
+    DECLARE sumChildTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    DECLARE sumChildMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    DECLARE maxChildMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    IF _isParallel <> (SELECT isParallel FROM projects WHERE account=_accountId AND id=_id) THEN #make sure we are making a change oterwise, no need to update anything
+		START TRANSACTION;
+			SELECT COUNT(*) INTO projCount FROM projectLocks WHERE account=_accountId AND id=_id FOR UPDATE; #set project lock to ensure data integrity
+			SELECT COUNT(*), SUM(totalRemainingTime), SUM(minimumRemainingTime), MAX(minimumRemainingTime) INTO childCount, sumChildTotalRemainingTime, sumChildMinimumRemainingTime, maxChildMinimumRemainingTime FROM projects WHERE account=_accountId AND id=_id;            
+			IF childCount > 0 THEN #settings isParallel and child coutners
+				IF _isParallel THEN #setting isParallel to true
+					UPDATE projects SET totalRemainingTime=sumChildTotalRemainingTime, minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+				ELSE #setting isParallel to false
+					UPDATE projects SET totalRemainingTime=sumChildTotalRemainingTime, minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+				END IF;
+			ELSE #just setting isParallel but not time counters
+				UPDATE projects SET isParallel=_isParallel WHERE account=_accountId AND id=_id;
+			END IF;
+		COMMIT;
+    END IF;
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS deleteProject;
+DELIMITER $$
+CREATE PROCEDURE deleteProject(_accountId BINARY(16), _projectId BINARY(16))
+BEGIN
+	DELETE FROM projectMembers WHERE account=_accountId AND project=_projectId;
+	DELETE FROM projectActivities WHERE account=_accountId AND project=_projectId;
+    DELETE FROM projectLocks WHERE account=_accountId AND project=_projectId;
+	DELETE FROM projects WHERE account=_accountId AND project=_projectId;
+	DELETE FROM nodes WHERE account=_accountId AND project=_projectId;
+	DELETE FROM timeLogs WHERE account=_accountId AND project=_projectId;
+END;
+$$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS deleteAccount;
 DELIMITER $$
 CREATE PROCEDURE deleteAccount(_id BINARY(16))
