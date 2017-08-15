@@ -45,11 +45,12 @@ CREATE TABLE projectMembers(
 	project BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
+    isActive BOOL NOT NULL DEFAULT TRUE,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
     role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
-    PRIMARY KEY (account, project, role, id),
-    UNIQUE INDEX (account, project, name, id),
+    PRIMARY KEY (account, project, isActive, role, name),
+    UNIQUE INDEX (account, project, isActive, name, role),
     UNIQUE INDEX (account, project, id),
     UNIQUE INDEX (account, id, project)
 );
@@ -171,7 +172,7 @@ DELIMITER $$
 CREATE PROCEDURE setMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
 	UPDATE accountMembers SET isActive=false, role=3 WHERE account=_account AND id=_member;
-    DELETE FROM projectMembers WHERE account=_account AND id=_member;
+    UPDATE projectMembers SET isActive=false, role=4 WHERE account=_account AND id=_member;
     UPDATE nodes SET member=NULL WHERE account=_account AND member=_member;
 END;
 $$
@@ -219,9 +220,9 @@ DROP PROCEDURE IF EXISTS deleteProject;
 DELIMITER $$
 CREATE PROCEDURE deleteProject(_accountId BINARY(16), _projectId BINARY(16))
 BEGIN
+    DELETE FROM projectLocks WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projectMembers WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projectActivities WHERE account=_accountId AND project=_projectId;
-    DELETE FROM projectLocks WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projects WHERE account=_accountId AND project=_projectId;
 	DELETE FROM nodes WHERE account=_accountId AND project=_projectId;
 	DELETE FROM timeLogs WHERE account=_accountId AND project=_projectId;
@@ -233,12 +234,12 @@ DROP PROCEDURE IF EXISTS deleteAccount;
 DELIMITER $$
 CREATE PROCEDURE deleteAccount(_id BINARY(16))
 BEGIN
+    DELETE FROM projectLocks WHERE account = _id;
 	DELETE FROM accounts WHERE id =_id;
 	DELETE FROM accountMembers WHERE account =_id;
 	DELETE FROM accountActivities WHERE account =_id;
 	DELETE FROM projectMembers WHERE account =_id;
 	DELETE FROM projectActivities WHERE account =_id;
-    DELETE FROM projectLocks WHERE account = _id;
 	DELETE FROM projects WHERE account =_id;
 	DELETE FROM nodes WHERE account =_id;
 	DELETE FROM timeLogs WHERE account =_id;

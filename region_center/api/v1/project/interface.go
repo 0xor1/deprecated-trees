@@ -8,7 +8,7 @@ import (
 
 type Api interface {
 	//must be account owner/admin
-	CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addProjectMember) *project
+	CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addMemberExternal) *project
 	//must be account owner/admin
 	SetName(shard int, accountId, projectId, myId Id, name string)
 	//must be account owner/admin
@@ -28,13 +28,13 @@ type Api interface {
 	//must be account owner/admin
 	DeleteProject(shard int, accountId, projectId, myId Id)
 	//must be account owner/admin or project admin
-	AddMembers(shard int, accountId, projectId, myId Id, members []*addProjectMember)
+	AddMembers(shard int, accountId, projectId, myId Id, members []*addMemberExternal)
 	//must be account owner/admin or project admin
 	RemoveMembers(shard int, accountId, projectId, myId Id, members []Id)
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
-	GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*projectMember, int)
+	GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int)
 	//for anyone
-	GetMe(shard int, accountId, projectId, myId Id) *projectMember
+	GetMe(shard int, accountId, projectId, myId Id) *member
 	//either one or both of OccurredAfter/Before must be nil
 	GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 }

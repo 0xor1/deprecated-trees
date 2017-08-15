@@ -64,58 +64,69 @@ type api struct {
 	store store
 }
 
-func (a *api) CreateAccount(accountId, ownerId Id, ownerName string) int {
-	shard := a.store.createAccount(accountId, ownerId, ownerName)
-	a.store.logActivity(shard, accountId, ownerId, accountId, "account", "created")
+func (a *api) CreateAccount(accountId, myId Id, myName string) int {
+	shard := a.store.createAccount(accountId, myId, myName)
+	a.store.logActivity(shard, accountId, myId, accountId, "account", "created")
 	return shard
 }
 
-func (a *api) DeleteAccount(shard int, accountId, ownerId Id) {
-	if !ownerId.Equal(accountId) {
-		ValidateMemberHasAccountOwnerAccess(a.store.getAccountRole(shard, accountId, ownerId))
+func (a *api) DeleteAccount(shard int, accountId, myId Id) {
+	if !myId.Equal(accountId) {
+		ValidateMemberHasAccountOwnerAccess(a.store.getAccountRole(shard, accountId, myId))
 	}
-	//TODO delete s3 data, uploaded files etc
 	a.store.deleteAccount(shard, accountId)
+	//TODO delete s3 data, uploaded files etc
 }
 
-func (a *api) AddMembers(shard int, accountId, actorId Id, members []*AddMemberInternal) {
-	if accountId.Equal(actorId) {
+func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInternal) {
+	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
-	accountRole := a.store.getAccountRole(shard, accountId, actorId)
+	accountRole := a.store.getAccountRole(shard, accountId, myId)
 	ValidateMemberHasAccountAdminAccess(accountRole)
 
-	pastMembers := make([]*AddMemberInternal, 0, len(members))
-	newMembers := make([]*AddMemberInternal, 0, len(members))
 	allIds := make([]Id, 0, len(members))
-	for _, mem := range members {
+	newMembersMap := map[string]*AddMemberInternal{}
+	for _, mem := range members { //loop over all the new entries and check permissions and build up useful id map and allIds slice
 		mem.Role.Validate()
 		if mem.Role == AccountOwner {
 			ValidateMemberHasAccountOwnerAccess(accountRole)
 		}
-		existingMember := a.store.getMember(shard, accountId, mem.Id)
-		if existingMember == nil {
-			newMembers = append(newMembers, mem)
-		} else if !existingMember.IsActive || existingMember.Role != mem.Role {
-			pastMembers = append(pastMembers, mem)
-		}
+		newMembersMap[mem.Id.String()] = mem
 		allIds = append(allIds, mem.Id)
+	}
+
+	inactiveMemberIds := a.store.getAllInactiveMemberIdsFromInputSet(shard, accountId, allIds)
+	inactiveMembers := make([]*AddMemberInternal, 0, len(inactiveMemberIds))
+	for _, inactiveMemberId := range inactiveMemberIds {
+		idStr := inactiveMemberId.String()
+		inactiveMembers = append(inactiveMembers, newMembersMap[idStr])
+		delete(newMembersMap, idStr)
+	}
+
+	newMembers := make([]*AddMemberInternal, 0, len(newMembersMap))
+	for _, newMem := range newMembersMap {
+		newMembers = append(newMembers, newMem)
 	}
 
 	if len(newMembers) > 0 {
 		a.store.addMembers(shard, accountId, newMembers)
 	}
-	if len(pastMembers) > 0 {
-		a.store.updateMembersAndSetActive(shard, accountId, pastMembers) //has to be AddMemberInternal in case the member changed their name whilst they were inactive on the account
+	if len(inactiveMembers) > 0 {
+		a.store.updateMembersAndSetActive(shard, accountId, inactiveMembers) //has to be AddMemberInternal in case the member changed their name whilst they were inactive on the account
 	}
-	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, actorId, allIds, "added")
+	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, myId, allIds, "added")
 }
 
-func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
-	if accountId.Equal(admin) {
+func (a *api) RemoveMembers(shard int, accountId, myId Id, members []Id) {
+	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
-	accountRole := a.store.getAccountRole(shard, accountId, admin)
+
+	accountRole := a.store.getAccountRole(shard, accountId, myId)
+	if accountRole == nil {
+		panic(InsufficientPermissionErr)
+	}
 
 	switch *accountRole {
 	case AccountOwner:
@@ -131,13 +142,13 @@ func (a *api) RemoveMembers(shard int, accountId, admin Id, members []Id) {
 			panic(InsufficientPermissionErr)
 		}
 	default:
-		if len(members) != 1 || !members[0].Equal(admin) { //member can remove themselves
+		if len(members) != 1 || !members[0].Equal(myId) { //any member can remove themselves
 			panic(InsufficientPermissionErr)
 		}
 	}
 
 	a.store.setMembersInactive(shard, accountId, members)
-	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, admin, members, "removed")
+	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, myId, members, "removed")
 }
 
 func (a *api) MemberIsOnlyAccountOwner(shard int, accountId, member Id) bool {
@@ -155,8 +166,8 @@ func (a *api) RenameMember(shard int, accountId, memberId Id, newName string) {
 
 func (a *api) MemberIsAccountOwner(shard int, accountId, myId Id) bool {
 	if !myId.Equal(accountId) {
-		member := a.store.getMember(shard, accountId, myId)
-		if member != nil && member.Role == AccountOwner {
+		accountRole := a.store.getAccountRole(shard, accountId, myId)
+		if accountRole != nil && *accountRole == AccountOwner {
 			return true
 		} else {
 			return false
@@ -168,7 +179,7 @@ func (a *api) MemberIsAccountOwner(shard int, accountId, myId Id) bool {
 type store interface {
 	createAccount(id, ownerId Id, ownerName string) int
 	deleteAccount(shard int, account Id)
-	getMember(shard int, accountId, memberId Id) *AccountMember
+	getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, members []Id) []Id
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole
 	addMembers(shard int, accountId Id, members []*AddMemberInternal)
 	updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberInternal)

@@ -72,8 +72,6 @@ type CreatedNamedEntity struct {
 	CreatedOn time.Time `json:"createdOn"`
 }
 
-type GenCreatedNamedEntity func(name string) *CreatedNamedEntity
-
 func NewCreatedNamedEntity(name string) *CreatedNamedEntity {
 	return &CreatedNamedEntity{
 		NamedEntity: NamedEntity{

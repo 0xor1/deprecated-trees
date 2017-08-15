@@ -15,25 +15,25 @@ import (
 )
 
 var (
-	noSuchRegionErr                       = &Error{Code: "cd_v1_acc_nsr", Msg: "no such region", IsPublic: true}
-	noSuchAccountErr                      = &Error{Code: "cd_v1_acc_nsa", Msg: "no such account", IsPublic: true}
-	invalidActivationAttemptErr           = &Error{Code: "cd_v1_acc_iaa", Msg: "invalid activation attempt", IsPublic: true}
-	invalidResetPwdAttemptErr             = &Error{Code: "cd_v1_acc_irpa", Msg: "invalid reset password attempt", IsPublic: true}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: "cd_v1_acc_ineca", Msg: "invalid new email confirmation attempt", IsPublic: true}
-	invalidNameOrPwdErr                   = &Error{Code: "cd_v1_acc_inop", Msg: "invalid name or password", IsPublic: true}
-	incorrectPwdErr                       = &Error{Code: "cd_v1_acc_ip", Msg: "password incorrect", IsPublic: true}
-	accountNotActivatedErr                = &Error{Code: "cd_v1_acc_ana", Msg: "account not activated", IsPublic: true}
-	emailAlreadyInUseErr                  = &Error{Code: "cd_v1_acc_eaiu", Msg: "email already in use", IsPublic: true}
-	nameAlreadyInUseErr                   = &Error{Code: "cd_v1_acc_naiu", Msg: "name already in use", IsPublic: true}
-	emailConfirmationCodeErr              = &Error{Code: "cd_v1_acc_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
-	noNewEmailRegisteredErr               = &Error{Code: "cd_v1_acc_nner", Msg: "no new email registered", IsPublic: true}
-	maxEntityCountExceededErr             = &Error{Code: "cd_v1_acc_mece", Msg: "max entity count exceeded", IsPublic: true}
-	onlyOwnerMemberErr                    = &Error{Code: "cd_v1_acc_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
-	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_acc_ias", Msg: "avatar images must be square", IsPublic: true}
+	noSuchRegionErr                       = &Error{Code: "cd_v1_a_nsr", Msg: "no such region", IsPublic: true}
+	noSuchAccountErr                      = &Error{Code: "cd_v1_a_nsa", Msg: "no such account", IsPublic: true}
+	invalidActivationAttemptErr           = &Error{Code: "cd_v1_a_iaa", Msg: "invalid activation attempt", IsPublic: true}
+	invalidResetPwdAttemptErr             = &Error{Code: "cd_v1_a_irpa", Msg: "invalid reset password attempt", IsPublic: true}
+	invalidNewEmailConfirmationAttemptErr = &Error{Code: "cd_v1_a_ineca", Msg: "invalid new email confirmation attempt", IsPublic: true}
+	invalidNameOrPwdErr                   = &Error{Code: "cd_v1_a_inop", Msg: "invalid name or password", IsPublic: true}
+	incorrectPwdErr                       = &Error{Code: "cd_v1_a_ip", Msg: "password incorrect", IsPublic: true}
+	accountNotActivatedErr                = &Error{Code: "cd_v1_a_ana", Msg: "account not activated", IsPublic: true}
+	emailAlreadyInUseErr                  = &Error{Code: "cd_v1_a_eaiu", Msg: "email already in use", IsPublic: true}
+	nameAlreadyInUseErr                   = &Error{Code: "cd_v1_a_naiu", Msg: "name already in use", IsPublic: true}
+	emailConfirmationCodeErr              = &Error{Code: "cd_v1_a_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
+	noNewEmailRegisteredErr               = &Error{Code: "cd_v1_a_nner", Msg: "no new email registered", IsPublic: true}
+	maxEntityCountExceededErr             = &Error{Code: "cd_v1_a_mece", Msg: "max entity count exceeded", IsPublic: true}
+	onlyOwnerMemberErr                    = &Error{Code: "cd_v1_a_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
+	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", IsPublic: true}
 )
 
-func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, newCreatedNamedEntity GenCreatedNamedEntity, cryptoHelper CryptoHelper, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
-	if store == nil || internalRegionClient == nil || linkMailer == nil || avatarStore == nil || newCreatedNamedEntity == nil || cryptoHelper == nil {
+func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
+	if store == nil || internalRegionClient == nil || linkMailer == nil || avatarStore == nil {
 		panic(InvalidArgumentsErr)
 	}
 	//compile regexs
@@ -50,8 +50,6 @@ func newApi(store store, internalRegionClient InternalRegionClient, linkMailer l
 		internalRegionClient:  internalRegionClient,
 		linkMailer:            linkMailer,
 		avatarStore:           avatarStore,
-		newCreatedNamedEntity: newCreatedNamedEntity,
-		cryptoHelper:          cryptoHelper,
 		nameRegexMatchers:     nameRegexes,
 		pwdRegexMatchers:      pwdRegexes,
 		maxAvatarDim:          maxAvatarDim,
@@ -74,8 +72,6 @@ type api struct {
 	internalRegionClient  InternalRegionClient
 	linkMailer            linkMailer
 	avatarStore           avatarStore
-	newCreatedNamedEntity GenCreatedNamedEntity
-	cryptoHelper          CryptoHelper
 	nameRegexMatchers     []*regexp.Regexp
 	pwdRegexMatchers      []*regexp.Regexp
 	maxAvatarDim          uint
@@ -117,8 +113,8 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 		a.linkMailer.sendMultipleAccountPolicyEmail(acc.Email)
 	}
 
-	accCore := a.newCreatedNamedEntity(name)
-	activationCode := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
+	accCore := NewCreatedNamedEntity(name)
+	activationCode := CryptoUrlSafeString(a.cryptoCodeLen)
 	acc := &fullPersonalAccountInfo{}
 	acc.CreatedNamedEntity = *accCore
 	acc.Region = region
@@ -130,8 +126,8 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 	acc.activationCode = &activationCode
 
 	pwdInfo := &pwdInfo{}
-	pwdInfo.salt = a.cryptoHelper.Bytes(a.saltLen)
-	pwdInfo.pwd = a.cryptoHelper.ScryptKey([]byte(pwd), pwdInfo.salt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	pwdInfo.salt = CryptoBytes(a.saltLen)
+	pwdInfo.pwd = ScryptKey([]byte(pwd), pwdInfo.salt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	pwdInfo.n = a.scryptN
 	pwdInfo.r = a.scryptR
 	pwdInfo.p = a.scryptP
@@ -176,7 +172,7 @@ func (a *api) Authenticate(email, pwdTry string) Id {
 	}
 
 	pwdInfo := a.store.getPwdInfo(acc.Id)
-	scryptPwdTry := a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+	scryptPwdTry := ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
 		panic(invalidNameOrPwdErr)
 	}
@@ -193,12 +189,12 @@ func (a *api) Authenticate(email, pwdTry string) Id {
 	}
 	// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 	if pwdInfo.n != a.scryptN || pwdInfo.r != a.scryptR || pwdInfo.p != a.scryptP || pwdInfo.keyLen != a.scryptKeyLen || len(pwdInfo.salt) < a.saltLen {
-		pwdInfo.salt = a.cryptoHelper.Bytes(a.saltLen)
+		pwdInfo.salt = CryptoBytes(a.saltLen)
 		pwdInfo.n = a.scryptN
 		pwdInfo.r = a.scryptR
 		pwdInfo.p = a.scryptP
 		pwdInfo.keyLen = a.scryptKeyLen
-		pwdInfo.pwd = a.cryptoHelper.ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+		pwdInfo.pwd = ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 		a.store.updatePwdInfo(acc.Id, pwdInfo)
 
 	}
@@ -229,7 +225,7 @@ func (a *api) ResetPwd(email string) {
 		return
 	}
 
-	resetPwdCode := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
+	resetPwdCode := CryptoUrlSafeString(a.cryptoCodeLen)
 
 	acc.resetPwdCode = &resetPwdCode
 	a.store.updatePersonalAccount(acc)
@@ -245,8 +241,8 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) {
 		panic(invalidResetPwdAttemptErr)
 	}
 
-	scryptSalt := a.cryptoHelper.Bytes(a.saltLen)
-	scryptPwd := a.cryptoHelper.ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	scryptSalt := CryptoBytes(a.saltLen)
+	scryptPwd := ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 
 	if acc.activationCode != nil {
 		shard := a.internalRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
@@ -296,14 +292,14 @@ func (a *api) SetMyPwd(myId Id, oldPwd, newPwd string) {
 		panic(noSuchAccountErr)
 	}
 
-	scryptPwdTry := a.cryptoHelper.ScryptKey([]byte(oldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+	scryptPwdTry := ScryptKey([]byte(oldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 
 	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
 		panic(incorrectPwdErr)
 	}
 
-	pwdInfo.salt = a.cryptoHelper.Bytes(a.saltLen)
-	pwdInfo.pwd = a.cryptoHelper.ScryptKey([]byte(newPwd), pwdInfo.salt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
+	pwdInfo.salt = CryptoBytes(a.saltLen)
+	pwdInfo.pwd = ScryptKey([]byte(newPwd), pwdInfo.salt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 	pwdInfo.n = a.scryptN
 	pwdInfo.r = a.scryptR
 	pwdInfo.p = a.scryptP
@@ -324,7 +320,7 @@ func (a *api) SetMyEmail(myId Id, newEmail string) {
 		panic(noSuchAccountErr)
 	}
 
-	confirmationCode := a.cryptoHelper.UrlSafeString(a.cryptoCodeLen)
+	confirmationCode := CryptoUrlSafeString(a.cryptoCodeLen)
 
 	acc.NewEmail = &newEmail
 	acc.newEmailConfirmationCode = &confirmationCode
@@ -460,7 +456,7 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 		panic(nameAlreadyInUseErr)
 	}
 
-	accountCore := a.newCreatedNamedEntity(name)
+	accountCore := NewCreatedNamedEntity(name)
 
 	account := &account{
 		CreatedNamedEntity: *accountCore,

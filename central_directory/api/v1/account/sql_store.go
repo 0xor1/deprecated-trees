@@ -131,14 +131,12 @@ func (s *sqlStore) getAccount(id Id) *account {
 
 func (s *sqlStore) getAccounts(ids []Id) []*account {
 	castedIds := make([]interface{}, 0, len(ids))
-	var query bytes.Buffer
-	query.WriteString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (`)
+	query := bytes.NewBufferString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (`)
 	for i, id := range ids {
-		if i == 0 {
-			query.WriteString(`?`)
-		} else {
-			query.WriteString(`, ?`)
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`?`)
 		castedIds = append(castedIds, []byte(id))
 	}
 	query.WriteString(`);`)
@@ -163,14 +161,12 @@ func (s *sqlStore) getAccounts(ids []Id) []*account {
 
 func (s *sqlStore) getPersonalAccounts(ids []Id) []*account {
 	castedIds := make([]interface{}, 0, len(ids))
-	var query bytes.Buffer
-	query.WriteString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE isPersonal = true AND id IN (`)
+	query := bytes.NewBufferString(`SELECT id, name, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE isPersonal = true AND id IN (`)
 	for i, id := range ids {
-		if i == 0 {
-			query.WriteString(`?`)
-		} else {
-			query.WriteString(`, ?`)
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`?`)
 		castedIds = append(castedIds, []byte(id))
 	}
 	query.WriteString(`);`)
@@ -225,15 +221,13 @@ func (s *sqlStore) getGroupAccounts(memberId Id, offset, limit int) ([]*account,
 }
 
 func (s *sqlStore) createMemberships(accountId Id, members []Id) {
-	var query bytes.Buffer
 	args := make([]interface{}, 0, len(members)*2)
-	query.WriteString(`INSERT INTO memberships (account, member) VALUES `)
+	query := bytes.NewBufferString(`INSERT INTO memberships (account, member) VALUES `)
 	for i, member := range members {
-		if i == 0 {
-			query.WriteString(`(?, ?)`)
-		} else {
-			query.WriteString(`, (?, ?)`)
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`(?, ?)`)
 		args = append(args, []byte(accountId), []byte(member))
 	}
 	if _, err := s.accountsDB.Exec(query.String(), args...); err != nil {
@@ -244,14 +238,12 @@ func (s *sqlStore) createMemberships(accountId Id, members []Id) {
 func (s *sqlStore) deleteMemberships(accountId Id, members []Id) {
 	castedIds := make([]interface{}, 0, len(members)+1)
 	castedIds = append(castedIds, []byte(accountId))
-	var query bytes.Buffer
-	query.WriteString(`DELETE FROM memberships WHERE account=? AND member IN (`)
+	query := bytes.NewBufferString(`DELETE FROM memberships WHERE account=? AND member IN (`)
 	for i, member := range members {
-		if i == 0 {
-			query.WriteString(`?`)
-		} else {
-			query.WriteString(`, ?`)
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`?`)
 		castedIds = append(castedIds, []byte(member))
 	}
 	query.WriteString(`);`)

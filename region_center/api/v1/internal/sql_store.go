@@ -35,16 +35,32 @@ func (s *sqlStore) deleteAccount(shard int, account Id) {
 	}
 }
 
-func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
-	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
-	res := AccountMember{}
-	if err := row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
+func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, members []Id) []Id {
+	queryArgs := make([]interface{}, 0, len(members)+1)
+	queryArgs = append(queryArgs, []byte(accountId))
+	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (`)
+	for i, mem := range members {
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`?`)
+		queryArgs = append(queryArgs, []byte(mem))
+	}
+	query.WriteString(`);`)
+	res := make([]Id, 0, len(members))
+	rows, err := s.shards[shard].Query(query.String(), queryArgs...)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
 		panic(err)
 	}
-	return &res
+	for rows.Next() {
+		id := make([]byte, 0, 16)
+		rows.Scan(&id)
+		res = append(res, Id(id))
+	}
+	return res
 }
 
 func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRole {
@@ -60,15 +76,13 @@ func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRol
 }
 
 func (s *sqlStore) addMembers(shard int, accountId Id, members []*AddMemberInternal) {
-	var query bytes.Buffer
 	queryArgs := make([]interface{}, 0, 3*len(members))
-	query.WriteString(`INSERT INTO accountMembers (account, id, name, role) VALUES `)
+	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, role) VALUES `)
 	for i, mem := range members {
-		if i == 0 {
-			query.WriteString(`(?, ?, ?, ?)`)
-		} else {
-			query.WriteString(`, (?, ?, ?, ?)`)
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`(?, ?, ?, ?)`)
 		queryArgs = append(queryArgs, []byte(accountId), []byte(mem.Id), mem.Name, mem.Role)
 	}
 	if _, err := s.shards[shard].Exec(query.String(), queryArgs...); err != nil {
@@ -95,14 +109,12 @@ func (s *sqlStore) getTotalOwnerCount(shard int, accountId Id) int {
 func (s *sqlStore) getOwnerCountInSet(shard int, accountId Id, members []Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, []byte(accountId))
-	var query bytes.Buffer
-	query.WriteString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (`)
+	query := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (`)
 	for i, mem := range members {
-		if i == 0 {
-			query.WriteString(`?`)
-		} else {
-			query.WriteString(`, ?`)
+		if i != 0 {
+			query.WriteString(`,`)
 		}
+		query.WriteString(`?`)
 		queryArgs = append(queryArgs, []byte(mem))
 	}
 	query.WriteString(`);`)

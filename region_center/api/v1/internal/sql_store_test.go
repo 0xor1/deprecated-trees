@@ -34,14 +34,6 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	groupAccountShard := store.createAccount(groupAccountId, aliId, "ali")
 	assert.Equal(t, 0, groupAccountShard)
 
-	ali := store.getMember(groupAccountShard, groupAccountId, aliId)
-	aliAccountRole := store.getAccountRole(groupAccountShard, groupAccountId, aliId)
-	assert.Equal(t, aliId, ali.Id)
-	assert.Equal(t, AccountOwner, ali.Role)
-	assert.Equal(t, "ali", ali.Name)
-	assert.Equal(t, true, ali.IsActive)
-	assert.Equal(t, AccountOwner, *aliAccountRole)
-
 	bob := &AddMemberInternal{}
 	bob.Id = NewId()
 	bob.Name = "bob"
@@ -69,19 +61,11 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, totalOwnerCount)
 
 	store.renameMember(groupAccountShard, groupAccountId, bob.Id, "jimbob")
-	mem2 := store.getMember(groupAccountShard, groupAccountId, bob.Id)
-	assert.Equal(t, bob.Id, mem2.Id)
-	assert.Equal(t, AccountAdmin, mem2.Role)
-	assert.Equal(t, "jimbob", mem2.Name)
-	assert.Equal(t, true, mem2.IsActive)
+	inactiveMembers := store.getAllInactiveMemberIdsFromInputSet(groupAccountShard, groupAccountId, []Id{cat.Id, bob.Id})
+	assert.Equal(t, 1, len(inactiveMembers))
+	assert.True(t, inactiveMembers[0].Equal(cat.Id))
 
-	mem3 := store.getMember(groupAccountShard, groupAccountId, cat.Id)
-	assert.Equal(t, cat.Id, mem3.Id)
-	assert.Equal(t, AccountMemberOfOnlySpecificProjects, mem3.Role)
-	assert.Equal(t, "cat", mem3.Name)
-	assert.Equal(t, false, mem3.IsActive)
-
-	store.logActivity(groupAccountShard, groupAccountId, ali.Id, cat.Id, "member", "added")
+	store.logActivity(groupAccountShard, groupAccountId, bob.Id, cat.Id, "member", "added")
 
 	store.deleteAccount(groupAccountShard, groupAccountId)
 	totalOwnerCount = store.getTotalOwnerCount(groupAccountShard, groupAccountId)

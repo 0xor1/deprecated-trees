@@ -16,7 +16,7 @@ func main() {
 	l := int(lTmp)
 	ch := misc.NewCryptoHelper()
 	for i := 0; i < n; i++ {
-		bs, _ := ch.Bytes(l)
+		bs, _ := ch.CryptoBytes(l)
 		fmt.Println(fmt.Sprintf("%x", bs))
 	}
 }

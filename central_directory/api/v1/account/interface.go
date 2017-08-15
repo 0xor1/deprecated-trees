@@ -37,7 +37,7 @@ type Api interface {
 
 // Return a new account Api backed by sql storage and sending link emails via an email service
 func NewApi(internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int, accountsDb, pwdsDb isql.DB) Api {
-	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionClient, linkMailer, avatarStore, NewCreatedNamedEntity, NewCryptoHelper(), nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen)
+	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionClient, linkMailer, avatarStore, nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxSearchLimitResults, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen)
 }
 
 func NewLogLinkMailer(log Log) linkMailer {

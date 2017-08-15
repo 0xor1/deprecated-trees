@@ -9,20 +9,7 @@ import (
 
 var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-type CryptoHelper interface {
-	Bytes(length int) []byte
-	UrlSafeString(length int) string
-	ScryptKey(password, salt []byte, N, r, p, keyLen int) []byte
-}
-
-func NewCryptoHelper() CryptoHelper {
-	return &cryptoHelper{}
-}
-
-type cryptoHelper struct {
-}
-
-func (c *cryptoHelper) Bytes(length int) []byte {
+func CryptoBytes(length int) []byte {
 	k := make([]byte, length)
 	if _, err := io.ReadFull(rand.Reader, k); err != nil {
 		panic(err)
@@ -30,7 +17,7 @@ func (c *cryptoHelper) Bytes(length int) []byte {
 	return k
 }
 
-func (c *cryptoHelper) UrlSafeString(length int) string {
+func CryptoUrlSafeString(length int) string {
 	buf := make([]rune, length)
 	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
 	for i := range buf {
@@ -43,7 +30,7 @@ func (c *cryptoHelper) UrlSafeString(length int) string {
 	return string(buf)
 }
 
-func (c *cryptoHelper) ScryptKey(password, salt []byte, N, r, p, keyLen int) []byte {
+func ScryptKey(password, salt []byte, N, r, p, keyLen int) []byte {
 	key, err := scrypt.Key(password, salt, N, r, p, keyLen)
 	if err != nil {
 		panic(err)

@@ -7,7 +7,7 @@ import (
 )
 
 func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole {
-	row := shard.QueryRow(`SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := shard.QueryRow(`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)
 	if err := row.Scan(&res); err != nil {
 		if err == sql.ErrNoRows {
@@ -21,7 +21,7 @@ func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole 
 func GetAccountAndProjectRoles(shard isql.ReplicaSet, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole) {
 	accountIdBytes := []byte(accountId)
 	memberIdBytes := []byte(memberId)
-	row := shard.QueryRow(`SELECT role accountRole, (SELECT role FROM projectMembers WHERE account=? AND project=? AND id=?) projectRole FROM accountMembers WHERE account=? AND id=?`, accountIdBytes, []byte(projectId), memberIdBytes, accountIdBytes, memberIdBytes)
+	row := shard.QueryRow(`SELECT role accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountIdBytes, []byte(projectId), memberIdBytes, accountIdBytes, memberIdBytes)
 	accRole := AccountRole(3)
 	projRole := ProjectRole(2)
 	if err := row.Scan(&accRole, &projRole); err != nil {
@@ -37,7 +37,7 @@ func GetAccountAndProjectRolesAndProjectIsPublic(shard isql.ReplicaSet, accountI
 	accountIdBytes := []byte(accountId)
 	projectIdBytes := []byte(projectId)
 	memberIdBytes := []byte(memberId)
-	row := shard.QueryRow(`SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND project=? AND id=?) projectRole FROM projects WHERE account=? AND project=?`, accountIdBytes, memberIdBytes, accountIdBytes, projectIdBytes, memberIdBytes, accountIdBytes, projectIdBytes)
+	row := shard.QueryRow(`SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND project=?`, accountIdBytes, memberIdBytes, accountIdBytes, projectIdBytes, memberIdBytes, accountIdBytes, projectIdBytes)
 	isPublic := false
 	accRole := AccountRole(3)
 	projRole := ProjectRole(2)

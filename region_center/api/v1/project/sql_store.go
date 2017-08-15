@@ -72,7 +72,7 @@ func (s *sqlStore) getPublicProjects(shard int, accountId Id, nameContains *stri
 }
 
 func (s *sqlStore) getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
-	return getProjects(s.shards[shard], `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+	return getProjects(s.shards[shard], `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
 }
 
 func (s *sqlStore) getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
@@ -87,20 +87,64 @@ func (s *sqlStore) deleteProject(shard int, accountId, projectId Id) {
 	s.shards[shard].Exec(`CALL deleteProject(?, ?)`, []byte(accountId), []byte(projectId))
 }
 
-func (s *sqlStore) addMembers(shard int, accountId, projectId Id, members []*addProjectMember) {
-
+func (s *sqlStore) addMembers(shard int, accountId, projectId Id, members []*addMemberExternal) {
+	query := bytes.NewBufferString(`INSERT INTO projectMembers (account, project, id, name, isActive, totalRemainingTime, totalLoggedTime, role) VALUES`)
+	args := make([]interface{}, 0, len(members)+1)
+	args = append(args, []byte(accountId))
+	for i, mem := range members {
+		if i != 0 {
+			query.WriteString(`,`)
+		}
+		query.WriteString(`, ()`)
+		args = append(args, []byte(id))
+	}
+	query.WriteString(`)`)
+	row := s.shards[shard].QueryRow(query.String(), args...)
+	res := 0
+	if err := row.Scan(&res); err != nil {
+		panic(err)
+	}
+	return res == len(allIds)
 }
 
 func (s *sqlStore) removeMembers(shard int, accountId, projectId Id, members []Id) {
 
 }
 
-func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*projectMember, int) {
+func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int) {
 
 }
 
-func (s *sqlStore) getMember(shard int, accountId, projectId, members Id) *projectMember {
+func (s *sqlStore) getMember(shard int, accountId, projectId, members Id) *member {
 
+}
+
+func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId, projectId Id, members []*addMemberExternal) []Id {
+	queryArgs := make([]interface{}, 0, len(members)+3)
+	queryArgs = append(queryArgs, []byte(accountId), []byte(projectId), []byte(accountId))
+	query := bytes.NewBufferString(`SELECT id FROM projectMembers WHERE account=? AND projectId=? AND isActive=false AND id IN (SELECT id FROM accountMembers WHERE account=? AND isActive=true AND id IN(`)
+	for i, mem := range members {
+		if i != 0 {
+			query.WriteString(`,`)
+		}
+		query.WriteString(`?`)
+		queryArgs = append(queryArgs, []byte(mem.Id))
+	}
+	query.WriteString(`));`)
+	res := make([]Id, 0, len(members))
+	rows, err := s.shards[shard].Query(query.String(), queryArgs...)
+	if rows != nil {
+		defer rows.Close()
+	}
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		id := make([]byte, 0, 16)
+		rows.Scan(&id)
+		res = append(res, Id(id))
+	}
+	return res
 }
 
 func (s *sqlStore) logAccountActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string) {
