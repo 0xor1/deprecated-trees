@@ -87,9 +87,9 @@ func (s *sqlStore) deleteProject(shard int, accountId, projectId Id) {
 	s.shards[shard].Exec(`CALL deleteProject(?, ?)`, []byte(accountId), []byte(projectId))
 }
 
-func (s *sqlStore) addMembers(shard int, accountId, projectId Id, members []*addMemberExternal) {
+func (s *sqlStore) addMembers(shard int, accountId, projectId Id, members []*addMemberInternal) {
 	query := bytes.NewBufferString(`INSERT INTO projectMembers (account, project, id, name, isActive, totalRemainingTime, totalLoggedTime, role) VALUES`)
-	args := make([]interface{}, 0, len(members)+1)
+	args := make([]interface{}, 0, (len(members)*8)+2)
 	args = append(args, []byte(accountId))
 	for i, mem := range members {
 		if i != 0 {
@@ -107,7 +107,11 @@ func (s *sqlStore) addMembers(shard int, accountId, projectId Id, members []*add
 	return res == len(allIds)
 }
 
-func (s *sqlStore) removeMembers(shard int, accountId, projectId Id, members []Id) {
+func (s *sqlStore) setMembersActive(shard int, accountId, projectId Id, members []Id) {
+
+}
+
+func (s *sqlStore) setMembersInactive(shard int, accountId, projectId Id, members []Id) {
 
 }
 
@@ -145,6 +149,10 @@ func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId, pro
 		res = append(res, Id(id))
 	}
 	return res
+}
+
+func (s *sqlStore) getNewMemberNames(shard int, accountId Id, members []Id) []*NamedEntity {
+
 }
 
 func (s *sqlStore) logAccountActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string) {

@@ -31,6 +31,14 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	project.IsParallel = isParallel
 	project.IsPublic = isPublic
 	a.store.createProject(shard, accountId, project)
+	if accountId.Equal(myId) {
+		myNamedEntity := a.store.getNewMemberNames(shard, accountId, []Id{myId})
+		addMemIn := &addMemberInternal{}
+		addMemIn.Id = myId
+		addMemIn.Name = myNamedEntity[0].Name
+		addMemIn.Role = ProjectAdmin
+		a.store.addMembers(shard, accountId, project.Id, []*addMemberInternal{addMemIn})
+	}
 
 	a.store.logAccountActivity(shard, accountId, Now(), myId, project.Id, "project", "created", nil)
 	a.store.logProjectActivity(shard, accountId, project.Id, Now(), myId, project.Id, "project", "created", nil)
@@ -121,8 +129,8 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
-	accountRole := a.store.getAccountRole(shard, accountId, myId)
-	ValidateMemberHasAccountAdminAccess(accountRole)
+	accountRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
+	ValidateMemberHasProjectAdminAccess(accountRole, projectRole)
 
 	newMembersMap := map[string]*addMemberInternal{}
 	for _, mem := range members {
@@ -153,20 +161,30 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 		newMemberIds = append(newMemberIds, newMem.Id)
 	}
 
-	if len(newMembers) > 0 {
+	newMembersLen := len(newMembers)
+	if newMembersLen > 0 {
 		a.store.addMembers(shard, accountId, projectId, newMembers)
-		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, newMemberIds, "added")
 	}
-	if len(inactiveMembers) > 0 {
+	inactiveMembersLen := len(inactiveMembers)
+	if inactiveMembersLen > 0 {
 		a.store.setMembersActive(shard, accountId, projectId, inactiveMembers)
 		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, inactiveMembers, "added")
+	}
+	if newMembersLen + inactiveMembersLen > 0 {
+		allAddedIds := make([]Id, 0, newMembersLen + inactiveMembersLen)
+		allAddedIds = append(allAddedIds, newMemberIds...)
+		allAddedIds = append(allAddedIds, inactiveMembers...)
+		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, allAddedIds, "added")
 	}
 }
 
 func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []Id) {
+	if accountId.Equal(myId) {
+		panic(InvalidOperationErr)
+	}
 	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectAdminAccess(myAccountRole, myProjectRole)
-	a.store.removeMembers(shard, accountId, projectId, members)
+	a.store.setMembersInactive(shard, accountId, projectId, members)
 	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "added")
 }
 
@@ -206,7 +224,7 @@ type store interface {
 	deleteProject(shard int, accountId, projectId Id)
 	addMembers(shard int, accountId, projectId Id, members []*addMemberInternal)
 	setMembersActive(shard int, accountId, projectId Id, members []Id)
-	removeMembers(shard int, accountId, projectId Id, members []Id)
+	setMembersInactive(shard int, accountId, projectId Id, members []Id)
 	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int)
 	getMember(shard int, accountId, projectId, member Id) *member
 	getAllInactiveMemberIdsFromInputSet(shard int, accountId, projectId Id, members []*addMemberExternal) []Id
