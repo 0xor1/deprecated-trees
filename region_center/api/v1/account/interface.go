@@ -3,7 +3,6 @@ package account
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
 	"github.com/0xor1/isql"
-	"time"
 )
 
 type Api interface {
@@ -16,14 +15,14 @@ type Api interface {
 	//pointers are optional filters
 	GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int)
 	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(shard int, accountId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
+	GetActivities(shard int, accountId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 	//for anyone
 	GetMe(shard int, accountId, myId Id) *AccountMember
 }
 
-func NewApi(shards map[int]isql.ReplicaSet, maxGetEntityCount int) Api {
+func NewApi(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {
 	return &api{
-		store:             newSqlStore(shards),
-		maxGetEntityCount: maxGetEntityCount,
+		store:                 newSqlStore(shards),
+		maxProcessEntityCount: maxProcessEntityCount,
 	}
 }

@@ -62,6 +62,7 @@ func (c *client) MemberIsAccountOwner(region string, shard int, accountId, myId 
 
 type api struct {
 	store store
+	maxProcessEntityCount int
 }
 
 func (a *api) CreateAccount(accountId, myId Id, myName string) int {
@@ -79,6 +80,9 @@ func (a *api) DeleteAccount(shard int, accountId, myId Id) {
 }
 
 func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInternal) {
+	if len(members) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
+	}
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
@@ -119,6 +123,9 @@ func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInte
 }
 
 func (a *api) RemoveMembers(shard int, accountId, myId Id, members []Id) {
+	if len(members) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
+	}
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}

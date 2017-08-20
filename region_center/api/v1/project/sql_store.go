@@ -89,22 +89,19 @@ func (s *sqlStore) deleteProject(shard int, accountId, projectId Id) {
 
 func (s *sqlStore) addMembers(shard int, accountId, projectId Id, members []*addMemberInternal) {
 	query := bytes.NewBufferString(`INSERT INTO projectMembers (account, project, id, name, isActive, totalRemainingTime, totalLoggedTime, role) VALUES`)
-	args := make([]interface{}, 0, (len(members)*8)+2)
-	args = append(args, []byte(accountId))
+	args := make([]interface{}, 0, len(members)*8)
+	accountIdBytes := []byte(accountId)
+	projectIdBytes := []byte(projectId)
 	for i, mem := range members {
 		if i != 0 {
 			query.WriteString(`,`)
 		}
-		query.WriteString(`, ()`)
-		args = append(args, []byte(id))
+		query.WriteString(`(?, ?, ?, ?, ?, ?, ?, ?)`)
+		args = append(args, accountIdBytes, projectIdBytes, []byte(mem.Id), mem.Name, true, 0, 0, mem.Role)
 	}
-	query.WriteString(`)`)
-	row := s.shards[shard].QueryRow(query.String(), args...)
-	res := 0
-	if err := row.Scan(&res); err != nil {
+	if _, err := s.shards[shard].Exec(query.String(), args...); err != nil {
 		panic(err)
 	}
-	return res == len(allIds)
 }
 
 func (s *sqlStore) setMembersActive(shard int, accountId, projectId Id, members []Id) {
@@ -167,7 +164,7 @@ func (s *sqlStore) logProjectBatchAddOrRemoveMembersActivity(shard int, accountI
 
 }
 
-func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
 
 }
 

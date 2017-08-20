@@ -129,12 +129,14 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, len(activities3))
 	assert.Equal(t, activity1.ItemName, activities3[0].ItemName)
 
-	activities4 := store.getActivities(0, accountId, nil, nil, &activity1.OccurredOn, nil, 100)
+	activity1OccurredOnUnixNano := uint64(activity1.OccurredOn.UnixNano()/1000000)
+	activities4 := store.getActivities(0, accountId, nil, nil, &activity1OccurredOnUnixNano, nil, 100)
 	assert.Equal(t, 2, len(activities4))
 	assert.Equal(t, activity2.ItemName, activities4[0].ItemName)
 	assert.Equal(t, activity3.ItemName, activities4[1].ItemName)
 
-	activities5 := store.getActivities(0, accountId, nil, nil, nil, &activity3.OccurredOn, 100)
+	activity3OccurredOnUnixNano := uint64(activity3.OccurredOn.UnixNano()/1000000)
+	activities5 := store.getActivities(0, accountId, nil, nil, nil, &activity3OccurredOnUnixNano, 100)
 	assert.Equal(t, 2, len(activities5))
 	assert.Equal(t, activity2.ItemName, activities5[0].ItemName)
 	assert.Equal(t, activity1.ItemName, activities5[1].ItemName)
@@ -142,7 +144,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 
 	newItemId := NewId()
 	store.logActivity(0, accountId, ali.Id, newItemId, "account", "setPublicProjectsEnabled", "true")
-	activities6 := store.getActivities(0, accountId, &newItemId, &ali.Id, nil, &activity3.OccurredOn, 100)
+	activities6 := store.getActivities(0, accountId, &newItemId, &ali.Id, nil, &activity3OccurredOnUnixNano, 100)
 	assert.Equal(t, 1, len(activities6))
 	assert.True(t, activities6[0].Member.Equal(ali.Id))
 	assert.True(t, activities6[0].Item.Equal(newItemId))

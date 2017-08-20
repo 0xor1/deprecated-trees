@@ -11,8 +11,8 @@ var (
 )
 
 type api struct {
-	store             store
-	maxGetEntityCount int
+	store                 store
+	maxProcessEntityCount int
 }
 
 func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addMemberExternal) *project {
@@ -93,7 +93,7 @@ func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
 
 func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
 	myAccountRole := a.store.getAccountRole(shard, accountId, myId)
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
 	if myAccountRole == nil {
 		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
 	}
@@ -126,6 +126,9 @@ func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 }
 
 func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addMemberExternal) {
+	if len(members) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
+	}
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
@@ -151,6 +154,9 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 		newMemberIds = append(newMemberIds, newMem.Id)
 	}
 
+	// from the time this sql read takes place, to the time the a.store.addMembers is commited to the db, it's possible
+	// that if a user changes their name during this time, the name will become out of sync but this is extremely unlikely
+	// to happen and easily fixed manually by a dev or by the user just changing their name again to update it
 	newMemberNamedEntities := a.store.getNewMemberNames(shard, accountId, newMemberIds)
 	newMemberIds = make([]Id, 0, len(newMemberNamedEntities))
 	newMembers := make([]*addMemberInternal, 0, len(newMemberNamedEntities))
@@ -179,6 +185,9 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 }
 
 func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []Id) {
+	if len(members) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
+	}
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
@@ -191,7 +200,7 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int) {
 	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
 	return a.store.getMembers(shard, accountId, projectId, role, nameContains, offset, limit)
 }
 
@@ -199,11 +208,14 @@ func (a *api) GetMe(shard int, accountId, projectId, myId Id) *member {
 	return a.store.getMember(shard, accountId, projectId, myId)
 }
 
-func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
+	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
+		panic(InvalidArgumentsErr)
+	}
 	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
-	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxGetEntityCount)
-	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfter, occurredBefore, limit)
+	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxProcessEntityCount)
+	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfterUnixMillis, occurredBeforeUnixMillis, limit)
 }
 
 type store interface {
@@ -232,7 +244,7 @@ type store interface {
 	logAccountActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string)
 	logProjectActivity(shard int, accountId, projectId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string)
 	logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string)
-	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
+	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 }
 
 type addMemberExternal struct {

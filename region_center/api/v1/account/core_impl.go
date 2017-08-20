@@ -3,12 +3,11 @@ package account
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
 	"fmt"
-	"time"
 )
 
 type api struct {
-	store             store
-	maxGetEntityCount int
+	store                 store
+	maxProcessEntityCount int
 }
 
 func (a *api) SetPublicProjectsEnabled(shard int, accountId, myId Id, publicProjectsEnabled bool) {
@@ -34,17 +33,17 @@ func (a *api) SetMemberRole(shard int, accountId, myId, memberId Id, role Accoun
 
 func (a *api) GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
 	return a.store.getMembers(shard, accountId, role, nameContains, offset, limit)
 }
 
-func (a *api) GetActivities(shard int, accountId, myId Id, itemId *Id, memberId *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity {
-	if occurredBefore != nil && occurredAfter != nil {
+func (a *api) GetActivities(shard int, accountId, myId Id, itemId *Id, memberId *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
+	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
 		panic(InvalidArgumentsErr)
 	}
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxGetEntityCount)
-	return a.store.getActivities(shard, accountId, itemId, memberId, occurredAfter, occurredBefore, limit)
+	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxProcessEntityCount)
+	return a.store.getActivities(shard, accountId, itemId, memberId, occurredAfterUnixMillis, occurredBeforeUnixMillis, limit)
 }
 
 func (a *api) GetMe(shard int, accountId Id, myId Id) *AccountMember {
@@ -58,6 +57,6 @@ type store interface {
 	setMemberRole(shard int, accountId, memberId Id, role AccountRole)
 	getMember(shard int, accountId, memberId Id) *AccountMember
 	getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int)
-	getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfter *time.Time, occurredBefore *time.Time, limit int) []*Activity
+	getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 	logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string)
 }

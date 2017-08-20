@@ -10,6 +10,7 @@ var (
 	idGenerationErr           = &Error{Code: "g_ig", Msg: "Failed to generate id", IsPublic: false}
 	InsufficientPermissionErr = &Error{Code: "g_ip", Msg: "insufficient permissions", IsPublic: true}
 	InvalidOperationErr       = &Error{Code: "g_io", Msg: "invalid operation", IsPublic: true}
+	MaxEntityCountExceededErr = &Error{Code: "g_mece", Msg: "max entity count exceeded", IsPublic: true}
 )
 
 type PermissionedError interface {

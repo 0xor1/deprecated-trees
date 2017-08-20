@@ -27,7 +27,7 @@ CREATE TABLE accountMembers(
 DROP TABLE IF EXISTS accountActivities;
 CREATE TABLE accountActivities(
 	account BINARY(16) NOT NULL,
-    occurredOn BIGINT NOT NULL, #unix millisecs timestamp
+    occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
     member BINARY(16) NOT NULL,
     item BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,
@@ -59,7 +59,7 @@ DROP TABLE IF EXISTS projectActivities;
 CREATE TABLE projectActivities(
 	account BINARY(16) NOT NULL,
     project BINARY(16) NOT NULL,
-    occurredOn BIGINT NOT NULL, #unix millisecs timestamp
+    occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
     member BINARY(16) NOT NULL,
     item BINARY(16) NOT NULL,
     itemType VARCHAR(100) NOT NULL,

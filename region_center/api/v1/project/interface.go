@@ -39,9 +39,9 @@ type Api interface {
 	GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 }
 
-func NewApi(shards map[int]isql.ReplicaSet, maxGetEntityCount int) Api {
+func NewApi(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {
 	return &api{
-		store:             newSqlStore(shards),
-		maxGetEntityCount: maxGetEntityCount,
+		store:                 newSqlStore(shards),
+		maxProcessEntityCount: maxProcessEntityCount,
 	}
 }

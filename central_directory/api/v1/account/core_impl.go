@@ -22,17 +22,16 @@ var (
 	invalidNewEmailConfirmationAttemptErr = &Error{Code: "cd_v1_a_ineca", Msg: "invalid new email confirmation attempt", IsPublic: true}
 	invalidNameOrPwdErr                   = &Error{Code: "cd_v1_a_inop", Msg: "invalid name or password", IsPublic: true}
 	incorrectPwdErr                       = &Error{Code: "cd_v1_a_ip", Msg: "password incorrect", IsPublic: true}
-	accountNotActivatedErr                = &Error{Code: "cd_v1_a_ana", Msg: "account not activated", IsPublic: true}
-	emailAlreadyInUseErr                  = &Error{Code: "cd_v1_a_eaiu", Msg: "email already in use", IsPublic: true}
-	nameAlreadyInUseErr                   = &Error{Code: "cd_v1_a_naiu", Msg: "name already in use", IsPublic: true}
-	emailConfirmationCodeErr              = &Error{Code: "cd_v1_a_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
-	noNewEmailRegisteredErr               = &Error{Code: "cd_v1_a_nner", Msg: "no new email registered", IsPublic: true}
-	maxEntityCountExceededErr             = &Error{Code: "cd_v1_a_mece", Msg: "max entity count exceeded", IsPublic: true}
-	onlyOwnerMemberErr                    = &Error{Code: "cd_v1_a_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
-	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", IsPublic: true}
+	accountNotActivatedErr    			  = &Error{Code: "cd_v1_a_ana", Msg: "account not activated", IsPublic: true}
+	emailAlreadyInUseErr      			  = &Error{Code: "cd_v1_a_eaiu", Msg: "email already in use", IsPublic: true}
+	nameAlreadyInUseErr       			  = &Error{Code: "cd_v1_a_naiu", Msg: "name already in use", IsPublic: true}
+	emailConfirmationCodeErr  			  = &Error{Code: "cd_v1_a_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
+	noNewEmailRegisteredErr   			  = &Error{Code: "cd_v1_a_nner", Msg: "no new email registered", IsPublic: true}
+	onlyOwnerMemberErr        			  = &Error{Code: "cd_v1_a_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
+	invalidAvatarShapeErr     			  = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", IsPublic: true}
 )
 
-func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxGetEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
+func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
 	if store == nil || internalRegionClient == nil || linkMailer == nil || avatarStore == nil {
 		panic(InvalidArgumentsErr)
 	}
@@ -57,7 +56,7 @@ func newApi(store store, internalRegionClient InternalRegionClient, linkMailer l
 		nameMaxRuneCount:      nameMaxRuneCount,
 		pwdMinRuneCount:       pwdMinRuneCount,
 		pwdMaxRuneCount:       pwdMaxRuneCount,
-		maxGetEntityCount:     maxGetEntityCount,
+		maxProcessEntityCount: maxProcessEntityCount,
 		cryptoCodeLen:         cryptoCodeLen,
 		saltLen:               saltLen,
 		scryptN:               scryptN,
@@ -79,7 +78,7 @@ type api struct {
 	nameMaxRuneCount      int
 	pwdMinRuneCount       int
 	pwdMaxRuneCount       int
-	maxGetEntityCount     int
+	maxProcessEntityCount int
 	cryptoCodeLen         int
 	saltLen               int
 	scryptN               int
@@ -268,8 +267,8 @@ func (a *api) GetAccount(name string) *account {
 }
 
 func (a *api) GetAccounts(ids []Id) []*account {
-	if len(ids) > a.maxGetEntityCount {
-		panic(maxEntityCountExceededErr)
+	if len(ids) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
 	}
 
 	return a.store.getAccounts(ids)
@@ -486,7 +485,7 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 }
 
 func (a *api) GetMyAccounts(myId Id, offset, limit int) ([]*account, int) {
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxGetEntityCount)
+	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
 	return a.store.getGroupAccounts(myId, offset, limit)
 }
 
@@ -530,8 +529,8 @@ func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberExternal) {
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
-	if len(newMembers) > a.maxGetEntityCount {
-		panic(maxEntityCountExceededErr)
+	if len(newMembers) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
 	}
 
 	account := a.store.getAccount(accountId)
@@ -567,8 +566,8 @@ func (a *api) RemoveMembers(myId, accountId Id, existingMembers []Id) {
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
-	if len(existingMembers) > a.maxGetEntityCount {
-		panic(maxEntityCountExceededErr)
+	if len(existingMembers) > a.maxProcessEntityCount {
+		panic(MaxEntityCountExceededErr)
 	}
 
 	account := a.store.getAccount(accountId)
