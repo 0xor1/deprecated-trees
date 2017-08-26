@@ -15,7 +15,7 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addMemberExternal) *project {
+func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addMember) *project {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
 		panic(publicProjectsDisabledErr)
@@ -32,16 +32,14 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	project.IsPublic = isPublic
 	a.store.createProject(shard, accountId, project)
 	if accountId.Equal(myId) {
-		myNamedEntity := a.store.getNewMemberNames(shard, accountId, []Id{myId})
-		addMemIn := &addMemberInternal{}
-		addMemIn.Id = myId
-		addMemIn.Name = myNamedEntity[0].Name
-		addMemIn.Role = ProjectAdmin
-		a.store.addMembers(shard, accountId, project.Id, []*addMemberInternal{addMemIn})
+		addMem := &addMember{}
+		addMem.Id = myId
+		addMem.Role = ProjectAdmin
+		a.store.addMemberOrSetActive(shard, accountId, project.Id, addMem)
 	}
 
-	a.store.logAccountActivity(shard, accountId, Now(), myId, project.Id, "project", "created", nil)
-	a.store.logProjectActivity(shard, accountId, project.Id, Now(), myId, project.Id, "project", "created", nil)
+	a.store.logAccountActivity(shard, accountId, myId, project.Id, "project", "created", nil)
+	a.store.logProjectActivity(shard, accountId, project.Id, myId, project.Id, "project", "created", nil)
 
 	a.AddMembers(shard, accountId, project.Id, myId, members)
 
@@ -52,14 +50,14 @@ func (a *api) SetName(shard int, accountId, projectId, myId Id, name string) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
 	a.store.setName(shard, accountId, projectId, name)
-	a.store.logProjectActivity(shard, accountId, projectId, Now(), myId, projectId, "project", "setName", &name)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setName", &name)
 }
 
 func (a *api) SetDescription(shard int, accountId, projectId, myId Id, description string) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
 	a.store.setDescription(shard, accountId, projectId, description)
-	a.store.logProjectActivity(shard, accountId, projectId, Now(), myId, projectId, "project", "setDescription", &description)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setDescription", &description)
 }
 
 func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic bool) {
@@ -71,8 +69,8 @@ func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic boo
 
 	a.store.setIsPublic(shard, accountId, projectId, isPublic)
 	action := fmt.Sprintf("%t", isPublic)
-	a.store.logAccountActivity(shard, accountId, Now(), myId, projectId, "project", "setIsPublic", &action)
-	a.store.logProjectActivity(shard, accountId, projectId, Now(), myId, projectId, "project", "setIsPublic", &action)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "setIsPublic", &action)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setIsPublic", &action)
 }
 
 func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool) {
@@ -81,7 +79,7 @@ func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel
 
 	a.store.setIsParallel(shard, accountId, projectId, isParallel)
 	action := fmt.Sprintf("%t", isParallel)
-	a.store.logProjectActivity(shard, accountId, projectId, Now(), myId, projectId, "project", "setIsParallel", &action)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setIsParallel", &action)
 }
 
 func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
@@ -107,25 +105,25 @@ func (a *api) ArchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	now := Now()
 	a.store.setProjectArchivedOn(shard, accountId, projectId, &now)
-	a.store.logAccountActivity(shard, accountId, now, myId, projectId, "project", "archived", nil)
-	a.store.logProjectActivity(shard, accountId, projectId, now, myId, projectId, "project", "archived", nil)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "archived", nil)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "archived", nil)
 }
 
 func (a *api) UnarchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	a.store.setProjectArchivedOn(shard, accountId, projectId, nil)
-	a.store.logAccountActivity(shard, accountId, Now(), myId, projectId, "project", "unarchived", nil)
-	a.store.logProjectActivity(shard, accountId, projectId, Now(), myId, projectId, "project", "unarchived", nil)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "unarchived", nil)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "unarchived", nil)
 }
 
 func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	a.store.deleteProject(shard, accountId, projectId)
-	a.store.logAccountActivity(shard, accountId, Now(), myId, projectId, "project", "deleted", nil)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "deleted", nil)
 	//TODO delete s3 data, uploaded files etc
 }
 
-func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addMemberExternal) {
+func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addMember) {
 	if len(members) > a.maxProcessEntityCount {
 		panic(MaxEntityCountExceededErr)
 	}
@@ -135,52 +133,34 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 	accountRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectAdminAccess(accountRole, projectRole)
 
-	newMembersMap := map[string]*addMemberInternal{}
+	addedMemberIds := make([]Id, 0, len(members))
 	for _, mem := range members {
 		mem.Role.Validate()
-		addMemIn := &addMemberInternal{}
-		addMemIn.Id = mem.Id
-		addMemIn.Role = mem.Role
-		newMembersMap[mem.Id.String()] = addMemIn
+		if a.store.addMemberOrSetActive(shard, accountId, projectId, mem) {
+			addedMemberIds = append(addedMemberIds, mem.Id)
+		}
 	}
 
-	inactiveMembers := a.store.getAllInactiveMemberIdsFromInputSet(shard, accountId, projectId, members)
-	for _, inactiveMember := range inactiveMembers {
-		delete(newMembersMap, inactiveMember.String())
+	if len(addedMemberIds) > 0 {
+		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, addedMemberIds, "added")
 	}
+}
 
-	newMemberIds := make([]Id, 0, len(newMembersMap))
-	for _, newMem := range newMembersMap {
-		newMemberIds = append(newMemberIds, newMem.Id)
+func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id, role ProjectRole) {
+	if accountId.Equal(myId) {
+		panic(InvalidOperationErr)
 	}
+	role.Validate()
 
-	// from the time this sql read takes place, to the time the a.store.addMembers is commited to the db, it's possible
-	// that if a user changes their name during this time, the name will become out of sync but this is extremely unlikely
-	// to happen and easily fixed manually by a dev or by the user just changing their name again to update it
-	newMemberNamedEntities := a.store.getNewMemberNames(shard, accountId, newMemberIds)
-	newMemberIds = make([]Id, 0, len(newMemberNamedEntities))
-	newMembers := make([]*addMemberInternal, 0, len(newMemberNamedEntities))
-	for _, newMemNamedEntity := range newMemberNamedEntities {
-		newMem := newMembersMap[newMemNamedEntity.Id.String()]
-		newMem.Name = newMemNamedEntity.Name
-		newMembers = append(newMembers, newMem)
-		newMemberIds = append(newMemberIds, newMem.Id)
-	}
+	accountRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
+	ValidateMemberHasProjectAdminAccess(accountRole, projectRole)
 
-	newMembersLen := len(newMembers)
-	if newMembersLen > 0 {
-		a.store.addMembers(shard, accountId, projectId, newMembers)
+	_, projectRole = a.store.getAccountAndProjectRoles(shard, accountId, projectId, member)
+	if projectRole == nil {
+		panic(InvalidOperationErr)
 	}
-	inactiveMembersLen := len(inactiveMembers)
-	if inactiveMembersLen > 0 {
-		a.store.setMembersActive(shard, accountId, projectId, inactiveMembers)
-		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, inactiveMembers, "added")
-	}
-	if newMembersLen + inactiveMembersLen > 0 {
-		allAddedIds := make([]Id, 0, newMembersLen + inactiveMembersLen)
-		allAddedIds = append(allAddedIds, newMemberIds...)
-		allAddedIds = append(allAddedIds, inactiveMembers...)
-		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, allAddedIds, "added")
+	if *projectRole != role {
+		a.store.setMemberRole(shard, accountId, projectId, member, role)
 	}
 }
 
@@ -193,8 +173,14 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 	}
 	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectAdminAccess(myAccountRole, myProjectRole)
-	a.store.setMembersInactive(shard, accountId, projectId, members)
-	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "added")
+
+	inactivatedMembers := make([]Id, 0, len(members))
+	for _, mem := range members {
+		if a.store.setMemberInactive(shard, accountId, projectId, mem) {
+			inactivatedMembers = append(inactivatedMembers, )
+		}
+	}
+	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "removed")
 }
 
 func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int) {
@@ -234,32 +220,26 @@ type store interface {
 	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
 	setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time)
 	deleteProject(shard int, accountId, projectId Id)
-	addMembers(shard int, accountId, projectId Id, members []*addMemberInternal)
-	setMembersActive(shard int, accountId, projectId Id, members []Id)
-	setMembersInactive(shard int, accountId, projectId Id, members []Id)
+	addMemberOrSetActive(shard int, accountId, projectId Id, member *addMember) bool
+	setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole)
+	setMemberInactive(shard int, accountId, projectId Id, member Id) bool
 	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int)
 	getMember(shard int, accountId, projectId, member Id) *member
-	getAllInactiveMemberIdsFromInputSet(shard int, accountId, projectId Id, members []*addMemberExternal) []Id
-	getNewMemberNames(shard int, accountId Id, members []Id) []*NamedEntity
-	logAccountActivity(shard int, accountId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string)
-	logProjectActivity(shard int, accountId, projectId Id, occurredOn time.Time, member, item Id, itemType, action string, newValue *string)
+	logAccountActivity(shard int, accountId, member, item Id, itemType, action string, newValue *string)
+	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 	logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string)
 	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 }
 
-type addMemberExternal struct {
+type addMember struct {
 	Entity
-	Role ProjectRole `json:"role"`
-}
-
-type addMemberInternal struct {
-	NamedEntity
 	Role ProjectRole `json:"role"`
 }
 
 type member struct {
 	NamedEntity
 	CommonTimeProps
+	IsActive bool `json:"isActive"`
 	Role ProjectRole `json:"role"`
 }
 

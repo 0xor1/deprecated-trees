@@ -167,13 +167,30 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setMemberInactive;
+DROP PROCEDURE IF EXISTS setAccountMemberInactive;
 DELIMITER $$
-CREATE PROCEDURE setMemberInactive(_account BINARY(16), _member BINARY(16))
+CREATE PROCEDURE setAccountMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
 	UPDATE accountMembers SET isActive=false, role=3 WHERE account=_account AND id=_member;
-    UPDATE projectMembers SET isActive=false, role=4 WHERE account=_account AND id=_member;
+    UPDATE projectMembers SET totalRemainingTime=0, totalLoggedTime=0, isActive=false, role=4 WHERE account=_account AND id=_member;
     UPDATE nodes SET member=NULL WHERE account=_account AND member=_member;
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS deleteAccount;
+DELIMITER $$
+CREATE PROCEDURE deleteAccount(_id BINARY(16))
+BEGIN
+    DELETE FROM projectLocks WHERE account = _id;
+	DELETE FROM accounts WHERE id =_id;
+	DELETE FROM accountMembers WHERE account =_id;
+	DELETE FROM accountActivities WHERE account =_id;
+	DELETE FROM projectMembers WHERE account =_id;
+	DELETE FROM projectActivities WHERE account =_id;
+	DELETE FROM projects WHERE account =_id;
+	DELETE FROM nodes WHERE account =_id;
+	DELETE FROM timeLogs WHERE account =_id;
 END;
 $$
 DELIMITER ;
@@ -230,19 +247,53 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS deleteAccount;
-DELIMITER $$
-CREATE PROCEDURE deleteAccount(_id BINARY(16))
+DROP PROCEDURE IF EXISTS addProjectMemberOrSetActive;
+DELIMITER $$ #TRIES to add a user to a project, sets true if they were added, false otherwise. It may be false if they are trying to add a user who is not a member of the account, or add a member who is already an active member of this project.
+CREATE PROCEDURE addProjectMemberOrSetActive(_accountId BINARY(16), _projectId BINARY(16), _id BINARY(16), _role TINYINT UNSIGNED)
 BEGIN
-    DELETE FROM projectLocks WHERE account = _id;
-	DELETE FROM accounts WHERE id =_id;
-	DELETE FROM accountMembers WHERE account =_id;
-	DELETE FROM accountActivities WHERE account =_id;
-	DELETE FROM projectMembers WHERE account =_id;
-	DELETE FROM projectActivities WHERE account =_id;
-	DELETE FROM projects WHERE account =_id;
-	DELETE FROM nodes WHERE account =_id;
-	DELETE FROM timeLogs WHERE account =_id;
+	DECLARE projMemberCount TINYINT DEFAULT 0;
+	DECLARE projMemberIsActive BOOL DEFAULT false;
+	DECLARE accMemberName VARCHAR(50) DEFAULT '';
+    SELECT COUNT(*), isActive INTO projMemberCount, projMemberIsActive FROM projectMembers WHERE account = _accountId AND project = _projectId AND id = _id;
+    IF projMemberCount = 1 AND projMemberIsActive = false THEN #setting previous member back to active, still need to check if they are an active account member
+		IF (SELECT COUNT(*) FROM accountMembers WHERE account = _accountId AND id = _id AND isActive = true) THEN #if active account member then add them to the project
+			UPDATE projectMembers SET role = _role, isActive = true WHERE account = _accountId AND project = _projectId AND id = _id;
+            SELECT true;
+        ELSE #they are a disabled account member and so can not be added to the project
+			SELECT false;
+		END IF;
+	ELSEIF projMemberCount = 1 AND projMemberIsActive = true THEN #they are already an active member of this project
+		SELECT false;
+    ELSEIF projMemberCount = 0 THEN #adding new project member, need to check if they are active account member
+		START TRANSACTION;
+			SELECT name INTO accMemberName FROM accountMembers WHERE account = _accountId AND id = _id AND isActive = true LOCK IN SHARE MODE;
+			IF accMemberName IS NOT NULL AND accMemberName <> '' THEN #if active account member then add them to the project
+				INSERT INTO projectMembers (account, project, id, name, isActive, totalRemainingTime, totalLoggedTime, role) VALUES (_accountId, _projectId, _id, accMemberName, true, 0, 0, _role);
+				SELECT true;
+			ELSE #they are a not an active account member so return false
+				SELECT false;
+			END IF;
+        COMMIT;
+    END IF;
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setProjectMemberInactive;
+DELIMITER $$
+CREATE PROCEDURE setProjectMemberInactive(_accountId BINARY(16), _projectId BINARY(16), _id BINARY(16))
+BEGIN
+	DECLARE projMemberCount TINYINT DEFAULT 0;	
+	START TRANSACTION;
+		SELECT COUNT(*) INTO projMemberCount FROM projectMembers WHERE account = _accountId AND project = _projectId AND id = _id AND isActive = true FOR UPDATE;
+		IF projMemberCount = 1 THEN
+			UPDATE nodes SET member = NULL WHERE account = _accountId AND project = _projectId AND member = _id;
+            UPDATE projectMembers SET totalRemainingTime = 0, totalLoggedTime = 0 WHERE account = _account AND project = _projectId AND member = _id;
+            SELECT true;
+		ELSE
+			SELECT false;
+        END IF;
+    COMMIT;
 END;
 $$
 DELIMITER ;

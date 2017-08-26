@@ -128,7 +128,7 @@ func (s *sqlStore) getOwnerCountInSet(shard int, accountId Id, members []Id) int
 func (s *sqlStore) setMembersInactive(shard int, accountId Id, members []Id) {
 	accountIdBytes := []byte(accountId)
 	for _, mem := range members {
-		if _, err := s.shards[shard].Exec(`CALL setMemberInactive(?, ?)`, accountIdBytes, []byte(mem)); err != nil {
+		if _, err := s.shards[shard].Exec(`CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem)); err != nil {
 			panic(err)
 		}
 	}

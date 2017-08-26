@@ -59,7 +59,7 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
 func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
 	query := bytes.NewBufferString(`SELECT %s FROM accountMembers WHERE account=? AND isActive=true`)
 	columns := ` id, name, isActive, role `
-	args := make([]interface{}, 0, 3)
+	args := make([]interface{}, 0, 5)
 	args = append(args, []byte(accountId))
 	if role != nil {
 		query.WriteString(` AND role=?`)
