@@ -1,4 +1,4 @@
-package internal
+package private
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
@@ -25,11 +25,11 @@ func (c *client) getRegion(region string) Api {
 	if !c.IsValidRegion(region) {
 		panic(invalidRegionErr)
 	}
-	return c.getRegion(region)
+	return c.regions[region]
 }
 
 func (c *client) IsValidRegion(region string) bool {
-	return c.getRegion(region) != nil
+	return c.regions[region] != nil
 }
 
 func (c *client) CreateAccount(region string, accountId, myId Id, ownerName string) int {
@@ -61,7 +61,7 @@ func (c *client) MemberIsAccountOwner(region string, shard int, accountId, myId 
 }
 
 type api struct {
-	store store
+	store                 store
 	maxProcessEntityCount int
 }
 

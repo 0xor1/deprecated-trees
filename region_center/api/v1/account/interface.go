@@ -20,9 +20,9 @@ type Api interface {
 	GetMe(shard int, accountId, myId Id) *AccountMember
 }
 
-func NewApi(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {
+func New(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {
 	return &api{
-		store:                 newSqlStore(shards),
+		store: newSqlStore(shards),
 		maxProcessEntityCount: maxProcessEntityCount,
 	}
 }

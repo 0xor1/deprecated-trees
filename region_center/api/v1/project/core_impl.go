@@ -177,7 +177,7 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 	inactivatedMembers := make([]Id, 0, len(members))
 	for _, mem := range members {
 		if a.store.setMemberInactive(shard, accountId, projectId, mem) {
-			inactivatedMembers = append(inactivatedMembers, )
+			inactivatedMembers = append(inactivatedMembers)
 		}
 	}
 	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "removed")
@@ -239,8 +239,8 @@ type addMember struct {
 type member struct {
 	NamedEntity
 	CommonTimeProps
-	IsActive bool `json:"isActive"`
-	Role ProjectRole `json:"role"`
+	IsActive bool        `json:"isActive"`
+	Role     ProjectRole `json:"role"`
 }
 
 type project struct {

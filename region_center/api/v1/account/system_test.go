@@ -9,23 +9,8 @@ import (
 	"time"
 )
 
-func Test_newSqlStore_NilCriticalParamErr(t *testing.T) {
-	defer func() {
-		err := recover().(error)
-		assert.IsType(t, &Error{}, err)
-	}()
-	newSqlStore(nil)
-}
-
-func Test_newSqlStore_success(t *testing.T) {
-	store := newSqlStore(map[int]isql.ReplicaSet{0: &isql.MockDB{}})
-	assert.NotNil(t, store)
-}
-
-//this test tests everything using a real sql db, comment/uncomment as necessary
 func Test_sqlStore_adHoc(t *testing.T) {
-	treeDb, _ := isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)
-	store := newSqlStore(map[int]isql.ReplicaSet{0: treeDb})
+	store := newSqlStore(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)})
 
 	accountId := NewId()
 	treeDb.Exec(`INSERT INTO accounts (id, publicProjectsEnabled) VALUES (?, ?)`, []byte(accountId), false)
@@ -129,13 +114,13 @@ func Test_sqlStore_adHoc(t *testing.T) {
 	assert.Equal(t, 1, len(activities3))
 	assert.Equal(t, activity1.ItemName, activities3[0].ItemName)
 
-	activity1OccurredOnUnixNano := uint64(activity1.OccurredOn.UnixNano()/1000000)
+	activity1OccurredOnUnixNano := uint64(activity1.OccurredOn.UnixNano() / 1000000)
 	activities4 := store.getActivities(0, accountId, nil, nil, &activity1OccurredOnUnixNano, nil, 100)
 	assert.Equal(t, 2, len(activities4))
 	assert.Equal(t, activity2.ItemName, activities4[0].ItemName)
 	assert.Equal(t, activity3.ItemName, activities4[1].ItemName)
 
-	activity3OccurredOnUnixNano := uint64(activity3.OccurredOn.UnixNano()/1000000)
+	activity3OccurredOnUnixNano := uint64(activity3.OccurredOn.UnixNano() / 1000000)
 	activities5 := store.getActivities(0, accountId, nil, nil, nil, &activity3OccurredOnUnixNano, 100)
 	assert.Equal(t, 2, len(activities5))
 	assert.Equal(t, activity2.ItemName, activities5[0].ItemName)

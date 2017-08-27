@@ -19,11 +19,11 @@ const (
 	ProjectWriter = ProjectRole(1)
 	ProjectReader = ProjectRole(2)
 
-	SortByName    = SortBy("name")
-	SortByCreatedOn = SortBy("createdon")
+	SortByName       = SortBy("name")
+	SortByCreatedOn  = SortBy("createdon")
 	SortByArchivedOn = SortBy("archivedon")
-	SortByStartOn = SortBy("starton")
-	SortByDueOn   = SortBy("dueon")
+	SortByStartOn    = SortBy("starton")
+	SortByDueOn      = SortBy("dueon")
 
 	SortDirAsc  = SortDir("asc")
 	SortDirDesc = SortDir("desc")

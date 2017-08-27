@@ -2,8 +2,8 @@ package misc
 
 import (
 	"bytes"
-	"github.com/0xor1/isql"
 	"database/sql"
+	"github.com/0xor1/isql"
 )
 
 func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole {

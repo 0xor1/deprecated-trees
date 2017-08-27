@@ -6,8 +6,8 @@ import (
 	"github.com/nfnt/resize"
 	"image"
 	_ "image/gif"
-	"image/jpeg"
-	_ "image/png"
+	_ "image/jpeg"
+	"image/png"
 	"io"
 	"regexp"
 	"strings"
@@ -22,13 +22,13 @@ var (
 	invalidNewEmailConfirmationAttemptErr = &Error{Code: "cd_v1_a_ineca", Msg: "invalid new email confirmation attempt", IsPublic: true}
 	invalidNameOrPwdErr                   = &Error{Code: "cd_v1_a_inop", Msg: "invalid name or password", IsPublic: true}
 	incorrectPwdErr                       = &Error{Code: "cd_v1_a_ip", Msg: "password incorrect", IsPublic: true}
-	accountNotActivatedErr    			  = &Error{Code: "cd_v1_a_ana", Msg: "account not activated", IsPublic: true}
-	emailAlreadyInUseErr      			  = &Error{Code: "cd_v1_a_eaiu", Msg: "email already in use", IsPublic: true}
-	nameAlreadyInUseErr       			  = &Error{Code: "cd_v1_a_naiu", Msg: "name already in use", IsPublic: true}
-	emailConfirmationCodeErr  			  = &Error{Code: "cd_v1_a_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
-	noNewEmailRegisteredErr   			  = &Error{Code: "cd_v1_a_nner", Msg: "no new email registered", IsPublic: true}
-	onlyOwnerMemberErr        			  = &Error{Code: "cd_v1_a_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
-	invalidAvatarShapeErr     			  = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", IsPublic: true}
+	accountNotActivatedErr                = &Error{Code: "cd_v1_a_ana", Msg: "account not activated", IsPublic: true}
+	emailAlreadyInUseErr                  = &Error{Code: "cd_v1_a_eaiu", Msg: "email already in use", IsPublic: true}
+	nameAlreadyInUseErr                   = &Error{Code: "cd_v1_a_naiu", Msg: "name already in use", IsPublic: true}
+	emailConfirmationCodeErr              = &Error{Code: "cd_v1_a_ecc", Msg: "email confirmation code is of zero length", IsPublic: false}
+	noNewEmailRegisteredErr               = &Error{Code: "cd_v1_a_nner", Msg: "no new email registered", IsPublic: true}
+	onlyOwnerMemberErr                    = &Error{Code: "cd_v1_a_oom", Msg: "can't delete member who is the only owner of an account", IsPublic: true}
+	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", IsPublic: true}
 )
 
 func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
@@ -182,7 +182,7 @@ func (a *api) Authenticate(email, pwdTry string) Id {
 	}
 
 	//if there was an outstanding password reset on this acc, remove it, they have since remembered their password
-	if len(*acc.resetPwdCode) > 0 {
+	if acc.resetPwdCode != nil && len(*acc.resetPwdCode) > 0 {
 		acc.resetPwdCode = nil
 		a.store.updatePersonalAccount(acc)
 	}
@@ -416,12 +416,12 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 			avatarImage = resize.Resize(a.maxAvatarDim, a.maxAvatarDim, avatarImage, resize.NearestNeighbor)
 		}
 		buff := &bytes.Buffer{}
-		if err := jpeg.Encode(buff, avatarImage, nil); err != nil {
+		if err := png.Encode(buff, avatarImage); err != nil {
 			panic(err)
 		}
 		data := buff.Bytes()
-		readerSeeker := bytes.NewReader(data)
-		a.avatarStore.put(myId.String(), "image/jpeg", int64(len(data)), readerSeeker)
+		reader := bytes.NewReader(data)
+		a.avatarStore.put(myId.String(), "image/png", reader)
 		if !account.HasAvatar {
 			//if account didn't previously have an avatar then lets update the store to reflect it's new state
 			account.HasAvatar = true
@@ -613,8 +613,9 @@ type linkMailer interface {
 }
 
 type avatarStore interface {
-	put(key string, mimeType string, size int64, data io.ReadSeeker)
+	put(key string, mimeType string, data io.Reader)
 	delete(key string)
+	deleteAll()
 }
 
 type account struct {

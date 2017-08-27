@@ -2,11 +2,11 @@ package project
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
-	"github.com/0xor1/isql"
-	"time"
 	"bytes"
 	"fmt"
+	"github.com/0xor1/isql"
 	"strings"
+	"time"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -330,4 +330,3 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 	}
 	return result, count
 }
-

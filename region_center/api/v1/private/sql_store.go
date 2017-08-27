@@ -1,4 +1,4 @@
-package internal
+package private
 
 import (
 	. "bitbucket.org/0xor1/task_center/misc"
