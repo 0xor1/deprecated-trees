@@ -199,8 +199,8 @@ DROP PROCEDURE IF EXISTS createProject;
 DELIMITER $$
 CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _archivedOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _fileCount BIGINT UNSIGNED, _fileSize BIGINT UNSIGNED, _linkedFileCount BIGINT UNSIGNED, _chatCount BIGINT UNSIGNED, _isParallel BOOL, _isPublic BOOL)
 BEGIN
-	INSERT INTO projectLocks (account, project) VALUES(_accountId, _id);
-	INSERT INTO projects (account, id, firstChild, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic) VALUES (_account, _id, _firstChild, _name, _description, _createdOn, _archivedOn, _startOn, _dueOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _fileCount, _fileSize, _linkedFileCount, _chatCount, _isParallel, _isPublic);
+	INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
+	INSERT INTO projects (account, id, firstChild, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic) VALUES (_accountId, _id, NULL, _name, _description, _createdOn, _archivedOn, _startOn, _dueOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _fileCount, _fileSize, _linkedFileCount, _chatCount, _isParallel, _isPublic);
 END;
 $$
 DELIMITER ;

@@ -124,6 +124,9 @@ func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 }
 
 func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addMember) {
+	if len(members) == 0 {
+		return
+	}
 	if len(members) > a.maxProcessEntityCount {
 		panic(MaxEntityCountExceededErr)
 	}

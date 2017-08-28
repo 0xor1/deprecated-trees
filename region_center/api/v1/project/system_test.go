@@ -5,7 +5,6 @@ import (
 	"bitbucket.org/0xor1/task_center/region_center/api/v1/private"
 	"github.com/0xor1/isql"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -27,7 +26,7 @@ func Test_system(t *testing.T) {
 	cat := AddMemberPrivate{}
 	cat.Id = NewId()
 	cat.Name = "cat"
-	cat.Role = AccountMemberOfOnlySpecificProjects
+	cat.Role = AccountMemberOfAllProjects
 	dan := AddMemberPrivate{}
 	dan.Id = NewId()
 	dan.Name = "dan"
@@ -35,8 +34,7 @@ func Test_system(t *testing.T) {
 	privateApi.CreateAccount(orgId, ali.Id, ali.Name)
 	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
 
-	project1 := projectApi.CreateProject(0, orgId, ali.Id, "p1", "p1_desc", nil, nil, true, false, []*addMember{})
+	projectApi.CreateProject(0, orgId, ali.Id, "p1", "p1_desc", nil, nil, true, false, []*addMember{})
 
-	//clean up the database
 	privateApi.DeleteAccount(0, orgId, ali.Id)
 }
