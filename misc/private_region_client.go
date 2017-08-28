@@ -1,11 +1,11 @@
 package misc
 
-type InternalRegionClient interface {
+type PrivateRegionClient interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool
 	CreateAccount(region string, account, owner Id, ownerName string) int
 	DeleteAccount(region string, shard int, account, owner Id)
-	AddMembers(region string, shard int, account, admin Id, members []*AddMemberInternal)
+	AddMembers(region string, shard int, account, admin Id, members []*AddMemberPrivate)
 	RemoveMembers(region string, shard int, account, admin Id, members []Id)
 	MemberIsOnlyAccountOwner(region string, shard int, account, member Id) bool
 	RenameMember(region string, shard int, account, member Id, newName string)

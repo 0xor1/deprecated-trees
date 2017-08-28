@@ -75,7 +75,7 @@ func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRol
 	return &res
 }
 
-func (s *sqlStore) addMembers(shard int, accountId Id, members []*AddMemberInternal) {
+func (s *sqlStore) addMembers(shard int, accountId Id, members []*AddMemberPrivate) {
 	queryArgs := make([]interface{}, 0, 3*len(members))
 	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, role) VALUES `)
 	for i, mem := range members {
@@ -90,7 +90,7 @@ func (s *sqlStore) addMembers(shard int, accountId Id, members []*AddMemberInter
 	}
 }
 
-func (s *sqlStore) updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberInternal) {
+func (s *sqlStore) updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberPrivate) {
 	for _, mem := range members {
 		if _, err := s.shards[shard].Exec(`UPDATE accountMembers SET name=?, role=?, isActive=true WHERE account=? AND id=?`, mem.Name, mem.Role, []byte(accountId), []byte(mem.Id)); err != nil {
 			panic(err)

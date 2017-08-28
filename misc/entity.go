@@ -33,8 +33,6 @@ type Entity struct {
 	Id Id `json:"id"`
 }
 
-type GenEntity func() (*Entity, error)
-
 func NewEntity() *Entity {
 	return &Entity{
 		Id: NewId(),
@@ -46,17 +44,15 @@ type NamedEntity struct {
 	Name string `json:"name"`
 }
 
-type AddMemberInternal struct {
+type AddMemberPrivate struct {
 	NamedEntity
 	Role AccountRole `json:"role"`
 }
 
-type AddMemberExternal struct {
+type AddMemberPublic struct {
 	Entity
 	Role AccountRole `json:"role"`
 }
-
-type GenNamedEntity func(name string) *NamedEntity
 
 func NewNamedEntity(name string) *NamedEntity {
 	return &NamedEntity{
@@ -83,8 +79,6 @@ func NewCreatedNamedEntity(name string) *CreatedNamedEntity {
 		CreatedOn: Now(),
 	}
 }
-
-type GenId func() Id
 
 //returns version 1 uuid as a byte slice
 func NewId() Id {
@@ -114,7 +108,7 @@ type CommonAbstractNodeProps struct {
 }
 
 type AccountMember struct {
-	AddMemberInternal
+	AddMemberPrivate
 	IsActive bool `json:"isActive"`
 }
 

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var (
@@ -31,8 +32,8 @@ var (
 	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", IsPublic: true}
 )
 
-func newApi(store store, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
-	if store == nil || internalRegionClient == nil || linkMailer == nil || avatarStore == nil {
+func newApi(store store, privateRegionClient PrivateRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
+	if store == nil || privateRegionClient == nil || linkMailer == nil || avatarStore == nil {
 		panic(InvalidArgumentsErr)
 	}
 	//compile regexs
@@ -46,7 +47,7 @@ func newApi(store store, internalRegionClient InternalRegionClient, linkMailer l
 	}
 	return &api{
 		store:                 store,
-		internalRegionClient:  internalRegionClient,
+		privateRegionClient:   privateRegionClient,
 		linkMailer:            linkMailer,
 		avatarStore:           avatarStore,
 		nameRegexMatchers:     nameRegexes,
@@ -68,7 +69,7 @@ func newApi(store store, internalRegionClient InternalRegionClient, linkMailer l
 
 type api struct {
 	store                 store
-	internalRegionClient  InternalRegionClient
+	privateRegionClient   PrivateRegionClient
 	linkMailer            linkMailer
 	avatarStore           avatarStore
 	nameRegexMatchers     []*regexp.Regexp
@@ -88,7 +89,7 @@ type api struct {
 }
 
 func (a *api) GetRegions() []string {
-	return a.internalRegionClient.GetRegions()
+	return a.privateRegionClient.GetRegions()
 }
 
 func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
@@ -100,7 +101,7 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 	language = strings.Trim(language, " ") // may need more validation than this at some point to check it is a language we support and not a junk value, but it isnt critical right now
 	theme.Validate()
 
-	if !a.internalRegionClient.IsValidRegion(region) {
+	if !a.privateRegionClient.IsValidRegion(region) {
 		panic(noSuchRegionErr)
 	}
 
@@ -117,7 +118,15 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 	acc := &fullPersonalAccountInfo{}
 	acc.CreatedNamedEntity = *accCore
 	acc.Region = region
-	acc.Shard = -1
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			a.store.deleteAccountAndAllAssociatedMemberships(acc.Id)
+			panic(r)
+		}
+	}()
+	acc.Shard = a.privateRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
 	acc.IsPersonal = true
 	acc.Email = email
 	acc.Language = language
@@ -154,12 +163,9 @@ func (a *api) Activate(email, activationCode string) {
 		panic(invalidActivationAttemptErr)
 	}
 
-	shard := a.internalRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
-
-	acc.Shard = shard
 	acc.activationCode = nil
 	activationTime := time.Now().UTC()
-	acc.activated = &activationTime
+	acc.activatedOn = &activationTime
 	a.store.updatePersonalAccount(acc)
 }
 
@@ -243,11 +249,6 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) {
 	scryptSalt := CryptoBytes(a.saltLen)
 	scryptPwd := ScryptKey([]byte(newPwd), scryptSalt, a.scryptN, a.scryptR, a.scryptP, a.scryptKeyLen)
 
-	if acc.activationCode != nil {
-		shard := a.internalRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
-		acc.Shard = shard
-	}
-
 	acc.activationCode = nil
 	acc.resetPwdCode = nil
 	a.store.updatePersonalAccount(acc)
@@ -272,6 +273,20 @@ func (a *api) GetAccounts(ids []Id) []*account {
 	}
 
 	return a.store.getAccounts(ids)
+}
+
+func (a *api) SearchAccounts(nameStartsWith string) []*account {
+	if utf8.RuneCountInString(nameStartsWith) < 3 || strings.Contains(nameStartsWith, "%") {
+		panic(InvalidArgumentsErr)
+	}
+	return a.store.searchAccounts(nameStartsWith)
+}
+
+func (a *api) SearchPersonalAccounts(nameOrEmailStartsWith string) []*account {
+	if utf8.RuneCountInString(nameOrEmailStartsWith) < 3 || strings.Contains(nameOrEmailStartsWith, "%") {
+		panic(InvalidArgumentsErr)
+	}
+	return a.store.searchPersonalAccounts(nameOrEmailStartsWith)
 }
 
 func (a *api) GetMe(myId Id) *me {
@@ -363,7 +378,7 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 			panic(InsufficientPermissionErr)
 		}
 
-		if !a.internalRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
+		if !a.privateRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
 			panic(InsufficientPermissionErr)
 		}
 	}
@@ -377,7 +392,7 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
 			offset += len(accounts)
 			for _, account := range accounts {
-				a.internalRegionClient.RenameMember(account.Region, account.Shard, account.Id, myId, newName)
+				a.privateRegionClient.RenameMember(account.Region, account.Shard, account.Id, myId, newName)
 			}
 		}
 	}
@@ -398,7 +413,7 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 			panic(InsufficientPermissionErr)
 		}
 
-		if !a.internalRegionClient.MemberIsAccountOwner(account.Region, account.Shard, accountId, myId) {
+		if !a.privateRegionClient.MemberIsAccountOwner(account.Region, account.Shard, accountId, myId) {
 			panic(InsufficientPermissionErr)
 		}
 	}
@@ -447,7 +462,7 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 	name = strings.Trim(name, " ")
 	ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 
-	if !a.internalRegionClient.IsValidRegion(region) {
+	if !a.privateRegionClient.IsValidRegion(region) {
 		panic(noSuchRegionErr)
 	}
 
@@ -477,7 +492,7 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 			panic(r)
 		}
 	}()
-	shard := a.internalRegionClient.CreateAccount(region, accountCore.Id, myId, owner.Name)
+	shard := a.privateRegionClient.CreateAccount(region, accountCore.Id, myId, owner.Name)
 
 	account.Shard = shard
 	a.store.updateAccount(account)
@@ -500,12 +515,12 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 			panic(InsufficientPermissionErr)
 		}
 		//otherwise attempting to delete a group account
-		if !a.internalRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
+		if !a.privateRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
 			panic(InsufficientPermissionErr)
 		}
 	}
 
-	a.internalRegionClient.DeleteAccount(acc.Region, acc.Shard, accountId, myId)
+	a.privateRegionClient.DeleteAccount(acc.Region, acc.Shard, accountId, myId)
 	a.store.deleteAccountAndAllAssociatedMemberships(accountId)
 
 	if myId.Equal(accountId) {
@@ -514,18 +529,18 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
 			offset += len(accounts)
 			for _, account := range accounts {
-				if a.internalRegionClient.MemberIsOnlyAccountOwner(account.Region, account.Shard, account.Id, myId) {
+				if a.privateRegionClient.MemberIsOnlyAccountOwner(account.Region, account.Shard, account.Id, myId) {
 					panic(onlyOwnerMemberErr)
 				}
 			}
 			for _, account := range accounts {
-				a.internalRegionClient.RemoveMembers(account.Region, account.Shard, account.Id, myId, []Id{myId})
+				a.privateRegionClient.RemoveMembers(account.Region, account.Shard, account.Id, myId, []Id{myId})
 			}
 		}
 	}
 }
 
-func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberExternal) {
+func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberPublic) {
 	if accountId.Equal(myId) {
 		panic(InvalidOperationErr)
 	}
@@ -539,7 +554,7 @@ func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberExternal) {
 	}
 
 	ids := make([]Id, 0, len(newMembers))
-	addMembersMap := map[string]*AddMemberExternal{}
+	addMembersMap := map[string]*AddMemberPublic{}
 	for _, member := range newMembers {
 		ids = append(ids, member.Id)
 		addMembersMap[member.Id.String()] = member
@@ -547,18 +562,18 @@ func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberExternal) {
 
 	accs := a.store.getPersonalAccounts(ids)
 
-	members := make([]*AddMemberInternal, 0, len(accs))
+	members := make([]*AddMemberPrivate, 0, len(accs))
 	for _, acc := range accs {
 		role := addMembersMap[acc.Id.String()].Role
 		role.Validate()
-		ami := &AddMemberInternal{}
+		ami := &AddMemberPrivate{}
 		ami.Id = acc.Id
 		ami.Role = role
 		ami.Name = acc.Name
 		members = append(members, ami)
 	}
 
-	a.internalRegionClient.AddMembers(account.Region, account.Shard, accountId, myId, members)
+	a.privateRegionClient.AddMembers(account.Region, account.Shard, accountId, myId, members)
 	a.store.createMemberships(accountId, ids)
 }
 
@@ -575,7 +590,7 @@ func (a *api) RemoveMembers(myId, accountId Id, existingMembers []Id) {
 		panic(noSuchAccountErr)
 	}
 
-	a.internalRegionClient.RemoveMembers(account.Region, account.Shard, accountId, myId, existingMembers)
+	a.privateRegionClient.RemoveMembers(account.Region, account.Shard, accountId, myId, existingMembers)
 	a.store.deleteMemberships(accountId, existingMembers)
 }
 
@@ -596,6 +611,8 @@ type store interface {
 	deleteAccountAndAllAssociatedMemberships(id Id)
 	getAccount(id Id) *account
 	getAccounts(ids []Id) []*account
+	searchAccounts(nameStartsWith string) []*account
+	searchPersonalAccounts(nameOrEmailStartsWith string) []*account
 	getPersonalAccounts(ids []Id) []*account
 	//group account
 	createGroupAccountAndMembership(account *account, ownerId Id)
@@ -615,7 +632,6 @@ type linkMailer interface {
 type avatarStore interface {
 	put(key string, mimeType string, data io.Reader)
 	delete(key string)
-	deleteAll()
 }
 
 type account struct {
@@ -642,13 +658,13 @@ type me struct {
 type fullPersonalAccountInfo struct {
 	me
 	activationCode           *string
-	activated                *time.Time
+	activatedOn              *time.Time
 	newEmailConfirmationCode *string
 	resetPwdCode             *string
 }
 
 func (a *fullPersonalAccountInfo) isActivated() bool {
-	return a.activated != nil
+	return a.activatedOn != nil
 }
 
 type pwdInfo struct {

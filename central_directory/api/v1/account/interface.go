@@ -22,6 +22,8 @@ type Api interface {
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string)
 	GetAccount(name string) *account
 	GetAccounts(ids []Id) []*account
+	SearchAccounts(nameStartsWith string) []*account
+	SearchPersonalAccounts(nameOrEmailStartsWith string) []*account
 	//requires active session to access
 	GetMe(myId Id) *me
 	SetMyPwd(myId Id, oldPwd, newPwd string)
@@ -34,12 +36,12 @@ type Api interface {
 	GetMyAccounts(myId Id, offset, limit int) ([]*account, int)
 	DeleteAccount(myId, accountId Id)
 	//member centric - must be an owner or admin
-	AddMembers(myId, accountId Id, newMembers []*AddMemberExternal)
+	AddMembers(myId, accountId Id, newMembers []*AddMemberPublic)
 	RemoveMembers(myId, accountId Id, existingMembers []Id)
 }
 
 // Return a new account Api backed by sql storage and sending link emails via an email service
-func New(accountsDb, pwdsDb isql.ReplicaSet, internalRegionClient InternalRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
+func New(accountsDb, pwdsDb isql.ReplicaSet, internalRegionClient PrivateRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
 	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionClient, linkMailer, avatarStore, nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen)
 }
 

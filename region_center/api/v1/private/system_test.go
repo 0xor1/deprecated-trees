@@ -20,18 +20,18 @@ func Test_system(t *testing.T) {
 	groupAccountShard := store.createAccount(groupAccountId, aliId, "ali")
 	assert.Equal(t, 0, groupAccountShard)
 
-	bob := &AddMemberInternal{}
+	bob := &AddMemberPrivate{}
 	bob.Id = NewId()
 	bob.Name = "bob"
 	bob.Role = AccountAdmin
-	cat := &AddMemberInternal{}
+	cat := &AddMemberPrivate{}
 	cat.Id = NewId()
 	cat.Name = "cat"
 	cat.Role = AccountMemberOfOnlySpecificProjects
-	store.addMembers(groupAccountShard, groupAccountId, []*AddMemberInternal{bob, cat})
+	store.addMembers(groupAccountShard, groupAccountId, []*AddMemberPrivate{bob, cat})
 
 	cat.Role = AccountOwner
-	store.updateMembersAndSetActive(groupAccountShard, groupAccountId, []*AddMemberInternal{cat})
+	store.updateMembersAndSetActive(groupAccountShard, groupAccountId, []*AddMemberPrivate{cat})
 
 	totalOwnerCount := store.getTotalOwnerCount(groupAccountShard, groupAccountId)
 	assert.Equal(t, 2, totalOwnerCount)

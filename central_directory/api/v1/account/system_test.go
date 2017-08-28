@@ -16,7 +16,7 @@ import (
 func Test_system(t *testing.T) {
 	accountsDb := isql.NewReplicaSet("mysql", "tc_cd_accounts:T@sk-C3n-T3r-@cc-0unt5@tcp(127.0.0.1:3306)/accounts?parseTime=true&loc=UTC&multiStatements=true", nil)
 	pwdsDb := isql.NewReplicaSet("mysql", "tc_cd_pwds:T@sk-C3n-T3r-Pwd5@tcp(127.0.0.1:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true", nil)
-	avatarStore := NewLocalAvatarStore("avatars")
+	avatarStore := NewLocalAvatarStore("avatars").(*localAvatarStore)
 	region := "use" //US-East
 	maxProcessEntityCount := 100
 	api := New(
@@ -49,7 +49,7 @@ func Test_system(t *testing.T) {
 
 	api.ResendActivationEmail("ali@ali.com")
 	activationCode := ""
-	accountsDb.QueryRow(`SELECT activationCode FROM personalAccountInfo`).Scan(&activationCode)
+	accountsDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 
 	api.Activate("ali@ali.com", activationCode)
 	aliId := api.Authenticate("ali@ali.com", "al1-Pwd-W00")
@@ -58,13 +58,13 @@ func Test_system(t *testing.T) {
 
 	api.ResendMyNewEmailConfirmationEmail(aliId)
 	newEmailConfirmationCode := ""
-	accountsDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccountInfo`).Scan(&newEmailConfirmationCode)
+	accountsDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
 
 	api.ConfirmNewEmail("ali@ali.com", "aliNew@aliNew.com", newEmailConfirmationCode)
 
 	api.ResetPwd("aliNew@aliNew.com")
 	resetPwdCode := ""
-	accountsDb.QueryRow(`SELECT resetPwdCode FROM personalAccountInfo`).Scan(&resetPwdCode)
+	accountsDb.QueryRow(`SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
 
 	api.SetNewPwdFromPwdReset("al1-Pwd-W00-2", "aliNew@aliNew.com", resetPwdCode)
 
@@ -133,22 +133,64 @@ func Test_system(t *testing.T) {
 	api.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", ColorBlindTheme)
 
 	bobActivationCode := ""
-	accountsDb.QueryRow(`SELECT activationCode FROM personalAccountInfo WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
+	accountsDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	api.Activate("bob@bob.com", bobActivationCode)
 	bobId := api.Authenticate("bob@bob.com", "8ob-Pwd-W00")
 	catActivationCode := ""
-	accountsDb.QueryRow(`SELECT activationCode FROM personalAccountInfo WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
+	accountsDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	api.Activate("cat@cat.com", catActivationCode)
 	catId := api.Authenticate("cat@cat.com", "c@t-Pwd-W00")
 
-	addBob := AddMemberExternal{}
+	addBob := AddMemberPublic{}
 	addBob.Id = bobId
 	addBob.Role = AccountAdmin
-	addCat := AddMemberExternal{}
+	addCat := AddMemberPublic{}
 	addCat.Id = catId
 	addCat.Role = AccountMemberOfOnlySpecificProjects
-	api.AddMembers(aliId, org.Id, []*AddMemberExternal{&addBob, &addCat})
+	api.AddMembers(aliId, org.Id, []*AddMemberPublic{&addBob, &addCat})
 	api.RemoveMembers(aliId, org.Id, []Id{bobId, catId})
+
+	accs = api.SearchAccounts("org")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(org.Id))
+	assert.Equal(t, "org", accs[0].Name)
+	assert.Equal(t, false, accs[0].IsPersonal)
+
+	accs = api.SearchAccounts("ali")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(aliId))
+	assert.Equal(t, "aliNew", accs[0].Name)
+	assert.Equal(t, true, accs[0].IsPersonal)
+
+	accs = api.SearchAccounts("bob")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(bobId))
+	assert.Equal(t, "bob", accs[0].Name)
+	assert.Equal(t, true, accs[0].IsPersonal)
+
+	accs = api.SearchAccounts("cat")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(catId))
+	assert.Equal(t, "cat", accs[0].Name)
+	assert.Equal(t, true, accs[0].IsPersonal)
+
+	accs = api.SearchPersonalAccounts("ali")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(aliId))
+	assert.Equal(t, "aliNew", accs[0].Name)
+	assert.Equal(t, true, accs[0].IsPersonal)
+
+	accs = api.SearchPersonalAccounts("bob")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(bobId))
+	assert.Equal(t, "bob", accs[0].Name)
+	assert.Equal(t, true, accs[0].IsPersonal)
+
+	accs = api.SearchPersonalAccounts("cat")
+	assert.Equal(t, 1, len(accs))
+	assert.True(t, accs[0].Id.Equal(catId))
+	assert.Equal(t, "cat", accs[0].Name)
+	assert.Equal(t, true, accs[0].IsPersonal)
 
 	avatarStore.deleteAll()
 	api.DeleteAccount(aliId, org.Id)

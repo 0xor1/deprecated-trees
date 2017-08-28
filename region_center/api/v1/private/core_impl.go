@@ -32,15 +32,15 @@ func (c *client) IsValidRegion(region string) bool {
 	return c.regions[region] != nil
 }
 
-func (c *client) CreateAccount(region string, accountId, myId Id, ownerName string) int {
-	return c.getRegion(region).CreateAccount(accountId, myId, ownerName)
+func (c *client) CreateAccount(region string, accountId, myId Id, myName string) int {
+	return c.getRegion(region).CreateAccount(accountId, myId, myName)
 }
 
 func (c *client) DeleteAccount(region string, shard int, accountId, myId Id) {
 	c.getRegion(region).DeleteAccount(shard, accountId, myId)
 }
 
-func (c *client) AddMembers(region string, shard int, accountId, myId Id, members []*AddMemberInternal) {
+func (c *client) AddMembers(region string, shard int, accountId, myId Id, members []*AddMemberPrivate) {
 	c.getRegion(region).AddMembers(shard, accountId, myId, members)
 }
 
@@ -79,7 +79,7 @@ func (a *api) DeleteAccount(shard int, accountId, myId Id) {
 	//TODO delete s3 data, uploaded files etc
 }
 
-func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInternal) {
+func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberPrivate) {
 	if len(members) > a.maxProcessEntityCount {
 		panic(MaxEntityCountExceededErr)
 	}
@@ -90,7 +90,7 @@ func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInte
 	ValidateMemberHasAccountAdminAccess(accountRole)
 
 	allIds := make([]Id, 0, len(members))
-	newMembersMap := map[string]*AddMemberInternal{}
+	newMembersMap := map[string]*AddMemberPrivate{}
 	for _, mem := range members { //loop over all the new entries and check permissions and build up useful id map and allIds slice
 		mem.Role.Validate()
 		if mem.Role == AccountOwner {
@@ -101,14 +101,14 @@ func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInte
 	}
 
 	inactiveMemberIds := a.store.getAllInactiveMemberIdsFromInputSet(shard, accountId, allIds)
-	inactiveMembers := make([]*AddMemberInternal, 0, len(inactiveMemberIds))
+	inactiveMembers := make([]*AddMemberPrivate, 0, len(inactiveMemberIds))
 	for _, inactiveMemberId := range inactiveMemberIds {
 		idStr := inactiveMemberId.String()
 		inactiveMembers = append(inactiveMembers, newMembersMap[idStr])
 		delete(newMembersMap, idStr)
 	}
 
-	newMembers := make([]*AddMemberInternal, 0, len(newMembersMap))
+	newMembers := make([]*AddMemberPrivate, 0, len(newMembersMap))
 	for _, newMem := range newMembersMap {
 		newMembers = append(newMembers, newMem)
 	}
@@ -117,7 +117,7 @@ func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberInte
 		a.store.addMembers(shard, accountId, newMembers)
 	}
 	if len(inactiveMembers) > 0 {
-		a.store.updateMembersAndSetActive(shard, accountId, inactiveMembers) //has to be AddMemberInternal in case the member changed their name whilst they were inactive on the account
+		a.store.updateMembersAndSetActive(shard, accountId, inactiveMembers) //has to be AddMemberPrivate in case the member changed their name whilst they were inactive on the account
 	}
 	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, myId, allIds, "added")
 }
@@ -188,8 +188,8 @@ type store interface {
 	deleteAccount(shard int, account Id)
 	getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, members []Id) []Id
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole
-	addMembers(shard int, accountId Id, members []*AddMemberInternal)
-	updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberInternal)
+	addMembers(shard int, accountId Id, members []*AddMemberPrivate)
+	updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberPrivate)
 	getTotalOwnerCount(shard int, accountId Id) int
 	getOwnerCountInSet(shard int, accountId Id, members []Id) int
 	setMembersInactive(shard int, accountId Id, members []Id)

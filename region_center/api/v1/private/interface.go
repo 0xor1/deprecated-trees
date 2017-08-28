@@ -8,7 +8,7 @@ import (
 type Api interface {
 	CreateAccount(accountId, myId Id, ownerName string) int
 	DeleteAccount(shard int, accountId, myId Id)
-	AddMembers(shard int, accountId, myId Id, members []*AddMemberInternal)
+	AddMembers(shard int, accountId, myId Id, members []*AddMemberPrivate)
 	RemoveMembers(shard int, accountId, myId Id, members []Id)
 	MemberIsOnlyAccountOwner(shard int, accountId, memberId Id) bool
 	RenameMember(shard int, accountId, memberId Id, newName string)
@@ -22,7 +22,7 @@ func New(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {
 	}
 }
 
-func NewClient(regions map[string]Api) InternalRegionClient {
+func NewClient(regions map[string]Api) PrivateRegionClient {
 	if regions == nil {
 		panic(InvalidArgumentsErr)
 	}
