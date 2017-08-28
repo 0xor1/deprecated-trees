@@ -23,8 +23,9 @@ func (a *api) GetPublicProjectsEnabled(shard int, accountId, myId Id) bool {
 
 func (a *api) SetMemberRole(shard int, accountId, myId, memberId Id, role AccountRole) {
 	accountRole := a.store.getAccountRole(shard, accountId, myId)
+	ValidateMemberHasAccountAdminAccess(accountRole)
 	role.Validate()
-	if (role == AccountOwner && *accountRole != AccountOwner) || *accountRole != AccountAdmin {
+	if role == AccountOwner && *accountRole != AccountOwner {
 		panic(InsufficientPermissionErr)
 	}
 	a.store.setMemberRole(shard, accountId, memberId, role)

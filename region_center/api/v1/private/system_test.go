@@ -9,51 +9,24 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	treeDb := isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)
-	store := newSqlStore(map[int]isql.ReplicaSet{0: treeDb})
+	maxProcessEntityCount := 100
+	api := New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)
 
 	aliId := NewId()
-	aliShard := store.createAccount(aliId, aliId, "ali")
-	assert.Equal(t, 0, aliShard)
-
-	groupAccountId := NewId()
-	groupAccountShard := store.createAccount(groupAccountId, aliId, "ali")
-	assert.Equal(t, 0, groupAccountShard)
-
-	bob := &AddMemberPrivate{}
+	orgId := NewId()
+	api.CreateAccount(orgId, aliId, "ali")
+	bob := AddMemberPrivate{}
 	bob.Id = NewId()
 	bob.Name = "bob"
 	bob.Role = AccountAdmin
-	cat := &AddMemberPrivate{}
+	cat := AddMemberPrivate{}
 	cat.Id = NewId()
 	cat.Name = "cat"
 	cat.Role = AccountMemberOfOnlySpecificProjects
-	store.addMembers(groupAccountShard, groupAccountId, []*AddMemberPrivate{bob, cat})
-
-	cat.Role = AccountOwner
-	store.updateMembersAndSetActive(groupAccountShard, groupAccountId, []*AddMemberPrivate{cat})
-
-	totalOwnerCount := store.getTotalOwnerCount(groupAccountShard, groupAccountId)
-	assert.Equal(t, 2, totalOwnerCount)
-
-	ownerCountInSet := store.getOwnerCountInSet(groupAccountShard, groupAccountId, []Id{aliId})
-	assert.Equal(t, 1, ownerCountInSet)
-
-	ownerCountInSet = store.getOwnerCountInSet(groupAccountShard, groupAccountId, []Id{bob.Id})
-	assert.Equal(t, 0, ownerCountInSet)
-
-	store.setMembersInactive(groupAccountShard, groupAccountId, []Id{cat.Id})
-	totalOwnerCount = store.getTotalOwnerCount(groupAccountShard, groupAccountId)
-	assert.Equal(t, 1, totalOwnerCount)
-
-	store.renameMember(groupAccountShard, groupAccountId, bob.Id, "jimbob")
-	inactiveMembers := store.getAllInactiveMemberIdsFromInputSet(groupAccountShard, groupAccountId, []Id{cat.Id, bob.Id})
-	assert.Equal(t, 1, len(inactiveMembers))
-	assert.True(t, inactiveMembers[0].Equal(cat.Id))
-
-	store.logActivity(groupAccountShard, groupAccountId, bob.Id, cat.Id, "member", "added")
-
-	store.deleteAccount(groupAccountShard, groupAccountId)
-	totalOwnerCount = store.getTotalOwnerCount(groupAccountShard, groupAccountId)
-	assert.Equal(t, 0, totalOwnerCount) // no owners can only occur if there is no account at all
+	api.AddMembers(0, orgId, aliId, []*AddMemberPrivate{&bob, &cat})
+	assert.True(t, api.MemberIsOnlyAccountOwner(0, orgId, aliId))
+	api.RenameMember(0, orgId, aliId, "aliNew")
+	assert.True(t, api.MemberIsAccountOwner(0, orgId, aliId))
+	api.RemoveMembers(0, orgId, aliId, []Id{bob.Id})
+	api.DeleteAccount(0, orgId, aliId)
 }

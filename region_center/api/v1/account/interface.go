@@ -18,6 +18,9 @@ type Api interface {
 	GetActivities(shard int, accountId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 	//for anyone
 	GetMe(shard int, accountId, myId Id) *AccountMember
+	//
+	// TODO needs payment info processing for group accounts with over 5 members
+	//
 }
 
 func New(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {

@@ -183,7 +183,7 @@ func (s *sqlStore) searchAccounts(nameStartsWith string) []*account {
 }
 
 func (s *sqlStore) searchPersonalAccounts(nameOrEmailStartsWith string) []*account {
-	rows, err := s.accounts.Query(`SELECT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, nameOrEmailStartsWith+"%", 0, 100, nameOrEmailStartsWith+"%", 0, 100, 0, 100)
+	rows, err := s.accounts.Query(`SELECT DISTINCT a.id, a.name, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, nameOrEmailStartsWith+"%", 0, 100, nameOrEmailStartsWith+"%", 0, 100, 0, 100)
 	if rows != nil {
 		defer rows.Close()
 	}
