@@ -97,6 +97,7 @@ type CommonTimeProps struct {
 type CommonNodeProps struct {
 	CreatedNamedEntity
 	CommonTimeProps
+	IsAbstract 		bool   `json:"isAbstract"`
 	Description     string `json:"description"`
 	LinkedFileCount uint64 `json:"linkedFileCount"`
 	ChatCount       uint64 `json:"chatCount"`

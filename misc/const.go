@@ -46,16 +46,7 @@ func (t *Theme) String() string {
 	if t == nil {
 		return ""
 	}
-	switch *t {
-	case LightTheme:
-		return "light"
-	case DarkTheme:
-		return "dark"
-	case ColorBlindTheme:
-		return "colorBlind"
-	default:
-		panic(invalidConstantValueErr)
-	}
+	return strconv.Itoa(int(*t))
 }
 
 func (t *Theme) UnmarshalJSON(raw []byte) error {
@@ -81,18 +72,7 @@ func (r *AccountRole) String() string {
 	if r == nil {
 		return ""
 	}
-	switch *r {
-	case AccountOwner:
-		return "accountOwner"
-	case AccountAdmin:
-		return "accountAdmin"
-	case AccountMemberOfAllProjects:
-		return "accountMemberOfAllProjects"
-	case AccountMemberOfOnlySpecificProjects:
-		return "accountMemberOfOnlySpecificProjects"
-	default:
-		panic(invalidConstantValueErr)
-	}
+	return strconv.Itoa(int(*r))
 }
 
 func (r *AccountRole) UnmarshalJSON(raw []byte) error {
@@ -118,16 +98,7 @@ func (r *ProjectRole) String() string {
 	if r == nil {
 		return ""
 	}
-	switch *r {
-	case ProjectAdmin:
-		return "projectAdmin"
-	case ProjectWriter:
-		return "projectWriter"
-	case ProjectReader:
-		return "projectReader"
-	default:
-		panic(invalidConstantValueErr)
-	}
+	return strconv.Itoa(int(*r))
 }
 
 func (r *ProjectRole) UnmarshalJSON(raw []byte) error {

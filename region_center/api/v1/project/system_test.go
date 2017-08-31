@@ -12,7 +12,7 @@ func Test_system(t *testing.T) {
 	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
 	maxProcessEntityCount := 100
 	privateApi := private.New(shards, maxProcessEntityCount)
-	projectApi := New(shards, maxProcessEntityCount)
+	api := New(shards, maxProcessEntityCount)
 
 	orgId := NewId()
 	ali := AddMemberPrivate{}
@@ -34,7 +34,7 @@ func Test_system(t *testing.T) {
 	privateApi.CreateAccount(orgId, ali.Id, ali.Name)
 	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
 
-	projectApi.CreateProject(0, orgId, ali.Id, "p1", "p1_desc", nil, nil, true, false, []*addMember{})
+	api.CreateProject(0, orgId, ali.Id, "p1", "p1_desc", nil, nil, true, false, []*addMember{})
 
 	privateApi.DeleteAccount(0, orgId, ali.Id)
 }
