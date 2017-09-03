@@ -176,34 +176,6 @@ func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *memb
 	return &res
 }
 
-func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId, projectId Id, members []*addMember) []Id {
-	queryArgs := make([]interface{}, 0, len(members)+3)
-	queryArgs = append(queryArgs, []byte(accountId), []byte(projectId), []byte(accountId))
-	query := bytes.NewBufferString(`SELECT id FROM projectMembers WHERE account=? AND projectId=? AND isActive=false AND id IN (SELECT id FROM accountMembers WHERE account=? AND isActive=true AND id IN(`)
-	for i, mem := range members {
-		if i != 0 {
-			query.WriteString(`,`)
-		}
-		query.WriteString(`?`)
-		queryArgs = append(queryArgs, []byte(mem.Id))
-	}
-	query.WriteString(`));`)
-	res := make([]Id, 0, len(members))
-	rows, err := s.shards[shard].Query(query.String(), queryArgs...)
-	if rows != nil {
-		defer rows.Close()
-	}
-	if err != nil {
-		panic(err)
-	}
-	for rows.Next() {
-		id := make([]byte, 0, 16)
-		rows.Scan(&id)
-		res = append(res, Id(id))
-	}
-	return res
-}
-
 func (s *sqlStore) logAccountActivity(shard int, accountId, member, item Id, itemType, action string, newValue *string) {
 	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, newValue)
 }
