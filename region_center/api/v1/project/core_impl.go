@@ -21,6 +21,7 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 		panic(publicProjectsDisabledErr)
 	}
 
+	minRemainingTime := uint64(0)
 	project := &project{}
 	project.Id = NewId()
 	project.Name = name
@@ -28,7 +29,8 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	project.CreatedOn = Now()
 	project.StartOn = startOn
 	project.DueOn = dueOn
-	project.IsParallel = isParallel
+	project.IsParallel = &isParallel
+	project.MinimumRemainingTime = &minRemainingTime
 	project.IsPublic = isPublic
 	a.store.createProject(shard, accountId, project)
 	if accountId.Equal(myId) {
@@ -164,6 +166,8 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 	}
 	if *projectRole != role {
 		a.store.setMemberRole(shard, accountId, projectId, member, role)
+		roleStr := role.String()
+		a.store.logProjectActivity(shard, accountId, projectId, myId, member, "member", "setRole", &roleStr)
 	}
 }
 

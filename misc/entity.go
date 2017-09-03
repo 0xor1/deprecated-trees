@@ -104,8 +104,8 @@ type CommonNodeProps struct {
 }
 
 type CommonAbstractNodeProps struct {
-	MinimumRemainingTime uint64 `json:"minimumRemainingTime"`
-	IsParallel           bool   `json:"isParallel"`
+	MinimumRemainingTime *uint64 `json:"minimumRemainingTime,omitempty"`
+	IsParallel           *bool   `json:"isParallel,omitempty"`
 }
 
 type AccountMember struct {

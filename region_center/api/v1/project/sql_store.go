@@ -69,9 +69,9 @@ func (s *sqlStore) setIsParallel(shard int, accountId, projectId Id, isParallel 
 }
 
 func (s *sqlStore) getProject(shard int, accountId, projectId Id) *project {
-	row := s.shards[shard].QueryRow(`SELECT name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
+	row := s.shards[shard].QueryRow(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
 	result := project{}
-	if err := row.Scan(&result.Name, &result.Description, &result.CreatedOn, &result.ArchivedOn, &result.StartOn, &result.DueOn, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.FileCount, &result.FileSize, &result.LinkedFileCount, &result.ChatCount, &result.IsParallel, &result.IsPublic); err != nil {
+	if err := row.Scan(&result.Id, &result.Name, &result.Description, &result.CreatedOn, &result.ArchivedOn, &result.StartOn, &result.DueOn, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.FileCount, &result.FileSize, &result.LinkedFileCount, &result.ChatCount, &result.IsParallel, &result.IsPublic); err != nil {
 		panic(err)
 	}
 	return &result
@@ -90,7 +90,7 @@ func (s *sqlStore) getAllProjects(shard int, accountId Id, nameContains *string,
 }
 
 func (s *sqlStore) setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time) {
-	if _, err := s.shards[shard].Exec(`UPDATE projects SET archivedOn=? WHERE account=? && project=?`, []byte(accountId), []byte(projectId)); err != nil {
+	if _, err := s.shards[shard].Exec(`UPDATE projects SET archivedOn=? WHERE account=? && id=?`, Now(), []byte(accountId), []byte(projectId)); err != nil {
 		panic(err)
 	}
 }
@@ -111,7 +111,7 @@ func (s *sqlStore) addMemberOrSetActive(shard int, accountId, projectId Id, memb
 }
 
 func (s *sqlStore) setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole) {
-	if _, err := s.shards[shard].Exec(`UPDATE projectMembers SET role=? WHERE account=? AND project=? AND member=? AND isActive=true`, role, []byte(accountId), []byte(projectId), []byte(member)); err != nil {
+	if _, err := s.shards[shard].Exec(`UPDATE projectMembers SET role=? WHERE account=? AND project=? AND id=? AND isActive=true`, role, []byte(accountId), []byte(projectId), []byte(member)); err != nil {
 		panic(err)
 	}
 }
@@ -127,7 +127,7 @@ func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member 
 
 func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int) {
 	query := bytes.NewBufferString(`SELECT %s FROM projectMembers WHERE account=? AND project=? AND isActive=true`)
-	columns := ` id, name, isActive, totalRemainingTime, totalLoggedTime role `
+	columns := ` id, name, isActive, totalRemainingTime, totalLoggedTime, role `
 	args := make([]interface{}, 0, 6)
 	args = append(args, []byte(accountId), []byte(projectId))
 	if role != nil {
@@ -168,7 +168,7 @@ func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectR
 }
 
 func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *member {
-	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
 	res := member{}
 	if err := row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role); err != nil {
 		panic(err)
@@ -266,7 +266,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 }
 
 func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId Id, myId *Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
-	columns := ` name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic `
+	columns := ` id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic `
 	query := bytes.NewBufferString(`SELECT %s FROM projects WHERE account=? %s`)
 	args := make([]interface{}, 0, 13)
 	args = append(args, []byte(accountId))
@@ -315,7 +315,7 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		return nil, count
 	}
 	query.WriteString(fmt.Sprintf(` ORDER BY %s %s LIMIT ? OFFSET ?`, sortBy, sortDir))
-	args = append(args, sortBy, sortDir, limit, offset)
+	args = append(args, limit, offset)
 	rows, err := shard.Query(fmt.Sprintf(query.String(), columns, specificSqlFilterTxt), args...)
 	if err != nil {
 		panic(err)
@@ -323,7 +323,7 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 	result := make([]*project, 0, limit)
 	for rows.Next() {
 		res := project{}
-		if err := rows.Scan(&res.Name, &res.Description, &res.CreatedOn, &res.ArchivedOn, &res.StartOn, &res.DueOn, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.FileCount, &res.FileSize, &res.LinkedFileCount, &res.ChatCount, &res.IsParallel, &res.IsPublic); err != nil {
+		if err := rows.Scan(&res.Id, &res.Name, &res.Description, &res.CreatedOn, &res.ArchivedOn, &res.StartOn, &res.DueOn, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.FileCount, &res.FileSize, &res.LinkedFileCount, &res.ChatCount, &res.IsParallel, &res.IsPublic); err != nil {
 			panic(err)
 		}
 		result = append(result, &res)

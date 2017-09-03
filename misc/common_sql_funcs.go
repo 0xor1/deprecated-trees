@@ -37,17 +37,17 @@ func GetAccountAndProjectRolesAndProjectIsPublic(shard isql.ReplicaSet, accountI
 	accountIdBytes := []byte(accountId)
 	projectIdBytes := []byte(projectId)
 	memberIdBytes := []byte(memberId)
-	row := shard.QueryRow(`SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND project=?`, accountIdBytes, memberIdBytes, accountIdBytes, projectIdBytes, memberIdBytes, accountIdBytes, projectIdBytes)
+	row := shard.QueryRow(`SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND id=?`, accountIdBytes, memberIdBytes, accountIdBytes, projectIdBytes, memberIdBytes, accountIdBytes, projectIdBytes)
 	isPublic := false
-	accRole := AccountRole(3)
-	projRole := ProjectRole(2)
+	var accRole *AccountRole
+	var projRole *ProjectRole
 	if err := row.Scan(&isPublic, &accRole, &projRole); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil, nil
 		}
 		panic(err)
 	}
-	return &accRole, &projRole, &isPublic
+	return accRole, projRole, &isPublic
 }
 
 func GetPublicProjectsEnabled(shard isql.ReplicaSet, accountId Id) bool {

@@ -237,10 +237,10 @@ DROP PROCEDURE IF EXISTS deleteProject;
 DELIMITER $$
 CREATE PROCEDURE deleteProject(_accountId BINARY(16), _projectId BINARY(16))
 BEGIN
-    DELETE FROM projectLocks WHERE account=_accountId AND project=_projectId;
+    DELETE FROM projectLocks WHERE account=_accountId AND id=_projectId;
 	DELETE FROM projectMembers WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projectActivities WHERE account=_accountId AND project=_projectId;
-	DELETE FROM projects WHERE account=_accountId AND project=_projectId;
+	DELETE FROM projects WHERE account=_accountId AND id=_projectId;
 	DELETE FROM nodes WHERE account=_accountId AND project=_projectId;
 	DELETE FROM timeLogs WHERE account=_accountId AND project=_projectId;
 END;
@@ -248,7 +248,7 @@ $$
 DELIMITER ;
 
 DROP PROCEDURE IF EXISTS addProjectMemberOrSetActive;
-DELIMITER $$ #TRIES to add a user to a project, sets true if they were added, false otherwise. It may be false if they are trying to add a user who is not a member of the account, or add a member who is already an active member of this project.
+DELIMITER $$
 CREATE PROCEDURE addProjectMemberOrSetActive(_accountId BINARY(16), _projectId BINARY(16), _id BINARY(16), _role TINYINT UNSIGNED)
 BEGIN
 	DECLARE projMemberCount TINYINT DEFAULT 0;
@@ -288,7 +288,7 @@ BEGIN
 		SELECT COUNT(*) INTO projMemberCount FROM projectMembers WHERE account = _accountId AND project = _projectId AND id = _id AND isActive = true FOR UPDATE;
 		IF projMemberCount = 1 THEN
 			UPDATE nodes SET member = NULL WHERE account = _accountId AND project = _projectId AND member = _id;
-            UPDATE projectMembers SET totalRemainingTime = 0, totalLoggedTime = 0 WHERE account = _account AND project = _projectId AND member = _id;
+            UPDATE projectMembers SET totalRemainingTime = 0, totalLoggedTime = 0 WHERE account = _accountId AND project = _projectId AND id = _id;
             SELECT true;
 		ELSE
 			SELECT false;
