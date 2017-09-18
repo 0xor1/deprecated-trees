@@ -48,12 +48,12 @@ func (c *client) RemoveMembers(region string, shard int, accountId, myId Id, mem
 	c.getRegion(region).RemoveMembers(shard, accountId, myId, members)
 }
 
-func (c *client) MemberIsOnlyAccountOwner(region string, shard int, accountId, member Id) bool {
-	return c.getRegion(region).MemberIsOnlyAccountOwner(shard, accountId, member)
+func (c *client) MemberIsOnlyAccountOwner(region string, shard int, accountId, myId Id) bool {
+	return c.getRegion(region).MemberIsOnlyAccountOwner(shard, accountId, myId)
 }
 
-func (c *client) RenameMember(region string, shard int, accountId, member Id, newName string) {
-	c.getRegion(region).RenameMember(shard, accountId, member, newName)
+func (c *client) RenameMember(region string, shard int, accountId, myId Id, newName string) {
+	c.getRegion(region).RenameMember(shard, accountId, myId, newName)
 }
 
 func (c *client) MemberIsAccountOwner(region string, shard int, accountId, myId Id) bool {
@@ -158,17 +158,17 @@ func (a *api) RemoveMembers(shard int, accountId, myId Id, members []Id) {
 	a.store.logAccountBatchAddOrRemoveMembersActivity(shard, accountId, myId, members, "removed")
 }
 
-func (a *api) MemberIsOnlyAccountOwner(shard int, accountId, member Id) bool {
-	if accountId.Equal(member) {
+func (a *api) MemberIsOnlyAccountOwner(shard int, accountId, myId Id) bool {
+	if accountId.Equal(myId) {
 		return true
 	}
 	totalOwnerCount := a.store.getTotalOwnerCount(shard, accountId)
-	ownerCount := a.store.getOwnerCountInSet(shard, accountId, []Id{member})
+	ownerCount := a.store.getOwnerCountInSet(shard, accountId, []Id{myId})
 	return totalOwnerCount == 1 && ownerCount == 1
 }
 
-func (a *api) RenameMember(shard int, accountId, memberId Id, newName string) {
-	a.store.renameMember(shard, accountId, memberId, newName)
+func (a *api) RenameMember(shard int, accountId, myId Id, newName string) {
+	a.store.renameMember(shard, accountId, myId, newName)
 }
 
 func (a *api) MemberIsAccountOwner(shard int, accountId, myId Id) bool {

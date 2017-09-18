@@ -7,8 +7,7 @@ import (
 )
 
 type Api interface {
-	CreateAbstractNode(shard int, accountId, projectId, parentId, firstChildId, myId Id, name, description string, isParallel bool) *abstractNode
-	CreateNode(shard int, accountId, projectId, parentId, firstChildId, myId Id, name, description string, memberId Id) *node
+	CreateNode(shard int, accountId, projectId, parentId, myId Id, name, description string, isAbstract bool, isParallel *bool) *node
 	SetName(shard int, accountId, projectId, nodeId, myId Id, name string)
 	SetDescription(shard int, accountId, projectId, nodeId, myId Id, description string)
 	SetIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool)

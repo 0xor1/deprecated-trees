@@ -12,11 +12,7 @@ type api struct {
 type store interface {
 }
 
-type abstractNode struct {
-	CommonNodeProps
-	CommonAbstractNodeProps
-}
-
 type node struct {
 	CommonNodeProps
+	CommonAbstractNodeProps
 }
