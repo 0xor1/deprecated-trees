@@ -27,13 +27,11 @@ func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRol
 }
 
 func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId Id, publicProjectsEnabled bool) {
-	if _, err := s.shards[shard].Exec(`UPDATE accounts SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(accountId)); err != nil {
-		panic(err)
-	}
+	_, err := s.shards[shard].Exec(`UPDATE accounts SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(accountId))
+	PanicIf(err)
 	if !publicProjectsEnabled {
-		if _, err := s.shards[shard].Exec(`UPDATE projects SET isPublic=false WHERE account=?`, []byte(accountId)); err != nil {
-			panic(err)
-		}
+		_, err := s.shards[shard].Exec(`UPDATE projects SET isPublic=false WHERE account=?`, []byte(accountId))
+		PanicIf(err)
 	}
 }
 
@@ -42,17 +40,14 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 }
 
 func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role AccountRole) {
-	if _, err := s.shards[shard].Exec(`UPDATE accountMembers SET role=? WHERE account=? AND id=?`, role, []byte(accountId), []byte(memberId)); err != nil {
-		panic(err)
-	}
+	_, err := s.shards[shard].Exec(`UPDATE accountMembers SET role=? WHERE account=? AND id=?`, role, []byte(accountId), []byte(memberId))
+	PanicIf(err)
 }
 
 func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
 	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountMember{}
-	if err := row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role); err != nil {
-		panic(err)
-	}
+	PanicIf(row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role))
 	return &res
 }
 
@@ -72,9 +67,7 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 	}
 	count := 0
 	row := s.shards[shard].QueryRow(fmt.Sprintf(query.String(), ` COUNT(*) `), args...)
-	if err := row.Scan(&count); err != nil {
-		panic(err)
-	}
+	PanicIf(row.Scan(&count))
 	if count == 0 {
 		return nil, count
 	}
@@ -84,15 +77,11 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 	if rows != nil {
 		defer rows.Close()
 	}
-	if err != nil {
-		panic(err)
-	}
+	PanicIf(err)
 	res := make([]*AccountMember, 0, limit)
 	for rows.Next() {
 		mem := AccountMember{}
-		if err := rows.Scan(&mem.Id, &mem.Name, &mem.IsActive, &mem.Role); err != nil {
-			panic(err)
-		}
+		PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
 	return res, count
@@ -130,17 +119,13 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	if rows != nil {
 		defer rows.Close()
 	}
-	if err != nil {
-		panic(err)
-	}
+	PanicIf(err)
 
 	res := make([]*Activity, 0, limit)
 	for rows.Next() {
 		act := Activity{}
 		unixMilli := int64(0)
-		if err := rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action, &act.NewValue); err != nil {
-			panic(err)
-		}
+		PanicIf(rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action, &act.NewValue))
 		act.OccurredOn = time.Unix(unixMilli/1000, (unixMilli%1000)*1000000).UTC()
 		res = append(res, &act)
 	}

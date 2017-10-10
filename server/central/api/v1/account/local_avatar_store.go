@@ -1,6 +1,7 @@
 package account
 
 import (
+	. "bitbucket.org/0xor1/task/server/misc"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,21 +18,14 @@ func (s *localAvatarStore) put(key string, mimeType string, data io.Reader) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	avatarBytes, err := ioutil.ReadAll(data)
-	if err != nil {
-		panic(err)
-	}
-	if err := ioutil.WriteFile(path.Join(s.absDirPath, key), avatarBytes, os.ModePerm); err != nil {
-		panic(err)
-	}
+	PanicIf(err)
+	PanicIf(ioutil.WriteFile(path.Join(s.absDirPath, key), avatarBytes, os.ModePerm))
 }
 
 func (s *localAvatarStore) delete(key string) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	if err := os.Remove(path.Join(s.absDirPath, key)); err != nil {
-		panic(err)
-	}
-
+	PanicIf(os.Remove(path.Join(s.absDirPath, key)))
 }
 
 func (s *localAvatarStore) deleteAll() {

@@ -16,7 +16,7 @@ type Api interface {
 	LogTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string)
 	DeleteNode(shard int, accountId, projectId, nodeId, myId Id)
 	GetNode(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) *node
-	GetChildren(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int)
+	GetChildren(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node
 }
 
 func New(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {

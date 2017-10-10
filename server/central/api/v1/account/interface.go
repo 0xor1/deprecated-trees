@@ -63,9 +63,7 @@ func NewLocalAvatarStore(relDirPath string) avatarStore {
 		panic(InvalidArgumentsErr)
 	}
 	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
+	PanicIf(err)
 	absDirPath := path.Join(wd, relDirPath)
 	os.MkdirAll(absDirPath, os.ModeDir)
 	return &localAvatarStore{

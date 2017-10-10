@@ -420,9 +420,7 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 
 	if avatarImageData != nil {
 		avatarImage, _, err := image.Decode(avatarImageData)
-		if err != nil {
-			panic(err)
-		}
+		PanicIf(err)
 		bounds := avatarImage.Bounds()
 		if bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y { //if it  isn't square, then error
 			panic(invalidAvatarShapeErr)
@@ -431,9 +429,7 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 			avatarImage = resize.Resize(a.maxAvatarDim, a.maxAvatarDim, avatarImage, resize.NearestNeighbor)
 		}
 		buff := &bytes.Buffer{}
-		if err := png.Encode(buff, avatarImage); err != nil {
-			panic(err)
-		}
+		PanicIf(png.Encode(buff, avatarImage))
 		data := buff.Bytes()
 		reader := bytes.NewReader(data)
 		a.avatarStore.put(myId.String(), "image/png", reader)

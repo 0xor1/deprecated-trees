@@ -3,7 +3,6 @@ package private
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
 	"bytes"
-	"database/sql"
 	"github.com/0xor1/isql"
 	"math/rand"
 )
@@ -23,16 +22,14 @@ type sqlStore struct {
 
 func (s *sqlStore) createAccount(id Id, ownerId Id, ownerName string) int {
 	shardId := rand.Intn(len(s.shards))
-	if _, err := s.shards[shardId].Exec(`CALL registerAccount(?, ?, ?);`, []byte(id), []byte(ownerId), ownerName); err != nil {
-		panic(err)
-	}
+	_, err := s.shards[shardId].Exec(`CALL registerAccount(?, ?, ?);`, []byte(id), []byte(ownerId), ownerName)
+	PanicIf(err)
 	return shardId
 }
 
 func (s *sqlStore) deleteAccount(shard int, account Id) {
-	if _, err := s.shards[shard].Exec(`CALL deleteAccount(?);`, []byte(account)); err != nil {
-		panic(err)
-	}
+	_, err := s.shards[shard].Exec(`CALL deleteAccount(?);`, []byte(account))
+	PanicIf(err)
 }
 
 func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, members []Id) []Id {
@@ -52,9 +49,7 @@ func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, 
 	if rows != nil {
 		defer rows.Close()
 	}
-	if err != nil {
-		panic(err)
-	}
+	PanicIf(err)
 	for rows.Next() {
 		id := make([]byte, 0, 16)
 		rows.Scan(&id)
@@ -66,11 +61,8 @@ func (s *sqlStore) getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, 
 func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRole {
 	row := s.shards[shard].QueryRow(`SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)
-	if err := row.Scan(&res); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		panic(err)
+	if IsSqlErrNoRowsAndPanicIf(row.Scan(&res)) {
+		return nil
 	}
 	return &res
 }
@@ -85,24 +77,20 @@ func (s *sqlStore) addMembers(shard int, accountId Id, members []*AddMemberPriva
 		query.WriteString(`(?, ?, ?, ?)`)
 		queryArgs = append(queryArgs, []byte(accountId), []byte(mem.Id), mem.Name, mem.Role)
 	}
-	if _, err := s.shards[shard].Exec(query.String(), queryArgs...); err != nil {
-		panic(err)
-	}
+	_, err := s.shards[shard].Exec(query.String(), queryArgs...)
+	PanicIf(err)
 }
 
 func (s *sqlStore) updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberPrivate) {
 	for _, mem := range members {
-		if _, err := s.shards[shard].Exec(`UPDATE accountMembers SET name=?, role=?, isActive=true WHERE account=? AND id=?`, mem.Name, mem.Role, []byte(accountId), []byte(mem.Id)); err != nil {
-			panic(err)
-		}
+		_, err := s.shards[shard].Exec(`UPDATE accountMembers SET name=?, role=?, isActive=true WHERE account=? AND id=?`, mem.Name, mem.Role, []byte(accountId), []byte(mem.Id))
+		PanicIf(err)
 	}
 }
 
 func (s *sqlStore) getTotalOwnerCount(shard int, accountId Id) int {
 	count := 0
-	if err := s.shards[shard].QueryRow(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count); err != nil && err != sql.ErrNoRows {
-		panic(err)
-	}
+	IsSqlErrNoRowsAndPanicIf(s.shards[shard].QueryRow(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count))
 	return count
 }
 
@@ -119,25 +107,21 @@ func (s *sqlStore) getOwnerCountInSet(shard int, accountId Id, members []Id) int
 	}
 	query.WriteString(`);`)
 	count := 0
-	if err := s.shards[shard].QueryRow(query.String(), queryArgs...).Scan(&count); err != nil && err != sql.ErrNoRows {
-		panic(err)
-	}
+	IsSqlErrNoRowsAndPanicIf(s.shards[shard].QueryRow(query.String(), queryArgs...).Scan(&count))
 	return count
 }
 
 func (s *sqlStore) setMembersInactive(shard int, accountId Id, members []Id) {
 	accountIdBytes := []byte(accountId)
 	for _, mem := range members {
-		if _, err := s.shards[shard].Exec(`CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem)); err != nil {
-			panic(err)
-		}
+		_, err := s.shards[shard].Exec(`CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem))
+		PanicIf(err)
 	}
 }
 
 func (s *sqlStore) renameMember(shard int, accountId Id, member Id, newName string) {
-	if _, err := s.shards[shard].Exec(`CALL renameMember(?, ?, ?)`, []byte(accountId), []byte(member), newName); err != nil {
-		panic(err)
-	}
+	_, err := s.shards[shard].Exec(`CALL renameMember(?, ?, ?)`, []byte(accountId), []byte(member), newName)
+	PanicIf(err)
 }
 
 func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string) {

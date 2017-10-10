@@ -11,9 +11,8 @@ var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP
 
 func CryptoBytes(length int) []byte {
 	k := make([]byte, length)
-	if _, err := io.ReadFull(rand.Reader, k); err != nil {
-		panic(err)
-	}
+	_, err := io.ReadFull(rand.Reader, k)
+	PanicIf(err)
 	return k
 }
 
@@ -22,9 +21,7 @@ func CryptoUrlSafeString(length int) string {
 	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
 	for i := range buf {
 		randomIdx, err := rand.Int(rand.Reader, urlSafeRunesLength)
-		if err != nil {
-			panic(err)
-		}
+		PanicIf(err)
 		buf[i] = urlSafeRunes[int(randomIdx.Int64())]
 	}
 	return string(buf)
@@ -32,8 +29,6 @@ func CryptoUrlSafeString(length int) string {
 
 func ScryptKey(password, salt []byte, N, r, p, keyLen int) []byte {
 	key, err := scrypt.Key(password, salt, N, r, p, keyLen)
-	if err != nil {
-		panic(err)
-	}
+	PanicIf(err)
 	return key
 }

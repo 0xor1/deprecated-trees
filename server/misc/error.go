@@ -1,6 +1,7 @@
 package misc
 
 import (
+	"database/sql"
 	"fmt"
 )
 
@@ -37,4 +38,20 @@ type ErrorRef struct {
 
 func (e *ErrorRef) Error() string {
 	return fmt.Sprintf("errorRef: %s", e.Id.String())
+}
+
+func PanicIf(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+func IsSqlErrNoRowsAndPanicIf(e error) bool {
+	if e != nil {
+		if e == sql.ErrNoRows {
+			return true
+		}
+		panic(e)
+	}
+	return false
 }

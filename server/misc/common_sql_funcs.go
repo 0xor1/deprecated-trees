@@ -2,18 +2,14 @@ package misc
 
 import (
 	"bytes"
-	"database/sql"
 	"github.com/0xor1/isql"
 )
 
 func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole {
 	row := shard.QueryRow(`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)
-	if err := row.Scan(&res); err != nil {
-		if err == sql.ErrNoRows {
-			return nil
-		}
-		panic(err)
+	if IsSqlErrNoRowsAndPanicIf(row.Scan(&res)) {
+		return nil
 	}
 	return &res
 }
@@ -24,11 +20,8 @@ func GetAccountAndProjectRoles(shard isql.ReplicaSet, accountId, projectId, memb
 	row := shard.QueryRow(`SELECT role accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountIdBytes, []byte(projectId), memberIdBytes, accountIdBytes, memberIdBytes)
 	var accRole *AccountRole
 	var projRole *ProjectRole
-	if err := row.Scan(&accRole, &projRole); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		panic(err)
+	if IsSqlErrNoRowsAndPanicIf(row.Scan(&accRole, &projRole)) {
+		return nil, nil
 	}
 	return accRole, projRole
 }
@@ -41,11 +34,8 @@ func GetAccountAndProjectRolesAndProjectIsPublic(shard isql.ReplicaSet, accountI
 	isPublic := false
 	var accRole *AccountRole
 	var projRole *ProjectRole
-	if err := row.Scan(&isPublic, &accRole, &projRole); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil, nil
-		}
-		panic(err)
+	if IsSqlErrNoRowsAndPanicIf(row.Scan(&isPublic, &accRole, &projRole)) {
+		return nil, nil, nil
 	}
 	return accRole, projRole, &isPublic
 }
@@ -53,22 +43,18 @@ func GetAccountAndProjectRolesAndProjectIsPublic(shard isql.ReplicaSet, accountI
 func GetPublicProjectsEnabled(shard isql.ReplicaSet, accountId Id) bool {
 	row := shard.QueryRow(`SELECT publicProjectsEnabled FROM accounts WHERE id=?`, []byte(accountId))
 	res := false
-	if err := row.Scan(&res); err != nil {
-		panic(err)
-	}
+	PanicIf(row.Scan(&res))
 	return res
 }
 
 func LogAccountActivity(shard isql.ReplicaSet, accountId, member, item Id, itemType, action string, newValue *string) {
-	if _, err := shard.Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), Now().UnixNano()/1000000, []byte(member), []byte(item), itemType, "", action, newValue); err != nil {
-		panic(err)
-	}
+	_, err := shard.Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), Now().UnixNano()/1000000, []byte(member), []byte(item), itemType, "", action, newValue)
+	PanicIf(err)
 }
 
 func LogProjectActivity(shard isql.ReplicaSet, accountId, projectId, member, item Id, itemType, action string, newValue *string) {
-	if _, err := shard.Exec(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), Now().UnixNano()/1000000, []byte(member), []byte(item), itemType, "", action, newValue); err != nil {
-		panic(err)
-	}
+	_, err := shard.Exec(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), Now().UnixNano()/1000000, []byte(member), []byte(item), itemType, "", action, newValue)
+	PanicIf(err)
 }
 
 func LogAccountBatchAddOrRemoveMembersActivity(shard isql.ReplicaSet, accountId, member Id, members []Id, action string) {
@@ -81,9 +67,8 @@ func LogAccountBatchAddOrRemoveMembersActivity(shard isql.ReplicaSet, accountId,
 		query.WriteString(` (? , ?, ?, ?, ?, ?, ?, ?)`)
 		args = append(args, []byte(accountId), Now().UnixNano()/1000000, []byte(member), []byte(memId), "member", "", action, nil)
 	}
-	if _, err := shard.Exec(query.String(), args...); err != nil {
-		panic(err)
-	}
+	_, err := shard.Exec(query.String(), args...)
+	PanicIf(err)
 }
 
 func LogProjectBatchAddOrRemoveMembersActivity(shard isql.ReplicaSet, accountId, projectId, member Id, members []Id, action string) {
@@ -96,7 +81,6 @@ func LogProjectBatchAddOrRemoveMembersActivity(shard isql.ReplicaSet, accountId,
 		query.WriteString(` (? , ?, ?, ?, ?, ?, ?, ?, ?)`)
 		args = append(args, []byte(accountId), []byte(projectId), Now().UnixNano()/1000000, []byte(member), []byte(memId), "member", "", action, nil)
 	}
-	if _, err := shard.Exec(query.String(), args...); err != nil {
-		panic(err)
-	}
+	_, err := shard.Exec(query.String(), args...)
+	PanicIf(err)
 }
