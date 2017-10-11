@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	publicProjectsDisabledErr = &Error{Code: "rc_v1_p_ppd", Msg: "public projects disabled", IsPublic: true}
+	publicProjectsDisabledErr = &Error{Code: "rc_v1_p_ppd", Msg: "public projects disabled", Public: true}
 )
 
 type api struct {

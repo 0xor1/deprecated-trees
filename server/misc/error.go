@@ -6,30 +6,30 @@ import (
 )
 
 var (
-	NotImplementedErr         = &Error{Code: "g_ni", Msg: "not implemented", IsPublic: false}
-	InvalidArgumentsErr       = &Error{Code: "g_ia", Msg: "invalid arguments", IsPublic: false}
-	idGenerationErr           = &Error{Code: "g_ig", Msg: "Failed to generate id", IsPublic: false}
-	InsufficientPermissionErr = &Error{Code: "g_ip", Msg: "insufficient permissions", IsPublic: true}
-	InvalidOperationErr       = &Error{Code: "g_io", Msg: "invalid operation", IsPublic: true}
-	MaxEntityCountExceededErr = &Error{Code: "g_mece", Msg: "max entity count exceeded", IsPublic: true}
+	NotImplementedErr         = &Error{Code: "g_ni", Msg: "not implemented", Public: true}
+	InvalidArgumentsErr       = &Error{Code: "g_ia", Msg: "invalid arguments", Public: true}
+	idGenerationErr           = &Error{Code: "g_ig", Msg: "failed to generate id", Public: false}
+	InsufficientPermissionErr = &Error{Code: "g_ip", Msg: "insufficient permissions", Public: true}
+	InvalidOperationErr       = &Error{Code: "g_io", Msg: "invalid operation", Public: true}
+	MaxEntityCountExceededErr = &Error{Code: "g_mece", Msg: "max entity count exceeded", Public: true}
 )
 
 type PermissionedError interface {
-	IsPrivate() bool
+	IsPublic() bool
 }
 
 type Error struct {
-	Code     string `json:"code"`
-	Msg      string `json:"msg"`
-	IsPublic bool   `json:"-"`
+	Code   string `json:"code"`
+	Msg    string `json:"msg"`
+	Public bool   `json:"-"`
 }
 
 func (e *Error) Error() string {
 	return fmt.Sprintf("code: %s, msg: %s", e.Code, e.Msg)
 }
 
-func (e *Error) IsPrivate() bool {
-	return !e.IsPublic
+func (e *Error) IsPublic() bool {
+	return e.Public
 }
 
 type ErrorRef struct {

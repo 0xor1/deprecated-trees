@@ -5,8 +5,8 @@ import (
 )
 
 var (
-	invalidRegionErr  = &Error{Code: "rc_v1_i_ir", Msg: "invalid region", IsPublic: false}
-	zeroOwnerCountErr = &Error{Code: "rc_v1_i_zoc", Msg: "zero owner count", IsPublic: true}
+	invalidRegionErr  = &Error{Code: "rc_v1_i_ir", Msg: "invalid region", Public: false}
+	zeroOwnerCountErr = &Error{Code: "rc_v1_i_zoc", Msg: "zero owner count", Public: true}
 )
 
 type client struct {

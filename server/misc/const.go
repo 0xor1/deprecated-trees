@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	invalidConstantValueErr = &Error{Code: "g_icv", Msg: "invalid constant value", IsPublic: true}
+	invalidConstantValueErr = &Error{Code: "g_icv", Msg: "invalid constant value", Public: true}
 )
 
 type Theme uint8
