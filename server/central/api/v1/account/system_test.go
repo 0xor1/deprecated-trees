@@ -7,7 +7,6 @@ import (
 	"github.com/0xor1/isql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
-	"github.com/uber-go/zap"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -23,7 +22,7 @@ func Test_system(t *testing.T) {
 		accountsDb,
 		pwdsDb,
 		private.NewClient(map[string]private.Api{region: private.New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)}),
-		NewLogLinkMailer(NewLog(zap.New(zap.NewTextEncoder()))),
+		NewLogLinkMailer(),
 		avatarStore,
 		[]string{},
 		[]string{},

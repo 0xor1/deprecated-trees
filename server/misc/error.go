@@ -6,52 +6,52 @@ import (
 )
 
 var (
-	NotImplementedErr         = &Error{Code: "g_ni", Msg: "not implemented", Public: true}
-	InvalidArgumentsErr       = &Error{Code: "g_ia", Msg: "invalid arguments", Public: true}
-	idGenerationErr           = &Error{Code: "g_ig", Msg: "failed to generate id", Public: false}
-	InsufficientPermissionErr = &Error{Code: "g_ip", Msg: "insufficient permissions", Public: true}
-	InvalidOperationErr       = &Error{Code: "g_io", Msg: "invalid operation", Public: true}
-	MaxEntityCountExceededErr = &Error{Code: "g_mece", Msg: "max entity count exceeded", Public: true}
+	NotImplementedErr         = &AppError{Code: "g_ni", Message: "not implemented", Public: true}
+	InvalidArgumentsErr       = &AppError{Code: "g_ia", Message: "invalid arguments", Public: true}
+	idGenerationErr           = &AppError{Code: "g_ig", Message: "failed to generate id", Public: false}
+	InsufficientPermissionErr = &AppError{Code: "g_ip", Message: "insufficient permissions", Public: true}
+	InvalidOperationErr       = &AppError{Code: "g_io", Message: "invalid operation", Public: true}
+	MaxEntityCountExceededErr = &AppError{Code: "g_mece", Message: "max entity count exceeded", Public: true}
+	externalAppErr 			  = &AppError{Code: "g_ea", Message: "external error occured", Public: false}
 )
 
 type PermissionedError interface {
+	error
 	IsPublic() bool
 }
 
-type Error struct {
-	Code   string `json:"code"`
-	Msg    string `json:"msg"`
-	Public bool   `json:"-"`
+type AppError struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Public  bool   `json:"-"`
 }
 
-func (e *Error) Error() string {
-	return fmt.Sprintf("code: %s, msg: %s", e.Code, e.Msg)
+func (e *AppError) Error() string {
+	return fmt.Sprintf("code: %s, msg: %s", e.Code, e.Message)
 }
 
-func (e *Error) IsPublic() bool {
+func (e *AppError) IsPublic() bool {
 	return e.Public
 }
 
-type ErrorRef struct {
-	Id Id `json:"id"`
-}
-
-func (e *ErrorRef) Error() string {
-	return fmt.Sprintf("errorRef: %s", e.Id.String())
+type externalError struct{
+	AppError
+	OriginalError error `json:"-"`
 }
 
 func PanicIf(e error) {
 	if e != nil {
-		panic(e)
+		panic(&externalError{
+			AppError: *externalAppErr,
+			OriginalError: e,
+		})
 	}
 }
 
 func IsSqlErrNoRowsAndPanicIf(e error) bool {
-	if e != nil {
-		if e == sql.ErrNoRows {
-			return true
-		}
-		panic(e)
+	if e == sql.ErrNoRows {
+		return true
 	}
+	PanicIf(e)
 	return false
 }

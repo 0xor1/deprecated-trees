@@ -1,26 +1,24 @@
 package account
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
-	"github.com/uber-go/zap"
+	"fmt"
 )
 
 type logLinkMailer struct {
-	log Log
 }
 
 func (l *logLinkMailer) sendMultipleAccountPolicyEmail(address string) {
-	l.log.Info(zap.String("address", address))
+	fmt.Printf("sendMultipleAccountPolicyEmail:\n\taddress: %s\n", address)
 }
 
 func (l *logLinkMailer) sendActivationLink(address, activationCode string) {
-	l.log.Info(zap.String("address", address), zap.String("activationCode", activationCode))
+	fmt.Printf("sendActivationLink:\n\taddress: %s\n\tactivationCode: %s\n", address, activationCode)
 }
 
 func (l *logLinkMailer) sendPwdResetLink(address, resetCode string) {
-	l.log.Info(zap.String("address", address), zap.String("resetCode", resetCode))
+	fmt.Printf("sendPwdResetLink:\n\taddress: %s\n\tresetCode: %s\n", address, resetCode)
 }
 
 func (l *logLinkMailer) sendNewEmailConfirmationLink(currentAddress, newAddress, confirmationCode string) {
-	l.log.Info(zap.String("currentAddress", currentAddress), zap.String("newAddress", newAddress), zap.String("confirmationCode", confirmationCode))
+	fmt.Printf("sendNewEmailConfirmationLink:\n\tcurrentAddress: %s\n\tnewAddress: %s\n\tconfirmationCode: %s\n", currentAddress, newAddress, confirmationCode)
 }

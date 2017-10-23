@@ -45,12 +45,8 @@ func New(accountsDb, pwdsDb isql.ReplicaSet, internalRegionClient PrivateRegionC
 	return newApi(newSqlStore(accountsDb, pwdsDb), internalRegionClient, linkMailer, avatarStore, nameRegexMatchers, pwdRegexMatchers, maxAvatarDim, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen)
 }
 
-func NewLogLinkMailer(log Log) linkMailer {
-	if log == nil {
-		panic(InvalidArgumentsErr)
-	}
+func NewLogLinkMailer() linkMailer {
 	return &logLinkMailer{
-		log: log,
 	}
 }
 

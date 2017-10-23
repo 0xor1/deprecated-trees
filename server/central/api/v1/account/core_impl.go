@@ -16,20 +16,20 @@ import (
 )
 
 var (
-	noSuchRegionErr                       = &Error{Code: "cd_v1_a_nsr", Msg: "no such region", Public: true}
-	noSuchAccountErr                      = &Error{Code: "cd_v1_a_nsa", Msg: "no such account", Public: true}
-	invalidActivationAttemptErr           = &Error{Code: "cd_v1_a_iaa", Msg: "invalid activation attempt", Public: true}
-	invalidResetPwdAttemptErr             = &Error{Code: "cd_v1_a_irpa", Msg: "invalid reset password attempt", Public: true}
-	invalidNewEmailConfirmationAttemptErr = &Error{Code: "cd_v1_a_ineca", Msg: "invalid new email confirmation attempt", Public: true}
-	invalidNameOrPwdErr                   = &Error{Code: "cd_v1_a_inop", Msg: "invalid name or password", Public: true}
-	incorrectPwdErr                       = &Error{Code: "cd_v1_a_ip", Msg: "password incorrect", Public: true}
-	accountNotActivatedErr                = &Error{Code: "cd_v1_a_ana", Msg: "account not activated", Public: true}
-	emailAlreadyInUseErr                  = &Error{Code: "cd_v1_a_eaiu", Msg: "email already in use", Public: true}
-	nameAlreadyInUseErr                   = &Error{Code: "cd_v1_a_naiu", Msg: "name already in use", Public: true}
-	emailConfirmationCodeErr              = &Error{Code: "cd_v1_a_ecc", Msg: "email confirmation code is of zero length", Public: false}
-	noNewEmailRegisteredErr               = &Error{Code: "cd_v1_a_nner", Msg: "no new email registered", Public: true}
-	onlyOwnerMemberErr                    = &Error{Code: "cd_v1_a_oom", Msg: "can't delete member who is the only owner of an account", Public: true}
-	invalidAvatarShapeErr                 = &Error{Code: "cd_v1_a_ias", Msg: "avatar images must be square", Public: true}
+	noSuchRegionErr                       = &AppError{Code: "cd_v1_a_nsr", Message: "no such region", Public: true}
+	noSuchAccountErr                      = &AppError{Code: "cd_v1_a_nsa", Message: "no such account", Public: true}
+	invalidActivationAttemptErr           = &AppError{Code: "cd_v1_a_iaa", Message: "invalid activation attempt", Public: true}
+	invalidResetPwdAttemptErr             = &AppError{Code: "cd_v1_a_irpa", Message: "invalid reset password attempt", Public: true}
+	invalidNewEmailConfirmationAttemptErr = &AppError{Code: "cd_v1_a_ineca", Message: "invalid new email confirmation attempt", Public: true}
+	invalidNameOrPwdErr                   = &AppError{Code: "cd_v1_a_inop", Message: "invalid name or password", Public: true}
+	incorrectPwdErr                       = &AppError{Code: "cd_v1_a_ip", Message: "password incorrect", Public: true}
+	accountNotActivatedErr                = &AppError{Code: "cd_v1_a_ana", Message: "account not activated", Public: true}
+	emailAlreadyInUseErr                  = &AppError{Code: "cd_v1_a_eaiu", Message: "email already in use", Public: true}
+	nameAlreadyInUseErr                   = &AppError{Code: "cd_v1_a_naiu", Message: "name already in use", Public: true}
+	emailConfirmationCodeErr              = &AppError{Code: "cd_v1_a_ecc", Message: "email confirmation code is of zero length", Public: false}
+	noNewEmailRegisteredErr               = &AppError{Code: "cd_v1_a_nner", Message: "no new email registered", Public: true}
+	onlyOwnerMemberErr                    = &AppError{Code: "cd_v1_a_oom", Message: "can't delete member who is the only owner of an account", Public: true}
+	invalidAvatarShapeErr                 = &AppError{Code: "cd_v1_a_ias", Message: "avatar images must be square", Public: true}
 )
 
 func newApi(store store, privateRegionClient PrivateRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
