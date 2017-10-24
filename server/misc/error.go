@@ -12,7 +12,7 @@ var (
 	InsufficientPermissionErr = &AppError{Code: "g_ip", Message: "insufficient permissions", Public: true}
 	InvalidOperationErr       = &AppError{Code: "g_io", Message: "invalid operation", Public: true}
 	MaxEntityCountExceededErr = &AppError{Code: "g_mece", Message: "max entity count exceeded", Public: true}
-	externalAppErr 			  = &AppError{Code: "g_ea", Message: "external error occured", Public: false}
+	externalAppErr            = &AppError{Code: "g_ea", Message: "external error occured", Public: false}
 )
 
 type PermissionedError interface {
@@ -38,7 +38,7 @@ func (e *AppError) Panic() {
 	panic(e)
 }
 
-type externalError struct{
+type externalError struct {
 	AppError
 	OriginalError error `json:"-"`
 }
@@ -46,7 +46,7 @@ type externalError struct{
 func PanicIf(e error) {
 	if e != nil {
 		(&externalError{
-			AppError: *externalAppErr,
+			AppError:      *externalAppErr,
 			OriginalError: e,
 		}).Panic()
 	}

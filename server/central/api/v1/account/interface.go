@@ -46,8 +46,7 @@ func New(accountsDb, pwdsDb isql.ReplicaSet, internalRegionClient PrivateRegionC
 }
 
 func NewLogLinkMailer() linkMailer {
-	return &logLinkMailer{
-	}
+	return &logLinkMailer{}
 }
 
 func NewSparkPostLinkMailer() linkMailer {
