@@ -12,17 +12,17 @@ type sparkPostMailer struct {
 }
 
 func (l *sparkPostMailer) sendMultipleAccountPolicyEmail(address string) {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }
 
 func (l *sparkPostMailer) sendActivationLink(address, activationCode string) {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }
 
 func (l *sparkPostMailer) sendPwdResetLink(address, resetCode string) {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }
 
 func (l *sparkPostMailer) sendNewEmailConfirmationLink(currentAddress, newAddress, confirmationCode string) {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }

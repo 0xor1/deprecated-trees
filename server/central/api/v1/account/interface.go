@@ -51,12 +51,13 @@ func NewLogLinkMailer() linkMailer {
 }
 
 func NewSparkPostLinkMailer() linkMailer {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
+	return nil
 }
 
 func NewLocalAvatarStore(relDirPath string) avatarStore {
 	if relDirPath == "" {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	wd, err := os.Getwd()
 	PanicIf(err)
@@ -69,5 +70,6 @@ func NewLocalAvatarStore(relDirPath string) avatarStore {
 }
 
 func NewS3AvatarStore() avatarStore {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
+	return nil
 }

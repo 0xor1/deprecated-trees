@@ -18,7 +18,7 @@ type api struct {
 func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addMember) *project {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
-		panic(publicProjectsDisabledErr)
+		publicProjectsDisabledErr.Panic()
 	}
 
 	minRemainingTime := uint64(0)
@@ -66,7 +66,7 @@ func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic boo
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
 	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
-		panic(publicProjectsDisabledErr)
+		publicProjectsDisabledErr.Panic()
 	}
 
 	a.store.setIsPublic(shard, accountId, projectId, isPublic)
@@ -130,10 +130,10 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 		return
 	}
 	if len(members) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	accountRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectAdminAccess(accountRole, projectRole)
@@ -153,7 +153,7 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 
 func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id, role ProjectRole) {
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	role.Validate()
 
@@ -162,7 +162,7 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 
 	_, projectRole = a.store.getAccountAndProjectRoles(shard, accountId, projectId, member)
 	if projectRole == nil {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	if *projectRole != role {
 		a.store.setMemberRole(shard, accountId, projectId, member, role)
@@ -173,10 +173,10 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 
 func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []Id) {
 	if len(members) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectAdminAccess(myAccountRole, myProjectRole)
@@ -203,7 +203,7 @@ func (a *api) GetMe(shard int, accountId, projectId, myId Id) *member {
 
 func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)

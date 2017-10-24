@@ -23,7 +23,7 @@ func (c *client) GetRegions() []string {
 
 func (c *client) getRegion(region string) Api {
 	if !c.IsValidRegion(region) {
-		panic(invalidRegionErr)
+		invalidRegionErr.Panic()
 	}
 	return c.regions[region]
 }
@@ -81,10 +81,10 @@ func (a *api) DeleteAccount(shard int, accountId, myId Id) {
 
 func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberPrivate) {
 	if len(members) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	accountRole := a.store.getAccountRole(shard, accountId, myId)
 	ValidateMemberHasAccountAdminAccess(accountRole)
@@ -124,15 +124,15 @@ func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberPriv
 
 func (a *api) RemoveMembers(shard int, accountId, myId Id, members []Id) {
 	if len(members) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 
 	accountRole := a.store.getAccountRole(shard, accountId, myId)
 	if accountRole == nil {
-		panic(InsufficientPermissionErr)
+		InsufficientPermissionErr.Panic()
 	}
 
 	switch *accountRole {
@@ -140,17 +140,17 @@ func (a *api) RemoveMembers(shard int, accountId, myId Id, members []Id) {
 		totalOwnerCount := a.store.getTotalOwnerCount(shard, accountId)
 		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, accountId, members)
 		if totalOwnerCount == ownerCountInRemoveSet {
-			panic(zeroOwnerCountErr)
+			zeroOwnerCountErr.Panic()
 		}
 
 	case AccountAdmin:
 		ownerCountInRemoveSet := a.store.getOwnerCountInSet(shard, accountId, members)
 		if ownerCountInRemoveSet > 0 {
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 	default:
 		if len(members) != 1 || !members[0].Equal(myId) { //any member can remove themselves
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 	}
 

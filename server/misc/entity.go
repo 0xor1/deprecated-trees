@@ -84,7 +84,7 @@ func NewCreatedNamedEntity(name string) *CreatedNamedEntity {
 func NewId() Id {
 	id := NewUUID()
 	if id == nil {
-		panic(idGenerationErr)
+		idGenerationErr.Panic()
 	}
 	return Id(id)
 }

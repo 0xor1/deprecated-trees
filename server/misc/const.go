@@ -38,7 +38,7 @@ type Theme uint8
 func (t *Theme) Validate() {
 	if t == nil || (*t != LightTheme && *t != DarkTheme && *t != ColorBlindTheme) {
 		*t = LightTheme
-		panic(invalidConstantValueErr)
+		invalidConstantValueErr.Panic()
 	}
 }
 
@@ -64,7 +64,7 @@ type AccountRole uint8
 func (r *AccountRole) Validate() {
 	if r == nil || (*r != AccountOwner && *r != AccountAdmin && *r != AccountMemberOfAllProjects && *r != AccountMemberOfOnlySpecificProjects) {
 		*r = AccountMemberOfOnlySpecificProjects
-		panic(invalidConstantValueErr)
+		invalidConstantValueErr.Panic()
 	}
 }
 
@@ -90,7 +90,7 @@ type ProjectRole uint8
 func (r *ProjectRole) Validate() {
 	if r == nil || (*r != ProjectAdmin && *r != ProjectWriter && *r != ProjectReader) {
 		*r = ProjectReader
-		panic(invalidConstantValueErr)
+		invalidConstantValueErr.Panic()
 	}
 }
 
@@ -116,7 +116,7 @@ type SortDir string
 func (sd *SortDir) Validate() {
 	if sd == nil || (*sd != SortDirAsc && *sd != SortDirDesc) {
 		*sd = SortDirAsc
-		panic(invalidConstantValueErr)
+		invalidConstantValueErr.Panic()
 	}
 }
 
@@ -136,7 +136,7 @@ type SortBy string
 func (sb *SortBy) Validate() {
 	if sb == nil || (*sb != SortByName && *sb != SortByCreatedOn && *sb != SortByArchivedOn && *sb != SortByStartOn && *sb != SortByDueOn) {
 		*sb = SortByName
-		panic(invalidConstantValueErr)
+		invalidConstantValueErr.Panic()
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
 	if len(shards) == 0 {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	return &sqlStore{
 		shards: shards,
@@ -89,7 +89,7 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 
 func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action, newValue FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)

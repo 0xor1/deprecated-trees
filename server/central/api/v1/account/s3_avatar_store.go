@@ -9,13 +9,13 @@ type s3AvatarStore struct {
 }
 
 func (s *s3AvatarStore) put(key string, mimeType string, size int64, data io.Reader) {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }
 
 func (s *s3AvatarStore) delete(key string) {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }
 
 func (s *s3AvatarStore) deleteAll() {
-	panic(NotImplementedErr)
+	NotImplementedErr.Panic()
 }

@@ -34,7 +34,7 @@ var (
 
 func newApi(store store, privateRegionClient PrivateRegionClient, linkMailer linkMailer, avatarStore avatarStore, nameRegexMatchers, pwdRegexMatchers []string, maxAvatarDim uint, nameMinRuneCount, nameMaxRuneCount, pwdMinRuneCount, pwdMaxRuneCount, maxProcessEntityCount, cryptoCodeLen, saltLen, scryptN, scryptR, scryptP, scryptKeyLen int) Api {
 	if store == nil || privateRegionClient == nil || linkMailer == nil || avatarStore == nil {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	//compile regexs
 	nameRegexes := make([]*regexp.Regexp, 0, len(nameRegexMatchers))
@@ -102,11 +102,11 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 	theme.Validate()
 
 	if !a.privateRegionClient.IsValidRegion(region) {
-		panic(noSuchRegionErr)
+		noSuchRegionErr.Panic()
 	}
 
 	if exists := a.store.accountWithCiNameExists(name); exists {
-		panic(nameAlreadyInUseErr)
+		nameAlreadyInUseErr.Panic()
 	}
 
 	if acc := a.store.getPersonalAccountByEmail(email); acc != nil {
@@ -160,7 +160,7 @@ func (a *api) Activate(email, activationCode string) {
 	activationCode = strings.Trim(activationCode, " ")
 	acc := a.store.getPersonalAccountByEmail(email)
 	if acc == nil || acc.activationCode == nil || activationCode != *acc.activationCode {
-		panic(invalidActivationAttemptErr)
+		invalidActivationAttemptErr.Panic()
 	}
 
 	acc.activationCode = nil
@@ -173,18 +173,18 @@ func (a *api) Authenticate(email, pwdTry string) Id {
 	email = strings.Trim(email, " ")
 	acc := a.store.getPersonalAccountByEmail(email)
 	if acc == nil {
-		panic(invalidNameOrPwdErr)
+		invalidNameOrPwdErr.Panic()
 	}
 
 	pwdInfo := a.store.getPwdInfo(acc.Id)
 	scryptPwdTry := ScryptKey([]byte(pwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-		panic(invalidNameOrPwdErr)
+		invalidNameOrPwdErr.Panic()
 	}
 
 	//must do this after checking the acc has the correct pwd otherwise it allows anyone to fish for valid emails on the system
 	if !acc.isActivated() {
-		panic(accountNotActivatedErr)
+		accountNotActivatedErr.Panic()
 	}
 
 	//if there was an outstanding password reset on this acc, remove it, they have since remembered their password
@@ -210,11 +210,11 @@ func (a *api) Authenticate(email, pwdTry string) Id {
 func (a *api) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) {
 	acc := a.store.getPersonalAccountByEmail(currentEmail)
 	if acc == nil || acc.NewEmail == nil || newEmail != *acc.NewEmail || acc.newEmailConfirmationCode == nil || confirmationCode != *acc.newEmailConfirmationCode {
-		panic(invalidNewEmailConfirmationAttemptErr)
+		invalidNewEmailConfirmationAttemptErr.Panic()
 	}
 
 	if acc := a.store.getPersonalAccountByEmail(newEmail); acc != nil {
-		panic(emailAlreadyInUseErr)
+		emailAlreadyInUseErr.Panic()
 	}
 
 	acc.Email = newEmail
@@ -243,7 +243,7 @@ func (a *api) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) {
 
 	acc := a.store.getPersonalAccountByEmail(email)
 	if acc == nil || acc.resetPwdCode == nil || resetPwdCode != *acc.resetPwdCode {
-		panic(invalidResetPwdAttemptErr)
+		invalidResetPwdAttemptErr.Panic()
 	}
 
 	scryptSalt := CryptoBytes(a.saltLen)
@@ -269,7 +269,7 @@ func (a *api) GetAccount(name string) *account {
 
 func (a *api) GetAccounts(ids []Id) []*account {
 	if len(ids) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 
 	return a.store.getAccounts(ids)
@@ -277,14 +277,14 @@ func (a *api) GetAccounts(ids []Id) []*account {
 
 func (a *api) SearchAccounts(nameStartsWith string) []*account {
 	if utf8.RuneCountInString(nameStartsWith) < 3 || strings.Contains(nameStartsWith, "%") {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	return a.store.searchAccounts(nameStartsWith)
 }
 
 func (a *api) SearchPersonalAccounts(nameOrEmailStartsWith string) []*account {
 	if utf8.RuneCountInString(nameOrEmailStartsWith) < 3 || strings.Contains(nameOrEmailStartsWith, "%") {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	return a.store.searchPersonalAccounts(nameOrEmailStartsWith)
 }
@@ -292,7 +292,7 @@ func (a *api) SearchPersonalAccounts(nameOrEmailStartsWith string) []*account {
 func (a *api) GetMe(myId Id) *me {
 	acc := a.store.getPersonalAccountById(myId)
 	if acc == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	return &acc.me
@@ -303,13 +303,13 @@ func (a *api) SetMyPwd(myId Id, oldPwd, newPwd string) {
 
 	pwdInfo := a.store.getPwdInfo(myId)
 	if pwdInfo == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	scryptPwdTry := ScryptKey([]byte(oldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 
 	if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-		panic(incorrectPwdErr)
+		incorrectPwdErr.Panic()
 	}
 
 	pwdInfo.salt = CryptoBytes(a.saltLen)
@@ -331,7 +331,7 @@ func (a *api) SetMyEmail(myId Id, newEmail string) {
 
 	acc := a.store.getPersonalAccountById(myId)
 	if acc == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	confirmationCode := CryptoUrlSafeString(a.cryptoCodeLen)
@@ -345,16 +345,16 @@ func (a *api) SetMyEmail(myId Id, newEmail string) {
 func (a *api) ResendMyNewEmailConfirmationEmail(myId Id) {
 	acc := a.store.getPersonalAccountById(myId)
 	if acc == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	// check the acc has actually registered a new email
 	if acc.NewEmail == nil {
-		panic(noNewEmailRegisteredErr)
+		noNewEmailRegisteredErr.Panic()
 	}
 	// just in case something has gone crazy wrong
 	if acc.newEmailConfirmationCode == nil {
-		panic(emailConfirmationCodeErr)
+		emailConfirmationCodeErr.Panic()
 	}
 
 	a.linkMailer.sendNewEmailConfirmationLink(acc.Email, *acc.NewEmail, *acc.newEmailConfirmationCode)
@@ -365,21 +365,21 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 	ValidateStringParam("name", newName, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 
 	if exists := a.store.accountWithCiNameExists(newName); exists {
-		panic(nameAlreadyInUseErr)
+		nameAlreadyInUseErr.Panic()
 	}
 
 	acc := a.store.getAccount(accountId)
 	if acc == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	if !myId.Equal(accountId) {
 		if acc.IsPersonal { // can't rename someone else's personal account
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 
 		if !a.privateRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 	}
 
@@ -405,16 +405,16 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 
 	account := a.store.getAccount(accountId)
 	if account == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	if !myId.Equal(accountId) {
 		if account.IsPersonal { // can't set avatar on someone else's personal account
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 
 		if !a.privateRegionClient.MemberIsAccountOwner(account.Region, account.Shard, accountId, myId) {
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 	}
 
@@ -423,7 +423,7 @@ func (a *api) SetAccountAvatar(myId Id, accountId Id, avatarImageData io.ReadClo
 		PanicIf(err)
 		bounds := avatarImage.Bounds()
 		if bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y { //if it  isn't square, then error
-			panic(invalidAvatarShapeErr)
+			invalidAvatarShapeErr.Panic()
 		}
 		if uint(bounds.Max.X-bounds.Min.X) > a.maxAvatarDim { // if it is larger than allowed then resize
 			avatarImage = resize.Resize(a.maxAvatarDim, a.maxAvatarDim, avatarImage, resize.NearestNeighbor)
@@ -459,11 +459,11 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 	ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 
 	if !a.privateRegionClient.IsValidRegion(region) {
-		panic(noSuchRegionErr)
+		noSuchRegionErr.Panic()
 	}
 
 	if exists := a.store.accountWithCiNameExists(name); exists {
-		panic(nameAlreadyInUseErr)
+		nameAlreadyInUseErr.Panic()
 	}
 
 	accountCore := NewCreatedNamedEntity(name)
@@ -478,7 +478,7 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 
 	owner := a.store.getPersonalAccountById(myId)
 	if owner == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	defer func() {
@@ -503,16 +503,16 @@ func (a *api) GetMyAccounts(myId Id, offset, limit int) ([]*account, int) {
 func (a *api) DeleteAccount(myId, accountId Id) {
 	acc := a.store.getAccount(accountId)
 	if acc == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	if !myId.Equal(accountId) {
 		if acc.IsPersonal { // can't delete someone else's personal account
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 		//otherwise attempting to delete a group account
 		if !a.privateRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
-			panic(InsufficientPermissionErr)
+			InsufficientPermissionErr.Panic()
 		}
 	}
 
@@ -526,7 +526,7 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 			offset += len(accounts)
 			for _, account := range accounts {
 				if a.privateRegionClient.MemberIsOnlyAccountOwner(account.Region, account.Shard, account.Id, myId) {
-					panic(onlyOwnerMemberErr)
+					onlyOwnerMemberErr.Panic()
 				}
 			}
 			for _, account := range accounts {
@@ -538,15 +538,15 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 
 func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberPublic) {
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	if len(newMembers) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 
 	account := a.store.getAccount(accountId)
 	if account == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	ids := make([]Id, 0, len(newMembers))
@@ -575,15 +575,15 @@ func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberPublic) {
 
 func (a *api) RemoveMembers(myId, accountId Id, existingMembers []Id) {
 	if accountId.Equal(myId) {
-		panic(InvalidOperationErr)
+		InvalidOperationErr.Panic()
 	}
 	if len(existingMembers) > a.maxProcessEntityCount {
-		panic(MaxEntityCountExceededErr)
+		MaxEntityCountExceededErr.Panic()
 	}
 
 	account := a.store.getAccount(accountId)
 	if account == nil {
-		panic(noSuchAccountErr)
+		noSuchAccountErr.Panic()
 	}
 
 	a.privateRegionClient.RemoveMembers(account.Region, account.Shard, accountId, myId, existingMembers)

@@ -8,7 +8,7 @@ import (
 
 func newSqlStore(accounts, pwds isql.ReplicaSet) store {
 	if accounts == nil || pwds == nil {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	return &sqlStore{
 		accounts: accounts,

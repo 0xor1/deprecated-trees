@@ -24,7 +24,7 @@ func New(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {
 
 func NewClient(regions map[string]Api) PrivateRegionClient {
 	if regions == nil {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	return &client{
 		regions: regions,

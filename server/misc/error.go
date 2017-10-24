@@ -34,6 +34,10 @@ func (e *AppError) IsPublic() bool {
 	return e.Public
 }
 
+func (e *AppError) Panic() {
+	panic(e)
+}
+
 type externalError struct{
 	AppError
 	OriginalError error `json:"-"`
@@ -41,10 +45,10 @@ type externalError struct{
 
 func PanicIf(e error) {
 	if e != nil {
-		panic(&externalError{
+		(&externalError{
 			AppError: *externalAppErr,
 			OriginalError: e,
-		})
+		}).Panic()
 	}
 }
 

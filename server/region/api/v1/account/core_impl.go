@@ -26,7 +26,7 @@ func (a *api) SetMemberRole(shard int, accountId, myId, memberId Id, role Accoun
 	ValidateMemberHasAccountAdminAccess(accountRole)
 	role.Validate()
 	if role == AccountOwner && *accountRole != AccountOwner {
-		panic(InsufficientPermissionErr)
+		InsufficientPermissionErr.Panic()
 	}
 	a.store.setMemberRole(shard, accountId, memberId, role)
 	a.store.logActivity(shard, accountId, myId, memberId, "member", "setRole", role.String())
@@ -40,7 +40,7 @@ func (a *api) GetMembers(shard int, accountId, myId Id, role *AccountRole, nameC
 
 func (a *api) GetActivities(shard int, accountId, myId Id, itemId *Id, memberId *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
-		panic(InvalidArgumentsErr)
+		InvalidArgumentsErr.Panic()
 	}
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxProcessEntityCount)
