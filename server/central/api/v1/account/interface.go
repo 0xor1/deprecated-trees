@@ -13,7 +13,7 @@ import (
 type Api interface {
 	//accessible outside of active session
 	GetRegions() []string
-	Register(name, email, pwd, region, language string, theme Theme)
+	Register(name, email, pwd, region, language string, displayName *string, theme Theme)
 	ResendActivationEmail(email string)
 	Activate(email, activationCode string)
 	Authenticate(email, pwd string) Id
@@ -30,9 +30,10 @@ type Api interface {
 	SetMyEmail(myId Id, newEmail string)
 	ResendMyNewEmailConfirmationEmail(myId Id)
 	SetAccountName(myId, accountId Id, newName string)
+	SetAccountDisplayName(myId, accountId Id, newDisplayName *string)
 	SetAccountAvatar(myId, accountId Id, avatarImage io.ReadCloser)
 	MigrateAccount(myId, accountId Id, newRegion string)
-	CreateAccount(myId Id, name, region string) *account
+	CreateAccount(myId Id, name, region string, displayName *string) *account
 	GetMyAccounts(myId Id, offset, limit int) ([]*account, int)
 	DeleteAccount(myId, accountId Id)
 	//member centric - must be an owner or admin

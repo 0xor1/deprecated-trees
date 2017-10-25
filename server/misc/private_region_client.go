@@ -9,5 +9,6 @@ type PrivateRegionClient interface {
 	RemoveMembers(region string, shard int, account, myId Id, members []Id)
 	MemberIsOnlyAccountOwner(region string, shard int, account, myId Id) bool
 	RenameMember(region string, shard int, account, myId Id, newName string)
+	SetMemberDisplayName(region string, shard int, account, myId Id, newDisplayName *string)
 	MemberIsAccountOwner(region string, shard int, account, myId Id) bool
 }

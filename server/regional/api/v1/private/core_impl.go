@@ -56,6 +56,10 @@ func (c *client) RenameMember(region string, shard int, accountId, myId Id, newN
 	c.getRegion(region).RenameMember(shard, accountId, myId, newName)
 }
 
+func (c *client) SetMemberDisplayName(region string, shard int, accountId, myId Id, newName *string) {
+	c.getRegion(region).SetMemberDisplayName(shard, accountId, myId, newName)
+}
+
 func (c *client) MemberIsAccountOwner(region string, shard int, accountId, myId Id) bool {
 	return c.getRegion(region).MemberIsAccountOwner(shard, accountId, myId)
 }
@@ -80,9 +84,7 @@ func (a *api) DeleteAccount(shard int, accountId, myId Id) {
 }
 
 func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberPrivate) {
-	if len(members) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(members), a.maxProcessEntityCount)
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
@@ -123,9 +125,7 @@ func (a *api) AddMembers(shard int, accountId, myId Id, members []*AddMemberPriv
 }
 
 func (a *api) RemoveMembers(shard int, accountId, myId Id, members []Id) {
-	if len(members) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(members), a.maxProcessEntityCount)
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
@@ -171,6 +171,10 @@ func (a *api) RenameMember(shard int, accountId, myId Id, newName string) {
 	a.store.renameMember(shard, accountId, myId, newName)
 }
 
+func (a *api) SetMemberDisplayName(shard int, accountId, myId Id, newDisplayName *string) {
+	a.store.setMemberDisplayName(shard, accountId, myId, newDisplayName)
+}
+
 func (a *api) MemberIsAccountOwner(shard int, accountId, myId Id) bool {
 	if !myId.Equal(accountId) {
 		accountRole := a.store.getAccountRole(shard, accountId, myId)
@@ -194,6 +198,7 @@ type store interface {
 	getOwnerCountInSet(shard int, accountId Id, members []Id) int
 	setMembersInactive(shard int, accountId Id, members []Id)
 	renameMember(shard int, accountId Id, member Id, newName string)
+	setMemberDisplayName(shard int, accountId Id, member Id, newDisplayName *string)
 	logActivity(shard int, accountId Id, member, item Id, itemType, action string)
 	logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string)
 }

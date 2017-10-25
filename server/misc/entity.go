@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+//returns version 1 uuid as a byte slice
+func NewId() Id {
+	id := NewUUID()
+	if id == nil {
+		idGenerationErr.Panic()
+	}
+	return Id(id)
+}
+
 type Id UUID
 
 func (id Id) String() string {
@@ -29,88 +38,16 @@ func Now() time.Time {
 	return time.Now().UTC()
 }
 
-type Entity struct {
-	Id Id `json:"id"`
-}
-
-func NewEntity() *Entity {
-	return &Entity{
-		Id: NewId(),
-	}
-}
-
-type NamedEntity struct {
-	Entity
-	Name string `json:"name"`
-}
-
 type AddMemberPrivate struct {
-	NamedEntity
-	Role AccountRole `json:"role"`
+	Id          Id          `json:"id"`
+	Name        string      `json:"name"`
+	DisplayName *string     `json:"displayName"`
+	Role        AccountRole `json:"role"`
 }
 
 type AddMemberPublic struct {
-	Entity
+	Id   Id          `json:"id"`
 	Role AccountRole `json:"role"`
-}
-
-func NewNamedEntity(name string) *NamedEntity {
-	return &NamedEntity{
-		Entity: Entity{
-			Id: NewId(),
-		},
-		Name: name,
-	}
-}
-
-type CreatedNamedEntity struct {
-	NamedEntity
-	CreatedOn time.Time `json:"createdOn"`
-}
-
-func NewCreatedNamedEntity(name string) *CreatedNamedEntity {
-	return &CreatedNamedEntity{
-		NamedEntity: NamedEntity{
-			Entity: Entity{
-				Id: NewId(),
-			},
-			Name: name,
-		},
-		CreatedOn: Now(),
-	}
-}
-
-//returns version 1 uuid as a byte slice
-func NewId() Id {
-	id := NewUUID()
-	if id == nil {
-		idGenerationErr.Panic()
-	}
-	return Id(id)
-}
-
-type CommonTimeProps struct {
-	TotalRemainingTime uint64 `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64 `json:"totalLoggedTime"`
-}
-
-type CommonNodeProps struct {
-	CreatedNamedEntity
-	CommonTimeProps
-	IsAbstract      bool   `json:"isAbstract"`
-	Description     string `json:"description"`
-	LinkedFileCount uint64 `json:"linkedFileCount"`
-	ChatCount       uint64 `json:"chatCount"`
-}
-
-type CommonAbstractNodeProps struct {
-	MinimumRemainingTime *uint64 `json:"minimumRemainingTime,omitempty"`
-	IsParallel           *bool   `json:"isParallel,omitempty"`
-}
-
-type AccountMember struct {
-	AddMemberPrivate
-	IsActive bool `json:"isActive"`
 }
 
 type Activity struct {

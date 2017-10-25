@@ -58,6 +58,12 @@ func ValidateOffsetAndLimitParams(offset, limit, maxLimit int) (int, int) {
 	return offset, limit
 }
 
+func ValidateEntityCount(entityCount, maxLimit int) {
+	if entityCount < 1 || entityCount > maxLimit {
+		InvalidEntityCountErr.Panic()
+	}
+}
+
 func ValidateMemberHasAccountOwnerAccess(accountRole *AccountRole) {
 	if accountRole == nil || *accountRole != AccountOwner {
 		InsufficientPermissionErr.Panic()

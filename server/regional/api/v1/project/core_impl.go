@@ -43,7 +43,9 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	a.store.logAccountActivity(shard, accountId, myId, project.Id, "project", "created", nil)
 	a.store.logProjectActivity(shard, accountId, project.Id, myId, project.Id, "project", "created", nil)
 
-	a.AddMembers(shard, accountId, project.Id, myId, members)
+	if len(members) > 0 {
+		a.AddMembers(shard, accountId, project.Id, myId, members)
+	}
 
 	return project
 }
@@ -126,12 +128,7 @@ func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 }
 
 func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addMember) {
-	if len(members) == 0 {
-		return
-	}
-	if len(members) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(members), a.maxProcessEntityCount)
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
@@ -172,9 +169,7 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 }
 
 func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []Id) {
-	if len(members) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(members), a.maxProcessEntityCount)
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
@@ -239,24 +234,35 @@ type store interface {
 }
 
 type addMember struct {
-	Entity
+	Id   Id          `json:"id"`
 	Role ProjectRole `json:"role"`
 }
 
 type member struct {
-	NamedEntity
-	CommonTimeProps
-	IsActive bool        `json:"isActive"`
-	Role     ProjectRole `json:"role"`
+	Id                 Id          `json:"id"`
+	Name               string      `json:"name"`
+	TotalRemainingTime uint64      `json:"totalRemainingTime"`
+	TotalLoggedTime    uint64      `json:"totalLoggedTime"`
+	IsActive           bool        `json:"isActive"`
+	Role               ProjectRole `json:"role"`
 }
 
 type project struct {
-	CommonNodeProps
-	CommonAbstractNodeProps
-	ArchivedOn *time.Time `json:"archivedOn,omitempty"`
-	StartOn    *time.Time `json:"startOn,omitempty"`
-	DueOn      *time.Time `json:"dueOn,omitempty"`
-	FileCount  uint64     `json:"fileCount"`
-	FileSize   uint64     `json:"fileSize"`
-	IsPublic   bool       `json:"isPublic"`
+	Id                   Id         `json:"id"`
+	Name                 string     `json:"name"`
+	CreatedOn            time.Time  `json:"createdOn"`
+	TotalRemainingTime   uint64     `json:"totalRemainingTime"`
+	TotalLoggedTime      uint64     `json:"totalLoggedTime"`
+	IsAbstract           bool       `json:"isAbstract"`
+	Description          string     `json:"description"`
+	LinkedFileCount      uint64     `json:"linkedFileCount"`
+	ChatCount            uint64     `json:"chatCount"`
+	MinimumRemainingTime *uint64    `json:"minimumRemainingTime,omitempty"`
+	IsParallel           *bool      `json:"isParallel,omitempty"`
+	ArchivedOn           *time.Time `json:"archivedOn,omitempty"`
+	StartOn              *time.Time `json:"startOn,omitempty"`
+	DueOn                *time.Time `json:"dueOn,omitempty"`
+	FileCount            uint64     `json:"fileCount"`
+	FileSize             uint64     `json:"fileSize"`
+	IsPublic             bool       `json:"isPublic"`
 }

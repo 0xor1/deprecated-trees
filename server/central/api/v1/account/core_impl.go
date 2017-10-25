@@ -92,7 +92,7 @@ func (a *api) GetRegions() []string {
 	return a.privateRegionClient.GetRegions()
 }
 
-func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
+func (a *api) Register(name, email, pwd, region, language string, displayName *string, theme Theme) {
 	name = strings.Trim(name, " ")
 	ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 	email = strings.Trim(email, " ")
@@ -113,10 +113,12 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 		a.linkMailer.sendMultipleAccountPolicyEmail(acc.Email)
 	}
 
-	accCore := NewCreatedNamedEntity(name)
 	activationCode := CryptoUrlSafeString(a.cryptoCodeLen)
 	acc := &fullPersonalAccountInfo{}
-	acc.CreatedNamedEntity = *accCore
+	acc.Id = NewId()
+	acc.Name = name
+	acc.DisplayName = displayName
+	acc.CreatedOn = Now()
 	acc.Region = region
 
 	defer func() {
@@ -126,7 +128,7 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 			panic(r)
 		}
 	}()
-	acc.Shard = a.privateRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, nil)
+	acc.Shard = a.privateRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, acc.DisplayName)
 	acc.IsPersonal = true
 	acc.Email = email
 	acc.Language = language
@@ -268,9 +270,7 @@ func (a *api) GetAccount(name string) *account {
 }
 
 func (a *api) GetAccounts(ids []Id) []*account {
-	if len(ids) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(ids), a.maxProcessEntityCount)
 
 	return a.store.getAccounts(ids)
 }
@@ -387,12 +387,49 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 	a.store.updateAccount(acc)
 
 	if myId.Equal(accountId) { // if i did rename my personal account, i need to update all the stored names in all the accounts Im a member of
+		a.privateRegionClient.RenameMember(acc.Region, acc.Shard, acc.Id, myId, newName) //first rename myself in my personal org
 		for offset, total := 0, 1; offset < total; {
 			var accounts []*account
 			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
 			offset += len(accounts)
 			for _, account := range accounts {
 				a.privateRegionClient.RenameMember(account.Region, account.Shard, account.Id, myId, newName)
+			}
+		}
+	}
+}
+
+func (a *api) SetAccountDisplayName(myId, accountId Id, newDisplayName *string) {
+	if newDisplayName != nil {
+		*newDisplayName = strings.Trim(*newDisplayName, " ")
+	}
+
+	acc := a.store.getAccount(accountId)
+	if acc == nil {
+		noSuchAccountErr.Panic()
+	}
+
+	if !myId.Equal(accountId) {
+		if acc.IsPersonal { // can't rename someone else's personal account
+			InsufficientPermissionErr.Panic()
+		}
+
+		if !a.privateRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
+			InsufficientPermissionErr.Panic()
+		}
+	}
+
+	acc.DisplayName = newDisplayName
+	a.store.updateAccount(acc)
+
+	if myId.Equal(accountId) { // if i did set my personal account displayName, i need to update all the stored displayNames in all the accounts Im a member of
+		a.privateRegionClient.SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, myId, newDisplayName) //first set my display name in my personal org
+		for offset, total := 0, 1; offset < total; {
+			var accounts []*account
+			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
+			offset += len(accounts)
+			for _, account := range accounts {
+				a.privateRegionClient.SetMemberDisplayName(account.Region, account.Shard, account.Id, myId, newDisplayName)
 			}
 		}
 	}
@@ -454,7 +491,7 @@ func (a *api) MigrateAccount(myId, accountId Id, newRegion string) {
 	(&fullPersonalAccountInfo{}).isMigrating()
 }
 
-func (a *api) CreateAccount(myId Id, name, region string) *account {
+func (a *api) CreateAccount(myId Id, name, region string, displayName *string) *account {
 	name = strings.Trim(name, " ")
 	ValidateStringParam("name", name, a.nameMinRuneCount, a.nameMaxRuneCount, a.nameRegexMatchers)
 
@@ -466,14 +503,14 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 		nameAlreadyInUseErr.Panic()
 	}
 
-	accountCore := NewCreatedNamedEntity(name)
-
-	account := &account{
-		CreatedNamedEntity: *accountCore,
-		Region:             region,
-		Shard:              -1,
-		IsPersonal:         false,
-	}
+	account := &account{}
+	account.Id = NewId()
+	account.Name = name
+	account.DisplayName = displayName
+	account.CreatedOn = Now()
+	account.Region = region
+	account.Shard = -1
+	account.IsPersonal = false
 	a.store.createGroupAccountAndMembership(account, myId)
 
 	owner := a.store.getPersonalAccountById(myId)
@@ -484,11 +521,11 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 	defer func() {
 		r := recover()
 		if r != nil {
-			a.store.deleteAccountAndAllAssociatedMemberships(accountCore.Id)
+			a.store.deleteAccountAndAllAssociatedMemberships(account.Id)
 			panic(r)
 		}
 	}()
-	shard := a.privateRegionClient.CreateAccount(region, accountCore.Id, myId, owner.Name, nil)
+	shard := a.privateRegionClient.CreateAccount(region, account.Id, myId, owner.Name, owner.DisplayName)
 
 	account.Shard = shard
 	a.store.updateAccount(account)
@@ -540,9 +577,7 @@ func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberPublic) {
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
-	if len(newMembers) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(newMembers), a.maxProcessEntityCount)
 
 	account := a.store.getAccount(accountId)
 	if account == nil {
@@ -566,6 +601,7 @@ func (a *api) AddMembers(myId, accountId Id, newMembers []*AddMemberPublic) {
 		ami.Id = acc.Id
 		ami.Role = role
 		ami.Name = acc.Name
+		ami.DisplayName = acc.DisplayName
 		members = append(members, ami)
 	}
 
@@ -577,9 +613,7 @@ func (a *api) RemoveMembers(myId, accountId Id, existingMembers []Id) {
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
-	if len(existingMembers) > a.maxProcessEntityCount {
-		MaxEntityCountExceededErr.Panic()
-	}
+	ValidateEntityCount(len(existingMembers), a.maxProcessEntityCount)
 
 	account := a.store.getAccount(accountId)
 	if account == nil {
@@ -631,12 +665,15 @@ type avatarStore interface {
 }
 
 type account struct {
-	CreatedNamedEntity
-	Region     string  `json:"region"`
-	NewRegion  *string `json:"newRegion,omitempty"`
-	Shard      int     `json:"shard"`
-	HasAvatar  bool    `json:"hasAvatar"`
-	IsPersonal bool    `json:"isPersonal"`
+	Id          Id        `json:"id"`
+	Name        string    `json:"name"`
+	DisplayName *string   `json:"displayName"`
+	CreatedOn   time.Time `json:"createdOn"`
+	Region      string    `json:"region"`
+	NewRegion   *string   `json:"newRegion,omitempty"`
+	Shard       int       `json:"shard"`
+	HasAvatar   bool      `json:"hasAvatar"`
+	IsPersonal  bool      `json:"isPersonal"`
 }
 
 func (a *account) isMigrating() bool {

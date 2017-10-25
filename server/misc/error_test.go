@@ -7,5 +7,5 @@ import (
 
 func Test_Error(t *testing.T) {
 	e := &AppError{Code: "test", Message: "yo ho ho"}
-	assert.Equal(t, "code: test, msg: yo ho ho", e.Error())
+	assert.Equal(t, "code:\n\ttest\nmessage:\n\tyo ho ho\n", e.Error())
 }

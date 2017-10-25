@@ -44,16 +44,16 @@ func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role Account
 	PanicIf(err)
 }
 
-func (s *sqlStore) getMember(shard int, accountId, memberId Id) *AccountMember {
-	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
-	res := AccountMember{}
-	PanicIf(row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role))
+func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
+	row := s.shards[shard].QueryRow(`SELECT id, name, displayName, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	res := member{}
+	PanicIf(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.IsActive, &res.Role))
 	return &res
 }
 
-func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*AccountMember, int) {
+func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*member, int) {
 	query := bytes.NewBufferString(`SELECT %s FROM accountMembers WHERE account=? AND isActive=true`)
-	columns := ` id, name, isActive, role `
+	columns := ` id, name, displayName, isActive, role `
 	args := make([]interface{}, 0, 5)
 	args = append(args, []byte(accountId))
 	if role != nil {
@@ -78,10 +78,10 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 		defer rows.Close()
 	}
 	PanicIf(err)
-	res := make([]*AccountMember, 0, limit)
+	res := make([]*member, 0, limit)
 	for rows.Next() {
-		mem := AccountMember{}
-		PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.IsActive, &mem.Role))
+		mem := member{}
+		PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
 	return res, count

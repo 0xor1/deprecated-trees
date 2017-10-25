@@ -43,8 +43,8 @@ func Test_system(t *testing.T) {
 	regions := api.GetRegions()
 	assert.Equal(t, 1, len(regions))
 	assert.Equal(t, region, regions[0])
-
-	api.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", DarkTheme)
+	aliDisplayName := "Ali O'Mally"
+	api.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, DarkTheme)
 
 	api.ResendActivationEmail("ali@ali.com")
 	activationCode := ""
@@ -70,6 +70,7 @@ func Test_system(t *testing.T) {
 	acc := api.GetAccount("ali")
 	assert.True(t, acc.Id.Equal(aliId))
 	assert.Equal(t, "ali", acc.Name)
+	assert.Equal(t, aliDisplayName, *acc.DisplayName)
 	assert.InDelta(t, Now().Unix(), acc.CreatedOn.Unix(), 5)
 	assert.Equal(t, false, acc.HasAvatar)
 	assert.Equal(t, true, acc.IsPersonal)
@@ -80,6 +81,7 @@ func Test_system(t *testing.T) {
 	accs := api.GetAccounts([]Id{aliId})
 	assert.True(t, accs[0].Id.Equal(aliId))
 	assert.Equal(t, "ali", accs[0].Name)
+	assert.Equal(t, aliDisplayName, *accs[0].DisplayName)
 	assert.InDelta(t, Now().Unix(), accs[0].CreatedOn.Unix(), 5)
 	assert.Equal(t, false, accs[0].HasAvatar)
 	assert.Equal(t, true, accs[0].IsPersonal)
@@ -90,6 +92,7 @@ func Test_system(t *testing.T) {
 	me := api.GetMe(aliId)
 	assert.True(t, me.Id.Equal(aliId))
 	assert.Equal(t, "ali", me.Name)
+	assert.Equal(t, aliDisplayName, *me.DisplayName)
 	assert.InDelta(t, Now().Unix(), me.CreatedOn.Unix(), 5)
 	assert.Equal(t, false, me.HasAvatar)
 	assert.Equal(t, true, me.IsPersonal)
@@ -104,12 +107,16 @@ func Test_system(t *testing.T) {
 	assert.True(t, aliId.Equal(aliId2))
 
 	api.SetAccountName(aliId, aliId, "aliNew")
+	aliDisplayName = "ZZZ ali ZZZ"
+	api.SetAccountDisplayName(aliId, aliId, &aliDisplayName)
 	api.SetAccountAvatar(aliId, aliId, ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))))
 
 	api.MigrateAccount(aliId, aliId, "usw")
 
-	org := api.CreateAccount(aliId, "org", region)
+	orgDisplayName := "Big Corp"
+	org := api.CreateAccount(aliId, "org", region, &orgDisplayName)
 	assert.Equal(t, "org", org.Name)
+	assert.Equal(t, orgDisplayName, *org.DisplayName)
 	assert.InDelta(t, Now().Unix(), org.CreatedOn.Unix(), 5)
 	assert.Equal(t, false, org.HasAvatar)
 	assert.Equal(t, false, org.IsPersonal)
@@ -121,6 +128,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 1, len(myAccs))
 	assert.Equal(t, 1, total)
 	assert.Equal(t, "org", myAccs[0].Name)
+	assert.Equal(t, orgDisplayName, *myAccs[0].DisplayName)
 	assert.InDelta(t, Now().Unix(), myAccs[0].CreatedOn.Unix(), 5)
 	assert.Equal(t, false, myAccs[0].HasAvatar)
 	assert.Equal(t, false, myAccs[0].IsPersonal)
@@ -128,8 +136,10 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, myAccs[0].Region)
 	assert.Equal(t, 0, myAccs[0].Shard)
 
-	api.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", LightTheme)
-	api.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", ColorBlindTheme)
+	bobDisplayName := "Fat Bob"
+	api.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, LightTheme)
+	catDisplayName := "Lap Cat"
+	api.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, ColorBlindTheme)
 
 	bobActivationCode := ""
 	accountsDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
@@ -147,48 +157,54 @@ func Test_system(t *testing.T) {
 	addCat.Id = catId
 	addCat.Role = AccountMemberOfOnlySpecificProjects
 	api.AddMembers(aliId, org.Id, []*AddMemberPublic{&addBob, &addCat})
-	api.RemoveMembers(aliId, org.Id, []Id{bobId, catId})
 
 	accs = api.SearchAccounts("org")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(org.Id))
 	assert.Equal(t, "org", accs[0].Name)
+	assert.Equal(t, orgDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, false, accs[0].IsPersonal)
 
 	accs = api.SearchAccounts("ali")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(aliId))
 	assert.Equal(t, "aliNew", accs[0].Name)
+	assert.Equal(t, aliDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
 	accs = api.SearchAccounts("bob")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(bobId))
 	assert.Equal(t, "bob", accs[0].Name)
+	assert.Equal(t, bobDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
 	accs = api.SearchAccounts("cat")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(catId))
 	assert.Equal(t, "cat", accs[0].Name)
+	assert.Equal(t, catDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
 	accs = api.SearchPersonalAccounts("ali")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(aliId))
 	assert.Equal(t, "aliNew", accs[0].Name)
+	assert.Equal(t, aliDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
 	accs = api.SearchPersonalAccounts("bob")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(bobId))
 	assert.Equal(t, "bob", accs[0].Name)
+	assert.Equal(t, bobDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
 	accs = api.SearchPersonalAccounts("cat")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(catId))
 	assert.Equal(t, "cat", accs[0].Name)
+	assert.Equal(t, catDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
 	avatarStore.deleteAll()

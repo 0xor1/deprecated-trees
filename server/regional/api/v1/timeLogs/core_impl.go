@@ -11,9 +11,3 @@ type api struct {
 
 type store interface {
 }
-
-type node struct {
-	CommonNodeProps
-	CommonAbstractNodeProps
-	Member *Id `json:"member,omitempty"`
-}
