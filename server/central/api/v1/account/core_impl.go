@@ -126,7 +126,7 @@ func (a *api) Register(name, email, pwd, region, language string, theme Theme) {
 			panic(r)
 		}
 	}()
-	acc.Shard = a.privateRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name)
+	acc.Shard = a.privateRegionClient.CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, nil)
 	acc.IsPersonal = true
 	acc.Email = email
 	acc.Language = language
@@ -488,7 +488,7 @@ func (a *api) CreateAccount(myId Id, name, region string) *account {
 			panic(r)
 		}
 	}()
-	shard := a.privateRegionClient.CreateAccount(region, accountCore.Id, myId, owner.Name)
+	shard := a.privateRegionClient.CreateAccount(region, accountCore.Id, myId, owner.Name, nil)
 
 	account.Shard = shard
 	a.store.updateAccount(account)

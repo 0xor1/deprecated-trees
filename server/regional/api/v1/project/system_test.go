@@ -2,8 +2,8 @@ package project
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
-	"bitbucket.org/0xor1/task/server/region/api/v1/account"
-	"bitbucket.org/0xor1/task/server/region/api/v1/private"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"github.com/0xor1/isql"
 	"github.com/bmizerany/assert"
 	_ "github.com/go-sql-driver/mysql"
@@ -34,7 +34,7 @@ func Test_system(t *testing.T) {
 	dan.Id = NewId()
 	dan.Name = "dan"
 	dan.Role = AccountMemberOfOnlySpecificProjects
-	privateApi.CreateAccount(orgId, ali.Id, ali.Name)
+	privateApi.CreateAccount(orgId, ali.Id, ali.Name, nil)
 	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
 	accountApi.SetPublicProjectsEnabled(0, orgId, ali.Id, true)
 

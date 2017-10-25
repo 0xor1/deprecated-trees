@@ -3,9 +3,10 @@ CREATE DATABASE accounts;
 USE accounts;
 
 DROP TABLE IF EXISTS accounts;
-CREATE TABLE accounts(
-	id BINARY(16) NOT NULL,
+CREATE TABLE accounts (
+    id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
+    displayName VARCHAR(100) NULL,
     createdOn DATETIME NOT NULL,
     region CHAR(3) NOT NULL,
     newRegion CHAR(3) NULL,
@@ -13,13 +14,15 @@ CREATE TABLE accounts(
     hasAvatar BOOL NOT NULL DEFAULT FALSE,
     isPersonal BOOL NOT NULL,
     PRIMARY KEY (name),
-    UNIQUE INDEX (id)
+    UNIQUE INDEX (id),
+    UNIQUE INDEX (displayName , name)
 );
 
 DROP TABLE IF EXISTS personalAccounts;
 CREATE TABLE personalAccounts(
 	id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
+    displayName VARCHAR(100) NULL,
     createdOn DATETIME NOT NULL,
     region CHAR(3) NOT NULL,
     newRegion CHAR(3) NULL,
@@ -35,7 +38,8 @@ CREATE TABLE personalAccounts(
 	resetPwdCode VARCHAR(100) NULL,
     PRIMARY KEY (id),
     UNIQUE INDEX (email),
-    UNIQUE INDEX (name)
+    UNIQUE INDEX (name),
+    UNIQUE INDEX (displayName, name)
 );
 
 DROP TABLE IF EXISTS memberships;

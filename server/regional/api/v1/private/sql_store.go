@@ -20,9 +20,9 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
-func (s *sqlStore) createAccount(id Id, ownerId Id, ownerName string) int {
+func (s *sqlStore) createAccount(id Id, myId Id, myName string, myDisplayName *string) int {
 	shardId := rand.Intn(len(s.shards))
-	_, err := s.shards[shardId].Exec(`CALL registerAccount(?, ?, ?);`, []byte(id), []byte(ownerId), ownerName)
+	_, err := s.shards[shardId].Exec(`CALL registerAccount(?, ?, ?, ?);`, []byte(id), []byte(myId), myName, myDisplayName)
 	PanicIf(err)
 	return shardId
 }

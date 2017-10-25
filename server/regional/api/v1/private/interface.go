@@ -6,7 +6,7 @@ import (
 )
 
 type Api interface {
-	CreateAccount(accountId, myId Id, ownerName string) int
+	CreateAccount(accountId, myId Id, myName string, myDisplayName *string) int
 	DeleteAccount(shard int, accountId, myId Id)
 	AddMembers(shard int, accountId, myId Id, members []*AddMemberPrivate)
 	RemoveMembers(shard int, accountId, myId Id, members []Id)

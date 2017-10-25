@@ -32,8 +32,8 @@ func (c *client) IsValidRegion(region string) bool {
 	return c.regions[region] != nil
 }
 
-func (c *client) CreateAccount(region string, accountId, myId Id, myName string) int {
-	return c.getRegion(region).CreateAccount(accountId, myId, myName)
+func (c *client) CreateAccount(region string, accountId, myId Id, myName string, myDisplayName *string) int {
+	return c.getRegion(region).CreateAccount(accountId, myId, myName, myDisplayName)
 }
 
 func (c *client) DeleteAccount(region string, shard int, accountId, myId Id) {
@@ -65,8 +65,8 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateAccount(accountId, myId Id, myName string) int {
-	shard := a.store.createAccount(accountId, myId, myName)
+func (a *api) CreateAccount(accountId, myId Id, myName string, myDisplayName *string) int {
+	shard := a.store.createAccount(accountId, myId, myName, myDisplayName)
 	a.store.logActivity(shard, accountId, myId, accountId, "account", "created")
 	return shard
 }
@@ -184,7 +184,7 @@ func (a *api) MemberIsAccountOwner(shard int, accountId, myId Id) bool {
 }
 
 type store interface {
-	createAccount(id, ownerId Id, ownerName string) int
+	createAccount(id, myId Id, myName string, myDisplayName *string) int
 	deleteAccount(shard int, account Id)
 	getAllInactiveMemberIdsFromInputSet(shard int, accountId Id, members []Id) []Id
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole

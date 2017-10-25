@@ -14,7 +14,7 @@ func Test_system(t *testing.T) {
 
 	aliId := NewId()
 	orgId := NewId()
-	api.CreateAccount(orgId, aliId, "ali")
+	api.CreateAccount(orgId, aliId, "ali", nil)
 	bob := AddMemberPrivate{}
 	bob.Id = NewId()
 	bob.Name = "bob"

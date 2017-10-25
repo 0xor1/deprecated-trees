@@ -2,14 +2,14 @@ package account
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
-	"bitbucket.org/0xor1/task/server/region/api/v1/private"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"github.com/0xor1/isql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func Test_sqlStore_adHoc(t *testing.T) {
+func Test_System(t *testing.T) {
 	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
 	maxProcessEntityCount := 100
 	privateApi := private.New(shards, maxProcessEntityCount)
@@ -17,7 +17,7 @@ func Test_sqlStore_adHoc(t *testing.T) {
 
 	orgId := NewId()
 	aliId := NewId()
-	privateApi.CreateAccount(orgId, aliId, "ali")
+	privateApi.CreateAccount(orgId, aliId, "ali", nil)
 	bob := AddMemberPrivate{}
 	bob.Id = NewId()
 	bob.Name = "bob"

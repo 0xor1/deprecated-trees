@@ -17,10 +17,13 @@ CREATE TABLE accountMembers(
 	account BINARY(16) NOT NULL,
 	id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
+    displayName VARCHAR(100) NULL,
     isActive BOOL NOT NULL DEFAULT TRUE,
     role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 memberOfAllProjects, 3 memberOfOnlySpecificProjects
     PRIMARY KEY (account, isActive, role, name),
+    UNIQUE INDEX (account, isActive, role, displayName, name),
     UNIQUE INDEX (account, isActive, name, role),
+    UNIQUE INDEX (account, isActive, displayName, role, name),
     UNIQUE INDEX (account, id)
 );
 
@@ -45,12 +48,15 @@ CREATE TABLE projectMembers(
 	project BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
     name VARCHAR(50) NOT NULL,
+    displayName VARCHAR(100) NULL,
     isActive BOOL NOT NULL DEFAULT TRUE,
     totalRemainingTime BIGINT UNSIGNED NOT NULL,
     totalLoggedTime BIGINT UNSIGNED NOT NULL,
     role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
     PRIMARY KEY (account, project, isActive, role, name),
+    UNIQUE INDEX (account, project, isActive, role, displayName, name),
     UNIQUE INDEX (account, project, isActive, name, role),
+    UNIQUE INDEX (account, project, isActive, displayName, role, name),
     UNIQUE INDEX (account, project, id),
     UNIQUE INDEX (account, id, project)
 );
@@ -149,10 +155,10 @@ CREATE TABLE timeLogs(
 
 DROP PROCEDURE IF EXISTS registerAccount;
 DELIMITER $$
-CREATE PROCEDURE registerAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50))
+CREATE PROCEDURE registerAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50), _ownerDisplayName VARCHAR(100))
 BEGIN
 	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_id, false);
-    INSERT INTO accountMembers (account, id, name, isActive, role) VALUES (_id, _ownerId, _ownerName, true, 0);
+    INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_id, _ownerId, _ownerName, _ownerDisplayName, true, 0);
 END;
 $$
 DELIMITER ;
@@ -163,6 +169,16 @@ CREATE PROCEDURE renameMember(_account BINARY(16), _member BINARY(16), _newName 
 BEGIN
 	UPDATE accountMembers SET name=_newName WHERE account=_account AND id=_member;
 	UPDATE projectMembers SET name=_newName WHERE account=_account AND id=_member;
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setMemberDisplayName;
+DELIMITER $$
+CREATE PROCEDURE setMemberDisplayName(_account BINARY(16), _member BINARY(16), _newDisplayName VARCHAR(100))
+BEGIN
+	UPDATE accountMembers SET displayName=_newDisplayName WHERE account=_account AND id=_member;
+	UPDATE projectMembers SET displayName=_newDisplayName WHERE account=_account AND id=_member;
 END;
 $$
 DELIMITER ;
@@ -254,6 +270,7 @@ BEGIN
 	DECLARE projMemberCount TINYINT DEFAULT 0;
 	DECLARE projMemberIsActive BOOL DEFAULT false;
 	DECLARE accMemberName VARCHAR(50) DEFAULT '';
+	DECLARE accMemberDisplayName VARCHAR(100) DEFAULT NULL;
     SELECT COUNT(*), isActive INTO projMemberCount, projMemberIsActive FROM projectMembers WHERE account = _accountId AND project = _projectId AND id = _id;
     IF projMemberCount = 1 AND projMemberIsActive = false THEN #setting previous member back to active, still need to check if they are an active account member
 		IF (SELECT COUNT(*) FROM accountMembers WHERE account = _accountId AND id = _id AND isActive = true) THEN #if active account member then add them to the project
@@ -266,9 +283,9 @@ BEGIN
 		SELECT false;
     ELSEIF projMemberCount = 0 THEN #adding new project member, need to check if they are active account member
 		START TRANSACTION;
-			SELECT name INTO accMemberName FROM accountMembers WHERE account = _accountId AND id = _id AND isActive = true LOCK IN SHARE MODE;
+			SELECT name, displayName INTO accMemberName, accMemberDisplayName FROM accountMembers WHERE account = _accountId AND id = _id AND isActive = true LOCK IN SHARE MODE;
 			IF accMemberName IS NOT NULL AND accMemberName <> '' THEN #if active account member then add them to the project
-				INSERT INTO projectMembers (account, project, id, name, isActive, totalRemainingTime, totalLoggedTime, role) VALUES (_accountId, _projectId, _id, accMemberName, true, 0, 0, _role);
+				INSERT INTO projectMembers (account, project, id, name, displayName, isActive, totalRemainingTime, totalLoggedTime, role) VALUES (_accountId, _projectId, _id, accMemberName, accMemberDisplayName, true, 0, 0, _role);
 				SELECT true;
 			ELSE #they are a not an active account member so return false
 				SELECT false;
