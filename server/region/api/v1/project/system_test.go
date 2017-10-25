@@ -11,7 +11,7 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "tc_rc_trees:T@sk-C3n-T3r-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
+	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
 	maxProcessEntityCount := 100
 	privateApi := private.New(shards, maxProcessEntityCount)
 	accountApi := account.New(shards, maxProcessEntityCount)

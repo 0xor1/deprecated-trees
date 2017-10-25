@@ -298,10 +298,10 @@ END;
 $$
 DELIMITER ;
 
-DROP USER IF EXISTS 'tc_rc_trees'@'%';
-CREATE USER 'tc_rc_trees'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Tr335';
-GRANT SELECT ON trees.* TO 'tc_rc_trees'@'%';
-GRANT INSERT ON trees.* TO 'tc_rc_trees'@'%';
-GRANT UPDATE ON trees.* TO 'tc_rc_trees'@'%';
-GRANT DELETE ON trees.* TO 'tc_rc_trees'@'%';
-GRANT EXECUTE ON trees.* TO 'tc_rc_trees'@'%';
+DROP USER IF EXISTS 't_r_trees'@'%';
+CREATE USER 't_r_trees'@'%' IDENTIFIED BY 'T@sk-Tr335';
+GRANT SELECT ON trees.* TO 't_r_trees'@'%';
+GRANT INSERT ON trees.* TO 't_r_trees'@'%';
+GRANT UPDATE ON trees.* TO 't_r_trees'@'%';
+GRANT DELETE ON trees.* TO 't_r_trees'@'%';
+GRANT EXECUTE ON trees.* TO 't_r_trees'@'%';

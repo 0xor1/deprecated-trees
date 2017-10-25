@@ -99,10 +99,10 @@ END;
 $$
 DELIMITER ;
 
-DROP USER IF EXISTS 'tc_cd_accounts'@'%';
-CREATE USER 'tc_cd_accounts'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-@cc-0unt5'; 
-GRANT SELECT ON accounts.* TO 'tc_cd_accounts'@'%';
-GRANT INSERT ON accounts.* TO 'tc_cd_accounts'@'%';
-GRANT UPDATE ON accounts.* TO 'tc_cd_accounts'@'%';
-GRANT DELETE ON accounts.* TO 'tc_cd_accounts'@'%';
-GRANT EXECUTE ON accounts.* TO 'tc_cd_accounts'@'%';
+DROP USER IF EXISTS 't_c_accounts'@'%';
+CREATE USER 't_c_accounts'@'%' IDENTIFIED BY 'T@sk-@cc-0unt5';
+GRANT SELECT ON accounts.* TO 't_c_accounts'@'%';
+GRANT INSERT ON accounts.* TO 't_c_accounts'@'%';
+GRANT UPDATE ON accounts.* TO 't_c_accounts'@'%';
+GRANT DELETE ON accounts.* TO 't_c_accounts'@'%';
+GRANT EXECUTE ON accounts.* TO 't_c_accounts'@'%';

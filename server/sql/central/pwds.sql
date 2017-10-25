@@ -14,10 +14,10 @@ CREATE TABLE pwds(
     PRIMARY KEY (id)
 );
 
-DROP USER IF EXISTS 'tc_cd_pwds'@'%';
-CREATE USER 'tc_cd_pwds'@'%' IDENTIFIED BY 'T@sk-C3n-T3r-Pwd5'; 
-GRANT SELECT ON pwds.* TO 'tc_cd_pwds'@'%'; 
-GRANT INSERT ON pwds.* TO 'tc_cd_pwds'@'%';
-GRANT UPDATE ON pwds.* TO 'tc_cd_pwds'@'%';
-GRANT DELETE ON pwds.* TO 'tc_cd_pwds'@'%';
-GRANT EXECUTE ON pwds.* TO 'tc_cd_pwds'@'%';
+DROP USER IF EXISTS 't_c_pwds'@'%';
+CREATE USER 't_c_pwds'@'%' IDENTIFIED BY 'T@sk-Pwd5';
+GRANT SELECT ON pwds.* TO 't_c_pwds'@'%';
+GRANT INSERT ON pwds.* TO 't_c_pwds'@'%';
+GRANT UPDATE ON pwds.* TO 't_c_pwds'@'%';
+GRANT DELETE ON pwds.* TO 't_c_pwds'@'%';
+GRANT EXECUTE ON pwds.* TO 't_c_pwds'@'%';
