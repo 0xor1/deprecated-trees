@@ -5,7 +5,7 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"github.com/0xor1/isql"
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 	_ "github.com/go-sql-driver/mysql"
 	"testing"
 )
@@ -70,11 +70,11 @@ func Test_system(t *testing.T) {
 	mems, total := api.GetMembers(0, orgId, proj.Id, ali.Id, nil, nil, 0, 100)
 	assert.Equal(t, 3, len(mems))
 	assert.Equal(t, 3, total)
-	assert.Equal(t, "ali", mems[0].Name)
-	assert.Equal(t, "bob", mems[1].Name)
-	assert.Equal(t, "cat", mems[2].Name)
+	assert.True(t, mems[0].Id.Equal(ali.Id))
+	assert.True(t, mems[1].Id.Equal(bob.Id))
+	assert.True(t, mems[2].Id.Equal(cat.Id))
 	bobMe := api.GetMe(0, orgId, proj.Id, bob.Id)
-	assert.Equal(t, "bob", bobMe.Name)
+	assert.True(t, bobMe.Id.Equal(bob.Id))
 	activities := api.GetActivities(0, orgId, proj.Id, ali.Id, nil, nil, nil, nil, 100)
 	assert.Equal(t, 11, len(activities))
 	api.RemoveMembers(0, orgId, proj.Id, ali.Id, []Id{bob.Id, cat.Id})

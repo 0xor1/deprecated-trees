@@ -113,7 +113,7 @@ func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member 
 
 func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int) {
 	query := bytes.NewBufferString(`SELECT %s FROM projectMembers WHERE account=? AND project=? AND isActive=true`)
-	columns := ` id, name, isActive, totalRemainingTime, totalLoggedTime, role `
+	columns := ` id, isActive, totalRemainingTime, totalLoggedTime, role `
 	args := make([]interface{}, 0, 6)
 	args = append(args, []byte(accountId), []byte(projectId))
 	if role != nil {
@@ -141,16 +141,16 @@ func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectR
 	res := make([]*member, 0, limit)
 	for rows.Next() {
 		mem := member{}
-		PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
+		PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
 		res = append(res, &mem)
 	}
 	return res, count
 }
 
 func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *member {
-	row := s.shards[shard].QueryRow(`SELECT id, name, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
+	row := s.shards[shard].QueryRow(`SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
 	res := member{}
-	PanicIf(row.Scan(&res.Id, &res.Name, &res.IsActive, &res.Role))
+	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 

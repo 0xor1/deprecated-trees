@@ -45,15 +45,15 @@ func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role Account
 }
 
 func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
-	row := s.shards[shard].QueryRow(`SELECT id, name, displayName, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := s.shards[shard].QueryRow(`SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := member{}
-	PanicIf(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.IsActive, &res.Role))
+	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 
 func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*member, int) {
 	query := bytes.NewBufferString(`SELECT %s FROM accountMembers WHERE account=? AND isActive=true`)
-	columns := ` id, name, displayName, isActive, role `
+	columns := ` id, isActive, role `
 	args := make([]interface{}, 0, 5)
 	args = append(args, []byte(accountId))
 	if role != nil {
@@ -81,7 +81,7 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 	res := make([]*member, 0, limit)
 	for rows.Next() {
 		mem := member{}
-		PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.IsActive, &mem.Role))
+		PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
 	return res, count

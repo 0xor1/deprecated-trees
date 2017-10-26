@@ -240,7 +240,6 @@ type addMember struct {
 
 type member struct {
 	Id                 Id          `json:"id"`
-	Name               string      `json:"name"`
 	TotalRemainingTime uint64      `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64      `json:"totalLoggedTime"`
 	IsActive           bool        `json:"isActive"`
