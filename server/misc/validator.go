@@ -58,6 +58,13 @@ func ValidateOffsetAndLimitParams(offset, limit, maxLimit int) (int, int) {
 	return offset, limit
 }
 
+func ValidateLimitParam(limit, maxLimit int) int {
+	if limit < 1 || limit > maxLimit {
+		limit = maxLimit
+	}
+	return limit
+}
+
 func ValidateEntityCount(entityCount, maxLimit int) {
 	if entityCount < 1 || entityCount > maxLimit {
 		InvalidEntityCountErr.Panic()

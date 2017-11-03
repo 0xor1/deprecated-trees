@@ -34,7 +34,7 @@ type Api interface {
 	SetAccountAvatar(myId, accountId Id, avatarImage io.ReadCloser)
 	MigrateAccount(myId, accountId Id, newRegion string)
 	CreateAccount(myId Id, name, region string, displayName *string) *account
-	GetMyAccounts(myId Id, offset, limit int) ([]*account, int)
+	GetMyAccounts(myId Id, after *Id, limit int) ([]*account, bool)
 	DeleteAccount(myId, accountId Id)
 	//member centric - must be an owner or admin
 	AddMembers(myId, accountId Id, newMembers []*AddMemberPublic)

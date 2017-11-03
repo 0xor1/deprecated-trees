@@ -5,8 +5,8 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"github.com/0xor1/isql"
-	"github.com/stretchr/testify/assert"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 

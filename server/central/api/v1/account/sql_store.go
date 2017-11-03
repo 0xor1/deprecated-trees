@@ -191,22 +191,31 @@ func (s *sqlStore) createGroupAccountAndMembership(account *account, memberId Id
 	PanicIf(err)
 }
 
-func (s *sqlStore) getGroupAccounts(memberId Id, offset, limit int) ([]*account, int) {
-	row := s.accounts.QueryRow(`SELECT COUNT(*) FROM memberships WHERE member=?`, []byte(memberId))
-	total := 0
-	PanicIf(row.Scan(&total))
-	rows, err := s.accounts.Query(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?) ORDER BY name ASC LIMIT ?, ?`, []byte(memberId), offset, limit)
+func (s *sqlStore) getGroupAccounts(memberId Id, after *Id, limit int) ([]*account, bool) {
+	args := make([]interface{}, 0, 3)
+	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
+	args = append(args, []byte(memberId))
+	if after != nil {
+		query.WriteString(` AND name > (SELECT name FROM accounts WHERE id = ?)`)
+		args = append(args, []byte(*after))
+	}
+	query.WriteString(` ORDER BY name ASC LIMIT ?`)
+	args = append(args, limit+1)
+	rows, err := s.accounts.Query(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
 	PanicIf(err)
-	res := make([]*account, 0, limit)
+	res := make([]*account, 0, limit+1)
 	for rows.Next() {
 		a := account{}
 		PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
-	return res, total
+	if len(res) == limit+1 {
+		return res[:limit], true
+	}
+	return res, false
 }
 
 func (s *sqlStore) createMemberships(accountId Id, members []Id) {

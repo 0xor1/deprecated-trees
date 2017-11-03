@@ -49,11 +49,10 @@ func (e *externalError) Error() string {
 
 func PanicIf(e error) {
 	if e != nil {
-		fmt.Println(e)
-		(&externalError{
+		panic(&externalError{
 			AppError:      *externalAppErr,
 			OriginalError: e,
-		}).Panic()
+		})
 	}
 }
 

@@ -388,12 +388,16 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 
 	if myId.Equal(accountId) { // if i did rename my personal account, i need to update all the stored names in all the accounts Im a member of
 		a.privateRegionClient.RenameMember(acc.Region, acc.Shard, acc.Id, myId, newName) //first rename myself in my personal org
-		for offset, total := 0, 1; offset < total; {
-			var accounts []*account
-			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
-			offset += len(accounts)
-			for _, account := range accounts {
-				a.privateRegionClient.RenameMember(account.Region, account.Shard, account.Id, myId, newName)
+		var after *Id
+		for {
+			accs, more := a.store.getGroupAccounts(myId, after, 100)
+			for _, acc := range accs {
+				a.privateRegionClient.RenameMember(acc.Region, acc.Shard, acc.Id, myId, newName)
+			}
+			if more {
+				after = &accs[len(accs)-1].Id
+			} else {
+				break
 			}
 		}
 	}
@@ -424,12 +428,16 @@ func (a *api) SetAccountDisplayName(myId, accountId Id, newDisplayName *string) 
 
 	if myId.Equal(accountId) { // if i did set my personal account displayName, i need to update all the stored displayNames in all the accounts Im a member of
 		a.privateRegionClient.SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, myId, newDisplayName) //first set my display name in my personal org
-		for offset, total := 0, 1; offset < total; {
-			var accounts []*account
-			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
-			offset += len(accounts)
-			for _, account := range accounts {
-				a.privateRegionClient.SetMemberDisplayName(account.Region, account.Shard, account.Id, myId, newDisplayName)
+		var after *Id
+		for {
+			accs, more := a.store.getGroupAccounts(myId, after, 100)
+			for _, acc := range accs {
+				a.privateRegionClient.SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, myId, newDisplayName)
+			}
+			if more {
+				after = &accs[len(accs)-1].Id
+			} else {
+				break
 			}
 		}
 	}
@@ -532,9 +540,8 @@ func (a *api) CreateAccount(myId Id, name, region string, displayName *string) *
 	return account
 }
 
-func (a *api) GetMyAccounts(myId Id, offset, limit int) ([]*account, int) {
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
-	return a.store.getGroupAccounts(myId, offset, limit)
+func (a *api) GetMyAccounts(myId Id, after *Id, limit int) ([]*account, bool) {
+	return a.store.getGroupAccounts(myId, after, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
 func (a *api) DeleteAccount(myId, accountId Id) {
@@ -557,17 +564,21 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 	a.store.deleteAccountAndAllAssociatedMemberships(accountId)
 
 	if myId.Equal(accountId) {
+		var after *Id
 		for offset, total := 0, 1; offset < total; {
-			var accounts []*account
-			accounts, total = a.store.getGroupAccounts(myId, offset, 100)
-			offset += len(accounts)
-			for _, account := range accounts {
-				if a.privateRegionClient.MemberIsOnlyAccountOwner(account.Region, account.Shard, account.Id, myId) {
+			accs, more := a.store.getGroupAccounts(myId, after, 100)
+			for _, acc := range accs {
+				if a.privateRegionClient.MemberIsOnlyAccountOwner(acc.Region, acc.Shard, acc.Id, myId) {
 					onlyOwnerMemberErr.Panic()
 				}
 			}
-			for _, account := range accounts {
-				a.privateRegionClient.RemoveMembers(account.Region, account.Shard, account.Id, myId, []Id{myId})
+			for _, acc := range accs {
+				a.privateRegionClient.RemoveMembers(acc.Region, acc.Shard, acc.Id, myId, []Id{myId})
+			}
+			if more {
+				after = &accs[len(accs)-1].Id
+			} else {
+				break
 			}
 		}
 	}
@@ -646,7 +657,7 @@ type store interface {
 	getPersonalAccounts(ids []Id) []*account
 	//group account
 	createGroupAccountAndMembership(account *account, ownerId Id)
-	getGroupAccounts(myId Id, offset, limit int) ([]*account, int)
+	getGroupAccounts(myId Id, after *Id, limit int) ([]*account, bool)
 	//members
 	createMemberships(accountId Id, members []Id)
 	deleteMemberships(accountId Id, members []Id)

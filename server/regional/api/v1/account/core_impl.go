@@ -63,7 +63,7 @@ type store interface {
 }
 
 type member struct {
-	Id          Id          `json:"id"`
-	Role        AccountRole `json:"role"`
-	IsActive    bool        `json:"isActive"`
+	Id       Id          `json:"id"`
+	Role     AccountRole `json:"role"`
+	IsActive bool        `json:"isActive"`
 }
