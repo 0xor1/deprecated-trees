@@ -1,7 +1,5 @@
 task
-===========
+====
 
-```
-go install github.com/0xor1/go_cover_all
-go_cover_all
-```
+The task repo is split into two main parts the server and the client, each has its own ReadMe file, see those for details
+on each.
