@@ -22,8 +22,8 @@ type Api interface {
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string)
 	GetAccount(name string) *account
 	GetAccounts(ids []Id) []*account
-	SearchAccounts(nameStartsWith string) []*account
-	SearchPersonalAccounts(nameOrEmailStartsWith string) []*account
+	SearchAccounts(nameOrDisplayNameStartsWith string) []*account
+	SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) []*account
 	//requires active session to access
 	GetMe(myId Id) *me
 	SetMyPwd(myId Id, oldPwd, newPwd string)

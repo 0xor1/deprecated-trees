@@ -129,8 +129,9 @@ func (s *sqlStore) getAccounts(ids []Id) []*account {
 	return res
 }
 
-func (s *sqlStore) searchAccounts(nameStartsWith string) []*account {
-	rows, err := s.accounts.Query(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?`, nameStartsWith+"%", 0, 100)
+func (s *sqlStore) searchAccounts(nameOrDisplayNameStartsWith string) []*account {
+	searchTerm := nameOrDisplayNameStartsWith+"%"
+	rows, err := s.accounts.Query(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -145,8 +146,9 @@ func (s *sqlStore) searchAccounts(nameStartsWith string) []*account {
 	return res
 }
 
-func (s *sqlStore) searchPersonalAccounts(nameOrEmailStartsWith string) []*account {
-	rows, err := s.accounts.Query(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, nameOrEmailStartsWith+"%", 0, 100, nameOrEmailStartsWith+"%", 0, 100, 0, 100)
+func (s *sqlStore) searchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) []*account {
+	searchTerm := nameOrDisplayNameOrEmailStartsWith+"%"
+	rows, err := s.accounts.Query(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	if rows != nil {
 		defer rows.Close()
 	}

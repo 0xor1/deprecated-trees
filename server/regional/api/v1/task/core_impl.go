@@ -1,4 +1,4 @@
-package node
+package task
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"

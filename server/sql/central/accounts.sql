@@ -15,7 +15,7 @@ CREATE TABLE accounts (
     isPersonal BOOL NOT NULL,
     PRIMARY KEY (name),
     UNIQUE INDEX (id),
-    UNIQUE INDEX (displayName , name)
+    UNIQUE INDEX (displayName, name)
 );
 
 DROP TABLE IF EXISTS personalAccounts;

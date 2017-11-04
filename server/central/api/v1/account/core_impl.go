@@ -100,6 +100,12 @@ func (a *api) Register(name, email, pwd, region, language string, displayName *s
 	ValidateStringParam("password", pwd, a.pwdMinRuneCount, a.pwdMaxRuneCount, a.pwdRegexMatchers)
 	language = strings.Trim(language, " ") // may need more validation than this at some point to check it is a language we support and not a junk value, but it isnt critical right now
 	theme.Validate()
+	if displayName != nil {
+		*displayName = strings.Trim(*displayName, " ")
+		if *displayName == "" {
+			displayName = nil
+		}
+	}
 
 	if !a.privateRegionClient.IsValidRegion(region) {
 		noSuchRegionErr.Panic()
@@ -275,18 +281,20 @@ func (a *api) GetAccounts(ids []Id) []*account {
 	return a.store.getAccounts(ids)
 }
 
-func (a *api) SearchAccounts(nameStartsWith string) []*account {
-	if utf8.RuneCountInString(nameStartsWith) < 3 || strings.Contains(nameStartsWith, "%") {
+func (a *api) SearchAccounts(nameOrDisplayNameStartsWith string) []*account {
+	nameOrDisplayNameStartsWith = strings.Trim(nameOrDisplayNameStartsWith, " ")
+	if utf8.RuneCountInString(nameOrDisplayNameStartsWith) < 3 || strings.Contains(nameOrDisplayNameStartsWith, "%") {
 		InvalidArgumentsErr.Panic()
 	}
-	return a.store.searchAccounts(nameStartsWith)
+	return a.store.searchAccounts(nameOrDisplayNameStartsWith)
 }
 
-func (a *api) SearchPersonalAccounts(nameOrEmailStartsWith string) []*account {
-	if utf8.RuneCountInString(nameOrEmailStartsWith) < 3 || strings.Contains(nameOrEmailStartsWith, "%") {
+func (a *api) SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) []*account {
+	nameOrDisplayNameOrEmailStartsWith = strings.Trim(nameOrDisplayNameOrEmailStartsWith, " ")
+	if utf8.RuneCountInString(nameOrDisplayNameOrEmailStartsWith) < 3 || strings.Contains(nameOrDisplayNameOrEmailStartsWith, "%") {
 		InvalidArgumentsErr.Panic()
 	}
-	return a.store.searchPersonalAccounts(nameOrEmailStartsWith)
+	return a.store.searchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith)
 }
 
 func (a *api) GetMe(myId Id) *me {
@@ -406,6 +414,9 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 func (a *api) SetAccountDisplayName(myId, accountId Id, newDisplayName *string) {
 	if newDisplayName != nil {
 		*newDisplayName = strings.Trim(*newDisplayName, " ")
+		if *newDisplayName == "" {
+			newDisplayName = nil
+		}
 	}
 
 	acc := a.store.getAccount(accountId)
@@ -421,6 +432,10 @@ func (a *api) SetAccountDisplayName(myId, accountId Id, newDisplayName *string) 
 		if !a.privateRegionClient.MemberIsAccountOwner(acc.Region, acc.Shard, accountId, myId) {
 			InsufficientPermissionErr.Panic()
 		}
+	}
+
+	if (acc.DisplayName == nil && newDisplayName == nil) || (acc.DisplayName != nil && newDisplayName != nil && *acc.DisplayName == *newDisplayName) {
+		return //if there is no change, dont do any redundant work
 	}
 
 	acc.DisplayName = newDisplayName
@@ -652,8 +667,8 @@ type store interface {
 	deleteAccountAndAllAssociatedMemberships(id Id)
 	getAccount(id Id) *account
 	getAccounts(ids []Id) []*account
-	searchAccounts(nameStartsWith string) []*account
-	searchPersonalAccounts(nameOrEmailStartsWith string) []*account
+	searchAccounts(nameOrDisplayNameStartsWith string) []*account
+	searchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) []*account
 	getPersonalAccounts(ids []Id) []*account
 	//group account
 	createGroupAccountAndMembership(account *account, ownerId Id)
