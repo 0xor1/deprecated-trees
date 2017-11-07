@@ -32,10 +32,9 @@ func (a *api) SetMemberRole(shard int, accountId, myId, memberId Id, role Accoun
 	a.store.logActivity(shard, accountId, myId, memberId, "member", "setRole", role.String())
 }
 
-func (a *api) GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*member, int) {
+func (a *api) GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
-	return a.store.getMembers(shard, accountId, role, nameContains, offset, limit)
+	return a.store.getMembers(shard, accountId, role, nameContains, after, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
 func (a *api) GetActivities(shard int, accountId, myId Id, itemId *Id, memberId *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
@@ -43,8 +42,7 @@ func (a *api) GetActivities(shard int, accountId, myId Id, itemId *Id, memberId 
 		InvalidArgumentsErr.Panic()
 	}
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxProcessEntityCount)
-	return a.store.getActivities(shard, accountId, itemId, memberId, occurredAfterUnixMillis, occurredBeforeUnixMillis, limit)
+	return a.store.getActivities(shard, accountId, itemId, memberId, occurredAfterUnixMillis, occurredBeforeUnixMillis, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
 func (a *api) GetMe(shard int, accountId Id, myId Id) *member {
@@ -57,7 +55,7 @@ type store interface {
 	getPublicProjectsEnabled(shard int, accountId Id) bool
 	setMemberRole(shard int, accountId, memberId Id, role AccountRole)
 	getMember(shard int, accountId, memberId Id) *member
-	getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*member, int)
+	getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 	logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string)
 }

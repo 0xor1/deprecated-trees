@@ -51,11 +51,14 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
 	return &res
 }
 
-func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, offset, limit int) ([]*member, int) {
-	query := bytes.NewBufferString(`SELECT %s FROM accountMembers WHERE account=? AND isActive=true`)
-	columns := ` id, isActive, role `
+func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
+	query := bytes.NewBufferString(`SELECT id, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
 	args := make([]interface{}, 0, 5)
 	args = append(args, []byte(accountId))
+	if after != nil {
+		query.WriteString(` AND name > (SELECT name FROM accountMembers WHERE account=? AND id = ?)`)
+		args = append(args, []byte(accountId), []byte(*after))
+	}
 	if role != nil {
 		query.WriteString(` AND role=?`)
 		args = append(args, role)
@@ -65,26 +68,23 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 		strVal := strings.Trim(*nameContains, " ")
 		args = append(args, fmt.Sprintf("%%%s%%", strVal))
 	}
-	count := 0
-	row := s.shards[shard].QueryRow(fmt.Sprintf(query.String(), ` COUNT(*) `), args...)
-	PanicIf(row.Scan(&count))
-	if count == 0 {
-		return nil, count
-	}
-	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ? OFFSET ?`)
-	args = append(args, limit, offset)
-	rows, err := s.shards[shard].Query(fmt.Sprintf(query.String(), columns), args...)
+	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ?`)
+	args = append(args, limit+1)
+	rows, err := s.shards[shard].Query(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
 	PanicIf(err)
-	res := make([]*member, 0, limit)
+	res := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
 		PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
-	return res, count
+	if len(res) == limit+1 {
+		return res[:limit], true
+	}
+	return res, false
 }
 
 func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
