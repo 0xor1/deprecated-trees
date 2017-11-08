@@ -252,8 +252,8 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		query.WriteString(` AND archivedOn IS NULL`)
 	}
 	if after != nil {
-		query.WriteString(fmt.Sprintf(` AND %s %s (SELECT %s FROM projects WHERE account=? AND id=?)`, sortBy, sortDir.GtLtSymbol(), sortBy))
-		args = append(args, []byte(accountId), []byte(*after))
+		query.WriteString(fmt.Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE account=? AND id=?) AND id <> ?`, sortBy, sortDir.GtLtSymbol(), sortBy))
+		args = append(args, []byte(accountId), []byte(*after), []byte(*after))
 	}
 	query.WriteString(fmt.Sprintf(` ORDER BY %s %s LIMIT ?`, sortBy, sortDir))
 	args = append(args, limit+1)
