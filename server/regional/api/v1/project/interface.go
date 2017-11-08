@@ -20,7 +20,7 @@ type Api interface {
 	//check project access permission per user
 	GetProject(shard int, accountId, projectId, myId Id) *project
 	//check project access permission per user
-	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	//must be account owner/admin
 	ArchiveProject(shard int, accountId, projectId, myId Id)
 	//must be account owner/admin
@@ -34,7 +34,7 @@ type Api interface {
 	//must be account owner/admin or project admin
 	RemoveMembers(shard int, accountId, projectId, myId Id, members []Id)
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
-	GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int)
+	GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	//for anyone
 	GetMe(shard int, accountId, projectId, myId Id) *member
 	//either one or both of OccurredAfter/Before must be nil

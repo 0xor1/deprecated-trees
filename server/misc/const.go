@@ -132,6 +132,14 @@ func (sd *SortDir) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
+func (sd *SortDir) GtLtSymbol() string {
+	if *sd == SortDirAsc {
+		return ">"
+	} else {
+		return "<"
+	}
+}
+
 type SortBy string
 
 func (sb *SortBy) Validate() {

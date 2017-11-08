@@ -93,16 +93,16 @@ func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
 	return a.store.getProject(shard, accountId, projectId)
 }
 
-func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int) {
+func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
 	myAccountRole := a.store.getAccountRole(shard, accountId, myId)
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
+	limit = ValidateLimitParam(limit, a.maxProcessEntityCount)
 	if myAccountRole == nil {
-		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
 	}
 	if *myAccountRole != AccountOwner && *myAccountRole != AccountAdmin {
-		return a.store.getPublicAndSpecificAccessProjects(shard, accountId, myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+		return a.store.getPublicAndSpecificAccessProjects(shard, accountId, myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
 	}
-	return a.store.getAllProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, offset, limit)
+	return a.store.getAllProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
 }
 
 func (a *api) ArchiveProject(shard int, accountId, projectId, myId Id) {
@@ -185,11 +185,10 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "removed")
 }
 
-func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int) {
+func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
 	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
-	offset, limit = ValidateOffsetAndLimitParams(offset, limit, a.maxProcessEntityCount)
-	return a.store.getMembers(shard, accountId, projectId, role, nameContains, offset, limit)
+	return a.store.getMembers(shard, accountId, projectId, role, nameContains, after, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
 func (a *api) GetMe(shard int, accountId, projectId, myId Id) *member {
@@ -202,8 +201,7 @@ func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, memb
 	}
 	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
 	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
-	_, limit = ValidateOffsetAndLimitParams(0, limit, a.maxProcessEntityCount)
-	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfterUnixMillis, occurredBeforeUnixMillis, limit)
+	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfterUnixMillis, occurredBeforeUnixMillis, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
 type store interface {
@@ -217,15 +215,15 @@ type store interface {
 	setIsPublic(shard int, accountId, projectId Id, isPublic bool)
 	setIsParallel(shard int, accountId, projectId Id, isParallel bool)
 	getProject(shard int, accountId, projectId Id) *project
-	getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
-	getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
-	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, offset, limit int) ([]*project, int)
+	getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
+	getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
+	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time)
 	deleteProject(shard int, accountId, projectId Id)
 	addMemberOrSetActive(shard int, accountId, projectId Id, member *addMember) bool
 	setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole)
 	setMemberInactive(shard int, accountId, projectId Id, member Id) bool
-	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, offset, limit int) ([]*member, int)
+	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	getMember(shard int, accountId, projectId, member Id) *member
 	logAccountActivity(shard int, accountId, member, item Id, itemType, action string, newValue *string)
 	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)

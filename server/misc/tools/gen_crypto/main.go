@@ -10,7 +10,7 @@ import (
 func main() {
 	fs := flag.NewFlagSet("util", flag.ExitOnError)
 	var t string
-	fs.StringVar(&t,"t", "b", "b for hex bytes array or s for ASCII string")
+	fs.StringVar(&t, "t", "b", "b for hex bytes array or s for ASCII string")
 	var nTmp uint
 	fs.UintVar(&nTmp, "n", 1, "number of crypto bytes or ASCII characters to generate")
 	var lTmp uint

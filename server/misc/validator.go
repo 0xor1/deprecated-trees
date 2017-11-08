@@ -48,16 +48,6 @@ func ValidateEmail(email string) {
 	ValidateStringParam("email", email, 6, 254, []*regexp.Regexp{emailRegex})
 }
 
-func ValidateOffsetAndLimitParams(offset, limit, maxLimit int) (int, int) {
-	if limit < 1 || limit > maxLimit {
-		limit = maxLimit
-	}
-	if offset < 0 {
-		offset = 0
-	}
-	return offset, limit
-}
-
 func ValidateLimitParam(limit, maxLimit int) int {
 	if limit < 1 || limit > maxLimit {
 		limit = maxLimit

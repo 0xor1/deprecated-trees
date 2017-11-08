@@ -580,7 +580,7 @@ func (a *api) DeleteAccount(myId, accountId Id) {
 
 	if myId.Equal(accountId) {
 		var after *Id
-		for offset, total := 0, 1; offset < total; {
+		for {
 			accs, more := a.store.getGroupAccounts(myId, after, 100)
 			for _, acc := range accs {
 				if a.privateRegionClient.MemberIsOnlyAccountOwner(acc.Region, acc.Shard, acc.Id, myId) {
