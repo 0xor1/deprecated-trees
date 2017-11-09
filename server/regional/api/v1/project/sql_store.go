@@ -111,7 +111,7 @@ func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member 
 	return setInactive
 }
 
-func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
+func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
 	query := bytes.NewBufferString(`SELECT id, isActive, totalRemainingTime, totalLoggedTime, role FROM projectMembers WHERE account=? AND project=? AND isActive=true`)
 	args := make([]interface{}, 0, 6)
 	args = append(args, []byte(accountId), []byte(projectId))
@@ -123,10 +123,11 @@ func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectR
 		query.WriteString(` AND role=?`)
 		args = append(args, role)
 	}
-	if nameContains != nil {
-		query.WriteString(` AND name LIKE ?`)
-		strVal := strings.Trim(*nameContains, " ")
-		args = append(args, fmt.Sprintf("%%%s%%", strVal))
+	if nameOrDisplayNameContains != nil {
+		query.WriteString(` AND (name LIKE ? OR displayName LIKE ?)`)
+		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
+		strVal = fmt.Sprintf("%%%s%%", strVal)
+		args = append(args, strVal)
 	}
 	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ?`)
 	args = append(args, limit)
@@ -252,10 +253,10 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		query.WriteString(` AND archivedOn IS NULL`)
 	}
 	if after != nil {
-		query.WriteString(fmt.Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE account=? AND id=?) AND id <> ?`, sortBy, sortDir.GtLtSymbol(), sortBy))
+		query.WriteString(fmt.Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE account=? AND id=?) AND id > ?`, sortBy, sortDir.GtLtSymbol(), sortBy))
 		args = append(args, []byte(accountId), []byte(*after), []byte(*after))
 	}
-	query.WriteString(fmt.Sprintf(` ORDER BY %s %s LIMIT ?`, sortBy, sortDir))
+	query.WriteString(fmt.Sprintf(` ORDER BY %s %s, id LIMIT ?`, sortBy, sortDir))
 	args = append(args, limit+1)
 	rows, err := shard.Query(fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
 	PanicIf(err)

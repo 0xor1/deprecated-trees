@@ -51,7 +51,7 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
 	return &res
 }
 
-func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
+func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
 	query := bytes.NewBufferString(`SELECT id, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
 	args := make([]interface{}, 0, 5)
 	args = append(args, []byte(accountId))
@@ -63,10 +63,11 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameCo
 		query.WriteString(` AND role=?`)
 		args = append(args, role)
 	}
-	if nameContains != nil {
-		query.WriteString(` AND name LIKE ?`)
-		strVal := strings.Trim(*nameContains, " ")
-		args = append(args, fmt.Sprintf("%%%s%%", strVal))
+	if nameOrDisplayNameContains != nil {
+		query.WriteString(` AND (name LIKE ? OR displayName LIKE ?)`)
+		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
+		strVal = fmt.Sprintf("%%%s%%", strVal)
+		args = append(args, strVal, strVal)
 	}
 	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ?`)
 	args = append(args, limit+1)
