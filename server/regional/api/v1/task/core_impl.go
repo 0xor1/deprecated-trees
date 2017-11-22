@@ -10,6 +10,47 @@ type api struct {
 	maxProcessEntityCount int
 }
 
+func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, name, description string, isAbstract bool, isParallel *bool, memberId *Id, timeRemaining *uint64) *node {
+
+}
+
+func (a *api) SetName(shard int, accountId, projectId, nodeId, myId Id, name string) {
+
+}
+
+func (a *api) SetDescription(shard int, accountId, projectId, nodeId, myId Id, description string) {
+
+}
+
+func (a *api) SetIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool) {
+
+}
+
+func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id) {
+
+}
+
+func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
+
+}
+
+func (a *api) LogTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string) {
+
+}
+
+func (a *api) MoveNode(shard int, accountId, projectId, nodeId, myId, parentId Id, nextSibling *Id) {
+
+}
+
+func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
+
+}
+
+func (a *api) GetNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node {
+
+}
+
+
 type store interface {
 }
 
