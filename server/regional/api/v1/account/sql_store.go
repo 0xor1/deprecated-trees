@@ -52,7 +52,7 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
 }
 
 /***
-TODO need to determine which of these is most efficient on the db:
+TODO need to determine which of these is most efficient on the db (this applys to project.GetMembers too):
 1)
 SELECT id, isActive, role
 FROM accountMembers
@@ -76,14 +76,13 @@ AND a2.account=:acc
 AND a2.id=:id
 AND (
         (
-            a1.name > a2.name
-            AND a1.role = a2.role
+            a1.name>a2.name
+            AND a1.role=a2.role
         )
-        OR a1.role > a2.role
+        OR a1.role>a2.role
 )
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
-
 
 func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
 	query := bytes.NewBufferString(`SELECT a1.id, a1.isActive, a1.role FROM accountMembers a1`)
@@ -94,7 +93,7 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameOr
 	query.WriteString(` WHERE a1.account=? AND a1.isActive=true`)
 	args = append(args, []byte(accountId))
 	if after != nil {
-		query.WriteString(` AND a2.account=? AND a2.id=? AND ((a1.name > a2.name AND a1.role = a2.role) OR a1.role > a2.role)`)
+		query.WriteString(` AND a2.account=? AND a2.id=? AND ((a1.name>a2.name AND a1.role=a2.role) OR a1.role>a2.role)`)
 		args = append(args, []byte(accountId), []byte(*after))
 	}
 	if role != nil {

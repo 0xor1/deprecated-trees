@@ -112,24 +112,28 @@ func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member 
 }
 
 func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
-	query := bytes.NewBufferString(`SELECT id, isActive, totalRemainingTime, totalLoggedTime, role FROM projectMembers WHERE account=? AND project=? AND isActive=true`)
-	args := make([]interface{}, 0, 8)
+	query := bytes.NewBufferString(`SELECT p1.id, p1.isActive, p1.totalRemainingTime, p1.totalLoggedTime, p1.role FROM projectMembers p1`)
+	args := make([]interface{}, 0, 9)
+	if after != nil {
+		query.WriteString(`, projectMembers p2`)
+	}
+	query.WriteString(` WHERE p1.account=? AND p1.project=? AND p1.isActive=true`)
 	args = append(args, []byte(accountId), []byte(projectId))
 	if after != nil {
-		query.WriteString(` AND name > (SELECT name FROM projectMembers WHERE account=? AND project=? AND id = ?)`)
+		query.WriteString(` AND p2.account=? AND p2.project=? p2.id=? AND ((p1.name>p2.name AND p1.role=p2.role) OR p1.role>p2.role)`)
 		args = append(args, []byte(accountId), []byte(projectId), []byte(*after))
 	}
 	if role != nil {
-		query.WriteString(` AND role=?`)
+		query.WriteString(` AND p1.role=?`)
 		args = append(args, role)
 	}
 	if nameOrDisplayNameContains != nil {
-		query.WriteString(` AND (name LIKE ? OR displayName LIKE ?)`)
+		query.WriteString(` AND (p1.name LIKE ? OR p1.displayName LIKE ?)`)
 		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
 		strVal = fmt.Sprintf("%%%s%%", strVal)
 		args = append(args, strVal, strVal)
 	}
-	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ?`)
+	query.WriteString(` ORDER BY p1.role ASC, p1.name ASC LIMIT ?`)
 	args = append(args, limit+1)
 	rows, err := s.shards[shard].Query(query.String(), args...)
 	if rows != nil {
