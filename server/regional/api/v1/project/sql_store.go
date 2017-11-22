@@ -113,7 +113,7 @@ func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member 
 
 func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
 	query := bytes.NewBufferString(`SELECT id, isActive, totalRemainingTime, totalLoggedTime, role FROM projectMembers WHERE account=? AND project=? AND isActive=true`)
-	args := make([]interface{}, 0, 6)
+	args := make([]interface{}, 0, 8)
 	args = append(args, []byte(accountId), []byte(projectId))
 	if after != nil {
 		query.WriteString(` AND name > (SELECT name FROM projectMembers WHERE account=? AND project=? AND id = ?)`)
@@ -127,10 +127,10 @@ func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectR
 		query.WriteString(` AND (name LIKE ? OR displayName LIKE ?)`)
 		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
 		strVal = fmt.Sprintf("%%%s%%", strVal)
-		args = append(args, strVal)
+		args = append(args, strVal, strVal)
 	}
 	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ?`)
-	args = append(args, limit)
+	args = append(args, limit+1)
 	rows, err := s.shards[shard].Query(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
@@ -214,7 +214,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 
 func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId Id, myId *Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
 	query := bytes.NewBufferString(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic FROM projects WHERE account=? %s`)
-	args := make([]interface{}, 0, 13)
+	args := make([]interface{}, 0, 14)
 	args = append(args, []byte(accountId))
 	if myId != nil {
 		args = append(args, []byte(accountId), []byte(*myId))

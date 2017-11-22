@@ -51,25 +51,63 @@ func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
 	return &res
 }
 
+/***
+TODO need to determine which of these is most efficient on the db:
+1)
+SELECT id, isActive, role
+FROM accountMembers
+WHERE account=:acc
+AND isActive=true
+AND (
+        (
+            name > (SELECT name FROM accountMembers WHERE account=:acc AND id=:id)
+            AND role = (SELECT role FROM accountMembers WHERE account=:acc AND id=:id)
+        )
+        OR role > (SELECT role FROM accountMembers WHERE account=:acc AND id=:id)
+)
+ORDER BY role ASC, name ASC LIMIT :lim
+
+2)
+SELECT a1.id, a1.isActive, a1.role
+FROM accountMembers a1, accountMembers a2
+WHERE a1.account=:acc
+AND a1.isActive=true
+AND a2.account=:acc
+AND a2.id=:id
+AND (
+        (
+            a1.name > a2.name
+            AND a1.role = a2.role
+        )
+        OR a1.role > a2.role
+)
+ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
+***/
+
+
 func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
-	query := bytes.NewBufferString(`SELECT id, isActive, role FROM accountMembers WHERE account=? AND isActive=true`)
-	args := make([]interface{}, 0, 5)
+	query := bytes.NewBufferString(`SELECT a1.id, a1.isActive, a1.role FROM accountMembers a1`)
+	args := make([]interface{}, 0, 7)
+	if after != nil {
+		query.WriteString(`, accountMembers a2`)
+	}
+	query.WriteString(` WHERE a1.account=? AND a1.isActive=true`)
 	args = append(args, []byte(accountId))
 	if after != nil {
-		query.WriteString(` AND name > (SELECT name FROM accountMembers WHERE account=? AND id = ?)`)
+		query.WriteString(` AND a2.account=? AND a2.id=? AND ((a1.name > a2.name AND a1.role = a2.role) OR a1.role > a2.role)`)
 		args = append(args, []byte(accountId), []byte(*after))
 	}
 	if role != nil {
-		query.WriteString(` AND role=?`)
+		query.WriteString(` AND a1.role=?`)
 		args = append(args, role)
 	}
 	if nameOrDisplayNameContains != nil {
-		query.WriteString(` AND (name LIKE ? OR displayName LIKE ?)`)
+		query.WriteString(` AND (a1.name LIKE ? OR a1.displayName LIKE ?)`)
 		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
 		strVal = fmt.Sprintf("%%%s%%", strVal)
 		args = append(args, strVal, strVal)
 	}
-	query.WriteString(` ORDER BY role ASC, name ASC LIMIT ?`)
+	query.WriteString(` ORDER BY a1.role ASC, a1.name ASC LIMIT ?`)
 	args = append(args, limit+1)
 	rows, err := s.shards[shard].Query(query.String(), args...)
 	if rows != nil {
