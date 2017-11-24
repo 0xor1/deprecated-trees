@@ -78,8 +78,7 @@ func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic boo
 }
 
 func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool) {
-	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectWriteAccess(myAccountRole, myProjectRole)
+	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	a.store.setIsParallel(shard, accountId, projectId, isParallel)
 	action := fmt.Sprintf("%t", isParallel)
@@ -87,8 +86,7 @@ func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel
 }
 
 func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
-	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
+	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
 
 	return a.store.getProject(shard, accountId, projectId)
 }
@@ -132,8 +130,7 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
-	accountRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectAdminAccess(accountRole, projectRole)
+	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	addedMemberIds := make([]Id, 0, len(members))
 	for _, mem := range members {
@@ -154,10 +151,9 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 	}
 	role.Validate()
 
-	accountRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectAdminAccess(accountRole, projectRole)
+	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	_, projectRole = a.store.getAccountAndProjectRoles(shard, accountId, projectId, member)
+	_, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, member)
 	if projectRole == nil {
 		InvalidOperationErr.Panic()
 	}
@@ -173,8 +169,7 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
-	myAccountRole, myProjectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectAdminAccess(myAccountRole, myProjectRole)
+	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	inactivatedMembers := make([]Id, 0, len(members))
 	for _, mem := range members {
@@ -186,8 +181,7 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 }
 
 func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
-	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
+	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
 	return a.store.getMembers(shard, accountId, projectId, role, nameContains, after, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
@@ -199,8 +193,7 @@ func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, memb
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
 		InvalidArgumentsErr.Panic()
 	}
-	myAccountRole, myProjectRole, projectIsPublic := a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId)
-	ValidateMemberHasProjectReadAccess(myAccountRole, myProjectRole, projectIsPublic)
+	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
 	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfterUnixMillis, occurredBeforeUnixMillis, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
