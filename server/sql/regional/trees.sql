@@ -103,6 +103,8 @@ CREATE TABLE projects(
     fileSize BIGINT UNSIGNED NOT NULL,
     linkedFileCount BIGINT UNSIGNED NOT NULL,
     chatCount BIGINT UNSIGNED NOT NULL,
+    childCount BIGINT UNSIGNED NOT NULL,
+    descendantCount BIGINT UNSIGNED NOT NULL,
     isParallel BOOL NOT NULL DEFAULT FALSE,
     isPublic BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (account, id),
@@ -130,7 +132,9 @@ CREATE TABLE nodes(
     minimumRemainingTime BIGINT UNSIGNED NULL,
     linkedFileCount INT UNSIGNED NOT NULL,
     chatCount BIGINT UNSIGNED NOT NULL,
-    isParallel BOOL NOT NULL DEFAULT FALSE,
+    childCount BIGINT UNSIGNED NULL,
+    descendantCount BIGINT UNSIGNED NULL,
+    isParallel BOOL NULL DEFAULT FALSE,
     member BINARY(16) NULL,
     PRIMARY KEY (account, project, id),
     UNIQUE INDEX(account, member, id),
@@ -213,10 +217,10 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createProject;
 DELIMITER $$
-CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _archivedOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _fileCount BIGINT UNSIGNED, _fileSize BIGINT UNSIGNED, _linkedFileCount BIGINT UNSIGNED, _chatCount BIGINT UNSIGNED, _isParallel BOOL, _isPublic BOOL)
+CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _archivedOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _fileCount BIGINT UNSIGNED, _fileSize BIGINT UNSIGNED, _linkedFileCount BIGINT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOL, _isPublic BOOL)
 BEGIN
 	INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
-	INSERT INTO projects (account, id, firstChild, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic) VALUES (_accountId, _id, NULL, _name, _description, _createdOn, _archivedOn, _startOn, _dueOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _fileCount, _fileSize, _linkedFileCount, _chatCount, _isParallel, _isPublic);
+	INSERT INTO projects (account, id, firstChild, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, childCount, descendantCount, isParallel, isPublic) VALUES (_accountId, _id, NULL, _name, _description, _createdOn, _archivedOn, _startOn, _dueOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _fileCount, _fileSize, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _isPublic);
 END;
 $$
 DELIMITER ;
