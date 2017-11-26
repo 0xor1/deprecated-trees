@@ -21,7 +21,6 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 		publicProjectsDisabledErr.Panic()
 	}
 
-	minRemainingTime := uint64(0)
 	project := &project{}
 	project.Id = NewId()
 	project.Name = name
@@ -29,8 +28,8 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	project.CreatedOn = Now()
 	project.StartOn = startOn
 	project.DueOn = dueOn
-	project.IsParallel = &isParallel
-	project.MinimumRemainingTime = &minRemainingTime
+	project.IsParallel = isParallel
+	project.MinimumRemainingTime = 0
 	project.IsPublic = isPublic
 	a.store.createProject(shard, accountId, project)
 	if accountId.Equal(myId) {
@@ -240,19 +239,20 @@ type member struct {
 type project struct {
 	Id                   Id         `json:"id"`
 	Name                 string     `json:"name"`
-	CreatedOn            time.Time  `json:"createdOn"`
-	TotalRemainingTime   uint64     `json:"totalRemainingTime"`
-	TotalLoggedTime      uint64     `json:"totalLoggedTime"`
-	IsAbstract           bool       `json:"isAbstract"`
 	Description          string     `json:"description"`
-	LinkedFileCount      uint64     `json:"linkedFileCount"`
-	ChatCount            uint64     `json:"chatCount"`
-	MinimumRemainingTime *uint64    `json:"minimumRemainingTime,omitempty"`
-	IsParallel           *bool      `json:"isParallel,omitempty"`
+	CreatedOn            time.Time  `json:"createdOn"`
 	ArchivedOn           *time.Time `json:"archivedOn,omitempty"`
 	StartOn              *time.Time `json:"startOn,omitempty"`
 	DueOn                *time.Time `json:"dueOn,omitempty"`
+	TotalRemainingTime   uint64     `json:"totalRemainingTime"`
+	TotalLoggedTime      uint64     `json:"totalLoggedTime"`
+	MinimumRemainingTime uint64     `json:"minimumRemainingTime"`
 	FileCount            uint64     `json:"fileCount"`
 	FileSize             uint64     `json:"fileSize"`
+	LinkedFileCount      uint64     `json:"linkedFileCount"`
+	ChatCount            uint64     `json:"chatCount"`
+	ChildCount           uint64     `json:"childCount"`
+	DescendantCount      uint64     `json:"descendantCount"`
+	IsParallel           bool       `json:"isParallel,omitempty"`
 	IsPublic             bool       `json:"isPublic"`
 }

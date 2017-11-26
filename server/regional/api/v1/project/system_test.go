@@ -48,7 +48,7 @@ func Test_system(t *testing.T) {
 	proj = api.GetProject(0, orgId, proj.Id, ali.Id)
 	assert.Equal(t, "a-p1_new", proj.Name)
 	assert.Equal(t, "a-p1_desc_new", proj.Description)
-	assert.Equal(t, false, *proj.IsParallel)
+	assert.Equal(t, false, proj.IsParallel)
 	assert.Equal(t, true, proj.IsPublic)
 	projs, more := api.GetProjects(0, orgId, ali.Id, nil, nil, nil, nil, nil, nil, nil, false, SortByCreatedOn, SortDirAsc, nil, 1)
 	assert.Equal(t, 1, len(projs))

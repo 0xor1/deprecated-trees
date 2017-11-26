@@ -39,7 +39,7 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 }
 
 func (s *sqlStore) createProject(shard int, accountId Id, project *project) {
-	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.Name, project.Description, project.CreatedOn, project.ArchivedOn, project.StartOn, project.DueOn, project.TotalRemainingTime, project.TotalLoggedTime, project.MinimumRemainingTime, project.FileCount, project.FileSize, project.LinkedFileCount, project.ChatCount, project.IsParallel, project.IsPublic)
+	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.Name, project.Description, project.CreatedOn, project.ArchivedOn, project.StartOn, project.DueOn, project.TotalRemainingTime, project.TotalLoggedTime, project.MinimumRemainingTime, project.FileCount, project.FileSize, project.LinkedFileCount, project.ChatCount, project.ChildCount, project.DescendantCount, project.IsParallel, project.IsPublic)
 	PanicIf(err)
 }
 
@@ -64,9 +64,9 @@ func (s *sqlStore) setIsParallel(shard int, accountId, projectId Id, isParallel 
 }
 
 func (s *sqlStore) getProject(shard int, accountId, projectId Id) *project {
-	row := s.shards[shard].QueryRow(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
+	row := s.shards[shard].QueryRow(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, childCount, descendantCount, isParallel, isPublic FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
 	result := project{}
-	PanicIf(row.Scan(&result.Id, &result.Name, &result.Description, &result.CreatedOn, &result.ArchivedOn, &result.StartOn, &result.DueOn, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.FileCount, &result.FileSize, &result.LinkedFileCount, &result.ChatCount, &result.IsParallel, &result.IsPublic))
+	PanicIf(row.Scan(&result.Id, &result.Name, &result.Description, &result.CreatedOn, &result.ArchivedOn, &result.StartOn, &result.DueOn, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.FileCount, &result.FileSize, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel, &result.IsPublic))
 	return &result
 }
 
@@ -217,7 +217,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 }
 
 func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId Id, myId *Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
-	query := bytes.NewBufferString(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, isParallel, isPublic FROM projects WHERE account=? %s`)
+	query := bytes.NewBufferString(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, childCount, descendantCount, isParallel, isPublic FROM projects WHERE account=? %s`)
 	args := make([]interface{}, 0, 14)
 	args = append(args, []byte(accountId))
 	if myId != nil {
@@ -267,7 +267,7 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 	res := make([]*project, 0, limit+1)
 	for rows.Next() {
 		proj := project{}
-		PanicIf(rows.Scan(&proj.Id, &proj.Name, &proj.Description, &proj.CreatedOn, &proj.ArchivedOn, &proj.StartOn, &proj.DueOn, &proj.TotalRemainingTime, &proj.TotalLoggedTime, &proj.MinimumRemainingTime, &proj.FileCount, &proj.FileSize, &proj.LinkedFileCount, &proj.ChatCount, &proj.IsParallel, &proj.IsPublic))
+		PanicIf(rows.Scan(&proj.Id, &proj.Name, &proj.Description, &proj.CreatedOn, &proj.ArchivedOn, &proj.StartOn, &proj.DueOn, &proj.TotalRemainingTime, &proj.TotalLoggedTime, &proj.MinimumRemainingTime, &proj.FileCount, &proj.FileSize, &proj.LinkedFileCount, &proj.ChatCount, &proj.ChildCount, &proj.DescendantCount, &proj.IsParallel, &proj.IsPublic))
 		res = append(res, &proj)
 	}
 	if len(res) == limit+1 {
