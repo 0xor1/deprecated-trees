@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+const(
+	itemType = "project"
+)
+
 var (
 	publicProjectsDisabledErr = &AppError{Code: "r_v1_p_ppd", Message: "public projects disabled", Public: true}
 )
@@ -39,8 +43,8 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 		a.store.addMemberOrSetActive(shard, accountId, project.Id, addMem)
 	}
 
-	a.store.logAccountActivity(shard, accountId, myId, project.Id, "project", "created", nil)
-	a.store.logProjectActivity(shard, accountId, project.Id, myId, project.Id, "project", "created", nil)
+	a.store.logAccountActivity(shard, accountId, myId, project.Id, itemType, "created", nil)
+	a.store.logProjectActivity(shard, accountId, project.Id, myId, project.Id, itemType, "created", nil)
 
 	if len(members) > 0 {
 		a.AddMembers(shard, accountId, project.Id, myId, members)
@@ -53,14 +57,14 @@ func (a *api) SetName(shard int, accountId, projectId, myId Id, name string) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
 	a.store.setName(shard, accountId, projectId, name)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setName", &name)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setName", &name)
 }
 
 func (a *api) SetDescription(shard int, accountId, projectId, myId Id, description string) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
 	a.store.setDescription(shard, accountId, projectId, description)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setDescription", &description)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setDescription", &description)
 }
 
 func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic bool) {
@@ -72,8 +76,8 @@ func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic boo
 
 	a.store.setIsPublic(shard, accountId, projectId, isPublic)
 	action := fmt.Sprintf("%t", isPublic)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "setIsPublic", &action)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setIsPublic", &action)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "setIsPublic", &action)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setIsPublic", &action)
 }
 
 func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool) {
@@ -81,7 +85,7 @@ func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel
 
 	a.store.setIsParallel(shard, accountId, projectId, isParallel)
 	action := fmt.Sprintf("%t", isParallel)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "setIsParallel", &action)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setIsParallel", &action)
 }
 
 func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
@@ -106,21 +110,21 @@ func (a *api) ArchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	now := Now()
 	a.store.setProjectArchivedOn(shard, accountId, projectId, &now)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "archived", nil)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "archived", nil)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "archived", nil)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "archived", nil)
 }
 
 func (a *api) UnarchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	a.store.setProjectArchivedOn(shard, accountId, projectId, nil)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "unarchived", nil)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, "project", "unarchived", nil)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "unarchived", nil)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "unarchived", nil)
 }
 
 func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	a.store.deleteProject(shard, accountId, projectId)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, "project", "deleted", nil)
+	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "deleted", nil)
 	//TODO delete s3 data, uploaded files etc
 }
 

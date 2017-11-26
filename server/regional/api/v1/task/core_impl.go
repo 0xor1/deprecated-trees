@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+const(
+	itemType = "node"
+)
+
 type api struct {
 	store                 store
 	maxProcessEntityCount int
@@ -20,12 +24,8 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nex
 	if timeRemaining != nil {
 		totalTimeRemaining = *timeRemaining
 	}
-	if memberId != nil { //if a member is being assigned to the node then we need to check they are an active account and project member
-		accRole, projRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, *memberId)
-		ValidateMemberHasProjectWriteAccess(accRole, projRole)
-		if projRole == nil || *projRole == ProjectReader {
-			InsufficientPermissionErr.Panic()
-		}
+	if memberId != nil { //if a member is being assigned to the node then we need to check they have project write access
+		ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, *memberId))
 	}
 	newNode := &node{
 		Id: NewId(),
@@ -43,7 +43,9 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nex
 		IsParallel: isParallel,
 		Member: memberId,
 	}
-
+	a.store.createNode(shard, accountId, projectId, parentId, nextSibling, newNode)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, newNode.Id, itemType, "created", nil)
+	return newNode
 }
 
 func (a *api) SetName(shard int, accountId, projectId, nodeId, myId Id, name string) {
@@ -86,6 +88,8 @@ func (a *api) GetNodes(shard int, accountId, projectId, parentId, myId Id, fromS
 type store interface {
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
+	createNode(shard int, accountId, projectId, parentId Id, nextSibling *Id, newNode *node)
+	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 }
 
 type node struct {
