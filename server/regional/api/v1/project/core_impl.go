@@ -134,6 +134,13 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 	addedMemberIds := make([]Id, 0, len(members))
 	for _, mem := range members {
 		mem.Role.Validate()
+		accRole := a.store.getAccountRole(shard, accountId, mem.Id)
+		if accRole == nil {
+			InvalidArgumentsErr.Panic()
+		}
+		if *accRole == AccountOwner || *accRole == AccountAdmin {
+			mem.Role = ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
+		}
 		if a.store.addMemberOrSetActive(shard, accountId, projectId, mem) {
 			addedMemberIds = append(addedMemberIds, mem.Id)
 		}
@@ -152,11 +159,14 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 
 	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	_, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, member)
+	accRole, projectRole := a.store.getAccountAndProjectRoles(shard, accountId, projectId, member)
 	if projectRole == nil {
 		InvalidOperationErr.Panic()
 	}
 	if *projectRole != role {
+		if role != ProjectAdmin && (*accRole == AccountOwner || *accRole == AccountAdmin) {
+			InvalidArgumentsErr.Panic() // account owners and admins can only be project admins
+		}
 		a.store.setMemberRole(shard, accountId, projectId, member, role)
 		roleStr := role.String()
 		a.store.logProjectActivity(shard, accountId, projectId, myId, member, "member", "setRole", &roleStr)

@@ -74,6 +74,7 @@ func Test_system(t *testing.T) {
 	catP.Id = cat.Id
 	catP.Role = ProjectReader
 	api.AddMembers(0, orgId, proj.Id, ali.Id, []*addMember{aliP, bobP, catP})
+	accountApi.SetMemberRole(0, orgId, ali.Id, bobP.Id, AccountMemberOfOnlySpecificProjects)
 	api.SetMemberRole(0, orgId, proj.Id, ali.Id, bobP.Id, ProjectReader)
 	mems, more := api.GetMembers(0, orgId, proj.Id, ali.Id, nil, nil, nil, 100)
 	assert.Equal(t, 3, len(mems))

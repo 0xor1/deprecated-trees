@@ -192,7 +192,7 @@ DELIMITER $$
 CREATE PROCEDURE setAccountMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
 	UPDATE accountMembers SET isActive=false, role=3 WHERE account=_account AND id=_member;
-    UPDATE projectMembers SET totalRemainingTime=0, totalLoggedTime=0, isActive=false, role=4 WHERE account=_account AND id=_member;
+    UPDATE projectMembers SET isActive=false, role=2 WHERE account=_account AND id=_member;
     UPDATE nodes SET member=NULL WHERE account=_account AND member=_member;
 END;
 $$
@@ -240,9 +240,9 @@ BEGIN
 			SELECT COUNT(*), SUM(totalRemainingTime), SUM(minimumRemainingTime), MAX(minimumRemainingTime) INTO childCount, sumChildTotalRemainingTime, sumChildMinimumRemainingTime, maxChildMinimumRemainingTime FROM projects WHERE account=_accountId AND id=_id;            
 			IF childCount > 0 THEN #settings isParallel and child coutners
 				IF _isParallel THEN #setting isParallel to true
-					UPDATE projects SET totalRemainingTime=sumChildTotalRemainingTime, minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+					UPDATE projects SET minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
 				ELSE #setting isParallel to false
-					UPDATE projects SET totalRemainingTime=sumChildTotalRemainingTime, minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+					UPDATE projects SET minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
 				END IF;
 			ELSE #just setting isParallel but not time counters
 				UPDATE projects SET isParallel=_isParallel WHERE account=_accountId AND id=_id;
@@ -309,7 +309,7 @@ BEGIN
 		SELECT COUNT(*) INTO projMemberCount FROM projectMembers WHERE account = _accountId AND project = _projectId AND id = _id AND isActive = true FOR UPDATE;
 		IF projMemberCount = 1 THEN
 			UPDATE nodes SET member = NULL WHERE account = _accountId AND project = _projectId AND member = _id;
-            UPDATE projectMembers SET totalRemainingTime = 0, totalLoggedTime = 0 WHERE account = _accountId AND project = _projectId AND id = _id;
+            UPDATE projectMembers SET totalRemainingTime = 0 WHERE account = _accountId AND project = _projectId AND id = _id;
             SELECT true;
 		ELSE
 			SELECT false;
