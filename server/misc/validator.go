@@ -61,6 +61,12 @@ func ValidateEntityCount(entityCount, maxLimit int) {
 	}
 }
 
+func ValidateExists(exists bool) {
+	if !exists {
+		NoSuchEntityErr.Panic()
+	}
+}
+
 func ValidateMemberHasAccountOwnerAccess(accountRole *AccountRole) {
 	if accountRole == nil || *accountRole != AccountOwner {
 		InsufficientPermissionErr.Panic()
@@ -81,6 +87,12 @@ func ValidateMemberHasProjectAdminAccess(accountRole *AccountRole, projectRole *
 
 func ValidateMemberHasProjectWriteAccess(accountRole *AccountRole, projectRole *ProjectRole) {
 	if accountRole == nil || ((*accountRole != AccountOwner && *accountRole != AccountAdmin) && (projectRole == nil || (*projectRole != ProjectAdmin && *projectRole != ProjectWriter))) {
+		InsufficientPermissionErr.Panic()
+	}
+}
+
+func ValidateMemberIsAProjectMemberWithWriteAccess(projectRole *ProjectRole) {
+	if projectRole == nil || (*projectRole != ProjectAdmin && *projectRole != ProjectWriter) {
 		InsufficientPermissionErr.Panic()
 	}
 }

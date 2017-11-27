@@ -34,6 +34,10 @@ func (s *sqlStore) getAccountAndProjectRolesAndProjectIsPublic(shard int, accoun
 	return GetAccountAndProjectRolesAndProjectIsPublic(s.shards[shard], accountId, projectId, memberId)
 }
 
+func (s *sqlStore) getProjectExists(shard int, accountId, projectId Id) bool {
+	return GetProjectExists(s.shards[shard], accountId, projectId)
+}
+
 func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 	return GetPublicProjectsEnabled(s.shards[shard], accountId)
 }

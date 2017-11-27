@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const(
+const (
 	itemType = "project"
 )
 
@@ -133,7 +133,9 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*ad
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
 	}
+
 	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
+	ValidateExists(a.store.getProjectExists(shard, accountId, projectId))
 
 	addedMemberIds := make([]Id, 0, len(members))
 	for _, mem := range members {
@@ -214,6 +216,7 @@ type store interface {
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
+	getProjectExists(shard int, accountId, projectId Id) bool
 	getPublicProjectsEnabled(shard int, accountId Id) bool
 	createProject(shard int, accountId Id, project *project)
 	setName(shard int, accountId, projectId Id, name string)

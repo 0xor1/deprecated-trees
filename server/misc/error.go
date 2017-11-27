@@ -11,7 +11,8 @@ var (
 	idGenerationErr           = &AppError{Code: "g_ig", Message: "failed to generate id", Public: false}
 	InsufficientPermissionErr = &AppError{Code: "g_ip", Message: "insufficient permissions", Public: true}
 	InvalidOperationErr       = &AppError{Code: "g_io", Message: "invalid operation", Public: true}
-	InvalidEntityCountErr     = &AppError{Code: "g_iece", Message: "invalid entity count", Public: true}
+	InvalidEntityCountErr     = &AppError{Code: "g_iec", Message: "invalid entity count", Public: true}
+	NoSuchEntityErr           = &AppError{Code: "g_nse", Message: "no such entity", Public: true}
 	externalAppErr            = &AppError{Code: "g_ea", Message: "external error occured", Public: false}
 )
 
