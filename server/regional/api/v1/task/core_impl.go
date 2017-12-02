@@ -84,7 +84,7 @@ func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, member
 	if memberId != nil {
 		ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, *memberId))
 	}
-	a.store.setMember(shard, accountId, projectId, nodeId, myId, memberId)
+	a.store.setMember(shard, accountId, projectId, nodeId, memberId)
 	var newValue *string
 	if memberId != nil {
 		str := memberId.String()
@@ -97,7 +97,7 @@ func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, member
 func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setTimeRemaining(shard, accountId, projectId, nodeId, myId, timeRemaining)
+	a.store.setTimeRemaining(shard, accountId, projectId, nodeId, timeRemaining)
 	newValue := fmt.Sprintf("%d", timeRemaining)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setTimeRemaining", &newValue)
 }
@@ -114,20 +114,20 @@ func (a *api) LogTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId
 func (a *api) MoveNode(shard int, accountId, projectId, nodeId, myId, parentId Id, nextSibling *Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.moveNode(shard, accountId, projectId, nodeId, myId, parentId, nextSibling)
+	a.store.moveNode(shard, accountId, projectId, nodeId, parentId, nextSibling)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
 func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.deleteNode(shard, accountId, projectId, nodeId, myId)
+	a.store.deleteNode(shard, accountId, projectId, nodeId)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
 func (a *api) GetNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node {
-	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
-	return a.store.getNodes(shard, accountId, projectId, parentId, myId, fromSibling, limit)
+	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
+	return a.store.getNodes(shard, accountId, projectId, parentId, fromSibling, limit)
 }
 
 type store interface {
@@ -140,12 +140,12 @@ type store interface {
 	setName(shard int, accountId, projectId, nodeId Id, name string)
 	setDescription(shard int, accountId, projectId, nodeId Id, description string)
 	setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool)
-	setMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id)
-	setTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64)
+	setMember(shard int, accountId, projectId, nodeId Id, memberId *Id)
+	setTimeRemaining(shard int, accountId, projectId, nodeId Id, timeRemaining uint64)
 	logTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string)
-	moveNode(shard int, accountId, projectId, nodeId, myId, parentId Id, nextSibling *Id)
-	deleteNode(shard int, accountId, projectId, nodeId, myId Id)
-	getNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node
+	moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id)
+	deleteNode(shard int, accountId, projectId, nodeId Id)
+	getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
 	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 }
 

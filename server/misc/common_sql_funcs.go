@@ -28,6 +28,15 @@ func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole 
 	return &res
 }
 
+func GetProjectRole(shard isql.ReplicaSet, accountId, projectId, memberId Id) *ProjectRole {
+	row := shard.QueryRow(`SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
+	var projRole *ProjectRole
+	if IsSqlErrNoRowsAndPanicIf(row.Scan(&projRole)) {
+		return nil
+	}
+	return projRole
+}
+
 func GetAccountAndProjectRoles(shard isql.ReplicaSet, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole) {
 	accountIdBytes := []byte(accountId)
 	memberIdBytes := []byte(memberId)
