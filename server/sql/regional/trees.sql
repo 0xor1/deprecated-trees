@@ -319,6 +319,78 @@ END;
 $$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS createNode;
+DELIMITER $$
+CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _nextSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _linkedFileCount INT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOLEAN, _memberId BINARY(16))
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setNodeIsParallel
+DELIMITER $$
+CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _isParallel BOOLEAN)
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setNodeMember
+DELIMITER $$
+CREATE PROCEDURE setNodeMember(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _memberId BINARY(16))
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setTimeRemaining
+DELIMITER $$
+CREATE PROCEDURE setTimeRemaining(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _timeRemaining BIGINT UNSIGNED)
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS logTimeAndSetTimeRemaining
+DELIMITER $$
+CREATE PROCEDURE logTimeAndSetTimeRemaining(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _timeRemaining BIGINT UNSIGNED, _note VARCHAR(250))
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS moveNode
+DELIMITER $$
+CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _parentId BINARY(16), _nextSibling BINARY(16))
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS deleteNode
+DELIMITER $$
+CREATE PROCEDURE deleteNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16))
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS getNodes
+DELIMITER $$
+CREATE PROCEDURE getNodes(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _fromSiblingId BINARY(16), _limit INT)
+BEGIN
+	#TODO
+END;
+$$
+DELIMITER ;
+
 DROP USER IF EXISTS 't_r_trees'@'%';
 CREATE USER 't_r_trees'@'%' IDENTIFIED BY 'T@sk-Tr335';
 GRANT SELECT ON trees.* TO 't_r_trees'@'%';
