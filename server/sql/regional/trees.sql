@@ -323,7 +323,7 @@ DROP PROCEDURE IF EXISTS createNode;
 DELIMITER $$
 CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _nextSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _linkedFileCount INT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOLEAN, _memberId BINARY(16))
 BEGIN
-	#TODO
+	SELECT TRUE;
 END;
 $$
 DELIMITER ;

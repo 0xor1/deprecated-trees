@@ -96,7 +96,7 @@ func (s *sqlStore) deleteProject(shard int, accountId, projectId Id) {
 	PanicIf(err)
 }
 
-func (s *sqlStore) addMemberOrSetActive(shard int, accountId, projectId Id, member *addMember) bool {
+func (s *sqlStore) addMemberOrSetActive(shard int, accountId, projectId Id, member *AddProjectMember) bool {
 	row := s.shards[shard].QueryRow(`CALL addProjectMemberOrSetActive(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(member.Id), member.Role)
 	added := false
 	PanicIf(row.Scan(&added))

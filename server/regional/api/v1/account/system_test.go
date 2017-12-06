@@ -10,7 +10,7 @@ import (
 )
 
 func Test_System(t *testing.T) {
-	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
+	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
 	maxProcessEntityCount := 100
 	privateApi := private.New(shards, maxProcessEntityCount)
 	api := New(shards, 100)

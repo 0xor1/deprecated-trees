@@ -20,21 +20,17 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nex
 	if (isAbstract && (isParallel == nil || memberId != nil || timeRemaining != nil)) || (!isAbstract && (isParallel != nil || timeRemaining == nil)) {
 		InvalidArgumentsErr.Panic()
 	}
-	zero := uint64(0)
+	zeroVal := uint64(0)
+	zero := &zeroVal
+	if !isAbstract {
+		zero = nil
+	}
 	totalTimeRemaining := uint64(0)
 	if timeRemaining != nil {
 		totalTimeRemaining = *timeRemaining
 	}
 	if memberId != nil { //if a member is being assigned to the node then we need to check they have project write access
 		ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, *memberId))
-	}
-	if projectId.Equal(parentId) {
-		ValidateExists(a.store.getProjectExists(shard, accountId, projectId))
-	} else {
-		ValidateExists(a.store.getNodeExists(shard, accountId, projectId, parentId))
-	}
-	if nextSibling != nil {
-		ValidateExists(a.store.getNodeExists(shard, accountId, projectId, *nextSibling))
 	}
 	newNode := &node{
 		Id:                   NewId(),
@@ -44,11 +40,11 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nex
 		CreatedOn:            Now(),
 		TotalRemainingTime:   totalTimeRemaining,
 		TotalLoggedTime:      0,
-		MinimumRemainingTime: &zero,
+		MinimumRemainingTime: zero,
 		LinkedFileCount:      0,
 		ChatCount:            0,
-		ChildCount:           &zero,
-		DescendantCount:      &zero,
+		ChildCount:           zero,
+		DescendantCount:      zero,
 		IsParallel:           isParallel,
 		Member:               memberId,
 	}

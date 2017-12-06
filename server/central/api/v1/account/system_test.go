@@ -13,15 +13,15 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	accountsDb := isql.NewReplicaSet("mysql", "t_c_accounts:T@sk-@cc-0unt5@tcp(127.0.0.1:3306)/accounts?parseTime=true&loc=UTC&multiStatements=true", nil)
-	pwdsDb := isql.NewReplicaSet("mysql", "t_c_pwds:T@sk-Pwd5@tcp(127.0.0.1:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true", nil)
+	accountsDb := isql.NewReplicaSet("mysql", "t_c_accounts:T@sk-@cc-0unt5@tcp(127.0.0.1:3307)/accounts?parseTime=true&loc=UTC&multiStatements=true", nil)
+	pwdsDb := isql.NewReplicaSet("mysql", "t_c_pwds:T@sk-Pwd5@tcp(127.0.0.1:3307)/pwds?parseTime=true&loc=UTC&multiStatements=true", nil)
 	avatarStore := NewLocalAvatarStore("avatars").(*localAvatarStore)
 	region := "use" //US-East
 	maxProcessEntityCount := 100
 	api := New(
 		accountsDb,
 		pwdsDb,
-		private.NewClient(map[string]private.Api{region: private.New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)}),
+		private.NewClient(map[string]private.Api{region: private.New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)}),
 		NewLogLinkMailer(),
 		avatarStore,
 		[]string{},

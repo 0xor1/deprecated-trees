@@ -11,7 +11,7 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
+	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
 	maxProcessEntityCount := 100
 	privateApi := private.New(shards, maxProcessEntityCount)
 	accountApi := account.New(shards, maxProcessEntityCount)
@@ -64,16 +64,16 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 1, len(projs))
 	assert.False(t, more)
 	api.UnarchiveProject(0, orgId, proj.Id, ali.Id)
-	aliP := &addMember{}
+	aliP := &AddProjectMember{}
 	aliP.Id = ali.Id
 	aliP.Role = ProjectAdmin
-	bobP := &addMember{}
+	bobP := &AddProjectMember{}
 	bobP.Id = bob.Id
 	bobP.Role = ProjectWriter
-	catP := &addMember{}
+	catP := &AddProjectMember{}
 	catP.Id = cat.Id
 	catP.Role = ProjectReader
-	api.AddMembers(0, orgId, proj.Id, ali.Id, []*addMember{aliP, bobP, catP})
+	api.AddMembers(0, orgId, proj.Id, ali.Id, []*AddProjectMember{aliP, bobP, catP})
 	accountApi.SetMemberRole(0, orgId, ali.Id, bobP.Id, AccountMemberOfOnlySpecificProjects)
 	api.SetMemberRole(0, orgId, proj.Id, ali.Id, bobP.Id, ProjectReader)
 	mems, more := api.GetMembers(0, orgId, proj.Id, ali.Id, nil, nil, nil, 100)

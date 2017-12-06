@@ -13,7 +13,7 @@ func GetProjectExists(shard isql.ReplicaSet, accountId, projectId Id) bool {
 }
 
 func GetNodeExists(shard isql.ReplicaSet, accountId, projectId Id, nodeId Id) bool {
-	row := shard.QueryRow(`SELECT COUNT() = 1 FROM nodes WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(nodeId))
+	row := shard.QueryRow(`SELECT COUNT(*) = 1 FROM nodes WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(nodeId))
 	exists := false
 	PanicIf(row.Scan(&exists))
 	return exists

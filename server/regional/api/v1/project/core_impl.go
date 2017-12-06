@@ -19,7 +19,7 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*addMember) *project {
+func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) *project {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
 		publicProjectsDisabledErr.Panic()
@@ -37,7 +37,7 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	project.IsPublic = isPublic
 	a.store.createProject(shard, accountId, project)
 	if accountId.Equal(myId) {
-		addMem := &addMember{}
+		addMem := &AddProjectMember{}
 		addMem.Id = myId
 		addMem.Role = ProjectAdmin
 		a.store.addMemberOrSetActive(shard, accountId, project.Id, addMem)
@@ -128,7 +128,7 @@ func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 	//TODO delete s3 data, uploaded files etc
 }
 
-func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*addMember) {
+func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*AddProjectMember) {
 	ValidateEntityCount(len(members), a.maxProcessEntityCount)
 	if accountId.Equal(myId) {
 		InvalidOperationErr.Panic()
@@ -229,7 +229,7 @@ type store interface {
 	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time)
 	deleteProject(shard int, accountId, projectId Id)
-	addMemberOrSetActive(shard int, accountId, projectId Id, member *addMember) bool
+	addMemberOrSetActive(shard int, accountId, projectId Id, member *AddProjectMember) bool
 	setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole)
 	setMemberInactive(shard int, accountId, projectId Id, member Id) bool
 	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool)
@@ -238,11 +238,6 @@ type store interface {
 	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 	logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string)
 	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
-}
-
-type addMember struct {
-	Id   Id          `json:"id"`
-	Role ProjectRole `json:"role"`
 }
 
 type member struct {

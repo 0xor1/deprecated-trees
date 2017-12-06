@@ -10,7 +10,7 @@ import (
 
 func Test_system(t *testing.T) {
 	maxProcessEntityCount := 100
-	api := New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3306)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)
+	api := New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)
 
 	aliId := NewId()
 	orgId := NewId()

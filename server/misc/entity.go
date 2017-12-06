@@ -50,6 +50,11 @@ type AddMemberPublic struct {
 	Role AccountRole `json:"role"`
 }
 
+type AddProjectMember struct {
+	Id   Id          `json:"id"`
+	Role ProjectRole `json:"role"`
+}
+
 type Activity struct {
 	OccurredOn time.Time `json:"occurredOn"`
 	Member     Id        `json:"member"`
