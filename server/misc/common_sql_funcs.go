@@ -12,13 +12,6 @@ func GetProjectExists(shard isql.ReplicaSet, accountId, projectId Id) bool {
 	return exists
 }
 
-func GetNodeExists(shard isql.ReplicaSet, accountId, projectId Id, nodeId Id) bool {
-	row := shard.QueryRow(`SELECT COUNT(*) = 1 FROM nodes WHERE account=? AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(nodeId))
-	exists := false
-	PanicIf(row.Scan(&exists))
-	return exists
-}
-
 func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole {
 	row := shard.QueryRow(`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)

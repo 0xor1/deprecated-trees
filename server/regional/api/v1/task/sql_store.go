@@ -34,14 +34,6 @@ func (s *sqlStore) getAccountAndProjectRolesAndProjectIsPublic(shard int, accoun
 	return GetAccountAndProjectRolesAndProjectIsPublic(s.shards[shard], accountId, projectId, memberId)
 }
 
-func (s *sqlStore) getProjectExists(shard int, accountId, projectId Id) bool {
-	return GetProjectExists(s.shards[shard], accountId, projectId)
-}
-
-func (s *sqlStore) getNodeExists(shard int, accountId, projectId, nodeId Id) bool {
-	return GetNodeExists(s.shards[shard], accountId, projectId, nodeId)
-}
-
 func (s *sqlStore) createNode(shard int, accountId, projectId, parentId Id, nextSibling *Id, newNode *node) {
 	args := make([]interface{}, 0, 18)
 	args = append(args, []byte(accountId), []byte(projectId), []byte(parentId))

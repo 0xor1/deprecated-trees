@@ -42,6 +42,7 @@ func Test_system(t *testing.T) {
 	project := projectApi.CreateProject(0, orgId, ali.Id, "proj", "projDesc", &start, &end, true, false, []*AddProjectMember{{Id: ali.Id, Role: ProjectAdmin}, {Id: bob.Id, Role: ProjectAdmin}, {Id: cat.Id, Role: ProjectWriter}, {Id: dan.Id, Role: ProjectReader}})
 
 	falseVal := false
+	//create node needs extensive testing to test every avenue of the stored procedure
 	firstNode := api.CreateNode(0, orgId, project.Id, project.Id, ali.Id, nil, "first", "firstDesc", true, &falseVal, nil, nil)
 	assert.Equal(t, true, firstNode.IsAbstract)
 	assert.Equal(t, "first", firstNode.Name)
@@ -49,7 +50,7 @@ func Test_system(t *testing.T) {
 	assert.InDelta(t, Now().Unix(), firstNode.CreatedOn.Unix(), 100)
 	assert.Equal(t, uint64(0), firstNode.TotalRemainingTime)
 	assert.Equal(t, uint64(0), firstNode.TotalLoggedTime)
-	assert.Equal(t, uint64(0), *firstNode.MinimumRemainingTime)
+	assert.Equal(t, uint64(0), firstNode.MinimumRemainingTime)
 	assert.Equal(t, uint64(0), firstNode.LinkedFileCount)
 	assert.Equal(t, uint64(0), firstNode.ChatCount)
 	assert.Equal(t, uint64(0), *firstNode.ChildCount)
