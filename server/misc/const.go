@@ -22,7 +22,6 @@ const (
 	SortByName        = SortBy("name")
 	SortByDisplayName = SortBy("displayname")
 	SortByCreatedOn   = SortBy("createdon")
-	SortByArchivedOn  = SortBy("archivedon")
 	SortByStartOn     = SortBy("starton")
 	SortByDueOn       = SortBy("dueon")
 
@@ -143,7 +142,7 @@ func (sd *SortDir) GtLtSymbol() string {
 type SortBy string
 
 func (sb *SortBy) Validate() {
-	if sb == nil || !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByArchivedOn || *sb == SortByStartOn || *sb == SortByDueOn) {
+	if sb == nil || !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn) {
 		*sb = SortByName
 		invalidConstantValueErr.Panic()
 	}

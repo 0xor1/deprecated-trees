@@ -38,17 +38,17 @@ func Test_system(t *testing.T) {
 	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
 	accountApi.SetPublicProjectsEnabled(0, orgId, ali.Id, true)
 
-	proj := api.CreateProject(0, orgId, ali.Id, "a-p1", "p1_desc", nil, nil, true, false, nil)
-	proj2 := api.CreateProject(0, orgId, ali.Id, "b-p2", "p2_desc", nil, nil, true, false, nil)
-	proj3 := api.CreateProject(0, orgId, ali.Id, "c-p3", "p3_desc", nil, nil, true, false, nil)
-	api.SetName(0, orgId, proj.Id, ali.Id, "a-p1_new")
-	api.SetDescription(0, orgId, proj.Id, ali.Id, "a-p1_desc_new")
-	api.SetIsParallel(0, orgId, proj.Id, ali.Id, false)
+	p1Desc := "p1_desc"
+	p2Desc := "p2_desc"
+	p3Desc := "p3_desc"
+	proj := api.CreateProject(0, orgId, ali.Id, "a-p1", &p1Desc, nil, nil, true, false, nil)
+	proj2 := api.CreateProject(0, orgId, ali.Id, "b-p2", &p2Desc, nil, nil, true, false, nil)
+	proj3 := api.CreateProject(0, orgId, ali.Id, "c-p3", &p3Desc, nil, nil, true, false, nil)
 	api.SetIsPublic(0, orgId, proj.Id, ali.Id, true)
 	proj = api.GetProject(0, orgId, proj.Id, ali.Id)
-	assert.Equal(t, "a-p1_new", proj.Name)
-	assert.Equal(t, "a-p1_desc_new", proj.Description)
-	assert.Equal(t, false, proj.IsParallel)
+	assert.Equal(t, "a-p1", proj.Name)
+	assert.Equal(t, "p1_desc", *proj.Description)
+	assert.Equal(t, true, proj.IsParallel)
 	assert.Equal(t, true, proj.IsPublic)
 	projs, more := api.GetProjects(0, orgId, ali.Id, nil, nil, nil, nil, nil, nil, nil, false, SortByCreatedOn, SortDirAsc, nil, 1)
 	assert.Equal(t, 1, len(projs))
@@ -85,9 +85,9 @@ func Test_system(t *testing.T) {
 	bobMe := api.GetMe(0, orgId, proj.Id, bob.Id)
 	assert.True(t, bobMe.Id.Equal(bob.Id))
 	activities := api.GetActivities(0, orgId, proj.Id, ali.Id, nil, nil, nil, nil, 100)
-	assert.Equal(t, 11, len(activities))
+	assert.Equal(t, 8, len(activities))
 	api.RemoveMembers(0, orgId, proj.Id, ali.Id, []Id{bob.Id, cat.Id})
-	api.DeleteProject(0, orgId, proj.Id, ali.Id)
+	//api.DeleteProject(0, orgId, proj.Id, ali.Id)
 
-	privateApi.DeleteAccount(0, orgId, ali.Id)
+	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }

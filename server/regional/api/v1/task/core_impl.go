@@ -15,7 +15,7 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, name, description string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) *node {
+func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) *node {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	if (isAbstract && (isParallel == nil || memberId != nil || totalRemainingTime != nil)) || (!isAbstract && (isParallel != nil || totalRemainingTime == nil)) {
 		InvalidArgumentsErr.Panic()
@@ -145,7 +145,7 @@ type node struct {
 	Id                   Id        `json:"id"`
 	IsAbstract           bool      `json:"isAbstract"`
 	Name                 string    `json:"name"`
-	Description          string    `json:"description"`
+	Description          *string   `json:"description"`
 	CreatedOn            time.Time `json:"createdOn"`
 	TotalRemainingTime   uint64    `json:"totalRemainingTime"`
 	TotalLoggedTime      uint64    `json:"totalLoggedTime"`

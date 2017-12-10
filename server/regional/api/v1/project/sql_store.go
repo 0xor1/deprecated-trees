@@ -43,17 +43,7 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 }
 
 func (s *sqlStore) createProject(shard int, accountId Id, project *project) {
-	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.Name, project.Description, project.CreatedOn, project.ArchivedOn, project.StartOn, project.DueOn, project.TotalRemainingTime, project.TotalLoggedTime, project.MinimumRemainingTime, project.FileCount, project.FileSize, project.LinkedFileCount, project.ChatCount, project.ChildCount, project.DescendantCount, project.IsParallel, project.IsPublic)
-	PanicIf(err)
-}
-
-func (s *sqlStore) setName(shard int, accountId, projectId Id, name string) {
-	_, err := s.shards[shard].Exec(`UPDATE projects SET name=? WHERE account=? AND id=?`, name, []byte(accountId), []byte(projectId))
-	PanicIf(err)
-}
-
-func (s *sqlStore) setDescription(shard int, accountId, projectId Id, description string) {
-	_, err := s.shards[shard].Exec(`UPDATE projects SET description=? WHERE account=? AND id=?`, description, []byte(accountId), []byte(projectId))
+	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.IsArchived, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.TotalRemainingTime, project.TotalLoggedTime, project.MinimumRemainingTime, project.FileCount, project.FileSize, project.LinkedFileCount, project.ChatCount, project.ChildCount, project.DescendantCount, project.IsParallel, project.IsPublic)
 	PanicIf(err)
 }
 
@@ -62,32 +52,27 @@ func (s *sqlStore) setIsPublic(shard int, accountId, projectId Id, isPublic bool
 	PanicIf(err)
 }
 
-func (s *sqlStore) setIsParallel(shard int, accountId, projectId Id, isParallel bool) {
-	_, err := s.shards[shard].Exec(`CALL setProjectIsParallel(?, ?, ?)`, []byte(accountId), []byte(projectId), isParallel)
-	PanicIf(err)
-}
-
 func (s *sqlStore) getProject(shard int, accountId, projectId Id) *project {
-	row := s.shards[shard].QueryRow(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, childCount, descendantCount, isParallel, isPublic FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
+	row := s.shards[shard].QueryRow(`SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, n.description, n.totalRemainingTime, n.totalLoggedTime, n.minimumRemainingTime, n.linkedFileCount, n.chatCount, n.childCount, n.descendantCount, n.isParallel FROM projects p, nodes n WHERE p.account=? AND p.id=? AND n.account=? AND n.project=? AND n.id=?`, []byte(accountId), []byte(projectId), []byte(accountId), []byte(projectId), []byte(projectId))
 	result := project{}
-	PanicIf(row.Scan(&result.Id, &result.Name, &result.Description, &result.CreatedOn, &result.ArchivedOn, &result.StartOn, &result.DueOn, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.FileCount, &result.FileSize, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel, &result.IsPublic))
+	PanicIf(row.Scan(&result.Id, &result.IsArchived, &result.Name, &result.CreatedOn, &result.StartOn, &result.DueOn, &result.FileCount, &result.FileSize, &result.IsPublic, &result.Description, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel))
 	return &result
 }
 
-func (s *sqlStore) getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
-	return getProjects(s.shards[shard], `AND isPublic=true`, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
+func (s *sqlStore) getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
+	return getProjects(s.shards[shard], `AND isPublic=true`, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func (s *sqlStore) getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
-	return getProjects(s.shards[shard], `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
+func (s *sqlStore) getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
+	return getProjects(s.shards[shard], `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func (s *sqlStore) getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
-	return getProjects(s.shards[shard], ``, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
+func (s *sqlStore) getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
+	return getProjects(s.shards[shard], ``, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func (s *sqlStore) setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time) {
-	_, err := s.shards[shard].Exec(`UPDATE projects SET archivedOn=? WHERE account=? && id=?`, Now(), []byte(accountId), []byte(projectId))
+func (s *sqlStore) setProjectIsArchived(shard int, accountId, projectId Id, isArchived bool) {
+	_, err := s.shards[shard].Exec(`UPDATE projects SET isArchived=? WHERE account=? && id=?`, isArchived, []byte(accountId), []byte(projectId))
 	PanicIf(err)
 }
 
@@ -220,10 +205,10 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 	return res
 }
 
-func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId Id, myId *Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
-	query := bytes.NewBufferString(`SELECT id, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, childCount, descendantCount, isParallel, isPublic FROM projects WHERE account=? %s`)
+func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId Id, myId *Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
+	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
 	args := make([]interface{}, 0, 14)
-	args = append(args, []byte(accountId))
+	args = append(args, []byte(accountId), isArchived)
 	if myId != nil {
 		args = append(args, []byte(accountId), []byte(*myId))
 	}
@@ -255,11 +240,6 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		query.WriteString(` AND dueOn<?`)
 		args = append(args, dueOnBefore)
 	}
-	if archived {
-		query.WriteString(` AND archivedOn IS NOT NULL`)
-	} else {
-		query.WriteString(` AND archivedOn IS NULL`)
-	}
 	if after != nil {
 		query.WriteString(fmt.Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE account=? AND id=?) AND id > ?`, sortBy, sortDir.GtLtSymbol(), sortBy))
 		args = append(args, []byte(accountId), []byte(*after), []byte(*after))
@@ -269,10 +249,44 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 	rows, err := shard.Query(fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
 	PanicIf(err)
 	res := make([]*project, 0, limit+1)
+	idx := 0
+	resIdx := map[string]int{}
 	for rows.Next() {
 		proj := project{}
-		PanicIf(rows.Scan(&proj.Id, &proj.Name, &proj.Description, &proj.CreatedOn, &proj.ArchivedOn, &proj.StartOn, &proj.DueOn, &proj.TotalRemainingTime, &proj.TotalLoggedTime, &proj.MinimumRemainingTime, &proj.FileCount, &proj.FileSize, &proj.LinkedFileCount, &proj.ChatCount, &proj.ChildCount, &proj.DescendantCount, &proj.IsParallel, &proj.IsPublic))
+		PanicIf(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
 		res = append(res, &proj)
+		resIdx[proj.Id.String()] = idx
+		idx++
+	}
+	if len(res) > 0 { //populate node properties
+		var id Id
+		var description *string
+		var totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount uint64
+		var isParallel bool
+		query.Reset()
+		args = make([]interface{}, 0, len(res) + 1)
+		args = append(args, []byte(accountId), []byte(res[0].Id))
+		query.WriteString(`SELECT id, description, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel FROM nodes WHERE account=? AND project=id AND project IN (?`)
+		for _, proj := range res[1:] {
+			query.WriteString(`,?`)
+			args = append(args, []byte(proj.Id))
+		}
+		query.WriteString(fmt.Sprintf(`) LIMIT %d`, len(res)))
+		rows, err := shard.Query(query.String(), args...)
+		PanicIf(err)
+		for rows.Next() {
+			rows.Scan(&id, &description, &totalRemainingTime, &totalLoggedTime, &minimumRemainingTime, &linkedFileCount, &chatCount, &childCount, &descendantCount, &isParallel)
+			proj := res[resIdx[id.String()]]
+			proj.Description = description
+			proj.TotalRemainingTime = totalRemainingTime
+			proj.TotalLoggedTime = totalLoggedTime
+			proj.MinimumRemainingTime = minimumRemainingTime
+			proj.LinkedFileCount = linkedFileCount
+			proj.ChatCount = chatCount
+			proj.ChildCount = childCount
+			proj.DescendantCount = descendantCount
+			proj.IsParallel = isParallel
+		}
 	}
 	if len(res) == limit+1 {
 		return res[:limit], true

@@ -19,7 +19,7 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) *project {
+func (a *api) CreateProject(shard int, accountId, myId Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) *project {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	if isPublic && !a.store.getPublicProjectsEnabled(shard, accountId) {
 		publicProjectsDisabledErr.Panic()
@@ -53,20 +53,6 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name, description str
 	return project
 }
 
-func (a *api) SetName(shard int, accountId, projectId, myId Id, name string) {
-	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-
-	a.store.setName(shard, accountId, projectId, name)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setName", &name)
-}
-
-func (a *api) SetDescription(shard int, accountId, projectId, myId Id, description string) {
-	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-
-	a.store.setDescription(shard, accountId, projectId, description)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setDescription", &description)
-}
-
 func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic bool) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 
@@ -80,43 +66,34 @@ func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic boo
 	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setIsPublic", &action)
 }
 
-func (a *api) SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool) {
-	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
-
-	a.store.setIsParallel(shard, accountId, projectId, isParallel)
-	action := fmt.Sprintf("%t", isParallel)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setIsParallel", &action)
-}
-
 func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
 
 	return a.store.getProject(shard, accountId, projectId)
 }
 
-func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
+func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
 	myAccountRole := a.store.getAccountRole(shard, accountId, myId)
 	limit = ValidateLimitParam(limit, a.maxProcessEntityCount)
 	if myAccountRole == nil {
-		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
+		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 	}
 	if *myAccountRole != AccountOwner && *myAccountRole != AccountAdmin {
-		return a.store.getPublicAndSpecificAccessProjects(shard, accountId, myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
+		return a.store.getPublicAndSpecificAccessProjects(shard, accountId, myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 	}
-	return a.store.getAllProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, archived, sortBy, sortDir, after, limit)
+	return a.store.getAllProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
 func (a *api) ArchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	now := Now()
-	a.store.setProjectArchivedOn(shard, accountId, projectId, &now)
+	a.store.setProjectIsArchived(shard, accountId, projectId, true)
 	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "archived", nil)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "archived", nil)
 }
 
 func (a *api) UnarchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	a.store.setProjectArchivedOn(shard, accountId, projectId, nil)
+	a.store.setProjectIsArchived(shard, accountId, projectId, false)
 	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "unarchived", nil)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "unarchived", nil)
 }
@@ -219,15 +196,12 @@ type store interface {
 	getProjectExists(shard int, accountId, projectId Id) bool
 	getPublicProjectsEnabled(shard int, accountId Id) bool
 	createProject(shard int, accountId Id, project *project)
-	setName(shard int, accountId, projectId Id, name string)
-	setDescription(shard int, accountId, projectId Id, description string)
 	setIsPublic(shard int, accountId, projectId Id, isPublic bool)
-	setIsParallel(shard int, accountId, projectId Id, isParallel bool)
 	getProject(shard int, accountId, projectId Id) *project
-	getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
-	getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
-	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
-	setProjectArchivedOn(shard int, accountId, projectId Id, now *time.Time)
+	getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
+	getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
+	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
+	setProjectIsArchived(shard int, accountId, projectId Id, isArchived bool)
 	deleteProject(shard int, accountId, projectId Id)
 	addMemberOrSetActive(shard int, accountId, projectId Id, member *AddProjectMember) bool
 	setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole)
@@ -250,10 +224,10 @@ type member struct {
 
 type project struct {
 	Id                   Id         `json:"id"`
+	IsArchived           bool       `json:"isArchived"`
 	Name                 string     `json:"name"`
-	Description          string     `json:"description"`
+	Description          *string    `json:"description"`
 	CreatedOn            time.Time  `json:"createdOn"`
-	ArchivedOn           *time.Time `json:"archivedOn,omitempty"`
 	StartOn              *time.Time `json:"startOn,omitempty"`
 	DueOn                *time.Time `json:"dueOn,omitempty"`
 	TotalRemainingTime   uint64     `json:"totalRemainingTime"`

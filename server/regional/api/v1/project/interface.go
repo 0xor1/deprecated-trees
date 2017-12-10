@@ -8,19 +8,13 @@ import (
 
 type Api interface {
 	//must be account owner/admin
-	CreateProject(shard int, accountId, myId Id, name, description string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) *project
-	//must be account owner/admin
-	SetName(shard int, accountId, projectId, myId Id, name string)
-	//must be account owner/admin
-	SetDescription(shard int, accountId, projectId, myId Id, description string)
+	CreateProject(shard int, accountId, myId Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) *project
 	//must be account owner/admin and account.publicProjectsEnabled must be true
 	SetIsPublic(shard int, accountId, projectId, myId Id, isPublic bool)
-	//must be account owner/admin or project admin/writer
-	SetIsParallel(shard int, accountId, projectId, myId Id, isParallel bool)
 	//check project access permission per user
 	GetProject(shard int, accountId, projectId, myId Id) *project
 	//check project access permission per user
-	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, archived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
+	GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	//must be account owner/admin
 	ArchiveProject(shard int, accountId, projectId, myId Id)
 	//must be account owner/admin

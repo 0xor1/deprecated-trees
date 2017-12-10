@@ -89,30 +89,20 @@ DROP TABLE IF EXISTS projects;
 CREATE TABLE projects(
 	account BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
-    firstChild BINARY(16) NULL,
+    isArchived BOOLEAN NOT NULL,
 	name VARCHAR(250) NOT NULL,
-	description VARCHAR(1250) NULL,
     createdOn DATETIME NOT NULL,
-    archivedOn DateTime NULL,
     startOn DATETIME NULL,
     dueOn DATETIME NULL,
-    totalRemainingTime BIGINT UNSIGNED NOT NULL,
-    totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    minimumRemainingTime BIGINT UNSIGNED NOT NULL,
     fileCount BIGINT UNSIGNED NOT NULL,
     fileSize BIGINT UNSIGNED NOT NULL,
-    linkedFileCount BIGINT UNSIGNED NOT NULL,
-    chatCount BIGINT UNSIGNED NOT NULL,
-    childCount BIGINT UNSIGNED NOT NULL,
-    descendantCount BIGINT UNSIGNED NOT NULL,
-    isParallel BOOL NOT NULL DEFAULT FALSE,
     isPublic BOOL NOT NULL DEFAULT FALSE,
     PRIMARY KEY (account, id),
-    INDEX(account, archivedOn, name, createdOn, id),
-    INDEX(account, archivedOn, createdOn, name, id),
-    INDEX(account, archivedOn, startOn, name, id),
-    INDEX(account, archivedOn, dueOn, name, id),
-    INDEX(account, archivedOn, isPublic, name, createdOn, id)
+    INDEX(account, isArchived, name, createdOn, id),
+    INDEX(account, isArchived, createdOn, name, id),
+    INDEX(account, isArchived, startOn, name, id),
+    INDEX(account, isArchived, dueOn, name, id),
+    INDEX(account, isArchived, isPublic, name, createdOn, id)
 );
 
 DROP TABLE IF EXISTS nodes;
@@ -120,7 +110,7 @@ CREATE TABLE nodes(
 	account BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
     id BINARY(16) NOT NULL,
-    parent BINARY(16) NOT NULL,
+    parent BINARY(16) NULL,
     firstChild BINARY(16) NULL,
     nextSibling BINARY(16) NULL,
     isAbstract BOOL NOT NULL,
@@ -217,10 +207,11 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createProject;
 DELIMITER $$
-CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _archivedOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _fileCount BIGINT UNSIGNED, _fileSize BIGINT UNSIGNED, _linkedFileCount BIGINT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOL, _isPublic BOOL)
+CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _isArchived BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _fileCount BIGINT UNSIGNED, _fileSize BIGINT UNSIGNED, _linkedFileCount BIGINT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOL, _isPublic BOOL)
 BEGIN
 	INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
-	INSERT INTO projects (account, id, firstChild, name, description, createdOn, archivedOn, startOn, dueOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, fileCount, fileSize, linkedFileCount, chatCount, childCount, descendantCount, isParallel, isPublic) VALUES (_accountId, _id, NULL, _name, _description, _createdOn, _archivedOn, _startOn, _dueOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _fileCount, _fileSize, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _isPublic);
+	INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_accountId, _id, _isArchived, _name, _createdOn, _startOn, _dueOn, _fileCount, _fileSize, _isPublic);
+	INSERT INTO nodes (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId, _id, _id, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, NULL);
 END;
 $$
 DELIMITER ;
@@ -229,25 +220,31 @@ DROP PROCEDURE IF EXISTS setProjectIsParallel;
 DELIMITER $$
 CREATE PROCEDURE setProjectIsParallel(_accountId BINARY(16), _id BINARY(16), _isParallel BOOL)
 BEGIN
-	DECLARE projCount TINYINT DEFAULT 0;
-    DECLARE childCount INT UNSIGNED DEFAULT 0;
+	DECLARE projExists BOOLEAN DEFAULT FALSE;
+    DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
+    DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
     DECLARE sumChildMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
     DECLARE maxChildMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    IF _isParallel <> (SELECT isParallel FROM projects WHERE account=_accountId AND id=_id) THEN #make sure we are making a change oterwise, no need to update anything
-		START TRANSACTION;
-			SELECT COUNT(*) INTO projCount FROM projectLocks WHERE account=_accountId AND id=_id FOR UPDATE; #set project lock to ensure data integrity
-			SELECT COUNT(*), SUM(minimumRemainingTime), MAX(minimumRemainingTime) INTO childCount, sumChildMinimumRemainingTime, maxChildMinimumRemainingTime FROM projects WHERE account=_accountId AND id=_id;            
-			IF childCount > 0 THEN #settings isParallel and child coutners
-				IF _isParallel THEN #setting isParallel to true
+    START TRANSACTION;
+    SELECT COUNT(*) = 1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_id FOR UPDATE; #set project lock to ensure data integrity
+    IF projExists THEN
+		SELECT isParallel, minimumRemainingTime INTO currentIsParallel, currentMinimumRemainingTime FROM projects WHERE account = _accountId AND id = _id;
+		IF _isParallel <> currentIsParallel THEN #make sure we are making a change oterwise, no need to update anything
+			IF currentMinimumRemainingTime <> 0 THEN
+				SELECT SUM(minimumRemainingTime), MAX(minimumRemainingTime) INTO sumChildMinimumRemainingTime, maxChildMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_id AND parent=_id;
+				IF _isParallel AND currentMinimumRemainingTime <> maxChildMinimumRemainingTime THEN #setting isParallel to true
 					UPDATE projects SET minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
-				ELSE #setting isParallel to false
+				ELSEIF (NOT _isParallel) AND currentMinimumRemainingTime <> sumChildMinimumRemainingTime THEN #setting isParallel to false
 					UPDATE projects SET minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+				ELSE #whilst the isParallel is changing it isn't effecting the minimumRemainingTime
+					UPDATE projects SET isParallel=_isParallel WHERE account=_accountId AND id=_id;
 				END IF;
-			ELSE #just setting isParallel but not time counters
+			ELSE
 				UPDATE projects SET isParallel=_isParallel WHERE account=_accountId AND id=_id;
-			END IF;
-		COMMIT;
+            END IF;
+		END IF;
     END IF;
+    COMMIT;
 END;
 $$
 DELIMITER ;
@@ -451,7 +448,85 @@ DROP PROCEDURE IF EXISTS setNodeIsParallel
 DELIMITER $$
 CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _isParallel BOOLEAN)
 BEGIN
-	#TODO
+	DECLARE projExists BOOLEAN DEFAULT FALSE;
+	DECLARE nodeExists BOOLEAN DEFAULT FALSE;
+    DECLARE nextNode BINARY(16) DEFAULT _nodeId;
+    DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
+    DECLARE preChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    DECLARE postChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    DECLARE sumChildMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    DECLARE maxChildMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+    START TRANSACTION;
+    SELECT COUNT(*) = 1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_id FOR UPDATE; #set project lock to ensure data integrity
+    IF projExists THEN
+		SELECT COUNT(*) = 1, parent, isParallel, minimumRemainingTime INTO nodeExists, nextNode, currentIsParallel, currentMinimumRemainingTime FROM nodes WHERE account = _accountId AND project = _projectId AND id = _nodeId;
+		IF nodeExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change oterwise, no need to update anything
+			IF currentMinimumRemainingTime <> 0 THEN
+				SELECT SUM(minimumRemainingTime), MAX(minimumRemainingTime) INTO sumChildMinimumRemainingTime, maxChildMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_id AND parent=_id;
+				IF _isParallel AND currentMinimumRemainingTime <> maxChildMinimumRemainingTime THEN #setting isParallel to true
+					UPDATE nodes SET minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+					SET postChangePreviousMinimumRemainingTime = maxChildMinimumRemainingTime;
+				ELSEIF (NOT _isParallel) AND currentMinimumRemainingTime <> sumChildMinimumRemainingTime THEN #setting isParallel to false
+					UPDATE nodes SET minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+                    SET postChangePreviousMinimumRemainingTime = sumChildMinimumRemainingTime;
+				ELSE #whilst the isParallel is changing it isn't effecting the minimumRemainingTime
+					UPDATE nodes SET isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+                    SET postChangePreviousMinimumRemainingTime = currentMinimumRemainingTime;
+				END IF;
+			ELSE
+				UPDATE nodes SET isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+				SET postChangePreviousMinimumRemainingTime = currentMinimumRemainingTime;
+            END IF;
+            
+            SET preChangePreviousMinimumRemainingTime = currentMinimumRemainingTime;
+            SET _nodeId = nextNode;
+            
+			WHILE preChangePreviousMinimumRemainingTime <> postChangePreviousMinimumRemainingTime DO
+				#get values needed to update current node
+				IF _nodeId <> _projectId THEN
+					SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, nextNode FROM nodes WHERE account = _accountId AND project = _projectId AND id = _nodeId;
+				ELSE
+					SELECT isParallel, minimumRemainingTime, NULL INTO currentIsParallel, currentMinimumRemainingTime, nextNode FROM projects WHERE account = _accountId AND id = _projectId;
+				END IF;
+
+				IF currentIsParallel AND currentMinimumRemainingTime <> maxChildMinimumRemainingTime THEN #setting isParallel to true
+					UPDATE nodes SET minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+					SET postChangePreviousMinimumRemainingTime = maxChildMinimumRemainingTime;
+				ELSEIF (NOT _isParallel) AND currentMinimumRemainingTime <> sumChildMinimumRemainingTime THEN #setting isParallel to false
+					UPDATE nodes SET minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+                    SET postChangePreviousMinimumRemainingTime = sumChildMinimumRemainingTime;
+				ELSE #whilst the isParallel is changing it isn't effecting the minimumRemainingTime
+					UPDATE nodes SET isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+                    SET postChangePreviousMinimumRemainingTime = currentMinimumRemainingTime;
+				END IF;
+            
+				IF _nodeId = _projectId THEN
+					SET nextNode = NULL;
+					SELECT isParallel, minimumRemainingTime INTO currentIsParallel, currentMinimumRemainingTime FROM projects WHERE account = _accountId AND project = _projectId;
+					IF currentIsParallel <> currentIsParallel THEN #make sure we are making a change oterwise, no need to update anything
+						IF currentMinimumRemainingTime <> 0 THEN
+							SELECT SUM(minimumRemainingTime), MAX(minimumRemainingTime) INTO sumChildMinimumRemainingTime, maxChildMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_id AND parent=_id;
+							IF _isParallel AND currentMinimumRemainingTime <> maxChildMinimumRemainingTime THEN #setting isParallel to true
+								UPDATE projects SET minimumRemainingTime=maxChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+							ELSEIF (NOT _isParallel) AND currentMinimumRemainingTime <> sumChildMinimumRemainingTime THEN #setting isParallel to false
+								UPDATE projects SET minimumRemainingTime=sumChildMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND id=_id;
+							ELSE #whilst the isParallel is changing it isn't effecting the minimumRemainingTime
+								UPDATE projects SET isParallel=_isParallel WHERE account=_accountId AND id=_id;
+							END IF;
+						ELSE
+							UPDATE projects SET isParallel=_isParallel WHERE account=_accountId AND id = _nodeId;
+						END IF;
+					END IF;
+				#ELSE
+            
+				END IF;
+				SET _nodeId = nextNode;
+			END WHILE;
+            
+		END IF;
+    END IF;
+    COMMIT;
 END;
 $$
 DELIMITER ;
