@@ -327,12 +327,18 @@ BEGIN
 	DECLARE projectExists BOOLEAN DEFAULT FALSE;
 	DECLARE parentExists BOOLEAN DEFAULT FALSE;
 	DECLARE previousSiblingExists BOOLEAN DEFAULT FALSE;
-	DECLARE nextSiblingIdToUse BINARY(16) DEFAULT NULL;
+	DECLARE idVariable BINARY(16) DEFAULT NULL; #initialy used for holding nextSiblingIdToUse then used as a temporary parentId variable when looping up the tree
     DECLARE memberExistsAndIsActive BOOLEAN DEFAULT FALSE;
     #necessary values for traveling up the tree
     DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
     DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-	#assume parameters are already validated against themselves in the business logic
+	
+    #assume parameters are already validated against themselves in the business logic
+    
+    IF NOT _isAbstract THEN #minimumRemainingTime needs setting to totalRemainingTime for concrete task nodes so the setting isParallel on project and abstract task nodes can easily calculate their new minimumRemainingTime value
+		SET _minimumRemainingTime = _totalRemainingTime;
+    END IF;
+    
     START TRANSACTION;
     #validate parameters against the database, i.e. make sure parent/sibiling/member exist and are active and have sufficient privelages 
 	#lock the project and lock the project member (member needs "for update" lock if remaining time is greater than zero, otherwise only "lock in share mode" is needed)
@@ -344,13 +350,13 @@ BEGIN
     END IF;
     IF _previousSiblingId IS NULL THEN
 		IF _parentId = _projectId THEN
-			SELECT firstChild INTO nextSiblingIdToUse FROM projects WHERE account = _accountId AND id = _projectId;
+			SELECT firstChild INTO idVariable FROM projects WHERE account = _accountId AND id = _projectId;
         ELSE
-			SELECT firstChild INTO nextSiblingIdToUse FROM nodes WHERE account = _accountId AND project = _projectId AND id = _parentId;        
+			SELECT firstChild INTO idVariable FROM nodes WHERE account = _accountId AND project = _projectId AND id = _parentId AND isAbstract = TRUE;        
         END IF;
 		SET previousSiblingExists = TRUE;
 	ELSE
-        SELECT COUNT(*) = 1, nextSibling INTO previousSiblingExists, nextSiblingIdToUse FROM nodes WHERE account = _accountId AND project = _projectId AND id = _previousSiblingId;
+        SELECT COUNT(*) = 1, nextSibling INTO previousSiblingExists, idVariable FROM nodes WHERE account = _accountId AND project = _projectId AND parent = _parentId AND id = _previousSiblingId;
     END IF;
     IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
 		SELECT COUNT(*) = 1 INTO memberExistsAndIsActive FROM projectMembers WHERE account = _accountId AND project = _projectId AND id = _memberId AND isActive = TRUE AND role < 2 FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
@@ -364,7 +370,7 @@ BEGIN
 		SELECT FALSE;
 	ELSE
 		#write the node row
-        INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, nextSiblingIdToUse, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _memberId);
+        INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _memberId);
         #update siblings and parent firstChild value if required
         IF _previousSiblingId IS NULL THEN #update parents firstChild
 			IF _parentId = _projectId THEN
@@ -372,85 +378,66 @@ BEGIN
 			ELSE
 				UPDATE nodes SET firstChild = _nodeId WHERE account = _accountId AND project = _projectId AND id = _parentId;
 			END IF;
-        ELSE
-			UPDATE nodes SET nextSibling = nodeId WHERE account = _accountId AND project = _projectId AND id = _previousSiblingId;
+        ELSE#update previousSiblings nextSibling value
+			UPDATE nodes SET nextSibling = _nodeId WHERE account = _accountId AND project = _projectId AND id = _previousSiblingId;
         END IF;
         #update member if needed
         IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
 			UPDATE projectMembers SET totalRemainingTime = totalRemainingTime + _totalRemainingTime WHERE account = _accountId AND project = _projectId AND id = _memberId;
         END IF;
+        
         WHILE _parentId IS NOT NULL DO
-			IF _parentId = _projectId THEN #UPDATE project node
-				IF _totalRemainingTime = 0 THEN #UPDATE childCount and descendantCount
-					IF _parentId = originalParentId THEN #UPDATE childCount and descendantCount
-						UPDATE projects SET childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                    ELSE #UPDATE descendantCount
+        
+			#get values needed to update current node
+			IF _parentId <> _projectId THEN
+				SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, idVariable FROM nodes WHERE account = _accountId AND project = _projectId AND id = _parentId;
+            ELSE
+				IF _totalRemainingTime <> 0 THEN
+					SELECT isParallel, minimumRemainingTime INTO currentIsParallel, currentMinimumRemainingTime FROM projects WHERE account = _accountId AND id = _projectId;
+				END IF;
+                SET idVariable = NULL;		
+			END IF;
+            
+            IF _totalRemainingTime = 0 THEN #dont need to update time values
+				IF _parentId <> originalParentId THEN #dont need to update child count
+					IF _parentId <> _projectId THEN #updating abstract task node
+						UPDATE nodes SET descendantCount = descendantCount + 1 WHERE account = _accountId AND project = _projectId AND id = _parentId;
+                    ELSE #updating project node
 						UPDATE projects SET descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
                     END IF;
-                ELSE #UPDATE time values AND childCount and descendantCount
-					SELECT isParallel, minimumRemainingTime INTO currentIsParallel, currentMinimumRemainingTime FROM projects WHERE account = _accountId AND id = _projectId;
-					IF _parentId = originalParentId THEN #UPDATE time values AND childCount and descendantCount
-						IF currentIsParallel THEN
-							IF _minimumRemainingTime > currentMinimumRemainingTime THEN #UPDATE total and minimum times and childCount and descendantCount
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime, childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                            ELSE #UPDATE total times and childCount and descendantCount 
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                            END IF;
-                        ELSE
-							UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = minimumRemainingTime + _minimumRemainingTime, childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                        END IF;
-                    ELSE #UPDATE time values AND descendantCount
-						IF currentIsParallel THEN
-							IF _minimumRemainingTime > currentMinimumRemainingTime THEN #UPDATE total and minimum times and childCount and descendantCount
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                            ELSE #UPDATE total times and childCount and descendantCount 
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                            END IF;
-                        ELSE
-							UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = minimumRemainingTime + _minimumRemainingTime, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                        END IF;
-                    END IF;
-				END IF;
-                SET _parentId = NULL;
-            ELSE #UPDATE abstract node
-				SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, nextSiblingIdToUse FROM nodes WHERE account = _accountId AND project = _projectId AND id = _parentId; #nextSiblingIdToUse var is pulling double duty here, it has already served its purpose and is now being used as a temporary holding value for the next _parentId value
-				IF _totalRemainingTime = 0 THEN #UPDATE childCount and descendantCount
-					IF _parentId = originalParentId THEN #UPDATE childCount and descendantCount
+                ELSE #need to update child/descendant counts
+					IF _parentId <> _projectId THEN #updating abstract task node
 						UPDATE nodes SET childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND project = _projectId AND id = _parentId;
-                    ELSE #UPDATE descendantCount
-						UPDATE nodes SET descendantCount = descendantCount + 1 WHERE account = _accountId AND project = _projectId AND id = _parentId;
+                    ELSE #updating project node
+						UPDATE projects SET childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
                     END IF;
-					SET _minimumRemainingTime = currentMinimumRemainingTime;
-                ELSE #UPDATE time values AND childCount and descendantCount
-					SELECT isParallel, minimumRemainingTime INTO currentIsParallel, currentMinimumRemainingTime FROM nodes WHERE account = _accountId AND project = _projectId AND id = _parentId;
-					IF _parentId = originalParentId THEN #UPDATE time values AND childCount and descendantCount
-						IF currentIsParallel THEN
-							IF _minimumRemainingTime > currentMinimumRemainingTime THEN #UPDATE total and minimum times and childCount and descendantCount
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime, childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                            ELSE #UPDATE total times and childCount and descendantCount 
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-								SET _minimumRemainingTime = currentMinimumRemainingTime;
-                            END IF;
-                        ELSE
-							UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = minimumRemainingTime + _minimumRemainingTime, childCount = childCount + 1, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-							SET _minimumRemainingTime = currentMinimumRemainingTime + _minimumRemainingTime;
-                        END IF;
-                    ELSE #UPDATE time values AND descendantCount
-						IF currentIsParallel THEN
-							IF _minimumRemainingTime > currentMinimumRemainingTime THEN #UPDATE total and minimum times and childCount and descendantCount
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-                            ELSE #UPDATE total times and childCount and descendantCount 
-								UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-								SET _minimumRemainingTime = currentMinimumRemainingTime;
-                            END IF;
-                        ELSE
-							UPDATE projects SET totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = minimumRemainingTime + _minimumRemainingTime, descendantCount = descendantCount + 1 WHERE account = _accountId AND id = _projectId;
-							SET _minimumRemainingTime = currentMinimumRemainingTime + _minimumRemainingTime;
-                        END IF;
-                    END IF;
+                END IF;
+                #update _minimumRemainingTime to be correct value for next iteration
+				SET _minimumRemainingTime = currentMinimumRemainingTime;
+            ELSE #need to update time values
+				#update _minimumRemainingTime to be correct value for current node
+				IF currentIsParallel THEN
+					IF _minimumRemainingTime < currentMinimumRemainingTime THEN #UPDATE total and minimum times and childCount and descendantCount
+						SET _minimumRemainingTime = currentMinimumRemainingTime;
+					END IF;
+				ELSE
+					SET _minimumRemainingTime = currentMinimumRemainingTime + _minimumRemainingTime;
 				END IF;
-                SET _parentId = nextSiblingIdToUse;
+                IF _parentId <> originalParentId THEN #dont need to update child count
+					IF _parentId <> _projectId THEN #updating abstract task node
+						UPDATE nodes SET descendantCount = descendantCount + 1, totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime WHERE account = _accountId AND project = _projectId AND id = _parentId;
+                    ELSE #updating project node
+						UPDATE projects SET descendantCount = descendantCount + 1, totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime WHERE account = _accountId AND id = _projectId;
+                    END IF;
+                ELSE #need to update child/descendant counts
+					IF _parentId <> _projectId THEN #updating abstract task node
+						UPDATE nodes SET childCount = childCount + 1, descendantCount = descendantCount + 1, totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime WHERE account = _accountId AND project = _projectId AND id = _parentId;
+                    ELSE #updating project node
+						UPDATE projects SET childCount = childCount + 1, descendantCount = descendantCount + 1, totalRemainingTime = totalRemainingTime + _totalRemainingTime, minimumRemainingTime = _minimumRemainingTime WHERE account = _accountId AND id = _projectId;
+                    END IF;
+                END IF;
             END IF;
+            SET _parentId = idVariable;
         END WHILE;
 		SELECT TRUE;
     END IF;

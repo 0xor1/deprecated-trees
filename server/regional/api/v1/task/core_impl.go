@@ -15,7 +15,7 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nextSibling *Id, name, description string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) *node {
+func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, name, description string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) *node {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	if (isAbstract && (isParallel == nil || memberId != nil || totalRemainingTime != nil)) || (!isAbstract && (isParallel != nil || totalRemainingTime == nil)) {
 		InvalidArgumentsErr.Panic()
@@ -38,7 +38,7 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nex
 		CreatedOn:            Now(),
 		TotalRemainingTime:   *totalRemainingTime,
 		TotalLoggedTime:      0,
-		MinimumRemainingTime: *totalRemainingTime,
+		MinimumRemainingTime: zeroPtr,
 		LinkedFileCount:      0,
 		ChatCount:            0,
 		ChildCount:           zeroPtr,
@@ -46,7 +46,7 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, nex
 		IsParallel:           isParallel,
 		Member:               memberId,
 	}
-	a.store.createNode(shard, accountId, projectId, parentId, nextSibling, newNode)
+	a.store.createNode(shard, accountId, projectId, parentId, previousSibling, newNode)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, newNode.Id, itemType, "created", nil)
 	return newNode
 }
@@ -128,7 +128,7 @@ type store interface {
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
 	getProjectRole(shard int, accountId, projectId, memberId Id) *ProjectRole
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
-	createNode(shard int, accountId, projectId, parentId Id, nextSibling *Id, newNode *node)
+	createNode(shard int, accountId, projectId, parentId Id, previousSibling *Id, newNode *node)
 	setName(shard int, accountId, projectId, nodeId Id, name string)
 	setDescription(shard int, accountId, projectId, nodeId Id, description string)
 	setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool)
@@ -149,7 +149,7 @@ type node struct {
 	CreatedOn            time.Time `json:"createdOn"`
 	TotalRemainingTime   uint64    `json:"totalRemainingTime"`
 	TotalLoggedTime      uint64    `json:"totalLoggedTime"`
-	MinimumRemainingTime uint64    `json:"minimumRemainingTime"` //only relevant for abstract nodes but needs to be in here for both types for much improved stored procedure logic
+	MinimumRemainingTime *uint64   `json:"minimumRemainingTime,omitempty"` //only abstract nodes
 	LinkedFileCount      uint64    `json:"linkedFileCount"`
 	ChatCount            uint64    `json:"chatCount"`
 	ChildCount           *uint64   `json:"childCount,omitempty"`      //only abstract nodes
