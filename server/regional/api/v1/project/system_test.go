@@ -87,7 +87,7 @@ func Test_system(t *testing.T) {
 	activities := api.GetActivities(0, orgId, proj.Id, ali.Id, nil, nil, nil, nil, 100)
 	assert.Equal(t, 8, len(activities))
 	api.RemoveMembers(0, orgId, proj.Id, ali.Id, []Id{bob.Id, cat.Id})
-	//api.DeleteProject(0, orgId, proj.Id, ali.Id)
+	api.DeleteProject(0, orgId, proj.Id, ali.Id)
 
-	//privateApi.DeleteAccount(0, orgId, ali.Id)
+	privateApi.DeleteAccount(0, orgId, ali.Id)
 }
