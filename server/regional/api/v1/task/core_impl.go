@@ -52,17 +52,21 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, pre
 }
 
 func (a *api) SetName(shard int, accountId, projectId, nodeId, myId Id, name string) {
-	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
+	if projectId.Equal(nodeId) {
+		ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
+	} else {
+		ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
+	}
 
 	a.store.setName(shard, accountId, projectId, nodeId, name)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setName", &name)
 }
 
-func (a *api) SetDescription(shard int, accountId, projectId, nodeId, myId Id, description string) {
+func (a *api) SetDescription(shard int, accountId, projectId, nodeId, myId Id, description *string) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	a.store.setDescription(shard, accountId, projectId, nodeId, description)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setDescription", &description)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setDescription", description)
 }
 
 func (a *api) SetIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool) {
@@ -119,24 +123,31 @@ func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
+func (a *api) GetNode(shard int, accountId, projectId, nodeId, myId Id) *node {
+	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
+	return a.store.getNode(shard, accountId, projectId, nodeId)
+}
+
 func (a *api) GetNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
 	return a.store.getNodes(shard, accountId, projectId, parentId, fromSibling, limit)
 }
 
 type store interface {
+	getAccountRole(shard int, accountId, memberId Id) *AccountRole
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
 	getProjectRole(shard int, accountId, projectId, memberId Id) *ProjectRole
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
 	createNode(shard int, accountId, projectId, parentId Id, previousSibling *Id, newNode *node)
 	setName(shard int, accountId, projectId, nodeId Id, name string)
-	setDescription(shard int, accountId, projectId, nodeId Id, description string)
+	setDescription(shard int, accountId, projectId, nodeId Id, description *string)
 	setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool)
 	setMember(shard int, accountId, projectId, nodeId Id, memberId *Id)
 	setTimeRemaining(shard int, accountId, projectId, nodeId Id, timeRemaining uint64)
 	logTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string)
 	moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id)
 	deleteNode(shard int, accountId, projectId, nodeId Id)
+	getNode(shard int, accountId, projectId, nodeId Id) *node
 	getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
 	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 }

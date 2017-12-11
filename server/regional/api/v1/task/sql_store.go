@@ -22,6 +22,10 @@ type sqlStore struct {
 	shards map[int]isql.ReplicaSet
 }
 
+func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRole {
+	return GetAccountRole(s.shards[shard], accountId, memberId)
+}
+
 func (s *sqlStore) getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole) {
 	return GetAccountAndProjectRoles(s.shards[shard], accountId, projectId, memberId)
 }
@@ -69,11 +73,11 @@ func (s *sqlStore) createNode(shard int, accountId, projectId, parentId Id, next
 }
 
 func (s *sqlStore) setName(shard int, accountId, projectId, nodeId Id, name string) {
-	_, err := s.shards[shard].Exec(`UPDATE nodes SET name=? WHERE account=? AND project=? AND id=?`, name, []byte(accountId), []byte(projectId), []byte(nodeId))
+	_, err := s.shards[shard].Exec(`CALL setNodeName(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), name)
 	PanicIf(err)
 }
 
-func (s *sqlStore) setDescription(shard int, accountId, projectId, nodeId Id, description string) {
+func (s *sqlStore) setDescription(shard int, accountId, projectId, nodeId Id, description *string) {
 	_, err := s.shards[shard].Exec(`UPDATE nodes SET description=? WHERE account=? AND project=? AND id=?`, description, []byte(accountId), []byte(projectId), []byte(nodeId))
 	PanicIf(err)
 }
@@ -114,6 +118,13 @@ func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId Id
 func (s *sqlStore) deleteNode(shard int, accountId, projectId, nodeId Id) {
 	_, err := s.shards[shard].Exec(`CALL deleteNode(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId))
 	PanicIf(err)
+}
+
+func (s *sqlStore) getNode(shard int, accountId, projectId, nodeId Id) *node {
+	row := s.shards[shard].QueryRow(`SELECT ... shit`, []byte(accountId), []byte(projectId), []byte(nodeId))
+	n := node{}
+	PanicIf(row.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
+	return &n
 }
 
 func (s *sqlStore) getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node {

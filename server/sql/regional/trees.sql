@@ -380,6 +380,18 @@ END;
 $$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS setNodeName
+DELIMITER $$
+CREATE PROCEDURE setNodeName(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _name VARCHAR(250))
+BEGIN
+	UPDATE nodes SET name=_name WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+    IF _projectId=_nodeId THEN
+		UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
+    END IF;
+END;
+$$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS setNodeIsParallel
 DELIMITER $$
 CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _isParallel BOOLEAN)
