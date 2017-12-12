@@ -413,7 +413,7 @@ BEGIN
     DECLARE preChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
     DECLARE postChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
     START TRANSACTION;
-    SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_id FOR UPDATE; #set project lock to ensure data integrity
+    SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
     IF projExists THEN
 		SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO nodeExists, nextNode, currentIsParallel, preChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
 		IF nodeExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change oterwise, no need to update anything
@@ -431,11 +431,15 @@ BEGIN
 			WHILE _nodeId IS NOT NULL AND preChangePreviousMinimumRemainingTime <> postChangePreviousMinimumRemainingTime DO
 				#get values needed to update current node
 				SELECT isParallel, minimumRemainingTime, parent INTO _isParallel, currentMinimumRemainingTime, nextNode FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-				
 				IF _isParallel AND currentMinimumRemainingTime < postChangePreviousMinimumRemainingTime THEN
 					UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-				ELSEIF (NOT _isParallel) AND preChangePreviousMinimumRemainingTime<>postChangePreviousMinimumRemainingTime  THEN #setting isParallel to false
-					UPDATE nodes SET minimumRemainingTime=minimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime) WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+				ELSEIF _isParallel AND currentMinimumRemainingTime = preChangePreviousMinimumRemainingTime THEN
+					SELECT MAX(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
+					IF currentMinimumRemainingTime <> postChangePreviousMinimumRemainingTime THEN
+						UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+					END IF;
+                ELSEIF (NOT _isParallel) AND preChangePreviousMinimumRemainingTime<>postChangePreviousMinimumRemainingTime  THEN #setting isParallel to false
+                    UPDATE nodes SET minimumRemainingTime=minimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime) WHERE account=_accountId AND project=_projectId AND id=_nodeId;
                     SET postChangePreviousMinimumRemainingTime=currentMinimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime);
 				ELSE #nochange to make
                     SET postChangePreviousMinimumRemainingTime=currentMinimumRemainingTime;

@@ -79,7 +79,8 @@ func Test_system(t *testing.T) {
 	api.SetName(0, orgId, project.Id, project.Id, ali.Id, "Proj-renamed")
 	api.SetName(0, orgId, project.Id, nodeA.Id, ali.Id, "A-renamed")
 	api.SetDescription(0, orgId, project.Id, nodeA.Id, ali.Id, nil)
-	//api.SetIsParallel(0, orgId, project.Id, nodeA.Id, ali.Id, true)
+	api.SetIsParallel(0, orgId, project.Id, nodeA.Id, ali.Id, true)
+	api.SetIsParallel(0, orgId, project.Id, project.Id, ali.Id, false)
 	
 	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }
