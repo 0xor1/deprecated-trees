@@ -181,18 +181,9 @@ DROP PROCEDURE IF EXISTS setAccountMemberInactive;
 DELIMITER $$
 CREATE PROCEDURE setAccountMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
-	UPDATE accountMembers SET isActive=false, role=3 WHERE account=_account AND id=_member;
-UPDATE projectMembers 
-SET 
-    isActive = FALSE,
-    role = 2
-WHERE
-    account = _account AND id = _member;
-UPDATE nodes 
-SET 
-    member = NULL
-WHERE
-    account = _account AND member = _member;
+	UPDATE accountMembers SET isActive=FALSE, role=3 WHERE account=_account AND id=_member;
+  UPDATE projectMembers SET isActive=FALSE, totalRemainingTime=0, role=2 WHERE account=_account AND id=_member;
+  UPDATE nodes SET member=NULL WHERE account=_account AND member=_member;
 END;
 $$
 DELIMITER ;
@@ -229,7 +220,7 @@ DROP PROCEDURE IF EXISTS deleteProject;
 DELIMITER $$
 CREATE PROCEDURE deleteProject(_accountId BINARY(16), _projectId BINARY(16))
 BEGIN
-    DELETE FROM projectLocks WHERE account=_accountId AND id=_projectId;
+  DELETE FROM projectLocks WHERE account=_accountId AND id=_projectId;
 	DELETE FROM projectMembers WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projectActivities WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projects WHERE account=_accountId AND id=_projectId;
@@ -247,17 +238,17 @@ BEGIN
 	DECLARE projMemberIsActive BOOL DEFAULT false;
 	DECLARE accMemberName VARCHAR(50) DEFAULT '';
 	DECLARE accMemberDisplayName VARCHAR(100) DEFAULT NULL;
-    SELECT COUNT(*), isActive INTO projMemberCount, projMemberIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_id;
-    IF projMemberCount=1 AND projMemberIsActive=false THEN #setting previous member back to active, still need to check if they are an active account member
-		IF (SELECT COUNT(*) FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true) THEN #if active account member then add them to the project
-			UPDATE projectMembers SET role=_role, isActive=true WHERE account=_accountId AND project=_projectId AND id=_id;
+  SELECT COUNT(*), isActive INTO projMemberCount, projMemberIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_id;
+  IF projMemberCount=1 AND projMemberIsActive=false THEN #setting previous member back to active, still need to check if they are an active account member
+    IF (SELECT COUNT(*) FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true) THEN #if active account member then add them to the project
+      UPDATE projectMembers SET role=_role, isActive=true WHERE account=_accountId AND project=_projectId AND id=_id;
             SELECT true;
         ELSE #they are a disabled account member and so can not be added to the project
-			SELECT false;
-		END IF;
+      SELECT false;
+    END IF;
 	ELSEIF projMemberCount=1 AND projMemberIsActive=true THEN #they are already an active member of this project
 		SELECT false;
-    ELSEIF projMemberCount=0 THEN #adding new project member, need to check if they are active account member
+  ELSEIF projMemberCount=0 THEN #adding new project member, need to check if they are active account member
 		START TRANSACTION;
 			SELECT name, displayName INTO accMemberName, accMemberDisplayName FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true LOCK IN SHARE MODE;
 			IF accMemberName IS NOT NULL AND accMemberName <> '' THEN #if active account member then add them to the project
@@ -266,7 +257,7 @@ BEGIN
 			ELSE #they are a not an active account member so return false
 				SELECT false;
 			END IF;
-        COMMIT;
+    COMMIT;
     END IF;
 END;
 $$
@@ -276,16 +267,19 @@ DROP PROCEDURE IF EXISTS setProjectMemberInactive;
 DELIMITER $$
 CREATE PROCEDURE setProjectMemberInactive(_accountId BINARY(16), _projectId BINARY(16), _id BINARY(16))
 BEGIN
-	DECLARE projMemberCount TINYINT DEFAULT 0;	
-	START TRANSACTION;
+  DECLARE projExists TINYINT DEFAULT 0;
+  DECLARE projMemberCount TINYINT DEFAULT 0;
+
+  START TRANSACTION;
+    SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
 		SELECT COUNT(*) INTO projMemberCount FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_id AND isActive=true FOR UPDATE;
 		IF projMemberCount=1 THEN
 			UPDATE nodes SET member=NULL WHERE account=_accountId AND project=_projectId AND member=_id;
-            UPDATE projectMembers SET totalRemainingTime=0 WHERE account=_accountId AND project=_projectId AND id=_id;
-            SELECT true;
+      UPDATE projectMembers SET totalRemainingTime=0 WHERE account=_accountId AND project=_projectId AND id=_id;
+      SELECT true;
 		ELSE
 			SELECT false;
-        END IF;
+    END IF;
     COMMIT;
 END;
 $$
@@ -301,29 +295,29 @@ BEGIN
 	DECLARE parentExists BOOLEAN DEFAULT FALSE;
 	DECLARE previousSiblingExists BOOLEAN DEFAULT FALSE;
 	DECLARE idVariable BINARY(16) DEFAULT NULL; #initialy used for holding nextSiblingIdToUse then used as a temporary parentId variable when looping up the tree
-    DECLARE memberExistsAndIsActive BOOLEAN DEFAULT FALSE;
-    #necessary values for traveling up the tree
-    DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
-    DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-	
-    #assume parameters are already validated against themselves in the business logic
-    
-    IF NOT _isAbstract THEN #minimumRemainingTime needs setting to totalRemainingTime for concrete task nodes so the setting isParallel on project and abstract task nodes can easily calculate their new minimumRemainingTime value
-		SET _minimumRemainingTime=_totalRemainingTime;
-    END IF;
-    
-    START TRANSACTION;
+  DECLARE memberExistsAndIsActive BOOLEAN DEFAULT FALSE;
+  #necessary values for traveling up the tree
+  DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
+  DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+
+  #assume parameters are already validated against themselves in the business logic
+
+  IF NOT _isAbstract THEN #minimumRemainingTime needs setting to totalRemainingTime for concrete task nodes so the setting isParallel on project and abstract task nodes can easily calculate their new minimumRemainingTime value
+  SET _minimumRemainingTime=_totalRemainingTime;
+  END IF;
+
+  START TRANSACTION;
     #validate parameters against the database, i.e. make sure parent/sibiling/member exist and are active and have sufficient privelages 
 	#lock the project and lock the project member (member needs "for update" lock if remaining time is greater than zero, otherwise only "lock in share mode" is needed)
 	SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
-    IF _parentId=_projectId THEN
-		SET parentExists=projectExists;
-    ELSE
-		SELECT COUNT(*)=1 INTO parentExists FROM nodes WHERE account=_accountId AND project=_projectId AND id=_parentId AND isAbstract=TRUE;	
-    END IF;
-    IF _previousSiblingId IS NULL THEN
-		SELECT firstChild INTO idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND id=_parentId AND isAbstract=TRUE;
-		SET previousSiblingExists=TRUE;
+  IF _parentId=_projectId THEN
+    SET parentExists=projectExists;
+  ELSE
+    SELECT COUNT(*)=1 INTO parentExists FROM nodes WHERE account=_accountId AND project=_projectId AND id=_parentId AND isAbstract=TRUE;
+  END IF;
+  IF _previousSiblingId IS NULL THEN
+    SELECT firstChild INTO idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND id=_parentId AND isAbstract=TRUE;
+    SET previousSiblingExists=TRUE;
 	ELSE
         SELECT COUNT(*)=1, nextSibling INTO previousSiblingExists, idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_parentId AND id=_previousSiblingId;
     END IF;
@@ -339,19 +333,19 @@ BEGIN
 		SELECT FALSE;
 	ELSE
 		#write the node row
-        INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _memberId);
-        #update siblings and parent firstChild value if required
-        IF _previousSiblingId IS NULL THEN #update parents firstChild
-			UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=_parentId;
-        ELSE#update previousSiblings nextSibling value
-			UPDATE nodes SET nextSibling=_nodeId WHERE account=_accountId AND project=_projectId AND id=_previousSiblingId;
-        END IF;
-        #update member if needed
-        IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
-			UPDATE projectMembers SET totalRemainingTime=totalRemainingTime + _totalRemainingTime WHERE account=_accountId AND project=_projectId AND id=_memberId;
-        END IF;
+    INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _memberId);
+    #update siblings and parent firstChild value if required
+    IF _previousSiblingId IS NULL THEN #update parents firstChild
+      UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=_parentId;
+    ELSE #update previousSiblings nextSibling value
+      UPDATE nodes SET nextSibling=_nodeId WHERE account=_accountId AND project=_projectId AND id=_previousSiblingId;
+    END IF;
+    #update member if needed
+    IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
+      UPDATE projectMembers SET totalRemainingTime=totalRemainingTime + _totalRemainingTime WHERE account=_accountId AND project=_projectId AND id=_memberId;
+    END IF;
         
-        WHILE _parentId IS NOT NULL DO
+    WHILE _parentId IS NOT NULL DO
         
 			#get values needed to update current node
 			SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND id=_parentId;
@@ -389,7 +383,7 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setNodeName
+DROP PROCEDURE IF EXISTS setNodeName;
 DELIMITER $$
 CREATE PROCEDURE setNodeName(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _name VARCHAR(250))
 BEGIN
@@ -401,7 +395,7 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setNodeIsParallel
+DROP PROCEDURE IF EXISTS setNodeIsParallel;
 DELIMITER $$
 CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _isParallel BOOLEAN)
 BEGIN
@@ -454,16 +448,46 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setNodeMember
+DROP PROCEDURE IF EXISTS setNodeMember;
 DELIMITER $$
 CREATE PROCEDURE setNodeMember(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _memberId BINARY(16))
 BEGIN
-	#TODO
+  DECLARE projExists BOOLEAN DEFAULT FALSE;
+  DECLARE memberExistsAndIsActive BOOLEAN DEFAULT FALSE;
+  DECLARE nodeExistsAndIsConcrete BOOLEAN DEFAULT FALSE;
+  DECLARE nodeTotalTimeRemaining BIGINT UNSIGNED DEFAULT 0;
+  DECLARE existingMember BINARY(16) DEFAULT NULL;
+  DECLARE existingMemberExists BOOLEAN DEFAULT FALSE; #seems pointless but it's justa var to stick a value in when locking the row
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
+  IF projExists THEN
+    SELECT COUNT(*)=1, totalRemainingTime, member INTO nodeExistsAndIsConcrete, nodeTotalTimeRemaining, existingMember FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId AND isAbstract=FALSE;
+    IF existingMember <> _memberId AND nodeExistsAndIsConcrete THEN
+      IF nodeTotalTimeRemaining > 0 THEN
+        IF _memberId IS NOT NULL THEN
+          SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
+          UPDATE projectMembers SET totalRemainingTime=totalRemainingTime+nodeTotalTimeRemaining WHERE account=_accountId AND project=_projectId AND id=_memberId;
+        END IF;
+        IF existingMember IS NOT NULL THEN
+          SELECT COUNT(*)=1 INTO existingMemberExists FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=existingMember FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
+          UPDATE projectMembers SET totalRemainingTime=totalRemainingTime-nodeTotalTimeRemaining WHERE account=_accountId AND project=_projectId AND id=existingMember;
+        END IF;
+      ELSE
+        IF _memberId IS NOT NULL THEN
+          SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 LOCK IN SHARE MODE; #less than 2 means 0->projectAdmin or 1->projectWriter
+        END IF;
+      END IF;
+      IF memberExistsAndIsActive THEN
+        UPDATE nodes SET member=_memberId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+      END IF;
+    END IF;
+  END IF;
+  COMMIT;
 END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setTimeRemaining
+DROP PROCEDURE IF EXISTS setTimeRemaining;
 DELIMITER $$
 CREATE PROCEDURE setTimeRemaining(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _timeRemaining BIGINT UNSIGNED)
 BEGIN
@@ -472,7 +496,7 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS logTimeAndSetTimeRemaining
+DROP PROCEDURE IF EXISTS logTimeAndSetTimeRemaining;
 DELIMITER $$
 CREATE PROCEDURE logTimeAndSetTimeRemaining(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _timeRemaining BIGINT UNSIGNED, _note VARCHAR(250))
 BEGIN
@@ -481,7 +505,7 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS moveNode
+DROP PROCEDURE IF EXISTS moveNode;
 DELIMITER $$
 CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _parentId BINARY(16), _nextSibling BINARY(16))
 BEGIN
@@ -490,7 +514,7 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS deleteNode
+DROP PROCEDURE IF EXISTS deleteNode;
 DELIMITER $$
 CREATE PROCEDURE deleteNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16))
 BEGIN
@@ -499,7 +523,7 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS getNodes
+DROP PROCEDURE IF EXISTS getNodes;
 DELIMITER $$
 CREATE PROCEDURE getNodes(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _fromSiblingId BINARY(16), _limit INT)
 BEGIN
