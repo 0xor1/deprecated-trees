@@ -453,24 +453,30 @@ DELIMITER $$
 CREATE PROCEDURE setNodeMember(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _memberId BINARY(16))
 BEGIN
   DECLARE projExists BOOLEAN DEFAULT FALSE;
-  DECLARE memberExistsAndIsActive BOOLEAN DEFAULT FALSE;
+  DECLARE memberExistsAndIsActive BOOLEAN DEFAULT TRUE;
   DECLARE nodeExistsAndIsConcrete BOOLEAN DEFAULT FALSE;
-  DECLARE nodeTotalTimeRemaining BIGINT UNSIGNED DEFAULT 0;
+  DECLARE changeMade BOOLEAN DEFAULT FALSE;
+  DECLARE nodeTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE existingMemberTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE existingMember BINARY(16) DEFAULT NULL;
   DECLARE existingMemberExists BOOLEAN DEFAULT FALSE; #seems pointless but it's justa var to stick a value in when locking the row
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
   IF projExists THEN
-    SELECT COUNT(*)=1, totalRemainingTime, member INTO nodeExistsAndIsConcrete, nodeTotalTimeRemaining, existingMember FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId AND isAbstract=FALSE;
-    IF existingMember <> _memberId AND nodeExistsAndIsConcrete THEN
-      IF nodeTotalTimeRemaining > 0 THEN
+    SELECT COUNT(*)=1, totalRemainingTime, member INTO nodeExistsAndIsConcrete, nodeTotalRemainingTime, existingMember FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId AND isAbstract=FALSE;
+    IF (existingMember <> _memberId OR (existingMember IS NOT NULL AND _memberId IS NULL) OR (existingMember IS NULL AND _memberId IS NOT NULL)) AND nodeExistsAndIsConcrete THEN
+      IF nodeTotalRemainingTime > 0 THEN
         IF _memberId IS NOT NULL THEN
           SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
-          UPDATE projectMembers SET totalRemainingTime=totalRemainingTime+nodeTotalTimeRemaining WHERE account=_accountId AND project=_projectId AND id=_memberId;
+          IF memberExistsAndIsActive THEN
+            UPDATE projectMembers SET totalRemainingTime=totalRemainingTime+nodeTotalRemainingTime WHERE account=_accountId AND project=_projectId AND id=_memberId;
+          END IF;
         END IF;
         IF existingMember IS NOT NULL THEN
-          SELECT COUNT(*)=1 INTO existingMemberExists FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=existingMember FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
-          UPDATE projectMembers SET totalRemainingTime=totalRemainingTime-nodeTotalTimeRemaining WHERE account=_accountId AND project=_projectId AND id=existingMember;
+          SELECT COUNT(*)=1, totalRemainingTime INTO existingMemberExists, existingMemberTotalRemainingTime FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=existingMember FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
+          IF existingMemberTotalRemainingTime >= nodeTotalRemainingTime THEN
+            UPDATE projectMembers SET totalRemainingTime=totalRemainingTime-nodeTotalRemainingTime WHERE account=_accountId AND project=_projectId AND id=existingMember;
+          END IF;
         END IF;
       ELSE
         IF _memberId IS NOT NULL THEN
@@ -479,9 +485,11 @@ BEGIN
       END IF;
       IF memberExistsAndIsActive THEN
         UPDATE nodes SET member=_memberId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+        SET changeMade = TRUE;
       END IF;
     END IF;
   END IF;
+  SELECT changeMade;
   COMMIT;
 END;
 $$

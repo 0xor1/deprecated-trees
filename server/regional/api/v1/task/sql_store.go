@@ -7,6 +7,7 @@ import (
 
 var (
 	nodeCreationErr = &AppError{Code: "r_v1_p_nc", Message: "node creation failed", Public: true}
+	memberSetErr = &AppError{Code: "r_v1_p_ms", Message: "member set failed", Public: true}
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -92,8 +93,12 @@ func (s *sqlStore) setMember(shard int, accountId, projectId, nodeId Id, memberI
 	if memberId != nil {
 		memArg = []byte(*memberId)
 	}
-	_, err := s.shards[shard].Exec(`CALL setNodeMember(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), memArg)
-	PanicIf(err)
+	row := s.shards[shard].QueryRow(`CALL setNodeMember(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), memArg)
+	changeMade := false
+	PanicIf(row.Scan(&changeMade))
+	if !changeMade {
+		memberSetErr.Panic()
+	}
 }
 
 func (s *sqlStore) setTimeRemaining(shard int, accountId, projectId, nodeId Id, timeRemaining uint64) {

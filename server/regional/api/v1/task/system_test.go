@@ -74,14 +74,17 @@ func Test_system(t *testing.T) {
 	api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, &nodeI.Id, "J", &desc, false, nil, &ali.Id, &oneVal)
 	api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, nil, "K", &desc, false, nil, &ali.Id, &fourVal)
 	nodeL := api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, &nodeI.Id, "L", &desc, true, &trueVal, nil, nil)
-	api.CreateNode(0, orgId, project.Id, nodeL.Id, ali.Id, nil, "M", &desc, false, nil, &ali.Id, &threeVal)
+	nodeM := api.CreateNode(0, orgId, project.Id, nodeL.Id, ali.Id, nil, "M", &desc, false, nil, &ali.Id, &threeVal)
 
 	api.SetName(0, orgId, project.Id, project.Id, ali.Id, "Proj-renamed")
 	api.SetName(0, orgId, project.Id, nodeA.Id, ali.Id, "A-renamed")
 	api.SetDescription(0, orgId, project.Id, nodeA.Id, ali.Id, nil)
 	api.SetIsParallel(0, orgId, project.Id, nodeA.Id, ali.Id, true)
 	api.SetIsParallel(0, orgId, project.Id, project.Id, ali.Id, false)
-	api.SetMember(0, orgId, project.Id, nodeL.Id, ali.Id, &bob.Id)
+	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &bob.Id)
+	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &cat.Id)
+	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, nil)
+	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &cat.Id)
 	
 	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }
