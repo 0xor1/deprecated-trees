@@ -292,7 +292,8 @@ CONTAINS SQL `createNode`:
 BEGIN
 	DECLARE originalParentId BINARY(16) DEFAULT _parentId;
 	DECLARE projectExists BOOLEAN DEFAULT FALSE;
-	DECLARE parentExists BOOLEAN DEFAULT FALSE;
+  DECLARE parentExists BOOLEAN DEFAULT FALSE;
+  DECLARE changeMade BOOLEAN DEFAULT FALSE;
 	DECLARE previousSiblingExists BOOLEAN DEFAULT FALSE;
 	DECLARE idVariable BINARY(16) DEFAULT NULL; #initialy used for holding nextSiblingIdToUse then used as a temporary parentId variable when looping up the tree
   DECLARE memberExistsAndIsActive BOOLEAN DEFAULT FALSE;
@@ -303,7 +304,7 @@ BEGIN
   #assume parameters are already validated against themselves in the business logic
 
   IF NOT _isAbstract THEN #minimumRemainingTime needs setting to totalRemainingTime for concrete task nodes so the setting isParallel on project and abstract task nodes can easily calculate their new minimumRemainingTime value
-  SET _minimumRemainingTime=_totalRemainingTime;
+    SET _minimumRemainingTime=_totalRemainingTime;
   END IF;
 
   START TRANSACTION;
@@ -320,18 +321,16 @@ BEGIN
     SET previousSiblingExists=TRUE;
 	ELSE
         SELECT COUNT(*)=1, nextSibling INTO previousSiblingExists, idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_parentId AND id=_previousSiblingId;
-    END IF;
-    IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
-		SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
-    ELSEIF _memberId IS NOT NULL AND _totalRemainingTime=0 THEN
-		SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 LOCK IN SHARE MODE;
-    ELSE
-		SET memberExistsAndIsActive=TRUE;
-    END IF;
-    IF NOT(projectExists AND parentExists AND previousSiblingExists AND memberExistsAndIsActive) THEN
-		#something is wrong, exit
-		SELECT FALSE;
-	ELSE
+  END IF;
+  IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
+    SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 FOR UPDATE; #less than 2 means 0->projectAdmin or 1->projectWriter
+  ELSEIF _memberId IS NOT NULL AND _totalRemainingTime=0 THEN
+    SELECT COUNT(*)=1 INTO memberExistsAndIsActive FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE AND role < 2 LOCK IN SHARE MODE;
+  ELSE
+    SET memberExistsAndIsActive=TRUE;
+  END IF;
+  IF projectExists AND parentExists AND previousSiblingExists AND memberExistsAndIsActive THEN
+    SET changeMade = TRUE;
 		#write the node row
     INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _memberId);
     #update siblings and parent firstChild value if required
@@ -377,7 +376,7 @@ BEGIN
         END WHILE;
 		SELECT TRUE;
     END IF;
-    
+    SELECT changeMade;
     COMMIT;
 END;
 $$
@@ -389,7 +388,7 @@ CREATE PROCEDURE setNodeName(_accountId BINARY(16), _projectId BINARY(16), _node
 BEGIN
 	UPDATE nodes SET name=_name WHERE account=_accountId AND project=_projectId AND id=_nodeId;
     IF _projectId=_nodeId THEN
-		UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
+		  UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
     END IF;
 END;
 $$
@@ -400,50 +399,53 @@ DELIMITER $$
 CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _isParallel BOOLEAN)
 BEGIN
 	DECLARE projExists BOOLEAN DEFAULT FALSE;
-	DECLARE nodeExists BOOLEAN DEFAULT FALSE;
-    DECLARE nextNode BINARY(16) DEFAULT NULL;
-    DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
-    DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE preChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE postChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    START TRANSACTION;
-    SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
-    IF projExists THEN
-		SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO nodeExists, nextNode, currentIsParallel, preChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-		IF nodeExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change oterwise, no need to update anything
-			IF preChangePreviousMinimumRemainingTime <> 0 THEN
-				IF _isParallel THEN #setting isParallel to true
-					SELECT MAX(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
-				ELSE #setting isParallel to false
-					SELECT SUM(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
-				END IF;
-                UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-            END IF;
-            
-            SET _nodeId=nextNode;
-            
-			WHILE _nodeId IS NOT NULL AND preChangePreviousMinimumRemainingTime <> postChangePreviousMinimumRemainingTime DO
-				#get values needed to update current node
-				SELECT isParallel, minimumRemainingTime, parent INTO _isParallel, currentMinimumRemainingTime, nextNode FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-				IF _isParallel AND currentMinimumRemainingTime < postChangePreviousMinimumRemainingTime THEN
-					UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-				ELSEIF _isParallel AND currentMinimumRemainingTime = preChangePreviousMinimumRemainingTime THEN
-					SELECT MAX(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
-					IF currentMinimumRemainingTime <> postChangePreviousMinimumRemainingTime THEN
-						UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-					END IF;
-                ELSEIF (NOT _isParallel) AND preChangePreviousMinimumRemainingTime<>postChangePreviousMinimumRemainingTime  THEN #setting isParallel to false
-                    UPDATE nodes SET minimumRemainingTime=minimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime) WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-                    SET postChangePreviousMinimumRemainingTime=currentMinimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime);
-				ELSE #nochange to make
-                    SET postChangePreviousMinimumRemainingTime=currentMinimumRemainingTime;
-				END IF;
-				SET preChangePreviousMinimumRemainingTime=currentMinimumRemainingTime;
-				SET _nodeId=nextNode;
-			END WHILE;
-		END IF;
+  DECLARE nodeExists BOOLEAN DEFAULT FALSE;
+  DECLARE changeMade BOOLEAN DEFAULT FALSE;
+  DECLARE nextNode BINARY(16) DEFAULT NULL;
+  DECLARE currentIsParallel BOOLEAN DEFAULT FALSE;
+  DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE preChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE postChangePreviousMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
+  IF projExists THEN
+    SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO nodeExists, nextNode, currentIsParallel, preChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+    IF nodeExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
+      SET changeMade = TRUE;
+      IF preChangePreviousMinimumRemainingTime <> 0 THEN
+        IF _isParallel THEN #setting isParallel to true
+          SELECT MAX(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
+        ELSE #setting isParallel to false
+          SELECT SUM(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
+        END IF;
+        UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime, isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+      END IF;
+
+      SET _nodeId=nextNode;
+
+      WHILE _nodeId IS NOT NULL AND preChangePreviousMinimumRemainingTime <> postChangePreviousMinimumRemainingTime DO
+        #get values needed to update current node
+        SELECT isParallel, minimumRemainingTime, parent INTO _isParallel, currentMinimumRemainingTime, nextNode FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+        IF _isParallel AND currentMinimumRemainingTime < postChangePreviousMinimumRemainingTime THEN
+          UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+        ELSEIF _isParallel AND currentMinimumRemainingTime = preChangePreviousMinimumRemainingTime THEN
+          SELECT MAX(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
+          IF currentMinimumRemainingTime <> postChangePreviousMinimumRemainingTime THEN
+            UPDATE nodes SET minimumRemainingTime=postChangePreviousMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+          END IF;
+        ELSEIF (NOT _isParallel) AND preChangePreviousMinimumRemainingTime<>postChangePreviousMinimumRemainingTime  THEN #setting isParallel to false
+          UPDATE nodes SET minimumRemainingTime=minimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime) WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+          SET postChangePreviousMinimumRemainingTime=currentMinimumRemainingTime+(postChangePreviousMinimumRemainingTime-preChangePreviousMinimumRemainingTime);
+        ELSE #nochange to make
+          SET postChangePreviousMinimumRemainingTime=currentMinimumRemainingTime;
+        END IF;
+        SET preChangePreviousMinimumRemainingTime=currentMinimumRemainingTime;
+        SET _nodeId=nextNode;
+      END WHILE;
     END IF;
-    COMMIT;
+  END IF;
+  SELECT changeMade;
+  COMMIT;
 END;
 $$
 DELIMITER ;
@@ -499,7 +501,31 @@ DROP PROCEDURE IF EXISTS setTimeRemaining;
 DELIMITER $$
 CREATE PROCEDURE setTimeRemaining(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _timeRemaining BIGINT UNSIGNED)
 BEGIN
-	#TODO
+  DECLARE projExists BOOLEAN DEFAULT FALSE;
+  DECLARE nodeExists BOOLEAN DEFAULT FALSE;
+  DECLARE changeMade BOOLEAN DEFAULT FALSE;
+  DECLARE existingMemberExists BOOLEAN DEFAULT FALSE;
+  DECLARE existingMember BINARY(16) DEFAULT NULL;
+  DECLARE preChangePreviousNodeTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE postChangePreviousNodeTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE preChangePreviousNodeMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE postChangePreviousNodeMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
+  IF projExists THEN
+    SELECT COUNT(*)=1, member, totalRemainingTime, minimumRemainingTime INTO nodeExists, existingMember, preChangePreviousNodeTotalRemainingTime, preChangePreviousNodeMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId AND isAbstract=FALSE;
+    IF nodeExists AND preChangePreviousNodeTotalRemainingTime <> _timeRemaining THEN
+      IF existingMember IS NOT NULL THEN
+        SELECT COUNT(*)=1 INTO existingMemberExists FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=existingMember;
+        UPDATE projectMembers SET totalRemainingTime=totalRemainingTime-(preChangePreviousNodeTotalRemainingTime-_timeRemaining) WHERE account=_accountId AND project=_projectId AND id=existingMember;
+      END IF;
+      #TODO
+      SET changeMade = TRUE;
+    END IF;
+  END IF;
+  SELECT changeMade;
+  COMMIT;
+
 END;
 $$
 DELIMITER ;
