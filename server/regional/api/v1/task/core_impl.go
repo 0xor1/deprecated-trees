@@ -89,7 +89,6 @@ func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, member
 		newValue = &str
 	}
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setMember", newValue)
-
 }
 
 func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
@@ -101,11 +100,9 @@ func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id,
 }
 
 func (a *api) LogTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string) {
-	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
+	a.SetTimeRemaining(shard, accountId, projectId, nodeId, myId, timeRemaining)
 
-	a.store.logTimeAndSetTimeRemaining(shard, accountId, projectId, nodeId, myId, duration, timeRemaining, note)
-	newValue := fmt.Sprintf("%d", timeRemaining)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setTimeRemaining", &newValue)
+	a.store.logTime(shard, accountId, projectId, nodeId, myId, duration, note)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "loggedTime", note)
 }
 
@@ -144,7 +141,7 @@ type store interface {
 	setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool)
 	setMember(shard int, accountId, projectId, nodeId Id, memberId *Id)
 	setTimeRemaining(shard int, accountId, projectId, nodeId Id, timeRemaining uint64)
-	logTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string)
+	logTime(shard int, accountId, projectId, nodeId, myId Id, duration uint64, note *string)
 	moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id)
 	deleteNode(shard int, accountId, projectId, nodeId Id)
 	getNode(shard int, accountId, projectId, nodeId Id) *node

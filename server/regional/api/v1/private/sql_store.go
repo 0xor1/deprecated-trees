@@ -78,7 +78,7 @@ func (s *sqlStore) addMembers(shard int, accountId Id, members []*AddMemberPriva
 
 func (s *sqlStore) updateMembersAndSetActive(shard int, accountId Id, members []*AddMemberPrivate) {
 	for _, mem := range members {
-		_, err := s.shards[shard].Exec(`UPDATE accountMembers SET name=?, displayName=?, role=?, isActive=true WHERE account=? AND id=?`, mem.Name, mem.DisplayName, mem.Role, []byte(accountId), []byte(mem.Id))
+		_, err := s.shards[shard].Exec(`CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
 		PanicIf(err)
 	}
 }

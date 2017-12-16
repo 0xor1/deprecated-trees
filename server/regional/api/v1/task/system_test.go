@@ -86,6 +86,8 @@ func Test_system(t *testing.T) {
 	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, nil)
 	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &cat.Id)
 	api.SetTimeRemaining(0, orgId, project.Id, nodeG.Id, cat.Id, 1)
+	note := "word up!"
+	api.LogTimeAndSetTimeRemaining(0, orgId, project.Id, nodeG.Id, cat.Id, 30, 40, &note)
 	
 	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }

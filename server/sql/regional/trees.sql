@@ -8,74 +8,74 @@ USE trees;
 DROP TABLE IF EXISTS accounts;
 CREATE TABLE accounts(
 	id BINARY(16) NOT NULL,
-    publicProjectsEnabled BOOL NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (id)
+  publicProjectsEnabled BOOL NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (id)
 );
 
 DROP TABLE IF EXISTS accountMembers;
 CREATE TABLE accountMembers(
 	account BINARY(16) NOT NULL,
 	id BINARY(16) NOT NULL,
-    name VARCHAR(50) NOT NULL,
-    displayName VARCHAR(100) NULL,
-    isActive BOOL NOT NULL DEFAULT TRUE,
-    role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 memberOfAllProjects, 3 memberOfOnlySpecificProjects
-    PRIMARY KEY (account, isActive, role, name),
-    UNIQUE INDEX (account, isActive, role, displayName, name),
-    UNIQUE INDEX (account, isActive, name, role),
-    UNIQUE INDEX (account, isActive, displayName, role, name),
-    UNIQUE INDEX (account, id)
+  name VARCHAR(50) NOT NULL,
+  displayName VARCHAR(100) NULL,
+  isActive BOOL NOT NULL DEFAULT TRUE,
+  role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 memberOfAllProjects, 3 memberOfOnlySpecificProjects
+  PRIMARY KEY (account, isActive, role, name),
+  UNIQUE INDEX (account, isActive, role, displayName, name),
+  UNIQUE INDEX (account, isActive, name, role),
+  UNIQUE INDEX (account, isActive, displayName, role, name),
+  UNIQUE INDEX (account, id)
 );
 
 DROP TABLE IF EXISTS accountActivities;
 CREATE TABLE accountActivities(
 	account BINARY(16) NOT NULL,
-    occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
-    member BINARY(16) NOT NULL,
-    item BINARY(16) NOT NULL,
-    itemType VARCHAR(100) NOT NULL,
-    itemName VARCHAR(250) NOT NULL,
-    action VARCHAR(100) NOT NULL,
-    newValue VARCHAR(1250) NULL,
-    PRIMARY KEY (account, occurredOn, item, member),
-    UNIQUE INDEX (account, item, occurredOn, member),
-    UNIQUE INDEX (account, member, occurredOn, item)
+  occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
+  member BINARY(16) NOT NULL,
+  item BINARY(16) NOT NULL,
+  itemType VARCHAR(100) NOT NULL,
+  itemName VARCHAR(250) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  newValue VARCHAR(1250) NULL,
+  PRIMARY KEY (account, occurredOn, item, member),
+  UNIQUE INDEX (account, item, occurredOn, member),
+  UNIQUE INDEX (account, member, occurredOn, item)
 );
 
 DROP TABLE IF EXISTS projectMembers;
 CREATE TABLE projectMembers(
 	account BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
-    id BINARY(16) NOT NULL,
-    name VARCHAR(50) NOT NULL,
-    displayName VARCHAR(100) NULL,
-    isActive BOOL NOT NULL DEFAULT TRUE,
-    totalRemainingTime BIGINT UNSIGNED NOT NULL,
-    totalLoggedTime BIGINT UNSIGNED NOT NULL,
-    role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
-    PRIMARY KEY (account, project, isActive, role, name),
-    UNIQUE INDEX (account, project, isActive, role, displayName, name),
-    UNIQUE INDEX (account, project, isActive, name, role),
-    UNIQUE INDEX (account, project, isActive, displayName, role, name),
-    UNIQUE INDEX (account, project, id),
-    UNIQUE INDEX (account, id, project)
+  id BINARY(16) NOT NULL,
+  name VARCHAR(50) NOT NULL,
+  displayName VARCHAR(100) NULL,
+  isActive BOOL NOT NULL DEFAULT TRUE,
+  totalRemainingTime BIGINT UNSIGNED NOT NULL,
+  totalLoggedTime BIGINT UNSIGNED NOT NULL,
+  role TINYINT UNSIGNED NOT NULL, #0 admin, 1 writer, 2 reader
+  PRIMARY KEY (account, project, isActive, role, name),
+  UNIQUE INDEX (account, project, isActive, role, displayName, name),
+  UNIQUE INDEX (account, project, isActive, name, role),
+  UNIQUE INDEX (account, project, isActive, displayName, role, name),
+  UNIQUE INDEX (account, project, id),
+  UNIQUE INDEX (account, id, project)
 );
 
 DROP TABLE IF EXISTS projectActivities;
 CREATE TABLE projectActivities(
 	account BINARY(16) NOT NULL,
-    project BINARY(16) NOT NULL,
-    occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
-    member BINARY(16) NOT NULL,
-    item BINARY(16) NOT NULL,
-    itemType VARCHAR(100) NOT NULL,
-    itemName VARCHAR(250) NOT NULL,
-    action VARCHAR(100) NOT NULL,
-    newValue VARCHAR(1250) NULL,
-    PRIMARY KEY (account, project, occurredOn, item, member),
-    UNIQUE INDEX (account, project, item, occurredOn, member),
-    UNIQUE INDEX (account, project, member, occurredOn, item),
-    UNIQUE INDEX (account, occurredOn, project, item, member)
+  project BINARY(16) NOT NULL,
+  occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
+  member BINARY(16) NOT NULL,
+  item BINARY(16) NOT NULL,
+  itemType VARCHAR(100) NOT NULL,
+  itemName VARCHAR(250) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  newValue VARCHAR(1250) NULL,
+  PRIMARY KEY (account, project, occurredOn, item, member),
+  UNIQUE INDEX (account, project, item, occurredOn, member),
+  UNIQUE INDEX (account, project, member, occurredOn, item),
+  UNIQUE INDEX (account, occurredOn, project, item, member)
 );
 
 DROP TABLE IF EXISTS projectLocks;
@@ -88,21 +88,21 @@ CREATE TABLE projectLocks(
 DROP TABLE IF EXISTS projects;
 CREATE TABLE projects(
 	account BINARY(16) NOT NULL,
-    id BINARY(16) NOT NULL,
-    isArchived BOOLEAN NOT NULL,
+  id BINARY(16) NOT NULL,
+  isArchived BOOLEAN NOT NULL,
 	name VARCHAR(250) NOT NULL,
-    createdOn DATETIME NOT NULL,
-    startOn DATETIME NULL,
-    dueOn DATETIME NULL,
-    fileCount BIGINT UNSIGNED NOT NULL,
-    fileSize BIGINT UNSIGNED NOT NULL,
-    isPublic BOOL NOT NULL DEFAULT FALSE,
-    PRIMARY KEY (account, id),
-    INDEX(account, isArchived, name, createdOn, id),
-    INDEX(account, isArchived, createdOn, name, id),
-    INDEX(account, isArchived, startOn, name, id),
-    INDEX(account, isArchived, dueOn, name, id),
-    INDEX(account, isArchived, isPublic, name, createdOn, id)
+  createdOn DATETIME NOT NULL,
+  startOn DATETIME NULL,
+  dueOn DATETIME NULL,
+  fileCount BIGINT UNSIGNED NOT NULL,
+  fileSize BIGINT UNSIGNED NOT NULL,
+  isPublic BOOL NOT NULL DEFAULT FALSE,
+  PRIMARY KEY (account, id),
+  INDEX(account, isArchived, name, createdOn, id),
+  INDEX(account, isArchived, createdOn, name, id),
+  INDEX(account, isArchived, startOn, name, id),
+  INDEX(account, isArchived, dueOn, name, id),
+  INDEX(account, isArchived, isPublic, name, createdOn, id)
 );
 
 DROP TABLE IF EXISTS nodes;
@@ -136,15 +136,15 @@ DROP TABLE IF EXISTS timeLogs;
 CREATE TABLE timeLogs(
 	account BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
-    node BINARY(16) NOT NULL,
-    member BINARY(16) NOT NULL,
-    loggedOn DATETIME NOT NULL,
-    nodeName VARCHAR(250) NOT NULL,
-    duration BIGINT UNSIGNED NOT NULL,
-    note VARCHAR(250) NULL,
-    PRIMARY KEY(account, project, node, loggedOn, member),
-    UNIQUE INDEX(account, project, member, loggedOn, node),
-    UNIQUE INDEX(account, member, loggedOn, project, node)
+  node BINARY(16) NOT NULL,
+  member BINARY(16) NOT NULL,
+  loggedOn DATETIME NOT NULL,
+  nodeName VARCHAR(250) NOT NULL,
+  duration BIGINT UNSIGNED NOT NULL,
+  note VARCHAR(250) NULL,
+  PRIMARY KEY(account, project, node, loggedOn, member),
+  UNIQUE INDEX(account, project, member, loggedOn, node),
+  UNIQUE INDEX(account, member, loggedOn, project, node)
 );
 
 DROP PROCEDURE IF EXISTS registerAccount;
@@ -152,7 +152,7 @@ DELIMITER $$
 CREATE PROCEDURE registerAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50), _ownerDisplayName VARCHAR(100))
 BEGIN
 	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_id, false);
-    INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_id, _ownerId, _ownerName, _ownerDisplayName, true, 0);
+  INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_id, _ownerId, _ownerName, _ownerDisplayName, true, 0);
 END;
 $$
 DELIMITER ;
@@ -181,10 +181,20 @@ DROP PROCEDURE IF EXISTS setAccountMemberInactive;
 DELIMITER $$
 CREATE PROCEDURE setAccountMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
-	UPDATE accountMembers SET isActive=FALSE, role=3 WHERE account=_account AND id=_member;
+  UPDATE accountMembers SET isActive=FALSE, role=3 WHERE account=_account AND id=_member;
   UPDATE projectMembers SET isActive=FALSE, totalRemainingTime=0, role=2 WHERE account=_account AND id=_member;
   UPDATE nodes SET member=NULL WHERE account=_account AND member=_member;
 END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS updateMembersAndSetActive;
+DELIMITER $$
+CREATE PROCEDURE updateMembersAndSetActive(_account BINARY(16), _member BINARY(16), _memberName VARCHAR(50), _displayName VARCHAR(100), _role TINYINT UNSIGNED)
+  BEGIN
+    UPDATE accountMembers SET isActive=TRUE, role=_role, name=_memberName, displayName=_displayName WHERE account=_account AND id=_member;
+    UPDATE projectMembers SET name=_memberName, displayName=_displayName WHERE account=_account AND id=_member;
+  END;
 $$
 DELIMITER ;
 
@@ -387,9 +397,11 @@ DELIMITER $$
 CREATE PROCEDURE setNodeName(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _name VARCHAR(250))
 BEGIN
 	UPDATE nodes SET name=_name WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-    IF _projectId=_nodeId THEN
-		  UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
-    END IF;
+  IF _projectId=_nodeId THEN
+    UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
+  ELSE
+    UPDATE timeLogs SET nodeName=_name WHERE account=_accountId AND project=_projectId AND node=_nodeId;
+  END IF;
 END;
 $$
 DELIMITER ;
@@ -559,15 +571,6 @@ END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS logTimeAndSetTimeRemaining;
-DELIMITER $$
-CREATE PROCEDURE logTimeAndSetTimeRemaining(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _timeRemaining BIGINT UNSIGNED, _note VARCHAR(250))
-BEGIN
-	#TODO
-END;
-$$
-DELIMITER ;
-
 DROP PROCEDURE IF EXISTS moveNode;
 DELIMITER $$
 CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _parentId BINARY(16), _nextSibling BINARY(16))
@@ -590,7 +593,35 @@ DROP PROCEDURE IF EXISTS getNodes;
 DELIMITER $$
 CREATE PROCEDURE getNodes(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _fromSiblingId BINARY(16), _limit INT)
 BEGIN
-	#TODO
+    #TODO
+END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS logTime;
+DELIMITER $$
+CREATE PROCEDURE logTime(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
+BEGIN
+  DECLARE projExists BOOLEAN DEFAULT FALSE;
+  DECLARE nodeExists BOOLEAN DEFAULT FALSE;
+  DECLARE memberExists BOOLEAN DEFAULT FALSE;
+  DECLARE nodeName VARCHAR(250) DEFAULT '';
+  DECLARE changeMade BOOLEAN DEFAULT FALSE;
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
+  IF projExists THEN
+    SELECT COUNT(*)=1, name INTO nodeExists, nodeName FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId AND isAbstract=FALSE;
+    IF nodeExists THEN
+      SELECT COUNT(*)=1 INTO memberExists FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_myId FOR UPDATE;
+      IF memberExists THEN
+        INSERT INTO timeLogs (account, project, node, member, loggedOn, nodeName, duration, note) VALUES (_accountId, _projectId, _nodeId, _myId, _loggedOn, nodeName, _duration, _note);
+        UPDATE projectMembers SET totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_myId;
+        SET changeMade=TRUE;
+      END IF;
+    END IF;
+  END IF;
+  SELECT changeMade;
+  COMMIT;
 END;
 $$
 DELIMITER ;

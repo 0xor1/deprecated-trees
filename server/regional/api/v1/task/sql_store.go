@@ -93,8 +93,8 @@ func (s *sqlStore) setTimeRemaining(shard int, accountId, projectId, nodeId Id, 
 	s.makeChangeHelper(shard, `CALL setTimeRemaining(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), timeRemaining)
 }
 
-func (s *sqlStore) logTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string) {
-	s.makeChangeHelper(shard, `CALL logTimeAndSetTimeRemaining(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), timeRemaining, note)
+func (s *sqlStore) logTime(shard int, accountId, projectId, nodeId, myId Id, duration uint64, note *string) {
+	s.makeChangeHelper(shard, `CALL logTime(?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), Now(), duration, note)
 }
 
 func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id) {
