@@ -68,7 +68,7 @@ func Test_system(t *testing.T) {
 	api.CreateNode(0, orgId, project.Id, project.Id, ali.Id, &nodeA.Id, "D", &desc, false, nil, &ali.Id, &fourVal)
 	nodeE := api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, nil, "E", &desc, false, nil, &ali.Id, &twoVal)
 	api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, &nodeE.Id, "F", &desc, false, nil, &ali.Id, &oneVal)
-	api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, nil, "G", &desc, false, nil, &ali.Id, &fourVal)
+	nodeG := api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, nil, "G", &desc, false, nil, &ali.Id, &fourVal)
 	api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, &nodeE.Id, "H", &desc, false, nil, &ali.Id, &threeVal)
 	nodeI := api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, nil, "I", &desc, false, nil, &ali.Id, &twoVal)
 	api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, &nodeI.Id, "J", &desc, false, nil, &ali.Id, &oneVal)
@@ -85,6 +85,7 @@ func Test_system(t *testing.T) {
 	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &cat.Id)
 	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, nil)
 	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &cat.Id)
+	api.SetTimeRemaining(0, orgId, project.Id, nodeG.Id, cat.Id, 1)
 	
 	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }
