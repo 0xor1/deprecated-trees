@@ -129,6 +129,7 @@ CREATE TABLE nodes(
   PRIMARY KEY (account, project, id),
   UNIQUE INDEX(account, member, id),
   UNIQUE INDEX(account, project, parent, id),
+  UNIQUE INDEX(account, project, nextSibling, id),
   UNIQUE INDEX(account, project, member, id)
 );
 
@@ -573,9 +574,56 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS moveNode;
 DELIMITER $$
-CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _parentId BINARY(16), _nextSibling BINARY(16))
+CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _newParentId BINARY(16), _newPreviousSibling BINARY(16))
 BEGIN
-	#TODO
+  DECLARE projExists BOOLEAN DEFAULT FALSE;
+  DECLARE nodeExists BOOLEAN DEFAULT FALSE;
+  DECLARE newParentExists BOOLEAN DEFAULT TRUE;
+  DECLARE newParentFirstChildId BINARY(16) DEFAULT NULL;
+  DECLARE newPreviousSiblingExists BOOLEAN DEFAULT TRUE;
+  DECLARE newNextSiblingId BINARY(16) DEFAULT NULL;
+  DECLARE originalParentId BINARY(16) DEFAULT NULL;
+  DECLARE originalParentFirstChildId BINARY(16) DEFAULT NULL;
+  DECLARE originalNextSiblingId BINARY(16) DEFAULT NULL;
+  DECLARE originalPreviousSiblingId BINARY(16) DEFAULT NULL;
+  DECLARE changeMade BOOLEAN DEFAULT FALSE;
+  START TRANSACTION;
+  IF _newParentId IS NOT NULL AND _projectId <> _nodeId THEN #check newParent is not null AND _nodeId <> _projectId or this call is invalid
+    SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
+    IF projExists THEN
+      SELECT COUNT(*)=1, parent, nextSibling INTO nodeExists, originalParentId, originalNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+      IF nodeExists THEN
+        IF _newParentId = originalParentId THEN #most moves will be just moving within a single parent node, this is a very simple and efficient move to make as we dont need to walk up the tree updating child/descendant counts or total/minimum remaining time values
+          SELECT firstChild INTO originalParentFirstChildId FROM nodes WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+          IF _newPreviousSibling IS NULL AND originalParentFirstChildId <> _nodeId  THEN #moving to firstChild position, and it is an actual change
+            SELECT id INTO originalPreviousSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND nextSibling=_nodeId;
+            UPDATE nodes SET nextSibling=originalParentFirstChildId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+            UPDATE nodes SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
+            UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+            SET changeMade=TRUE;
+          ELSEIF _newPreviousSibling IS NOT NULL THEN #moving to some other position NOT firstChild
+            SELECT COUNT(*)=1, nextSibling INTO newPreviousSiblingExists, newNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newPreviousSibling AND parent=originalParentId;
+            IF newPreviousSiblingExists AND ((newNextSiblingId IS NULL AND originalNextSiblingId IS NOT NULL) OR (newNextSiblingId IS NOT NULL AND originalNextSiblingId IS NULL) OR (newNextSiblingId IS NOT NULL AND originalNextSiblingId IS NOT NULL AND newNextSiblingId <> originalNextSiblingId)) THEN
+              UPDATE nodes SET nextSibling=newNextSiblingId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+              IF originalParentFirstChildId = _nodeId AND originalNextSiblingId IS NOT NULL THEN #moving the first child node
+                UPDATE nodes SET firstChild=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+              ELSE #moving a none first child node
+                SELECT id INTO originalPreviousSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND nextSibling=_nodeId;
+                IF originalPreviousSiblingId IS NOT NULL THEN
+                  UPDATE nodes SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
+                END IF;
+              END IF;
+              SET changeMade=TRUE;
+            END IF;
+          END IF;
+        ELSE #this is the expensive complex move to make, to simplify we do not work out a shared ancestor node and perform operations up to that node, we full remove the aggregated values all the way to the project node, then add them back in in the new location, this may result in more processing, but should still be efficient and simplify the code logic below.
+
+        END IF;
+      END IF;
+    END IF;
+  END IF;
+  SELECT changeMade;
+  COMMIT;
 END;
 $$
 DELIMITER ;
