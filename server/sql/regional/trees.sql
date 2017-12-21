@@ -605,6 +605,7 @@ BEGIN
             SELECT COUNT(*)=1, nextSibling INTO newPreviousSiblingExists, newNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newPreviousSibling AND parent=originalParentId;
             IF newPreviousSiblingExists AND ((newNextSiblingId IS NULL AND originalNextSiblingId IS NOT NULL) OR (newNextSiblingId IS NOT NULL AND originalNextSiblingId IS NULL) OR (newNextSiblingId IS NOT NULL AND originalNextSiblingId IS NOT NULL AND newNextSiblingId <> originalNextSiblingId)) THEN
               UPDATE nodes SET nextSibling=newNextSiblingId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+              UPDATE nodes SET nextSibling=_nodeId WHERE account=_accountId AND project=_projectId AND id=_newPreviousSibling;
               IF originalParentFirstChildId = _nodeId AND originalNextSiblingId IS NOT NULL THEN #moving the first child node
                 UPDATE nodes SET firstChild=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
               ELSE #moving a none first child node
