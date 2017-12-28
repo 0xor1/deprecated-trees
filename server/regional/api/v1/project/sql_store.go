@@ -43,7 +43,7 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 }
 
 func (s *sqlStore) createProject(shard int, accountId Id, project *project) {
-	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.IsArchived, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.TotalRemainingTime, project.TotalLoggedTime, project.MinimumRemainingTime, project.FileCount, project.FileSize, project.LinkedFileCount, project.ChatCount, project.ChildCount, project.DescendantCount, project.IsParallel, project.IsPublic)
+	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	PanicIf(err)
 }
 

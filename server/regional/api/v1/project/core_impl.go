@@ -33,7 +33,6 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name string, descript
 	project.StartOn = startOn
 	project.DueOn = dueOn
 	project.IsParallel = isParallel
-	project.MinimumRemainingTime = 0
 	project.IsPublic = isPublic
 	a.store.createProject(shard, accountId, project)
 	if accountId.Equal(myId) {

@@ -122,8 +122,8 @@ CREATE TABLE nodes(
   minimumRemainingTime BIGINT UNSIGNED NOT NULL,
   linkedFileCount INT UNSIGNED NOT NULL,
   chatCount BIGINT UNSIGNED NOT NULL,
-  childCount BIGINT UNSIGNED NULL,
-  descendantCount BIGINT UNSIGNED NULL,
+  childCount BIGINT UNSIGNED NOT NULL,
+  descendantCount BIGINT UNSIGNED NOT NULL,
   isParallel BOOL NULL DEFAULT FALSE,
   member BINARY(16) NULL,
   PRIMARY KEY (account, project, id),
@@ -218,11 +218,11 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createProject;
 DELIMITER $$
-CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _isArchived BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _fileCount BIGINT UNSIGNED, _fileSize BIGINT UNSIGNED, _linkedFileCount BIGINT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOL, _isPublic BOOL)
+CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _isParallel BOOL, _isPublic BOOL)
 BEGIN
 	INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
-	INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_accountId, _id, _isArchived, _name, _createdOn, _startOn, _dueOn, _fileCount, _fileSize, _isPublic);
-	INSERT INTO nodes (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId, _id, _id, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, NULL);
+	INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_accountId, _id, FALSE, _name, _createdOn, _startOn, _dueOn, 0, 0, _isPublic);
+	INSERT INTO nodes (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId, _id, _id, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, 0, 0, 0, 0, 0, 0, 0, _isParallel, NULL);
 END;
 $$
 DELIMITER ;
@@ -298,9 +298,10 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createNode;
 DELIMITER $$
-CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _previousSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _totalLoggedTime BIGINT UNSIGNED, _minimumRemainingTime BIGINT UNSIGNED, _linkedFileCount INT UNSIGNED, _chatCount BIGINT UNSIGNED, _childCount BIGINT UNSIGNED, _descendantCount BIGINT UNSIGNED, _isParallel BOOLEAN, _memberId BINARY(16))
+CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _previousSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _isParallel BOOLEAN, _memberId BINARY(16))
 CONTAINS SQL `createNode`:
 BEGIN
+  DECLARE _minimumRemainingTime BIGINT UNSIGNED DEFAULT _totalRemainingTime;
 	DECLARE originalParentId BINARY(16) DEFAULT _parentId;
 	DECLARE projectExists BOOLEAN DEFAULT FALSE;
   DECLARE parentExists BOOLEAN DEFAULT FALSE;
@@ -313,10 +314,6 @@ BEGIN
   DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
 
   #assume parameters are already validated against themselves in the business logic
-
-  IF NOT _isAbstract THEN #minimumRemainingTime needs setting to totalRemainingTime for concrete task nodes so the setting isParallel on project and abstract task nodes can easily calculate their new minimumRemainingTime value
-    SET _minimumRemainingTime=_totalRemainingTime;
-  END IF;
 
   START TRANSACTION;
     #validate parameters against the database, i.e. make sure parent/sibiling/member exist and are active and have sufficient privelages 
@@ -340,10 +337,13 @@ BEGIN
   ELSE
     SET memberExistsAndIsActive=TRUE;
   END IF;
+  IF _memberId IS NOT NULL AND _isAbstract THEN
+    SET memberExistsAndIsActive=FALSE; #set this to false to fail the validation check so we dont create an invalid abstract node with an assigned member
+  END IF;
   IF projectExists AND parentExists AND previousSiblingExists AND memberExistsAndIsActive THEN
     SET changeMade = TRUE;
 		#write the node row
-    INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, _totalLoggedTime, _minimumRemainingTime, _linkedFileCount, _chatCount, _childCount, _descendantCount, _isParallel, _memberId);
+    INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, 0, _minimumRemainingTime, 0, 0, 0, 0, _isParallel, _memberId);
     #update siblings and parent firstChild value if required
     IF _previousSiblingId IS NULL THEN #update parents firstChild
       UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=_parentId;
@@ -360,7 +360,7 @@ BEGIN
 			#get values needed to update current node
 			SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND id=_parentId;
             
-            IF _totalRemainingTime=0 THEN #dont need to update time values
+        IF _totalRemainingTime=0 THEN #dont need to update time values
 				IF _parentId <> originalParentId THEN #dont need to update child count
 					UPDATE nodes SET descendantCount=descendantCount + 1 WHERE account=_accountId AND project=_projectId AND id=_parentId;
                 ELSE #need to update child/descendant counts
@@ -618,7 +618,7 @@ BEGIN
             END IF;
           END IF;
         ELSE #this is the expensive complex move to make, to simplify we do not work out a shared ancestor node and perform operations up to that node, we full remove the aggregated values all the way to the project node, then add them back in in the new location, this may result in more processing, but should still be efficient and simplify the code logic below.
-
+			SET projExists=FALSE;
         END IF;
       END IF;
     END IF;

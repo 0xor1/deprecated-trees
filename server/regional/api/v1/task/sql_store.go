@@ -52,19 +52,13 @@ func (s *sqlStore) createNode(shard int, accountId, projectId, parentId Id, next
 	args = append(args, newNode.Description)
 	args = append(args, newNode.CreatedOn)
 	args = append(args, newNode.TotalRemainingTime)
-	args = append(args, newNode.TotalLoggedTime)
-	args = append(args, newNode.MinimumRemainingTime)
-	args = append(args, newNode.LinkedFileCount)
-	args = append(args, newNode.ChatCount)
-	args = append(args, newNode.ChildCount)
-	args = append(args, newNode.DescendantCount)
 	args = append(args, newNode.IsParallel)
 	if newNode.Member != nil {
 		args = append(args, []byte(*newNode.Member))
 	} else {
 		args = append(args, nil)
 	}
-	s.makeChangeHelper(shard, `CALL createNode(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
+	s.makeChangeHelper(shard, `CALL createNode(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
 }
 
 func (s *sqlStore) setName(shard int, accountId, projectId, nodeId Id, name string) {
