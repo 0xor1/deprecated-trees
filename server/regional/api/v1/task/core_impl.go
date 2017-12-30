@@ -91,16 +91,43 @@ func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, member
 func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setTimeRemaining(shard, accountId, projectId, nodeId, timeRemaining)
+	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, &timeRemaining, nil, nil, nil, nil)
 	newValue := fmt.Sprintf("%d", timeRemaining)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setTimeRemaining", &newValue)
 }
 
-func (a *api) LogTimeAndSetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, duration uint64, timeRemaining uint64, note *string) {
-	a.SetTimeRemaining(shard, accountId, projectId, nodeId, myId, timeRemaining)
+func (a *api) LogTime(shard int, accountId, projectId, nodeId Id, myId Id, duration uint64, note *string) *timeLog {
+	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
-	a.store.logTime(shard, accountId, projectId, nodeId, myId, duration, note)
+	loggedOn := Now()
+	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, nil, &myId, &loggedOn, &duration, note)
 	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "loggedTime", note)
+	return &timeLog{
+		Project:  projectId,
+		Node:     nodeId,
+		Member:   myId,
+		LoggedOn: loggedOn,
+		Duration: duration,
+		Note:     note,
+	}
+}
+
+func (a *api) SetTimeRemainingAndLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining uint64, myId Id, duration uint64, note *string) *timeLog {
+	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
+
+	loggedOn := Now()
+	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, &timeRemaining, &myId, &loggedOn, &duration, note)
+	newValue := fmt.Sprintf("%d", timeRemaining)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setTimeRemaining", &newValue)
+	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "loggedTime", note)
+	return &timeLog{
+		Project:  projectId,
+		Node:     nodeId,
+		Member:   myId,
+		LoggedOn: loggedOn,
+		Duration: duration,
+		Note:     note,
+	}
 }
 
 func (a *api) MoveNode(shard int, accountId, projectId, nodeId, myId, parentId Id, nextSibling *Id) {
@@ -137,8 +164,7 @@ type store interface {
 	setDescription(shard int, accountId, projectId, nodeId Id, description *string)
 	setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool)
 	setMember(shard int, accountId, projectId, nodeId Id, memberId *Id)
-	setTimeRemaining(shard int, accountId, projectId, nodeId Id, timeRemaining uint64)
-	logTime(shard int, accountId, projectId, nodeId, myId Id, duration uint64, note *string)
+	setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining *uint64, myId *Id, loggedOn *time.Time, duration *uint64, note *string)
 	moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id)
 	deleteNode(shard int, accountId, projectId, nodeId Id)
 	getNode(shard int, accountId, projectId, nodeId Id) *node
@@ -161,4 +187,14 @@ type node struct {
 	DescendantCount      *uint64   `json:"descendantCount,omitempty"` //only abstract nodes
 	IsParallel           *bool     `json:"isParallel,omitempty"`      //only abstract nodes
 	Member               *Id       `json:"member,omitempty"`          //only task nodes
+}
+
+type timeLog struct {
+	Project  Id        `json:"project"`
+	Node     Id        `json:"node"`
+	Member   Id        `json:"member"`
+	LoggedOn time.Time `json:"loggedOn"`
+	NodeName string    `json:"nodeName"`
+	Duration uint64    `json:"duration"`
+	Note     *string   `json:"note"`
 }

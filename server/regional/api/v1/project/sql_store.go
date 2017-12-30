@@ -264,7 +264,7 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		var totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount uint64
 		var isParallel bool
 		query.Reset()
-		args = make([]interface{}, 0, len(res) + 1)
+		args = make([]interface{}, 0, len(res)+1)
 		args = append(args, []byte(accountId), []byte(res[0].Id))
 		query.WriteString(`SELECT id, description, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel FROM nodes WHERE account=? AND project=id AND project IN (?`)
 		for _, proj := range res[1:] {

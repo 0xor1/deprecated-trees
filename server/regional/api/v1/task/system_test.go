@@ -6,9 +6,9 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
 	"github.com/0xor1/isql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_system(t *testing.T) {
@@ -38,7 +38,7 @@ func Test_system(t *testing.T) {
 	privateApi.CreateAccount(orgId, ali.Id, ali.Name, nil)
 	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
 	start := Now()
-	end := start.Add(5*24*time.Hour)
+	end := start.Add(5 * 24 * time.Hour)
 	desc := "desc"
 	project := projectApi.CreateProject(0, orgId, ali.Id, "proj", &desc, &start, &end, true, false, []*AddProjectMember{{Id: ali.Id, Role: ProjectAdmin}, {Id: bob.Id, Role: ProjectAdmin}, {Id: cat.Id, Role: ProjectWriter}, {Id: dan.Id, Role: ProjectReader}})
 
@@ -87,7 +87,7 @@ func Test_system(t *testing.T) {
 	api.SetMember(0, orgId, project.Id, nodeM.Id, ali.Id, &cat.Id)
 	api.SetTimeRemaining(0, orgId, project.Id, nodeG.Id, cat.Id, 1)
 	note := "word up!"
-	api.LogTimeAndSetTimeRemaining(0, orgId, project.Id, nodeG.Id, cat.Id, 30, 40, &note)
-	
+	tl := api.SetTimeRemainingAndLogTime(0, orgId, project.Id, nodeG.Id, 30, cat.Id, 40, &note)
+	assert.Equal(t, uint64(40), tl.Duration)
 	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }

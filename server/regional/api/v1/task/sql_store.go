@@ -3,6 +3,7 @@ package task
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
 	"github.com/0xor1/isql"
+	"time"
 )
 
 var (
@@ -83,12 +84,16 @@ func (s *sqlStore) setMember(shard int, accountId, projectId, nodeId Id, memberI
 	s.makeChangeHelper(shard, `CALL setNodeMember(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), memArg)
 }
 
-func (s *sqlStore) setTimeRemaining(shard int, accountId, projectId, nodeId Id, timeRemaining uint64) {
-	s.makeChangeHelper(shard, `CALL setTimeRemaining(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), timeRemaining)
-}
-
-func (s *sqlStore) logTime(shard int, accountId, projectId, nodeId, myId Id, duration uint64, note *string) {
-	s.makeChangeHelper(shard, `CALL logTime(?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), Now(), duration, note)
+func (s *sqlStore) setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining *uint64, myId *Id, loggedOn *time.Time, duration *uint64, note *string) {
+	args := make([]interface{}, 0, 8)
+	args = append(args, []byte(accountId), []byte(projectId), []byte(nodeId), timeRemaining)
+	if myId != nil {
+		args = append(args, []byte(*myId))
+	} else {
+		args = append(args, nil)
+	}
+	args = append(args, loggedOn, duration, note)
+	s.makeChangeHelper(shard, `CALL setTimeRemainingAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, args...)
 }
 
 func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id) {
@@ -107,6 +112,7 @@ func (s *sqlStore) getNode(shard int, accountId, projectId, nodeId Id) *node {
 	row := s.shards[shard].QueryRow(`SELECT ... shit`, []byte(accountId), []byte(projectId), []byte(nodeId))
 	n := node{}
 	PanicIf(row.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
+	nilOutPropertiesThatAreNotNilInTheDb(&n)
 	return &n
 }
 
@@ -124,6 +130,7 @@ func (s *sqlStore) getNodes(shard int, accountId, projectId, parentId Id, fromSi
 	for rows.Next() {
 		n := node{}
 		PanicIf(rows.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
+		nilOutPropertiesThatAreNotNilInTheDb(&n)
 		res = append(res, &n)
 	}
 	return res
@@ -139,5 +146,14 @@ func (s *sqlStore) makeChangeHelper(shard int, sql string, args ...interface{}) 
 	PanicIf(row.Scan(&changeMade))
 	if !changeMade {
 		noChangeMadeErr.Panic()
+	}
+}
+
+func nilOutPropertiesThatAreNotNilInTheDb(n *node) {
+	if !n.IsAbstract {
+		n.MinimumRemainingTime = nil
+		n.ChildCount = nil
+		n.DescendantCount = nil
+		n.IsParallel = nil
 	}
 }
