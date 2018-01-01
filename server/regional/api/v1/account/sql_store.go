@@ -25,21 +25,17 @@ func (s *sqlStore) getAccountRole(shard int, accountId, memberId Id) *AccountRol
 	return GetAccountRole(s.shards[shard], accountId, memberId)
 }
 
-func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId Id, publicProjectsEnabled bool) {
-	_, err := s.shards[shard].Exec(`UPDATE accounts SET publicProjectsEnabled=? WHERE id=?`, publicProjectsEnabled, []byte(accountId))
+func (s *sqlStore) setPublicProjectsEnabled(shard int, accountId, myId Id, publicProjectsEnabled bool) {
+	_, err := s.shards[shard].Exec(`CALL setPublicProjectsEnabled(?, ?, ?)`, []byte(accountId), []byte(myId), publicProjectsEnabled)
 	PanicIf(err)
-	if !publicProjectsEnabled {
-		_, err := s.shards[shard].Exec(`UPDATE projects SET isPublic=false WHERE account=?`, []byte(accountId))
-		PanicIf(err)
-	}
 }
 
 func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 	return GetPublicProjectsEnabled(s.shards[shard], accountId)
 }
 
-func (s *sqlStore) setMemberRole(shard int, accountId, memberId Id, role AccountRole) {
-	_, err := s.shards[shard].Exec(`UPDATE accountMembers SET role=? WHERE account=? AND id=?`, role, []byte(accountId), []byte(memberId))
+func (s *sqlStore) setMemberRole(shard int, accountId, myId, memberId Id, role AccountRole) {
+	_, err := s.shards[shard].Exec(`CALL setAccountMemberRole(?, ?, ?, ?)`, []byte(accountId), []byte(myId), []byte(memberId), role)
 	PanicIf(err)
 }
 

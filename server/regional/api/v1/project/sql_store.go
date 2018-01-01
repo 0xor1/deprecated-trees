@@ -157,7 +157,15 @@ func (s *sqlStore) logProjectActivity(shard int, accountId, projectId, member, i
 }
 
 func (s *sqlStore) logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string) {
-	LogProjectBatchAddOrRemoveMembersActivity(s.shards[shard], accountId, projectId, member, members, action)
+	query := bytes.NewBufferString(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (?,?,?,?,?,?,?,?,?)`)
+	args := make([]interface{}, 0, len(members)*9)
+	args = append(args, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(members[0]), "member", action, nil, nil)
+	for _, memId := range members[1:] {
+		query.WriteString(`,(?,?,?,?,?,?,?,?,?)`)
+		args = append(args, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(memId), "member", action, nil, nil)
+	}
+	_, err := s.shards[shard].Exec(query.String(), args...)
+	PanicIf(err)
 }
 
 func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {

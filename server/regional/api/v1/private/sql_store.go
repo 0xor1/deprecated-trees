@@ -122,5 +122,13 @@ func (s *sqlStore) setMemberDisplayName(shard int, accountId Id, member Id, newD
 }
 
 func (s *sqlStore) logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string) {
-	LogAccountBatchAddOrRemoveMembersActivity(s.shards[shard], accountId, member, members, action)
+	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (?,?,?,?,?,?,?,?)`)
+	args := make([]interface{}, 0, len(members)*8)
+	args = append(args, []byte(accountId), Now(), []byte(member), []byte(members[0]), "member", action, nil, nil)
+	for _, memId := range members[1:] {
+		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
+		args = append(args, []byte(accountId), Now(), []byte(member), []byte(memId), "member", action, nil, nil)
+	}
+	_, err := s.shards[shard].Exec(query.String(), args...)
+	PanicIf(err)
 }

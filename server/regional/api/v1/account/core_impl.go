@@ -2,7 +2,6 @@ package account
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
-	"fmt"
 )
 
 type api struct {
@@ -12,8 +11,7 @@ type api struct {
 
 func (a *api) SetPublicProjectsEnabled(shard int, accountId, myId Id, publicProjectsEnabled bool) {
 	ValidateMemberHasAccountOwnerAccess(a.store.getAccountRole(shard, accountId, myId))
-	a.store.setPublicProjectsEnabled(shard, accountId, publicProjectsEnabled)
-	a.store.logActivity(shard, accountId, myId, accountId, "account", "setPublicProjectsEnabled", fmt.Sprintf("%t", publicProjectsEnabled))
+	a.store.setPublicProjectsEnabled(shard, accountId, myId, publicProjectsEnabled)
 }
 
 func (a *api) GetPublicProjectsEnabled(shard int, accountId, myId Id) bool {
@@ -28,8 +26,7 @@ func (a *api) SetMemberRole(shard int, accountId, myId, memberId Id, role Accoun
 	if role == AccountOwner && *accountRole != AccountOwner {
 		InsufficientPermissionErr.Panic()
 	}
-	a.store.setMemberRole(shard, accountId, memberId, role)
-	a.store.logActivity(shard, accountId, myId, memberId, "member", "setRole", role.String())
+	a.store.setMemberRole(shard, accountId, myId, memberId, role)
 }
 
 func (a *api) GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
@@ -51,13 +48,12 @@ func (a *api) GetMe(shard int, accountId Id, myId Id) *member {
 
 type store interface {
 	getAccountRole(shard int, accountId, memberId Id) *AccountRole
-	setPublicProjectsEnabled(shard int, accountId Id, publicProjectsEnabled bool)
+	setPublicProjectsEnabled(shard int, accountId, myId Id, publicProjectsEnabled bool)
 	getPublicProjectsEnabled(shard int, accountId Id) bool
-	setMemberRole(shard int, accountId, memberId Id, role AccountRole)
+	setMemberRole(shard int, accountId, myId, memberId Id, role AccountRole)
 	getMember(shard int, accountId, memberId Id) *member
 	getMembers(shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
-	logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string)
 }
 
 type member struct {

@@ -203,17 +203,48 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS deleteAccount;
 DELIMITER $$
 CREATE PROCEDURE deleteAccount(_id BINARY(16))
-BEGIN
-  DELETE FROM projectLocks WHERE account=_id;
-	DELETE FROM accounts WHERE id=_id;
-	DELETE FROM accountMembers WHERE account=_id;
-	DELETE FROM accountActivities WHERE account=_id;
-	DELETE FROM projectMembers WHERE account=_id;
-	DELETE FROM projectActivities WHERE account=_id;
-	DELETE FROM projects WHERE account=_id;
-	DELETE FROM nodes WHERE account=_id;
-	DELETE FROM timeLogs WHERE account=_id;
-END;
+  BEGIN
+    DELETE FROM projectLocks WHERE account=_id;
+    DELETE FROM accounts WHERE id=_id;
+    DELETE FROM accountMembers WHERE account=_id;
+    DELETE FROM accountActivities WHERE account=_id;
+    DELETE FROM projectMembers WHERE account=_id;
+    DELETE FROM projectActivities WHERE account=_id;
+    DELETE FROM projects WHERE account=_id;
+    DELETE FROM nodes WHERE account=_id;
+    DELETE FROM timeLogs WHERE account=_id;
+  END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setPublicProjectsEnabled;
+DELIMITER $$
+CREATE PROCEDURE setPublicProjectsEnabled(_accountId BINARY(16), _myId BINARY(16), _enabled BOOLEAN)
+  BEGIN
+    UPDATE accounts SET publicProjectsEnabled=_enabled WHERE id=_accountId;
+    IF NOT _enabled THEN
+      UPDATE projects SET isPublic=FALSE WHERE account=_accountId;
+    END IF;
+    IF _enabled THEN
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'setPublicProjectsEnabled', NULL, 'true');
+    ELSE
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'setPublicProjectsEnabled', NULL, 'false');
+    END IF;
+  END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setAccountMemberRole;
+DELIMITER $$
+CREATE PROCEDURE setAccountMemberRole(_accountId BINARY(16), _myId BINARY(16), _memberId BINARY(16), _role TINYINT UNSIGNED)
+  BEGIN
+    START TRANSACTION;
+    IF (SELECT COUNT(*)=1 FROM accountMembers WHERE account=_accountId AND id=_memberId AND isActive=TRUE FOR UPDATE) THEN
+      UPDATE accountMembers SET role=_role WHERE account=_accountId AND id=_memberId AND isActive=TRUE;
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setAccountRole', NULL, CAST(_role as char character set utf8));
+    END IF;
+    COMMIT;
+  END;
 $$
 DELIMITER ;
 
