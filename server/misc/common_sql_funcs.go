@@ -4,6 +4,10 @@ import (
 	"github.com/0xor1/isql"
 )
 
+var (
+	noChangeMadeErr = &AppError{Code: "r_v1_p_nc", Message: "no change made", Public: true}
+)
+
 func GetProjectExists(shard isql.ReplicaSet, accountId, projectId Id) bool {
 	row := shard.QueryRow(`SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
 	exists := false
@@ -70,4 +74,13 @@ func LogAccountActivity(shard isql.ReplicaSet, accountId, member, item Id, itemT
 func LogProjectActivity(shard isql.ReplicaSet, accountId, projectId, member, item Id, itemType, action string, itemName, newValue *string) {
 	_, err := shard.Exec(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(item), itemType, action, itemName, newValue)
 	PanicIf(err)
+}
+
+func MakeChangeHelper(shard isql.ReplicaSet, sql string, args ...interface{}) {
+	row := shard.QueryRow(sql, args...)
+	changeMade := false
+	PanicIf(row.Scan(&changeMade))
+	if !changeMade {
+		noChangeMadeErr.Panic()
+	}
 }

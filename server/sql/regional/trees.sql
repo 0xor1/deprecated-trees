@@ -238,37 +238,81 @@ DROP PROCEDURE IF EXISTS setAccountMemberRole;
 DELIMITER $$
 CREATE PROCEDURE setAccountMemberRole(_accountId BINARY(16), _myId BINARY(16), _memberId BINARY(16), _role TINYINT UNSIGNED)
   BEGIN
+    DECLARE memberExists BOOLEAN DEFAULT FALSE;
+    SELECT COUNT(*)=1 INTO memberExists  FROM accountMembers WHERE account=_accountId AND id=_memberId AND isActive=TRUE FOR UPDATE;
     START TRANSACTION;
-    IF (SELECT COUNT(*)=1 FROM accountMembers WHERE account=_accountId AND id=_memberId AND isActive=TRUE FOR UPDATE) THEN
+    IF memberExists THEN
       UPDATE accountMembers SET role=_role WHERE account=_accountId AND id=_memberId AND isActive=TRUE;
       INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setAccountRole', NULL, CAST(_role as char character set utf8));
     END IF;
     COMMIT;
+    SELECT memberExists;
   END;
 $$
 DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createProject;
 DELIMITER $$
-CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _isParallel BOOL, _isPublic BOOL)
-BEGIN
-	INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
-	INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_accountId, _id, FALSE, _name, _createdOn, _startOn, _dueOn, 0, 0, _isPublic);
-	INSERT INTO nodes (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId, _id, _id, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, 0, 0, 0, 0, 0, 0, 0, _isParallel, NULL);
-END;
+CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _myId BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _isParallel BOOL, _isPublic BOOL)
+  BEGIN
+    INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
+    INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_accountId, _id, FALSE, _name, _createdOn, _startOn, _dueOn, 0, 0, _isPublic);
+    INSERT INTO nodes (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId, _id, _id, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, 0, 0, 0, 0, 0, 0, 0, _isParallel, NULL);
+    INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _id, 'project', 'created', _name, NULL);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _id, UTC_TIMESTAMP(6), _myId, _id, 'project', 'created', _name, NULL);
+  END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setProjectIsPublic;
+DELIMITER $$
+CREATE PROCEDURE setProjectIsPublic(_accountId BINARY(16), _projectId BINARY(16), _myId BINARY(16), _isPublic BOOL)
+  BEGIN
+    DECLARE projName VARCHAR(250);
+    SELECT name INTO projName FROM projects WHERE account=_accountId AND id=_projectId;
+    UPDATE projects SET isPublic=_isPublic WHERE account=_accountId AND id=_projectId;
+    IF _isPublic THEN
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'true');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'true');
+    ELSE
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'false');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'false');
+    END IF;
+  END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setProjectIsArchived;
+DELIMITER $$
+CREATE PROCEDURE setProjectIsArchived(_accountId BINARY(16), _projectId BINARY(16), _myId BINARY(16), _isArchived BOOL)
+  BEGIN
+    DECLARE projName VARCHAR(250);
+    SELECT name INTO projName FROM projects WHERE account=_accountId AND id=_projectId;
+    UPDATE projects SET isArchived=_isArchived WHERE account=_accountId AND id=_projectId;
+    IF _isArchived THEN
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'true');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'true');
+    ELSE
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'false');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'false');
+    END IF;
+  END;
 $$
 DELIMITER ;
 
 DROP PROCEDURE IF EXISTS deleteProject;
 DELIMITER $$
-CREATE PROCEDURE deleteProject(_accountId BINARY(16), _projectId BINARY(16))
+CREATE PROCEDURE deleteProject(_accountId BINARY(16), _projectId BINARY(16), _myId BINARY(16))
 BEGIN
+  DECLARE projName VARCHAR(250);
+  SELECT name INTO projName FROM projects WHERE account=_accountId AND id=_projectId;
   DELETE FROM projectLocks WHERE account=_accountId AND id=_projectId;
 	DELETE FROM projectMembers WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projectActivities WHERE account=_accountId AND project=_projectId;
 	DELETE FROM projects WHERE account=_accountId AND id=_projectId;
 	DELETE FROM nodes WHERE account=_accountId AND project=_projectId;
 	DELETE FROM timeLogs WHERE account=_accountId AND project=_projectId;
+  INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'deleted', projName, NULL);
 END;
 $$
 DELIMITER ;
@@ -325,6 +369,23 @@ BEGIN
     END IF;
     COMMIT;
 END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setProjectMemberRole;
+DELIMITER $$
+CREATE PROCEDURE setProjectMemberRole(_accountId BINARY(16), _projectId BINARY(16), _myId BINARY(16), _memberId BINARY(16), _role TINYINT UNSIGNED)
+  BEGIN
+    DECLARE memberExists BOOLEAN DEFAULT FALSE;
+    SELECT COUNT(*)=1 INTO memberExists  FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE FOR UPDATE;
+    START TRANSACTION;
+    IF memberExists THEN
+      UPDATE projectMembers SET role=_role WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE;
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setProjectRole', NULL, CAST(_role as char character set utf8));
+    END IF;
+    COMMIT;
+    SELECT memberExists;
+  END;
 $$
 DELIMITER ;
 

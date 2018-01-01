@@ -35,8 +35,7 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 }
 
 func (s *sqlStore) setMemberRole(shard int, accountId, myId, memberId Id, role AccountRole) {
-	_, err := s.shards[shard].Exec(`CALL setAccountMemberRole(?, ?, ?, ?)`, []byte(accountId), []byte(myId), []byte(memberId), role)
-	PanicIf(err)
+	MakeChangeHelper(s.shards[shard], `CALL setAccountMemberRole(?, ?, ?, ?)`, []byte(accountId), []byte(myId), []byte(memberId), role)
 }
 
 func (s *sqlStore) getMember(shard int, accountId, memberId Id) *member {
@@ -161,8 +160,4 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 		res = append(res, &act)
 	}
 	return res
-}
-
-func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string) {
-	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil, &newValue)
 }

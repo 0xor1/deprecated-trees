@@ -42,13 +42,13 @@ func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
 	return GetPublicProjectsEnabled(s.shards[shard], accountId)
 }
 
-func (s *sqlStore) createProject(shard int, accountId Id, project *project) {
-	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
+func (s *sqlStore) createProject(shard int, accountId, myId Id, project *project) {
+	_, err := s.shards[shard].Exec(`CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(project.Id), []byte(myId), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	PanicIf(err)
 }
 
-func (s *sqlStore) setIsPublic(shard int, accountId, projectId Id, isPublic bool) {
-	_, err := s.shards[shard].Exec(`UPDATE projects SET isPublic=? WHERE account=? AND id=?`, isPublic, []byte(accountId), []byte(projectId))
+func (s *sqlStore) setIsPublic(shard int, accountId, projectId, myId Id, isPublic bool) {
+	_, err := s.shards[shard].Exec(`CALL setProjectIsPublic(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), isPublic)
 	PanicIf(err)
 }
 
@@ -71,13 +71,13 @@ func (s *sqlStore) getAllProjects(shard int, accountId Id, nameContains *string,
 	return getProjects(s.shards[shard], ``, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func (s *sqlStore) setProjectIsArchived(shard int, accountId, projectId Id, isArchived bool) {
-	_, err := s.shards[shard].Exec(`UPDATE projects SET isArchived=? WHERE account=? && id=?`, isArchived, []byte(accountId), []byte(projectId))
+func (s *sqlStore) setProjectIsArchived(shard int, accountId, projectId, myId Id, isArchived bool) {
+	_, err := s.shards[shard].Exec(`CALL setProjectIsArchived(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), isArchived)
 	PanicIf(err)
 }
 
-func (s *sqlStore) deleteProject(shard int, accountId, projectId Id) {
-	_, err := s.shards[shard].Exec(`CALL deleteProject(?, ?)`, []byte(accountId), []byte(projectId))
+func (s *sqlStore) deleteProject(shard int, accountId, projectId, myId Id) {
+	_, err := s.shards[shard].Exec(`CALL deleteProject(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId))
 	PanicIf(err)
 }
 
@@ -88,9 +88,8 @@ func (s *sqlStore) addMemberOrSetActive(shard int, accountId, projectId Id, memb
 	return added
 }
 
-func (s *sqlStore) setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole) {
-	_, err := s.shards[shard].Exec(`UPDATE projectMembers SET role=? WHERE account=? AND project=? AND id=? AND isActive=true`, role, []byte(accountId), []byte(projectId), []byte(member))
-	PanicIf(err)
+func (s *sqlStore) setMemberRole(shard int, accountId, projectId, myId, member Id, role ProjectRole) {
+	MakeChangeHelper(s.shards[shard], `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), []byte(member), role)
 }
 
 func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member Id) bool {

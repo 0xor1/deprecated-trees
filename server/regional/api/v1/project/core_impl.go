@@ -2,12 +2,7 @@ package project
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
-	"fmt"
 	"time"
-)
-
-const (
-	itemType = "project"
 )
 
 var (
@@ -34,16 +29,13 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name string, descript
 	project.DueOn = dueOn
 	project.IsParallel = isParallel
 	project.IsPublic = isPublic
-	a.store.createProject(shard, accountId, project)
+	a.store.createProject(shard, accountId, myId, project)
 	if accountId.Equal(myId) {
 		addMem := &AddProjectMember{}
 		addMem.Id = myId
 		addMem.Role = ProjectAdmin
 		a.store.addMemberOrSetActive(shard, accountId, project.Id, addMem)
 	}
-
-	a.store.logAccountActivity(shard, accountId, myId, project.Id, itemType, "created", nil)
-	a.store.logProjectActivity(shard, accountId, project.Id, myId, project.Id, itemType, "created", nil)
 
 	if len(members) > 0 {
 		a.AddMembers(shard, accountId, project.Id, myId, members)
@@ -59,10 +51,7 @@ func (a *api) SetIsPublic(shard int, accountId, projectId, myId Id, isPublic boo
 		publicProjectsDisabledErr.Panic()
 	}
 
-	a.store.setIsPublic(shard, accountId, projectId, isPublic)
-	action := fmt.Sprintf("%t", isPublic)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "setIsPublic", &action)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "setIsPublic", &action)
+	a.store.setIsPublic(shard, accountId, projectId, myId, isPublic)
 }
 
 func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
@@ -85,22 +74,17 @@ func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, c
 
 func (a *api) ArchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	a.store.setProjectIsArchived(shard, accountId, projectId, true)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "archived", nil)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "archived", nil)
+	a.store.setProjectIsArchived(shard, accountId, projectId, myId, true)
 }
 
 func (a *api) UnarchiveProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	a.store.setProjectIsArchived(shard, accountId, projectId, false)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "unarchived", nil)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, projectId, itemType, "unarchived", nil)
+	a.store.setProjectIsArchived(shard, accountId, projectId, myId, false)
 }
 
 func (a *api) DeleteProject(shard int, accountId, projectId, myId Id) {
 	ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
-	a.store.deleteProject(shard, accountId, projectId)
-	a.store.logAccountActivity(shard, accountId, myId, projectId, itemType, "deleted", nil)
+	a.store.deleteProject(shard, accountId, projectId, myId)
 	//TODO delete s3 data, uploaded files etc
 }
 
@@ -149,9 +133,7 @@ func (a *api) SetMemberRole(shard int, accountId, projectId, myId Id, member Id,
 		if role != ProjectAdmin && (*accRole == AccountOwner || *accRole == AccountAdmin) {
 			InvalidArgumentsErr.Panic() // account owners and admins can only be project admins
 		}
-		a.store.setMemberRole(shard, accountId, projectId, member, role)
-		roleStr := role.String()
-		a.store.logProjectActivity(shard, accountId, projectId, myId, member, "member", "setRole", &roleStr)
+		a.store.setMemberRole(shard, accountId, projectId, myId, member, role)
 	}
 }
 
@@ -194,21 +176,19 @@ type store interface {
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
 	getProjectExists(shard int, accountId, projectId Id) bool
 	getPublicProjectsEnabled(shard int, accountId Id) bool
-	createProject(shard int, accountId Id, project *project)
-	setIsPublic(shard int, accountId, projectId Id, isPublic bool)
+	createProject(shard int, accountId, myId Id, project *project)
+	setIsPublic(shard int, accountId, projectId, myId Id, isPublic bool)
 	getProject(shard int, accountId, projectId Id) *project
 	getPublicProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	getPublicAndSpecificAccessProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
-	setProjectIsArchived(shard int, accountId, projectId Id, isArchived bool)
-	deleteProject(shard int, accountId, projectId Id)
+	setProjectIsArchived(shard int, accountId, projectId, myId Id, isArchived bool)
+	deleteProject(shard int, accountId, projectId, myId Id)
 	addMemberOrSetActive(shard int, accountId, projectId Id, member *AddProjectMember) bool
-	setMemberRole(shard int, accountId, projectId Id, member Id, role ProjectRole)
+	setMemberRole(shard int, accountId, projectId, myId, member Id, role ProjectRole)
 	setMemberInactive(shard int, accountId, projectId Id, member Id) bool
 	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	getMember(shard int, accountId, projectId, member Id) *member
-	logAccountActivity(shard int, accountId, member, item Id, itemType, action string, newValue *string)
-	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 	logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string)
 	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 }
