@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/0xor1/isql"
 	"strings"
-	"time"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -129,7 +128,7 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
 		InvalidArgumentsErr.Panic()
 	}
-	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action, newValue FROM accountActivities WHERE account=?`)
+	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, newValue FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
 	args = append(args, []byte(accountId))
 	if item != nil {
@@ -162,14 +161,12 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 	res := make([]*Activity, 0, limit)
 	for rows.Next() {
 		act := Activity{}
-		unixMilli := int64(0)
-		PanicIf(rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action, &act.NewValue))
-		act.OccurredOn = time.Unix(unixMilli/1000, (unixMilli%1000)*1000000).UTC()
+		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.NewValue))
 		res = append(res, &act)
 	}
 	return res
 }
 
 func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string, newValue string) {
-	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, &newValue)
+	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil, &newValue)
 }

@@ -11,7 +11,7 @@ type Api interface {
 	AddMembers(shard int, accountId, myId Id, members []*AddMemberPrivate)
 	RemoveMembers(shard int, accountId, myId Id, members []Id)
 	MemberIsOnlyAccountOwner(shard int, accountId, memberId Id) bool
-	RenameMember(shard int, accountId, memberId Id, newName string)
+	SetMemberName(shard int, accountId, memberId Id, newName string)
 	SetMemberDisplayName(shard int, accountId, memberId Id, newDisplayName *string)
 	MemberIsAccountOwner(shard int, accountId, memberId Id) bool
 }

@@ -25,7 +25,7 @@ func Test_system(t *testing.T) {
 	cat.Role = AccountMemberOfOnlySpecificProjects
 	api.AddMembers(0, orgId, aliId, []*AddMemberPrivate{&bob, &cat})
 	assert.True(t, api.MemberIsOnlyAccountOwner(0, orgId, aliId))
-	api.RenameMember(0, orgId, aliId, "aliNew")
+	api.SetMemberName(0, orgId, aliId, "aliNew")
 	assert.True(t, api.MemberIsAccountOwner(0, orgId, aliId))
 	api.RemoveMembers(0, orgId, aliId, []Id{bob.Id})
 	api.DeleteAccount(0, orgId, aliId)

@@ -111,18 +111,14 @@ func (s *sqlStore) setMembersInactive(shard int, accountId Id, members []Id) {
 	}
 }
 
-func (s *sqlStore) renameMember(shard int, accountId Id, member Id, newName string) {
-	_, err := s.shards[shard].Exec(`CALL renameMember(?, ?, ?)`, []byte(accountId), []byte(member), newName)
+func (s *sqlStore) setMemberName(shard int, accountId Id, member Id, newName string) {
+	_, err := s.shards[shard].Exec(`CALL setMemberName(?, ?, ?)`, []byte(accountId), []byte(member), newName)
 	PanicIf(err)
 }
 
 func (s *sqlStore) setMemberDisplayName(shard int, accountId Id, member Id, newDisplayName *string) {
 	_, err := s.shards[shard].Exec(`CALL setMemberDisplayName(?, ?, ?)`, []byte(accountId), []byte(member), newDisplayName)
 	PanicIf(err)
-}
-
-func (s *sqlStore) logActivity(shard int, accountId Id, member, item Id, itemType, action string) {
-	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil)
 }
 
 func (s *sqlStore) logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string) {

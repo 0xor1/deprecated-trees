@@ -149,11 +149,11 @@ func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *memb
 }
 
 func (s *sqlStore) logAccountActivity(shard int, accountId, member, item Id, itemType, action string, newValue *string) {
-	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, newValue)
+	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil, newValue)
 }
 
 func (s *sqlStore) logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string) {
-	LogProjectActivity(s.shards[shard], accountId, projectId, member, item, itemType, action, newValue)
+	LogProjectActivity(s.shards[shard], accountId, projectId, member, item, itemType, action, nil, newValue)
 }
 
 func (s *sqlStore) logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string) {
@@ -164,7 +164,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
 		InvalidArgumentsErr.Panic()
 	}
-	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemName, action, newValue FROM projectActivities WHERE account=? AND project=?`)
+	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, newValue FROM projectActivities WHERE account=? AND project=?`)
 	args := make([]interface{}, 0, limit)
 	args = append(args, []byte(accountId), []byte(projectId))
 	if item != nil {
@@ -197,9 +197,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 	res := make([]*Activity, 0, limit)
 	for rows.Next() {
 		act := Activity{}
-		unixMilli := int64(0)
-		PanicIf(rows.Scan(&unixMilli, &act.Item, &act.Member, &act.ItemType, &act.ItemName, &act.Action, &act.NewValue))
-		act.OccurredOn = time.Unix(unixMilli/1000, (unixMilli%1000)*1000000).UTC()
+		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.NewValue))
 		res = append(res, &act)
 	}
 	return res

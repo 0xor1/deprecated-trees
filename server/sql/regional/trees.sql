@@ -7,15 +7,15 @@ USE trees;
 
 DROP TABLE IF EXISTS accounts;
 CREATE TABLE accounts(
-	id BINARY(16) NOT NULL,
+  id BINARY(16) NOT NULL,
   publicProjectsEnabled BOOL NOT NULL DEFAULT FALSE,
   PRIMARY KEY (id)
 );
 
 DROP TABLE IF EXISTS accountMembers;
 CREATE TABLE accountMembers(
-	account BINARY(16) NOT NULL,
-	id BINARY(16) NOT NULL,
+  account BINARY(16) NOT NULL,
+  id BINARY(16) NOT NULL,
   name VARCHAR(50) NOT NULL,
   displayName VARCHAR(100) NULL,
   isActive BOOL NOT NULL DEFAULT TRUE,
@@ -30,12 +30,12 @@ CREATE TABLE accountMembers(
 DROP TABLE IF EXISTS accountActivities;
 CREATE TABLE accountActivities(
 	account BINARY(16) NOT NULL,
-  occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
+  occurredOn DATETIME(6) NOT NULL,
   member BINARY(16) NOT NULL,
   item BINARY(16) NOT NULL,
   itemType VARCHAR(100) NOT NULL,
-  itemName VARCHAR(250) NOT NULL,
   action VARCHAR(100) NOT NULL,
+  itemName VARCHAR(250) NULL,
   newValue VARCHAR(1250) NULL,
   PRIMARY KEY (account, occurredOn, item, member),
   UNIQUE INDEX (account, item, occurredOn, member),
@@ -65,12 +65,12 @@ DROP TABLE IF EXISTS projectActivities;
 CREATE TABLE projectActivities(
 	account BINARY(16) NOT NULL,
   project BINARY(16) NOT NULL,
-  occurredOn BIGINT UNSIGNED NOT NULL, #unix millisecs timestamp
+  occurredOn DATETIME(6) NOT NULL,
   member BINARY(16) NOT NULL,
   item BINARY(16) NOT NULL,
   itemType VARCHAR(100) NOT NULL,
-  itemName VARCHAR(250) NOT NULL,
   action VARCHAR(100) NOT NULL,
+  itemName VARCHAR(250) NULL,
   newValue VARCHAR(1250) NULL,
   PRIMARY KEY (account, project, occurredOn, item, member),
   UNIQUE INDEX (account, project, item, occurredOn, member),
@@ -150,20 +150,21 @@ CREATE TABLE timeLogs(
 
 DROP PROCEDURE IF EXISTS registerAccount;
 DELIMITER $$
-CREATE PROCEDURE registerAccount(_id BINARY(16), _ownerId BINARY(16), _ownerName VARCHAR(50), _ownerDisplayName VARCHAR(100))
+CREATE PROCEDURE registerAccount(_accountId BINARY(16), _myId BINARY(16), _myName VARCHAR(50), _myDisplayName VARCHAR(100))
 BEGIN
-	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_id, false);
-  INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_id, _ownerId, _ownerName, _ownerDisplayName, true, 0);
+	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_accountId, false);
+  INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_accountId, _myId, _myName, _myDisplayName, true, 0);
+  INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'created', NULL, NULL);
 END;
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS renameMember;
+DROP PROCEDURE IF EXISTS setMemberName;
 DELIMITER $$
-CREATE PROCEDURE renameMember(_account BINARY(16), _member BINARY(16), _newName VARCHAR(50))
+CREATE PROCEDURE setMemberName(_accountId BINARY(16), _memberId BINARY(16), _newName VARCHAR(50))
 BEGIN
-	UPDATE accountMembers SET name=_newName WHERE account=_account AND id=_member;
-	UPDATE projectMembers SET name=_newName WHERE account=_account AND id=_member;
+	UPDATE accountMembers SET name=_newName WHERE account=_accountId AND id=_memberId;
+	UPDATE projectMembers SET name=_newName WHERE account=_accountId AND id=_memberId;
 END;
 $$
 DELIMITER ;

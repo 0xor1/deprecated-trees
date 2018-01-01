@@ -60,7 +60,7 @@ type Activity struct {
 	Member     Id        `json:"member"`
 	Item       Id        `json:"item"`
 	ItemType   string    `json:"itemType"`
-	ItemName   string    `json:"itemName"`
 	Action     string    `json:"action"`
+	ItemName   *string   `json:"itemName,omitempty"`
 	NewValue   *string   `json:"newValue,omitempty"`
 }

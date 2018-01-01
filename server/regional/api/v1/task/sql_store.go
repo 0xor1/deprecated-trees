@@ -137,7 +137,7 @@ func (s *sqlStore) getNodes(shard int, accountId, projectId, parentId Id, fromSi
 }
 
 func (s *sqlStore) logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string) {
-	LogProjectActivity(s.shards[shard], accountId, projectId, member, item, itemType, action, newValue)
+	LogProjectActivity(s.shards[shard], accountId, projectId, member, item, itemType, action, nil, newValue)
 }
 
 func (s *sqlStore) makeChangeHelper(shard int, sql string, args ...interface{}) {

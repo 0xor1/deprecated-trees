@@ -63,35 +63,35 @@ func GetPublicProjectsEnabled(shard isql.ReplicaSet, accountId Id) bool {
 	return res
 }
 
-func LogAccountActivity(shard isql.ReplicaSet, accountId, member, item Id, itemType, action string, newValue *string) {
-	_, err := shard.Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), Now().UnixNano()/1000000, []byte(member), []byte(item), itemType, "", action, newValue)
+func LogAccountActivity(shard isql.ReplicaSet, accountId, member, item Id, itemType, action string, itemName, newValue *string) {
+	_, err := shard.Exec(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), Now(), []byte(member), []byte(item), itemType, action, itemName, newValue)
 	PanicIf(err)
 }
 
-func LogProjectActivity(shard isql.ReplicaSet, accountId, projectId, member, item Id, itemType, action string, newValue *string) {
-	_, err := shard.Exec(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), Now().UnixNano()/1000000, []byte(member), []byte(item), itemType, "", action, newValue)
+func LogProjectActivity(shard isql.ReplicaSet, accountId, projectId, member, item Id, itemType, action string, itemName, newValue *string) {
+	_, err := shard.Exec(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(item), itemType, action, itemName, newValue)
 	PanicIf(err)
 }
 
 func LogAccountBatchAddOrRemoveMembersActivity(shard isql.ReplicaSet, accountId, member Id, members []Id, action string) {
-	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (?,?,?,?,?,?,?,?)`)
+	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
-	args = append(args, []byte(accountId), Now().UnixNano()/1000000, []byte(member), []byte(members[0]), "member", "", action, nil)
+	args = append(args, []byte(accountId), Now(), []byte(member), []byte(members[0]), "member", action, nil, nil)
 	for _, memId := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
-		args = append(args, []byte(accountId), Now().UnixNano()/1000000, []byte(member), []byte(memId), "member", "", action, nil)
+		args = append(args, []byte(accountId), Now(), []byte(member), []byte(memId), "member", action, nil, nil)
 	}
 	_, err := shard.Exec(query.String(), args...)
 	PanicIf(err)
 }
 
 func LogProjectBatchAddOrRemoveMembersActivity(shard isql.ReplicaSet, accountId, projectId, member Id, members []Id, action string) {
-	query := bytes.NewBufferString(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, itemName, action, newValue) VALUES (?,?,?,?,?,?,?,?,?)`)
+	query := bytes.NewBufferString(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (?,?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*9)
-	args = append(args, []byte(accountId), []byte(projectId), Now().UnixNano()/1000000, []byte(member), []byte(members[0]), "member", "", action, nil)
+	args = append(args, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(members[0]), "member", action, nil, nil)
 	for _, memId := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?,?,?,?,?)`)
-		args = append(args, []byte(accountId), []byte(projectId), Now().UnixNano()/1000000, []byte(member), []byte(memId), "member", "", action, nil)
+		args = append(args, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(memId), "member", action, nil, nil)
 	}
 	_, err := shard.Exec(query.String(), args...)
 	PanicIf(err)

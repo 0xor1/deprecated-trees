@@ -395,12 +395,12 @@ func (a *api) SetAccountName(myId, accountId Id, newName string) {
 	a.store.updateAccount(acc)
 
 	if myId.Equal(accountId) { // if i did rename my personal account, i need to update all the stored names in all the accounts Im a member of
-		a.privateRegionClient.RenameMember(acc.Region, acc.Shard, acc.Id, myId, newName) //first rename myself in my personal org
+		a.privateRegionClient.SetMemberName(acc.Region, acc.Shard, acc.Id, myId, newName) //first rename myself in my personal org
 		var after *Id
 		for {
 			accs, more := a.store.getGroupAccounts(myId, after, 100)
 			for _, acc := range accs {
-				a.privateRegionClient.RenameMember(acc.Region, acc.Shard, acc.Id, myId, newName)
+				a.privateRegionClient.SetMemberName(acc.Region, acc.Shard, acc.Id, myId, newName)
 			}
 			if more {
 				after = &accs[len(accs)-1].Id

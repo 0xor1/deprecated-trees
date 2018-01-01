@@ -52,8 +52,8 @@ func (c *client) MemberIsOnlyAccountOwner(region string, shard int, accountId, m
 	return c.getRegion(region).MemberIsOnlyAccountOwner(shard, accountId, myId)
 }
 
-func (c *client) RenameMember(region string, shard int, accountId, myId Id, newName string) {
-	c.getRegion(region).RenameMember(shard, accountId, myId, newName)
+func (c *client) SetMemberName(region string, shard int, accountId, myId Id, newName string) {
+	c.getRegion(region).SetMemberName(shard, accountId, myId, newName)
 }
 
 func (c *client) SetMemberDisplayName(region string, shard int, accountId, myId Id, newName *string) {
@@ -70,9 +70,7 @@ type api struct {
 }
 
 func (a *api) CreateAccount(accountId, myId Id, myName string, myDisplayName *string) int {
-	shard := a.store.createAccount(accountId, myId, myName, myDisplayName)
-	a.store.logActivity(shard, accountId, myId, accountId, "account", "created")
-	return shard
+	return a.store.createAccount(accountId, myId, myName, myDisplayName)
 }
 
 func (a *api) DeleteAccount(shard int, accountId, myId Id) {
@@ -167,8 +165,8 @@ func (a *api) MemberIsOnlyAccountOwner(shard int, accountId, myId Id) bool {
 	return totalOwnerCount == 1 && ownerCount == 1
 }
 
-func (a *api) RenameMember(shard int, accountId, myId Id, newName string) {
-	a.store.renameMember(shard, accountId, myId, newName)
+func (a *api) SetMemberName(shard int, accountId, myId Id, newName string) {
+	a.store.setMemberName(shard, accountId, myId, newName)
 }
 
 func (a *api) SetMemberDisplayName(shard int, accountId, myId Id, newDisplayName *string) {
@@ -197,8 +195,7 @@ type store interface {
 	getTotalOwnerCount(shard int, accountId Id) int
 	getOwnerCountInSet(shard int, accountId Id, members []Id) int
 	setMembersInactive(shard int, accountId Id, members []Id)
-	renameMember(shard int, accountId Id, member Id, newName string)
+	setMemberName(shard int, accountId Id, member Id, newName string)
 	setMemberDisplayName(shard int, accountId Id, member Id, newDisplayName *string)
-	logActivity(shard int, accountId Id, member, item Id, itemType, action string)
 	logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string)
 }
