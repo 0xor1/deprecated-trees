@@ -147,10 +147,6 @@ func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *memb
 	return &res
 }
 
-func (s *sqlStore) logAccountActivity(shard int, accountId, member, item Id, itemType, action string, newValue *string) {
-	LogAccountActivity(s.shards[shard], accountId, member, item, itemType, action, nil, newValue)
-}
-
 func (s *sqlStore) logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string) {
 	LogProjectActivity(s.shards[shard], accountId, projectId, member, item, itemType, action, nil, newValue)
 }
