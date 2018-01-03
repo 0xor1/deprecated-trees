@@ -2,7 +2,6 @@ package task
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
-	"fmt"
 	"time"
 )
 
@@ -43,8 +42,7 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, pre
 		IsParallel:           isParallel,
 		Member:               memberId,
 	}
-	a.store.createNode(shard, accountId, projectId, parentId, previousSibling, newNode)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, newNode.Id, itemType, "created", nil)
+	a.store.createNode(shard, accountId, projectId, parentId, myId, previousSibling, newNode)
 	return newNode
 }
 
@@ -55,23 +53,19 @@ func (a *api) SetName(shard int, accountId, projectId, nodeId, myId Id, name str
 		ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	}
 
-	a.store.setName(shard, accountId, projectId, nodeId, name)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setName", &name)
+	a.store.setName(shard, accountId, projectId, nodeId, myId, name)
 }
 
 func (a *api) SetDescription(shard int, accountId, projectId, nodeId, myId Id, description *string) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setDescription(shard, accountId, projectId, nodeId, description)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setDescription", description)
+	a.store.setDescription(shard, accountId, projectId, nodeId, myId, description)
 }
 
 func (a *api) SetIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setIsParallel(shard, accountId, projectId, nodeId, isParallel)
-	action := fmt.Sprintf("%t", isParallel)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setIsParallel", &action)
+	a.store.setIsParallel(shard, accountId, projectId, nodeId, myId, isParallel)
 }
 
 func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id) {
@@ -79,29 +73,20 @@ func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, member
 	if memberId != nil {
 		ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, *memberId))
 	}
-	a.store.setMember(shard, accountId, projectId, nodeId, memberId)
-	var newValue *string
-	if memberId != nil {
-		str := memberId.String()
-		newValue = &str
-	}
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setMember", newValue)
+	a.store.setMember(shard, accountId, projectId, nodeId, myId, memberId)
 }
 
 func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, &timeRemaining, nil, nil, nil, nil)
-	newValue := fmt.Sprintf("%d", timeRemaining)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setTimeRemaining", &newValue)
+	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, nil, nil, nil)
 }
 
 func (a *api) LogTime(shard int, accountId, projectId, nodeId Id, myId Id, duration uint64, note *string) *timeLog {
 	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
 	loggedOn := Now()
-	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, nil, &myId, &loggedOn, &duration, note)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "loggedTime", note)
+	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, myId,nil, &loggedOn, &duration, note)
 	return &timeLog{
 		Project:  projectId,
 		Node:     nodeId,
@@ -116,10 +101,7 @@ func (a *api) SetTimeRemainingAndLogTime(shard int, accountId, projectId, nodeId
 	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
 	loggedOn := Now()
-	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, &timeRemaining, &myId, &loggedOn, &duration, note)
-	newValue := fmt.Sprintf("%d", timeRemaining)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "setTimeRemaining", &newValue)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "loggedTime", note)
+	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, &loggedOn, &duration, note)
 	return &timeLog{
 		Project:  projectId,
 		Node:     nodeId,
@@ -134,14 +116,14 @@ func (a *api) MoveNode(shard int, accountId, projectId, nodeId, myId, parentId I
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	a.store.moveNode(shard, accountId, projectId, nodeId, parentId, nextSibling)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
+	//a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
 func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	a.store.deleteNode(shard, accountId, projectId, nodeId)
-	a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
+	//a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
 func (a *api) GetNode(shard int, accountId, projectId, nodeId, myId Id) *node {
@@ -159,17 +141,16 @@ type store interface {
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
 	getProjectRole(shard int, accountId, projectId, memberId Id) *ProjectRole
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
-	createNode(shard int, accountId, projectId, parentId Id, previousSibling *Id, newNode *node)
-	setName(shard int, accountId, projectId, nodeId Id, name string)
-	setDescription(shard int, accountId, projectId, nodeId Id, description *string)
-	setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool)
-	setMember(shard int, accountId, projectId, nodeId Id, memberId *Id)
-	setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining *uint64, myId *Id, loggedOn *time.Time, duration *uint64, note *string)
+	createNode(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, newNode *node)
+	setName(shard int, accountId, projectId, nodeId, myId Id, name string)
+	setDescription(shard int, accountId, projectId, nodeId, myId Id, description *string)
+	setIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool)
+	setMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id)
+	setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
 	moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id)
 	deleteNode(shard int, accountId, projectId, nodeId Id)
 	getNode(shard int, accountId, projectId, nodeId Id) *node
 	getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
-	logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string)
 }
 
 type node struct {

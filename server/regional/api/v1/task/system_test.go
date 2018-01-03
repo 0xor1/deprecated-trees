@@ -89,5 +89,5 @@ func Test_system(t *testing.T) {
 	note := "word up!"
 	tl := api.SetTimeRemainingAndLogTime(0, orgId, project.Id, nodeG.Id, 30, cat.Id, 40, &note)
 	assert.Equal(t, uint64(40), tl.Duration)
-	privateApi.DeleteAccount(0, orgId, ali.Id)
+	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }

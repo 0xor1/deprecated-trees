@@ -66,11 +66,6 @@ func GetPublicProjectsEnabled(shard isql.ReplicaSet, accountId Id) bool {
 	return res
 }
 
-func LogProjectActivity(shard isql.ReplicaSet, accountId, projectId, member, item Id, itemType, action string, itemName, newValue *string) {
-	_, err := shard.Exec(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (? , ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(item), itemType, action, itemName, newValue)
-	PanicIf(err)
-}
-
 func MakeChangeHelper(shard isql.ReplicaSet, sql string, args ...interface{}) {
 	row := shard.QueryRow(sql, args...)
 	changeMade := false

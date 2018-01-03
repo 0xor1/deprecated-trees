@@ -35,9 +35,9 @@ func (s *sqlStore) getAccountAndProjectRolesAndProjectIsPublic(shard int, accoun
 	return GetAccountAndProjectRolesAndProjectIsPublic(s.shards[shard], accountId, projectId, memberId)
 }
 
-func (s *sqlStore) createNode(shard int, accountId, projectId, parentId Id, nextSibling *Id, newNode *node) {
+func (s *sqlStore) createNode(shard int, accountId, projectId, parentId, myId Id, nextSibling *Id, newNode *node) {
 	args := make([]interface{}, 0, 18)
-	args = append(args, []byte(accountId), []byte(projectId), []byte(parentId))
+	args = append(args, []byte(accountId), []byte(projectId), []byte(parentId), []byte(myId))
 	if nextSibling != nil {
 		args = append(args, []byte(*nextSibling))
 	} else {
@@ -55,41 +55,33 @@ func (s *sqlStore) createNode(shard int, accountId, projectId, parentId Id, next
 	} else {
 		args = append(args, nil)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL createNode(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
+	MakeChangeHelper(s.shards[shard], `CALL createNode(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
 }
 
-func (s *sqlStore) setName(shard int, accountId, projectId, nodeId Id, name string) {
-	_, err := s.shards[shard].Exec(`CALL setNodeName(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), name)
+func (s *sqlStore) setName(shard int, accountId, projectId, nodeId, myId Id, name string) {
+	_, err := s.shards[shard].Exec(`CALL setNodeName(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), name)
 	PanicIf(err)
 }
 
-func (s *sqlStore) setDescription(shard int, accountId, projectId, nodeId Id, description *string) {
-	_, err := s.shards[shard].Exec(`UPDATE nodes SET description=? WHERE account=? AND project=? AND id=?`, description, []byte(accountId), []byte(projectId), []byte(nodeId))
+func (s *sqlStore) setDescription(shard int, accountId, projectId, nodeId, myId Id, description *string) {
+	_, err := s.shards[shard].Exec(`CALL setNodeDescription(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), description)
 	PanicIf(err)
 }
 
-func (s *sqlStore) setIsParallel(shard int, accountId, projectId, nodeId Id, isParallel bool) {
-	MakeChangeHelper(s.shards[shard], `CALL setNodeIsParallel(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), isParallel)
+func (s *sqlStore) setIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool) {
+	MakeChangeHelper(s.shards[shard], `CALL setNodeIsParallel(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), isParallel)
 }
 
-func (s *sqlStore) setMember(shard int, accountId, projectId, nodeId Id, memberId *Id) {
+func (s *sqlStore) setMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id) {
 	var memArg []byte
 	if memberId != nil {
 		memArg = []byte(*memberId)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL setNodeMember(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), memArg)
+	MakeChangeHelper(s.shards[shard], `CALL setNodeMember(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), memArg)
 }
 
-func (s *sqlStore) setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining *uint64, myId *Id, loggedOn *time.Time, duration *uint64, note *string) {
-	args := make([]interface{}, 0, 8)
-	args = append(args, []byte(accountId), []byte(projectId), []byte(nodeId), timeRemaining)
-	if myId != nil {
-		args = append(args, []byte(*myId))
-	} else {
-		args = append(args, nil)
-	}
-	args = append(args, loggedOn, duration, note)
-	MakeChangeHelper(s.shards[shard], `CALL setTimeRemainingAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, args...)
+func (s *sqlStore) setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string) {
+	MakeChangeHelper(s.shards[shard], `CALL setTimeRemainingAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), timeRemaining, loggedOn, duration, note)
 }
 
 func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id) {
@@ -130,10 +122,6 @@ func (s *sqlStore) getNodes(shard int, accountId, projectId, parentId Id, fromSi
 		res = append(res, &n)
 	}
 	return res
-}
-
-func (s *sqlStore) logProjectActivity(shard int, accountId, projectId, member, item Id, itemType, action string, newValue *string) {
-	LogProjectActivity(s.shards[shard], accountId, projectId, member, item, itemType, action, nil, newValue)
 }
 
 func nilOutPropertiesThatAreNotNilInTheDb(n *node) {

@@ -394,7 +394,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createNode;
 DELIMITER $$
-CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _previousSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _isParallel BOOLEAN, _memberId BINARY(16))
+CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _myId BINARY(16), _previousSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOLEAN, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _isParallel BOOLEAN, _memberId BINARY(16))
 BEGIN
   DECLARE _minimumRemainingTime BIGINT UNSIGNED DEFAULT _totalRemainingTime;
 	DECLARE originalParentId BINARY(16) DEFAULT _parentId;
@@ -442,6 +442,7 @@ BEGIN
       SET _isParallel=FALSE;
     END IF;
     INSERT INTO nodes (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _nodeId, _parentId, NULL, idVariable, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, 0, _minimumRemainingTime, 0, 0, 0, 0, _isParallel, _memberId);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'created', _name, NULL);
     #update siblings and parent firstChild value if required
     IF _previousSiblingId IS NULL THEN #update parents firstChild
       UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=_parentId;
@@ -493,21 +494,35 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setNodeName;
 DELIMITER $$
-CREATE PROCEDURE setNodeName(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _name VARCHAR(250))
-BEGIN
-	UPDATE nodes SET name=_name WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-  IF _projectId=_nodeId THEN
-    UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
-  ELSE
-    UPDATE timeLogs SET nodeName=_name WHERE account=_accountId AND project=_projectId AND node=_nodeId;
-  END IF;
-END;
+CREATE PROCEDURE setNodeName(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _name VARCHAR(250))
+  BEGIN
+    UPDATE nodes SET name=_name WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+    IF _projectId=_nodeId THEN
+      UPDATE projects SET name=_name WHERE account=_accountId AND id=_nodeId;
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'project', 'setName', NULL, _name);
+      UPDATE accountActivities SET itemName=_name WHERE account=_accountId AND item=_nodeId;
+    ELSE
+      UPDATE timeLogs SET nodeName=_name WHERE account=_accountId AND project=_projectId AND node=_nodeId;
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'setName', NULL, _name);
+      UPDATE projectActivities SET itemName=_name WHERE account=_accountId AND project=_projectId AND item=_nodeId;
+    END IF;
+  END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS setNodeDescription;
+DELIMITER $$
+CREATE PROCEDURE setNodeDescription(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _description VARCHAR(250))
+  BEGIN
+    UPDATE nodes SET description=_description WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'setDescription', NULL, _description);
+  END;
 $$
 DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setNodeIsParallel;
 DELIMITER $$
-CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _isParallel BOOLEAN)
+CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _isParallel BOOLEAN)
 BEGIN
 	DECLARE projExists BOOLEAN DEFAULT FALSE;
   DECLARE nodeExists BOOLEAN DEFAULT FALSE;
@@ -523,6 +538,11 @@ BEGIN
     SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO nodeExists, nextNode, currentIsParallel, preChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
     IF nodeExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
       SET changeMade = TRUE;
+      IF _isParallel THEN
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'setIsParallel', NULL, 'true');
+      ELSE
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'setIsParallel', NULL, 'false');
+      END IF;
       IF preChangePreviousMinimumRemainingTime <> 0 THEN
         IF _isParallel THEN #setting isParallel to true
           SELECT MAX(minimumRemainingTime) INTO postChangePreviousMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND parent=_nodeId;
@@ -563,7 +583,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setNodeMember;
 DELIMITER $$
-CREATE PROCEDURE setNodeMember(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _memberId BINARY(16))
+CREATE PROCEDURE setNodeMember(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _memberId BINARY(16))
 BEGIN
   DECLARE projExists BOOLEAN DEFAULT FALSE;
   DECLARE memberExistsAndIsActive BOOLEAN DEFAULT TRUE;
@@ -599,6 +619,11 @@ BEGIN
       IF memberExistsAndIsActive THEN
         UPDATE nodes SET member=_memberId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
         SET changeMade = TRUE;
+        IF _memberId IS NOT NULL THEN
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'setMember', NULL, LOWER(HEX(_memberId)));
+        ELSE
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'setMember', NULL, NULL);
+        END IF;
       END IF;
     END IF;
   END IF;
@@ -611,7 +636,7 @@ DELIMITER ;
 ## Pass NULL in _timeRemaining to not set a new TotalTimeRemaining value, pass NULL or zero to _duration to not log time
 DROP PROCEDURE IF EXISTS setTimeRemainingAndOrLogTime;
 DELIMITER $$
-CREATE PROCEDURE setTimeRemainingAndOrLogTime(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _timeRemaining BIGINT UNSIGNED, _myId BINARY(16), _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
+CREATE PROCEDURE setTimeRemainingAndOrLogTime(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
 BEGIN
   DECLARE projExists BOOLEAN DEFAULT FALSE;
   DECLARE nodeExists BOOLEAN DEFAULT FALSE;
@@ -652,10 +677,14 @@ BEGIN
         IF memberExists THEN
           INSERT INTO timeLogs (account, project, node, member, loggedOn, nodeName, duration, note) VALUES (_accountId, _projectId, _nodeId, _myId, _loggedOn, nodeName, _duration, _note);
           UPDATE projectMembers SET totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_myId;
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _nodeId, 'node', 'loggedTime', nodeName, _note);
         END IF;
       END IF;
 
       UPDATE nodes SET totalRemainingTime=_timeRemaining, minimumRemainingTime=_timeRemaining, totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+      IF _timeRemaining<>preChangeOriginalMinimumRemainingTime THEN
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _myId, _nodeId, 'node', 'setTimeRemaining', nodeName, CAST(_timeRemaining as char character set utf8));
+      END IF;
       SET _nodeId=nextNode;
       SET postChangePreviousMinimumRemainingTime=_timeRemaining;
       WHILE _nodeId IS NOT NULL DO
