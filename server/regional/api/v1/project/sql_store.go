@@ -81,22 +81,16 @@ func (s *sqlStore) deleteProject(shard int, accountId, projectId, myId Id) {
 	PanicIf(err)
 }
 
-func (s *sqlStore) addMemberOrSetActive(shard int, accountId, projectId Id, member *AddProjectMember) bool {
-	row := s.shards[shard].QueryRow(`CALL addProjectMemberOrSetActive(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(member.Id), member.Role)
-	added := false
-	PanicIf(row.Scan(&added))
-	return added
+func (s *sqlStore) addMemberOrSetActive(shard int, accountId, projectId, myId Id, member *AddProjectMember) {
+	MakeChangeHelper(s.shards[shard], `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), []byte(member.Id), member.Role)
 }
 
 func (s *sqlStore) setMemberRole(shard int, accountId, projectId, myId, member Id, role ProjectRole) {
 	MakeChangeHelper(s.shards[shard], `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), []byte(member), role)
 }
 
-func (s *sqlStore) setMemberInactive(shard int, accountId, projectId Id, member Id) bool {
-	row := s.shards[shard].QueryRow(`CALL setProjectMemberInactive(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(member))
-	setInactive := false
-	PanicIf(row.Scan(&setInactive))
-	return setInactive
+func (s *sqlStore) setMemberInactive(shard int, accountId, projectId, myId Id, member Id) {
+	MakeChangeHelper(s.shards[shard],`CALL setProjectMemberInactive(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), []byte(member))
 }
 
 func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
@@ -145,18 +139,6 @@ func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *memb
 	res := member{}
 	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
-}
-
-func (s *sqlStore) logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string) {
-	query := bytes.NewBufferString(`INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (?,?,?,?,?,?,?,?,?)`)
-	args := make([]interface{}, 0, len(members)*9)
-	args = append(args, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(members[0]), "member", action, nil, nil)
-	for _, memId := range members[1:] {
-		query.WriteString(`,(?,?,?,?,?,?,?,?,?)`)
-		args = append(args, []byte(accountId), []byte(projectId), Now(), []byte(member), []byte(memId), "member", action, nil, nil)
-	}
-	_, err := s.shards[shard].Exec(query.String(), args...)
-	PanicIf(err)
 }
 
 func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {

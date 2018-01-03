@@ -319,7 +319,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS addProjectMemberOrSetActive;
 DELIMITER $$
-CREATE PROCEDURE addProjectMemberOrSetActive(_accountId BINARY(16), _projectId BINARY(16), _id BINARY(16), _role TINYINT UNSIGNED)
+CREATE PROCEDURE addProjectMemberOrSetActive(_accountId BINARY(16), _projectId BINARY(16), _myId BINARY(16), _id BINARY(16), _role TINYINT UNSIGNED)
 BEGIN
 	DECLARE projMemberCount TINYINT DEFAULT 0;
 	DECLARE projMemberIsActive BOOL DEFAULT false;
@@ -329,8 +329,9 @@ BEGIN
   IF projMemberCount=1 AND projMemberIsActive=false THEN #setting previous member back to active, still need to check if they are an active account member
     IF (SELECT COUNT(*) FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true) THEN #if active account member then add them to the project
       UPDATE projectMembers SET role=_role, isActive=true WHERE account=_accountId AND project=_projectId AND id=_id;
-            SELECT true;
-        ELSE #they are a disabled account member and so can not be added to the project
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'added', NULL, NULL);
+      SELECT true;
+    ELSE #they are a disabled account member and so can not be added to the project
       SELECT false;
     END IF;
 	ELSEIF projMemberCount=1 AND projMemberIsActive=true THEN #they are already an active member of this project
@@ -340,7 +341,8 @@ BEGIN
 			SELECT name, displayName INTO accMemberName, accMemberDisplayName FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true LOCK IN SHARE MODE;
 			IF accMemberName IS NOT NULL AND accMemberName <> '' THEN #if active account member then add them to the project
 				INSERT INTO projectMembers (account, project, id, name, displayName, isActive, totalRemainingTime, totalLoggedTime, role) VALUES (_accountId, _projectId, _id, accMemberName, accMemberDisplayName, true, 0, 0, _role);
-				SELECT true;
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'added', NULL, NULL);
+        SELECT true;
 			ELSE #they are a not an active account member so return false
 				SELECT false;
 			END IF;
@@ -352,17 +354,18 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setProjectMemberInactive;
 DELIMITER $$
-CREATE PROCEDURE setProjectMemberInactive(_accountId BINARY(16), _projectId BINARY(16), _id BINARY(16))
+CREATE PROCEDURE setProjectMemberInactive(_accountId BINARY(16), _projectId BINARY(16), _myId BINARY(16), _id BINARY(16))
 BEGIN
-  DECLARE projExists TINYINT DEFAULT 0;
-  DECLARE projMemberCount TINYINT DEFAULT 0;
+  DECLARE projExists BOOLEAN DEFAULT FALSE;
+  DECLARE projMemberExists BOOLEAN DEFAULT FALSE;
 
   START TRANSACTION;
     SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
-		SELECT COUNT(*) INTO projMemberCount FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_id AND isActive=true FOR UPDATE;
-		IF projMemberCount=1 THEN
+		SELECT COUNT(*)=1 INTO projMemberExists FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=_id AND isActive=true FOR UPDATE;
+		IF projMemberExists THEN
 			UPDATE nodes SET member=NULL WHERE account=_accountId AND project=_projectId AND member=_id;
       UPDATE projectMembers SET totalRemainingTime=0 WHERE account=_accountId AND project=_projectId AND id=_id;
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'removed', NULL, NULL);
       SELECT true;
 		ELSE
 			SELECT false;

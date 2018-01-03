@@ -34,7 +34,7 @@ func (a *api) CreateProject(shard int, accountId, myId Id, name string, descript
 		addMem := &AddProjectMember{}
 		addMem.Id = myId
 		addMem.Role = ProjectAdmin
-		a.store.addMemberOrSetActive(shard, accountId, project.Id, addMem)
+		a.store.addMemberOrSetActive(shard, accountId, project.Id, myId, addMem)
 	}
 
 	if len(members) > 0 {
@@ -97,7 +97,6 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*Ad
 	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	ValidateExists(a.store.getProjectExists(shard, accountId, projectId))
 
-	addedMemberIds := make([]Id, 0, len(members))
 	for _, mem := range members {
 		mem.Role.Validate()
 		accRole := a.store.getAccountRole(shard, accountId, mem.Id)
@@ -107,13 +106,7 @@ func (a *api) AddMembers(shard int, accountId, projectId, myId Id, members []*Ad
 		if *accRole == AccountOwner || *accRole == AccountAdmin {
 			mem.Role = ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 		}
-		if a.store.addMemberOrSetActive(shard, accountId, projectId, mem) {
-			addedMemberIds = append(addedMemberIds, mem.Id)
-		}
-	}
-
-	if len(addedMemberIds) > 0 {
-		a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, addedMemberIds, "added")
+		a.store.addMemberOrSetActive(shard, accountId, projectId, myId, mem)
 	}
 }
 
@@ -144,13 +137,9 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 	}
 	ValidateMemberHasProjectAdminAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	inactivatedMembers := make([]Id, 0, len(members))
 	for _, mem := range members {
-		if a.store.setMemberInactive(shard, accountId, projectId, mem) {
-			inactivatedMembers = append(inactivatedMembers)
-		}
+		a.store.setMemberInactive(shard, accountId, projectId, myId, mem)
 	}
-	a.store.logProjectBatchAddOrRemoveMembersActivity(shard, accountId, projectId, myId, members, "removed")
 }
 
 func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
@@ -184,12 +173,11 @@ type store interface {
 	getAllProjects(shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool)
 	setProjectIsArchived(shard int, accountId, projectId, myId Id, isArchived bool)
 	deleteProject(shard int, accountId, projectId, myId Id)
-	addMemberOrSetActive(shard int, accountId, projectId Id, member *AddProjectMember) bool
+	addMemberOrSetActive(shard int, accountId, projectId, myId Id, member *AddProjectMember)
 	setMemberRole(shard int, accountId, projectId, myId, member Id, role ProjectRole)
-	setMemberInactive(shard int, accountId, projectId Id, member Id) bool
+	setMemberInactive(shard int, accountId, projectId, myId Id, member Id)
 	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	getMember(shard int, accountId, projectId, member Id) *member
-	logProjectBatchAddOrRemoveMembersActivity(shard int, accountId, projectId, member Id, members []Id, action string)
 	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
 }
 
