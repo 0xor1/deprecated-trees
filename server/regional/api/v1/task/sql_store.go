@@ -80,16 +80,16 @@ func (s *sqlStore) setMember(shard int, accountId, projectId, nodeId, myId Id, m
 	MakeChangeHelper(s.shards[shard], `CALL setNodeMember(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), memArg)
 }
 
-func (s *sqlStore) setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	MakeChangeHelper(s.shards[shard], `CALL setTimeRemainingAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), timeRemaining, loggedOn, duration, note)
+func (s *sqlStore) setRemainingTimeAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string) {
+	MakeChangeHelper(s.shards[shard], `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), timeRemaining, loggedOn, duration, note)
 }
 
-func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id) {
+func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, nextSibling *Id) {
 	var nextSib []byte
 	if nextSibling != nil {
 		nextSib = []byte(*nextSibling)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL moveNode(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(parentId), nextSib)
+	MakeChangeHelper(s.shards[shard], `CALL moveNode(?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(parentId), []byte(myId), nextSib)
 }
 
 func (s *sqlStore) deleteNode(shard int, accountId, projectId, nodeId Id) {

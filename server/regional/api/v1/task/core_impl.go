@@ -76,17 +76,17 @@ func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, member
 	a.store.setMember(shard, accountId, projectId, nodeId, myId, memberId)
 }
 
-func (a *api) SetTimeRemaining(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
+func (a *api) SetRemainingTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, nil, nil, nil)
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, nil, nil, nil)
 }
 
 func (a *api) LogTime(shard int, accountId, projectId, nodeId Id, myId Id, duration uint64, note *string) *timeLog {
 	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
 	loggedOn := Now()
-	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, myId,nil, &loggedOn, &duration, note)
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, nodeId, myId,nil, &loggedOn, &duration, note)
 	return &timeLog{
 		Project:  projectId,
 		Node:     nodeId,
@@ -97,11 +97,11 @@ func (a *api) LogTime(shard int, accountId, projectId, nodeId Id, myId Id, durat
 	}
 }
 
-func (a *api) SetTimeRemainingAndLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining uint64, myId Id, duration uint64, note *string) *timeLog {
+func (a *api) SetRemainingTimeAndLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining uint64, myId Id, duration uint64, note *string) *timeLog {
 	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
 	loggedOn := Now()
-	a.store.setTimeRemainingAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, &loggedOn, &duration, note)
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, &loggedOn, &duration, note)
 	return &timeLog{
 		Project:  projectId,
 		Node:     nodeId,
@@ -115,15 +115,14 @@ func (a *api) SetTimeRemainingAndLogTime(shard int, accountId, projectId, nodeId
 func (a *api) MoveNode(shard int, accountId, projectId, nodeId, myId, parentId Id, nextSibling *Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.moveNode(shard, accountId, projectId, nodeId, parentId, nextSibling)
-	//a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
+	a.store.moveNode(shard, accountId, projectId, nodeId, parentId, myId, nextSibling)
 }
 
 func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
 	a.store.deleteNode(shard, accountId, projectId, nodeId)
-	//a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
+	//TODO put in Stored Proc a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
 func (a *api) GetNode(shard int, accountId, projectId, nodeId, myId Id) *node {
@@ -146,8 +145,8 @@ type store interface {
 	setDescription(shard int, accountId, projectId, nodeId, myId Id, description *string)
 	setIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool)
 	setMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id)
-	setTimeRemainingAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
-	moveNode(shard int, accountId, projectId, nodeId, parentId Id, nextSibling *Id)
+	setRemainingTimeAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
+	moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, nextSibling *Id)
 	deleteNode(shard int, accountId, projectId, nodeId Id)
 	getNode(shard int, accountId, projectId, nodeId Id) *node
 	getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
