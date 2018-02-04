@@ -628,6 +628,7 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS moveNode;
 DELIMITER $$
 CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _newParentId BINARY(16), _myId BINARY(16), _newPreviousSiblingId BINARY(16))
+CONTAINS SQL moveNode:
 BEGIN
   DECLARE projExists BOOL DEFAULT FALSE;
   DECLARE nodeExists BOOL DEFAULT FALSE;
@@ -643,6 +644,7 @@ BEGIN
   DECLARE originalTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE originalTotalLoggedTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE idVariable BINARY(16) DEFAULT _newParentId;
   DECLARE changeMade BOOL DEFAULT FALSE;
   START TRANSACTION;
   IF _newParentId IS NOT NULL AND _projectId <> _nodeId AND _newParentId <> _nodeId THEN #check newParent is not null AND _nodeId is not the project or the new parent
@@ -652,7 +654,7 @@ BEGIN
       IF nodeExists THEN
         SELECT firstChild INTO originalParentFirstChildId FROM nodes WHERE account=_accountId AND project=_projectId AND id=originalParentId;
         IF _newPreviousSiblingId IS NOT NULL THEN
-          SELECT COUNT(*)=1, nextSibling INTO newPreviousSiblingExists, newNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId AND parent=originalParentId;
+          SELECT COUNT(*)=1, nextSibling INTO newPreviousSiblingExists, newNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId AND parent=_newParentId;
         ELSE
           SET newPreviousSiblingExists=TRUE;
         END IF;
@@ -682,6 +684,15 @@ BEGIN
                # but should still be efficient and simplify the code logic below.
             SELECT COUNT(*)=1, firstChild INTO newParentExists, newParentFirstChildId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newParentId;
             IF newParentExists THEN
+              #need to validate that the node being moved is not in the new ancestral chain i.e. make sure we're not trying to make it a descendant of itself
+              WHILE idVariable IS NOT NULL DO
+                IF idVariable = _nodeId THEN
+                  SELECT changeMade;
+                  COMMIT; #invalid call, exit immediately
+                  LEAVE moveNode;
+                END IF;
+                SELECT parent INTO idVariable FROM nodes WHERE account=_accountId AND project=_projectId AND id=idVariable;
+              END WHILE;
               #move the node
               #remove from original location
               IF originalParentFirstChildId = _nodeId THEN #removing from first child position
@@ -848,3 +859,6 @@ GRANT INSERT ON trees.* TO 't_r_trees'@'%';
 GRANT UPDATE ON trees.* TO 't_r_trees'@'%';
 GRANT DELETE ON trees.* TO 't_r_trees'@'%';
 GRANT EXECUTE ON trees.* TO 't_r_trees'@'%';
+
+#useful helper query for manual verifying results
+#SELECT  n1.name, n2.name AS parent, n3.name AS nextSibling, n4.name AS firstChild, n1.isAbstract, n1.description, n1.totalRemainingTime, n1.totalLoggedTime, n1.minimumRemainingTime FROM trees.nodes n1 LEFT JOIN trees.nodes n2 ON n1.parent = n2.id LEFT JOIN trees.nodes n3 ON n1.nextSibling = n3.id LEFT JOIN trees.nodes n4 ON n1.firstChild = n4.id ORDER BY n1.name;

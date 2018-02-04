@@ -84,27 +84,27 @@ func (s *sqlStore) setRemainingTimeAndOrLogTime(shard int, accountId, projectId,
 	MakeChangeHelper(s.shards[shard], `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), timeRemaining, loggedOn, duration, note)
 }
 
-func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, nextSibling *Id) {
-	var nextSib []byte
-	if nextSibling != nil {
-		nextSib = []byte(*nextSibling)
+func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, newPreviousSibling *Id) {
+	var prevSib []byte
+	if newPreviousSibling != nil {
+		prevSib = []byte(*newPreviousSibling)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL moveNode(?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(parentId), []byte(myId), nextSib)
+	MakeChangeHelper(s.shards[shard], `CALL moveNode(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(parentId), []byte(myId), prevSib)
 }
 
 func (s *sqlStore) deleteNode(shard int, accountId, projectId, nodeId Id) {
 	MakeChangeHelper(s.shards[shard], `CALL deleteNode(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId))
 }
 
-func (s *sqlStore) getNode(shard int, accountId, projectId, nodeId Id) *node {
-	row := s.shards[shard].QueryRow(`SELECT ... shit`, []byte(accountId), []byte(projectId), []byte(nodeId))
+func (s *sqlStore) getNodes(shard int, accountId, projectId Id, nodeId []Id) []*node {
+	row := s.shards[shard].QueryRow(`SELECT ... shit`, []byte(accountId), []byte(projectId))
 	n := node{}
 	PanicIf(row.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
 	nilOutPropertiesThatAreNotNilInTheDb(&n)
-	return &n
+	return []*node{}
 }
 
-func (s *sqlStore) getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node {
+func (s *sqlStore) getChildNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node {
 	var fromSib []byte
 	if fromSibling != nil {
 		fromSib = []byte(*fromSibling)

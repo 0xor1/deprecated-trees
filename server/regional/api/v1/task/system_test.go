@@ -71,13 +71,13 @@ func Test_system(t *testing.T) {
 	nodeG := api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, nil, "G", &desc, false, nil, &ali.Id, &fourVal)
 	api.CreateNode(0, orgId, project.Id, nodeC.Id, ali.Id, &nodeE.Id, "H", &desc, false, nil, &ali.Id, &threeVal)
 	nodeI := api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, nil, "I", &desc, false, nil, &ali.Id, &twoVal)
-	api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, &nodeI.Id, "J", &desc, false, nil, &ali.Id, &oneVal)
-	api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, nil, "K", &desc, false, nil, &ali.Id, &fourVal)
+	nodeJ := api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, &nodeI.Id, "J", &desc, false, nil, &ali.Id, &oneVal)
+	nodeK := api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, nil, "K", &desc, false, nil, &ali.Id, &fourVal)
 	nodeL := api.CreateNode(0, orgId, project.Id, nodeA.Id, ali.Id, &nodeI.Id, "L", &desc, true, &trueVal, nil, nil)
 	nodeM := api.CreateNode(0, orgId, project.Id, nodeL.Id, ali.Id, nil, "M", &desc, false, nil, &ali.Id, &threeVal)
 
-	api.SetName(0, orgId, project.Id, project.Id, ali.Id, "Proj-renamed")
-	api.SetName(0, orgId, project.Id, nodeA.Id, ali.Id, "A-renamed")
+	api.SetName(0, orgId, project.Id, project.Id, ali.Id, "PROJ")
+	api.SetName(0, orgId, project.Id, nodeA.Id, ali.Id, "AAA")
 	api.SetDescription(0, orgId, project.Id, nodeA.Id, ali.Id, nil)
 	api.SetIsParallel(0, orgId, project.Id, nodeA.Id, ali.Id, true)
 	api.SetIsParallel(0, orgId, project.Id, project.Id, ali.Id, false)
@@ -89,5 +89,10 @@ func Test_system(t *testing.T) {
 	note := "word up!"
 	tl := api.SetRemainingTimeAndLogTime(0, orgId, project.Id, nodeG.Id, 30, cat.Id, 40, &note)
 	assert.Equal(t, uint64(40), tl.Duration)
+
+	api.MoveNode(0, orgId, project.Id, nodeG.Id, ali.Id, nodeA.Id, nil)
+	api.MoveNode(0, orgId, project.Id, nodeG.Id, ali.Id, nodeA.Id, &nodeK.Id)
+	api.MoveNode(0, orgId, project.Id, nodeG.Id, ali.Id, nodeA.Id, &nodeJ.Id)
+	api.MoveNode(0, orgId, project.Id, nodeG.Id, ali.Id, nodeL.Id, &nodeM.Id)
 	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }

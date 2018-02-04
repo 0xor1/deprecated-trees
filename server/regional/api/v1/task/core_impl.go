@@ -125,14 +125,14 @@ func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
 	//TODO put in Stored Proc a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
 }
 
-func (a *api) GetNode(shard int, accountId, projectId, nodeId, myId Id) *node {
+func (a *api) GetNodes(shard int, accountId, projectId, myId Id, nodeIds []Id) []*node {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getNode(shard, accountId, projectId, nodeId)
+	return a.store.getNodes(shard, accountId, projectId, nodeIds)
 }
 
-func (a *api) GetNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node {
+func (a *api) GetChildNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getNodes(shard, accountId, projectId, parentId, fromSibling, limit)
+	return a.store.getChildNodes(shard, accountId, projectId, parentId, fromSibling, limit)
 }
 
 type store interface {
@@ -148,8 +148,8 @@ type store interface {
 	setRemainingTimeAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
 	moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, nextSibling *Id)
 	deleteNode(shard int, accountId, projectId, nodeId Id)
-	getNode(shard int, accountId, projectId, nodeId Id) *node
-	getNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
+	getNodes(shard int, accountId, projectId Id, nodeIds []Id) []*node
+	getChildNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
 }
 
 type node struct {
