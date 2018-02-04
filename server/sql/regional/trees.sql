@@ -393,13 +393,13 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS createNode;
 DELIMITER $$
 CREATE PROCEDURE createNode(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _myId BINARY(16), _previousSiblingId BINARY(16), _nodeId BINARY(16), _isAbstract BOOL, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _isParallel BOOL, _memberId BINARY(16))
-CONTAINS SQL `createNode`:
 BEGIN
 	DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE parentExists BOOL DEFAULT FALSE;
 	DECLARE previousSiblingExists BOOL DEFAULT FALSE;
 	DECLARE nextSiblingToUse BINARY(16) DEFAULT NULL;
   DECLARE memberExistsAndIsActive BOOL DEFAULT FALSE;
+  DECLARE changeMade BOOL DEFAULT FALSE;
 
   #assume parameters are already validated against themselves in the business logic
 
@@ -429,6 +429,7 @@ BEGIN
     SET memberExistsAndIsActive=FALSE; #set this to false to fail the validation check so we dont create an invalid abstract node with an assigned member
   END IF;
   IF projectExists AND parentExists AND previousSiblingExists AND memberExistsAndIsActive THEN
+    SET changeMade=TRUE;
 		#write the node row
     if NOT _isAbstract THEN
       SET _isParallel=FALSE;
@@ -446,11 +447,9 @@ BEGIN
       UPDATE projectMembers SET totalRemainingTime=totalRemainingTime + _totalRemainingTime WHERE account=_accountId AND project=_projectId AND id=_memberId;
     END IF;
 
-    SELECT setAncestralChainAggregateValuesFromNode(_accountId, _projectId, _parentId);
-    COMMIT;
-    LEAVE `createNode`;
+    CALL _setAncestralChainAggregateValuesFromNode(_accountId, _projectId, _parentId);
   END IF;
-  SELECT '';
+  SELECT changeMade;
   COMMIT;
 END;
 $$
@@ -487,14 +486,13 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS setNodeIsParallel;
 DELIMITER $$
 CREATE PROCEDURE setNodeIsParallel(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId BINARY(16), _isParallel BOOL)
-CONTAINS SQL `setNodeIsParallel`:
 BEGIN
 	DECLARE projExists BOOL DEFAULT FALSE;
   DECLARE nodeExists BOOL DEFAULT FALSE;
-  DECLARE changeMade BOOL DEFAULT FALSE;
   DECLARE nextNode BINARY(16) DEFAULT NULL;
   DECLARE currentIsParallel BOOL DEFAULT FALSE;
   DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE changeMade BOOL DEFAULT FALSE;
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
   IF projExists THEN
@@ -508,17 +506,11 @@ BEGIN
       END IF;
       UPDATE nodes SET isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_nodeId;
       IF currentMinimumRemainingTime <> 0 THEN
-        SELECT setAncestralChainAggregateValuesFromNode(_accountId, _projectId, _nodeId);
-        COMMIT;
-        LEAVE `setNodeIsParallel`;
-      ELSE
-        SELECT HEX(_nodeId);
-        COMMIT;
-        LEAVE `setNodeIsParallel`;
+        CALL _setAncestralChainAggregateValuesFromNode(_accountId, _projectId, _nodeId);
       END IF;
     END IF;
   END IF;
-  SELECT '';
+  SELECT changeMade;
   COMMIT;
 END;
 $$
@@ -580,7 +572,6 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS setRemainingTimeAndOrLogTime;
 DELIMITER $$
 CREATE PROCEDURE setRemainingTimeAndOrLogTime(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _myId bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
-CONTAINS SQL `setRemainingTimeAndOrLogTime`:
 BEGIN
   DECLARE projExists BOOL DEFAULT FALSE;
   DECLARE nodeExists BOOL DEFAULT FALSE;
@@ -590,20 +581,22 @@ BEGIN
   DECLARE existingMember BINARY(16) DEFAULT NULL;
   DECLARE nextNode BINARY(16) DEFAULT NULL;
   DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE changeMade BOOL DEFAULT FALSE;
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
   IF projExists THEN
     SELECT COUNT(*)=1, name, member, parent, totalRemainingTime INTO nodeExists, nodeName, existingMember, nextNode, originalMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId AND isAbstract=FALSE;
     IF _timeRemaining IS NULL THEN
-      SET _timeRemaining=originalMinimumRemainingTime;
+      SET _timeRemaining= originalMinimumRemainingTime;
     END IF;
     IF _duration IS NULL THEN
       SET _duration=0;
     END IF;
     IF nodeExists AND (originalMinimumRemainingTime <> _timeRemaining OR _duration > 0) THEN
+      SET changeMade = TRUE;
       IF existingMember IS NOT NULL AND originalMinimumRemainingTime <> _timeRemaining THEN
         SELECT COUNT(*)=1 INTO existingMemberExists FROM projectMembers WHERE account=_accountId AND project=_projectId AND id=existingMember FOR UPDATE;
-        UPDATE projectMembers SET totalRemainingTime=totalRemainingTime+_timeRemaining-originalMinimumRemainingTime WHERE account=_accountId AND project=_projectId AND id=existingMember;
+        UPDATE projectMembers SET totalRemainingTime=totalRemainingTime+_timeRemaining - originalMinimumRemainingTime WHERE account = _accountId AND project = _projectId AND id = existingMember;
       END IF;
 
       IF _myId IS NOT NULL AND _duration > 0 THEN
@@ -620,15 +613,13 @@ BEGIN
       END IF;
 
       UPDATE nodes SET totalRemainingTime=_timeRemaining, minimumRemainingTime=_timeRemaining, totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-      IF _timeRemaining<>originalMinimumRemainingTime THEN
+      IF _timeRemaining <> originalMinimumRemainingTime THEN
         INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _myId, _nodeId, 'node', 'setRemainingTime', nodeName, CAST(_timeRemaining as char character set utf8));
       END IF;
-      SELECT setAncestralChainAggregateValuesFromNode(_accountId, _projectId, nextNode);
-      COMMIT;
-      LEAVE `setRemainingTimeAndOrLogTime`;
+      CALL _setAncestralChainAggregateValuesFromNode(_accountId, _projectId, nextNode);
     END IF;
   END IF;
-  SELECT '';
+  SELECT changeMade;
   COMMIT;
 END;
 $$
@@ -636,7 +627,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS moveNode;
 DELIMITER $$
-CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _newParentId BINARY(16), _myId BINARY(16), _newPreviousSibling BINARY(16))
+CREATE PROCEDURE moveNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16), _newParentId BINARY(16), _myId BINARY(16), _newPreviousSiblingId BINARY(16))
 BEGIN
   DECLARE projExists BOOL DEFAULT FALSE;
   DECLARE nodeExists BOOL DEFAULT FALSE;
@@ -652,8 +643,6 @@ BEGIN
   DECLARE originalTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE originalTotalLoggedTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE newParentsParentId BINARY(16) DEFAULT NULL;
-  DECLARE originalParentsParentId BINARY(16) DEFAULT NULL;
   DECLARE changeMade BOOL DEFAULT FALSE;
   START TRANSACTION;
   IF _newParentId IS NOT NULL AND _projectId <> _nodeId AND _newParentId <> _nodeId THEN #check newParent is not null AND _nodeId is not the project or the new parent
@@ -661,21 +650,21 @@ BEGIN
     IF projExists THEN
       SELECT COUNT(*)=1, parent, nextSibling, name, totalRemainingTime, totalLoggedTime, minimumRemainingTime INTO nodeExists, originalParentId, originalNextSiblingId, nodeName, originalTotalRemainingTime, originalTotalLoggedTime, originalMinimumRemainingTime FROM nodes WHERE account=_accountId AND project=_projectId AND id=_nodeId;
       IF nodeExists THEN
-        SELECT firstChild, parent INTO originalParentFirstChildId, originalParentsParentId FROM nodes WHERE account=_accountId AND project=_projectId AND id=originalParentId;
-        IF _newPreviousSibling IS NOT NULL THEN
-          SELECT COUNT(*)=1, nextSibling INTO newPreviousSiblingExists, newNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newPreviousSibling AND parent=originalParentId;
+        SELECT firstChild INTO originalParentFirstChildId FROM nodes WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+        IF _newPreviousSiblingId IS NOT NULL THEN
+          SELECT COUNT(*)=1, nextSibling INTO newPreviousSiblingExists, newNextSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId AND parent=originalParentId;
         ELSE
           SET newPreviousSiblingExists=TRUE;
         END IF;
         IF newPreviousSiblingExists THEN
           IF _newParentId = originalParentId THEN #most moves will be just moving within a single parent node, this is a very simple and efficient move to make as we dont need to walk up the tree updating child/descendant counts or total/minimum/logged times
-            IF _newPreviousSibling IS NULL AND originalParentFirstChildId <> _nodeId  THEN #moving to firstChild position, and it is an actual change
+            IF _newPreviousSiblingId IS NULL AND originalParentFirstChildId <> _nodeId  THEN #moving to firstChild position, and it is an actual change
               SELECT id INTO originalPreviousSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND nextSibling=_nodeId;
               UPDATE nodes SET nextSibling=originalParentFirstChildId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
               UPDATE nodes SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
               UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
-              SET changeMade=TRUE;
-            ELSEIF _newPreviousSibling IS NOT NULL AND ((newNextSiblingId IS NULL AND originalNextSiblingId IS NOT NULL) OR (newNextSiblingId IS NOT NULL AND newNextSiblingId <> _nodeId AND originalNextSiblingId IS NULL) OR (newNextSiblingId IS NOT NULL AND newNextSiblingId <> _nodeId AND originalNextSiblingId IS NOT NULL AND newNextSiblingId <> originalNextSiblingId)) THEN
+              SET changeMade = TRUE;
+            ELSEIF _newPreviousSiblingId IS NOT NULL AND ((newNextSiblingId IS NULL AND originalNextSiblingId IS NOT NULL) OR (newNextSiblingId IS NOT NULL AND newNextSiblingId <> _nodeId AND originalNextSiblingId IS NULL) OR (newNextSiblingId IS NOT NULL AND newNextSiblingId <> _nodeId AND originalNextSiblingId IS NOT NULL AND newNextSiblingId <> originalNextSiblingId)) THEN
               IF originalParentFirstChildId = _nodeId AND originalNextSiblingId IS NOT NULL THEN #moving the first child node
                 UPDATE nodes SET firstChild=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
               ELSE #moving a none first child node
@@ -685,35 +674,35 @@ BEGIN
                 END IF;
               END IF;
               UPDATE nodes SET nextSibling=newNextSiblingId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
-              UPDATE nodes SET nextSibling=_nodeId WHERE account=_accountId AND project=_projectId AND id=_newPreviousSibling;
-              SET changeMade=TRUE;
+              UPDATE nodes SET nextSibling=_nodeId WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId;
+              SET changeMade = TRUE;
             END IF;
           ELSE # this is the expensive complex move to make, to simplify we do not work out a shared ancestor node and perform operations up to that node
                # we fully remove the aggregated values all the way to the project node, then add them back in in the new location, this may result in more processing,
-               # but should still be efficient and simplify the code logic below. There are two special cases however which will be the most common types of these moves,
-               # moving up or down a parent level, these two special cases are handled with specific logic so the ancestor path is onlt traversed once.
-            SELECT COUNT(*)=1, parent, firstChild INTO newParentExists, newParentsParentId, newParentFirstChildId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newParentId;
+               # but should still be efficient and simplify the code logic below.
+            SELECT COUNT(*)=1, firstChild INTO newParentExists, newParentFirstChildId FROM nodes WHERE account=_accountId AND project=_projectId AND id=_newParentId;
             IF newParentExists THEN
-              IF _newParentId = originalParentsParentId THEN # special case we're moving up one level
-
-              ELSEIF newParentsParentId = originalParentId THEN #special case
-              END IF;
               #move the node
               #remove from original location
-              IF originalParentFirstChildId <> _nodeId THEN
-
-              ELSE
+              IF originalParentFirstChildId = _nodeId THEN #removing from first child position
                 UPDATE nodes SET firstChild=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+              ELSE #removing from none first child position
+                SELECT id INTO originalPreviousSiblingId FROM nodes WHERE account=_accountId AND project=_projectId AND nextSibling=_nodeId;
+                UPDATE nodes SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
               END IF;
-              IF _newPreviousSibling IS NULL THEN #moving to firstChild position
+              ##remove parent id so it isn't included in update in setAncestralChainAggregateValuesFromNode call
+              UPDATE nodes SET parent=NULL WHERE account=_accountId AND project=_projectId AND id=_nodeId;
+              CALL _setAncestralChainAggregateValuesFromNode(_accountId, _projectId, originalParentId);
 
+              #now add in the new position
+              IF _newPreviousSiblingId IS NULL THEN #moving to firstChild position
+                UPDATE nodes SET firstChild=_nodeId WHERE account=_accountId AND project=_projectId AND id=_newParentId;
+                UPDATE nodes SET parent=_newParentId, nextSibling=newParentFirstChildId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
               ELSE #moving to none firstChild position
-
+                UPDATE nodes SET nextSibling=_nodeId WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId;
+                UPDATE nodes SET parent=_newParentId, nextSibling=newNextSiblingId WHERE account=_accountId AND project=_projectId AND id=_nodeId;
               END IF;
-              #subtract the aggregated values from the original parent ancestors
-
-              #add the aggregated values to the new parent ancestors
-
+              CALL _setAncestralChainAggregateValuesFromNode(_accountId, _projectId, _newParentId);
               SET changeMade=TRUE;
             END IF;
           END IF;
@@ -748,14 +737,14 @@ CREATE PROCEDURE getNodes(_accountId BINARY(16), _projectId BINARY(16), _parentI
 $$
 DELIMITER ;
 
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
-#********************************MAGIC FUNCTION WARNING*********************************#
-# THIS FUNCTION MUST ONLY BE CALLED INTERNALLY BY THE ABOVE STORED PROCEDURES THAT HAVE #
-# SET THEIR OWN TRANSACTIONS AND PROJECTID LOCKS AND HAVE VALIDATED ALL INPUT PARAMS.   #                                                                                                  #
-#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
-DROP FUNCTION IF EXISTS setAncestralChainAggregateValuesFromNode;
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+#********************************MAGIC PROCEDURE WARNING*********************************#
+# THIS PROCEDURE MUST ONLY BE CALLED INTERNALLY BY THE ABOVE STORED PROCEDURES THAT HAVE #
+# SET THEIR OWN TRANSACTIONS AND PROJECTID LOCKS AND HAVE VALIDATED ALL INPUT PARAMS.    #                                                                                                  #
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+DROP PROCEDURE IF EXISTS _setAncestralChainAggregateValuesFromNode;
 DELIMITER $$
-CREATE FUNCTION setAncestralChainAggregateValuesFromNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16)) RETURNS VARCHAR(32000)
+CREATE PROCEDURE _setAncestralChainAggregateValuesFromNode(_accountId BINARY(16), _projectId BINARY(16), _nodeId BINARY(16))
   BEGIN
     DECLARE originalTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
     DECLARE originalTotalLoggedTime BIGINT UNSIGNED DEFAULT 0;
@@ -773,20 +762,17 @@ CREATE FUNCTION setAncestralChainAggregateValuesFromNode(_accountId BINARY(16), 
     DECLARE totalRemainingTimeChangeIsPositive BOOL DEFAULT TRUE;
     DECLARE totalLoggedTimeChangeIsPositive BOOL DEFAULT TRUE;
     DECLARE descendantCountChangeIsPositive BOOL DEFAULT TRUE;
-    DECLARE result VARCHAR(32000) DEFAULT '';
 
     SELECT totalRemainingTime, totalLoggedTime, minimumRemainingTime, childCount, descendantCount, isParallel, parent INTO originalTotalRemainingTime, originalTotalLoggedTime, preChangeMinimumRemainingTime, originalChildCount, originalDescendantCount, currentIsParallel, nextNode FROM nodes WHERE account = _accountId AND project = _projectId AND id = _nodeId;
     IF currentIsParallel THEN
-      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), MAX(minimumRemainingTime), SUM(*), SUM(descendantCount)INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM nodes WHERE account = _accountId AND project = _projectId AND parent = _nodeId;
+      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), MAX(minimumRemainingTime), COUNT(*), SUM(descendantCount)INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM nodes WHERE account = _accountId AND project = _projectId AND parent = _nodeId;
     ELSE                                                   #this is the only difference#
-      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), SUM(minimumRemainingTime), SUM(*), SUM(descendantCount)INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM nodes WHERE account = _accountId AND project = _projectId AND parent = _nodeId;
+      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), SUM(minimumRemainingTime), COUNT(*), SUM(descendantCount)INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM nodes WHERE account = _accountId AND project = _projectId AND parent = _nodeId;
     END IF;
     SET descendantCountChange = descendantCountChange + newChildCount;
 
     #the first node updated is special, it could have had a new child added or removed from it, so the childCount can be updated, no other ancestor will have the childCount updated
     UPDATE nodes SET totalRemainingTime = totalRemainingTimeChange, totalLoggedTime = totalLoggedTimeChange, minimumRemainingTime = postChangeMinimumRemainingTime, childCount = newChildCount, descendantCount = descendantCountChange WHERE account = _accountId AND project = _projectId AND id = _nodeId;
-
-    SET result = CONCAT(result, HEX(_nodeId));
 
     IF totalRemainingTimeChange >= originalTotalRemainingTime THEN
       SET totalRemainingTimeChange = totalRemainingTimeChange - originalTotalRemainingTime;
@@ -848,13 +834,9 @@ CREATE FUNCTION setAncestralChainAggregateValuesFromNode(_accountId BINARY(16), 
         UPDATE nodes SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account=_accountId AND project=_projectId AND id=_nodeId;
       END IF;
 
-      SET result = CONCAT(result, HEX(_nodeId));
-
       SET _nodeId=nextNode;
 
     END WHILE;
-
-    RETURN result;
   END;
 $$
 DELIMITER ;
