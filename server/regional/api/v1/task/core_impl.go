@@ -127,11 +127,13 @@ func (a *api) DeleteTask(shard int, accountId, projectId, taskId, myId Id) {
 
 func (a *api) GetTasks(shard int, accountId, projectId, myId Id, taskIds []Id) []*task {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
+	ValidateEntityCount(len(taskIds), a.maxProcessEntityCount)
 	return a.store.getTasks(shard, accountId, projectId, taskIds)
 }
 
 func (a *api) GetChildTasks(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*task {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
+	ValidateLimitParam(limit, a.maxProcessEntityCount)
 	return a.store.getChildTasks(shard, accountId, projectId, parentId, fromSibling, limit)
 }
 

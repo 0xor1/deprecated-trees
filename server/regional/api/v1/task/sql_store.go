@@ -4,6 +4,7 @@ import (
 	. "bitbucket.org/0xor1/task/server/misc"
 	"github.com/0xor1/isql"
 	"time"
+	"bytes"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -96,12 +97,24 @@ func (s *sqlStore) deleteTask(shard int, accountId, projectId, taskId Id) {
 	MakeChangeHelper(s.shards[shard], `CALL deleteTask(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId))
 }
 
-func (s *sqlStore) getTasks(shard int, accountId, projectId Id, taskId []Id) []*task {
-	row := s.shards[shard].QueryRow(`SELECT ... shit`, []byte(accountId), []byte(projectId))
-	n := task{}
-	PanicIf(row.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
-	nilOutPropertiesThatAreNotNilInTheDb(&n)
-	return []*task{}
+func (s *sqlStore) getTasks(shard int, accountId, projectId Id, taskIds []Id) []*task {
+	idsStr := bytes.NewBufferString(``)
+	for _, id := range taskIds {
+		idsStr.WriteString(id.String())
+	}
+	rows, err := s.shards[shard].Query(`CALL getTasks(?, ?, ?)`, []byte(accountId), []byte(projectId), idsStr.String())
+	if rows != nil {
+		defer rows.Close()
+	}
+	PanicIf(err)
+	res := make([]*task, 0, len(taskIds))
+	for rows.Next() {
+		t := task{}
+		PanicIf(rows.Scan(&t.Id, &t.IsAbstract, &t.Name, &t.Description, &t.CreatedOn, &t.TotalRemainingTime, &t.TotalLoggedTime, &t.MinimumRemainingTime, &t.LinkedFileCount, &t.ChatCount, &t.ChildCount, &t.DescendantCount, &t.IsParallel, &t.Member))
+		nilOutPropertiesThatAreNotNilInTheDb(&t)
+		res = append(res, &t)
+	}
+	return res
 }
 
 func (s *sqlStore) getChildTasks(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*task {
@@ -116,19 +129,19 @@ func (s *sqlStore) getChildTasks(shard int, accountId, projectId, parentId Id, f
 	PanicIf(err)
 	res := make([]*task, 0, limit)
 	for rows.Next() {
-		n := task{}
-		PanicIf(rows.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
-		nilOutPropertiesThatAreNotNilInTheDb(&n)
-		res = append(res, &n)
+		t := task{}
+		PanicIf(rows.Scan(&t.Id, &t.IsAbstract, &t.Name, &t.Description, &t.CreatedOn, &t.TotalRemainingTime, &t.TotalLoggedTime, &t.MinimumRemainingTime, &t.LinkedFileCount, &t.ChatCount, &t.ChildCount, &t.DescendantCount, &t.IsParallel, &t.Member))
+		nilOutPropertiesThatAreNotNilInTheDb(&t)
+		res = append(res, &t)
 	}
 	return res
 }
 
-func nilOutPropertiesThatAreNotNilInTheDb(n *task) {
-	if !n.IsAbstract {
-		n.MinimumRemainingTime = nil
-		n.ChildCount = nil
-		n.DescendantCount = nil
-		n.IsParallel = nil
+func nilOutPropertiesThatAreNotNilInTheDb(t *task) {
+	if !t.IsAbstract {
+		t.MinimumRemainingTime = nil
+		t.ChildCount = nil
+		t.DescendantCount = nil
+		t.IsParallel = nil
 	}
 }

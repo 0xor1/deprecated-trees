@@ -795,11 +795,79 @@ END;
 $$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS getTasks;
+DELIMITER $$
+CREATE PROCEDURE getTasks(_accountId BINARY(16), _projectId BINARY(16), _taskIdsStr VARCHAR(16000)) #16000 == 500 uuids
+  BEGIN
+    DECLARE projectExists BOOL DEFAULT FALSE;
+    DECLARE taskIdsStrLen INT DEFAULT LENGTH(_taskIdsStr);
+    DECLARE offset INT DEFAULT 0;
+    DROP TEMPORARY TABLE IF EXISTS tempIds;
+    CREATE TEMPORARY TABLE tempIds(
+      id BINARY(16) NOT NULL,
+      PRIMARY KEY (id)
+    );
+    START TRANSACTION;
+
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId LOCK IN SHARE MODE;
+    IF projectExists AND taskIdsStrLen > 0 AND taskIdsStrLen % 32 = 0 THEN
+      WHILE offset < taskIdsStrLen DO
+        INSERT INTO tempIds VALUE (UNHEX(SUBSTRING(_taskIdsStr, offset + 1, 32)));
+        SET offset = offset + 32;
+      END WHILE;
+    END IF;
+    SELECT id, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account=_accountId AND project=_projectId AND id IN (SELECT id FROM tempIds);
+    DROP TEMPORARY TABLE IF EXISTS tempIds;
+    COMMIT;
+  END;
+$$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS getChildTasks;
 DELIMITER $$
 CREATE PROCEDURE getChildTasks(_accountId BINARY(16), _projectId BINARY(16), _parentId BINARY(16), _fromSiblingId BINARY(16), _limit INT)
   BEGIN
-    #TODO
+    DECLARE projectExists BOOL DEFAULT FALSE;
+    DECLARE idVariable BINARY(16) DEFAULT NULL;
+    DECLARE idx INT DEFAULT 0;
+    DROP TEMPORARY TABLE IF EXISTS tempResult;
+    CREATE TEMPORARY TABLE tempResult(
+      selectOrder INT NOT NULL,
+      nextSibling BINARY(16) NULL,
+      id BINARY(16) NOT NULL,
+      isAbstract BOOL NOT NULL,
+      name VARCHAR(250) NOT NULL,
+      description VARCHAR(1250) NULL,
+      createdOn DATETIME NOT NULL,
+      totalRemainingTime BIGINT UNSIGNED NOT NULL,
+      totalLoggedTime BIGINT UNSIGNED NOT NULL,
+      minimumRemainingTime BIGINT UNSIGNED NOT NULL,
+      linkedFileCount INT UNSIGNED NOT NULL,
+      chatCount BIGINT UNSIGNED NOT NULL,
+      childCount BIGINT UNSIGNED NOT NULL,
+      descendantCount BIGINT UNSIGNED NOT NULL,
+      isParallel BOOL NOT NULL DEFAULT FALSE,
+      member BINARY(16) NULL,
+      PRIMARY KEY (selectOrder)
+    );
+    START TRANSACTION;
+
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId LOCK IN SHARE MODE;
+    IF projectExists THEN
+      IF _fromSiblingId IS NOT NULL THEN
+        SELECT nextSibling INTO idVariable FROM tasks WHERE account=_accountId AND project=_projectId AND id=_fromSiblingId AND parent=_parentId;
+      ELSE
+        SELECT firstChild INTO idVariable FROM tasks WHERE account=_accountId AND project=_projectId AND id=_parentId;
+      END IF;
+      WHILE idVariable IS NOT NULL AND idx < _limit DO
+        INSERT INTO tempResult SELECT idx, nextSibling, id, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account=_accountId AND project=_projectId AND id=idVariable;
+        SELECT nextSibling INTO idVariable FROM tempResult WHERE selectOrder = idx;
+        SET idx = idx + 1;
+      END WHILE;
+    END IF;
+    SELECT id, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tempResult ORDER BY selectOrder ASC;
+    DROP TEMPORARY TABLE IF EXISTS tempResult;
+    COMMIT;
   END;
 $$
 DELIMITER ;
