@@ -87,7 +87,7 @@ func Test_system(t *testing.T) {
 	api.SetMember(0, orgId, project.Id, taskM.Id, ali.Id, &cat.Id)
 	api.SetRemainingTime(0, orgId, project.Id, taskG.Id, cat.Id, 1)
 	note := "word up!"
-	tl := api.SetRemainingTimeAndLogTime(0, orgId, project.Id, taskG.Id, 30, cat.Id, 40, &note)
+	tl := api.SetRemainingTimeAndLogTime(0, orgId, project.Id, taskG.Id, cat.Id, 30, 40, &note)
 	assert.Equal(t, uint64(40), tl.Duration)
 
 	api.MoveTask(0, orgId, project.Id, taskG.Id, ali.Id, taskA.Id, nil)

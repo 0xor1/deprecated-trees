@@ -2,9 +2,9 @@ package task
 
 import (
 	. "bitbucket.org/0xor1/task/server/misc"
+	"bytes"
 	"github.com/0xor1/isql"
 	"time"
-	"bytes"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {

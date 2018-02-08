@@ -77,39 +77,39 @@ func (a *api) SetMember(shard int, accountId, projectId, taskId, myId Id, member
 }
 
 func (a *api) SetRemainingTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining uint64) {
-	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
-
-	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, &timeRemaining, nil, nil, nil)
+	a.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, &timeRemaining, nil, nil)
 }
 
 func (a *api) LogTime(shard int, accountId, projectId, taskId Id, myId Id, duration uint64, note *string) *timeLog {
-	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
-
-	loggedOn := Now()
-	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId,nil, &loggedOn, &duration, note)
-	return &timeLog{
-		Project:  projectId,
-		Task:     taskId,
-		Member:   myId,
-		LoggedOn: loggedOn,
-		Duration: duration,
-		Note:     note,
-	}
+	return a.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, nil, &duration, note)
 }
 
-func (a *api) SetRemainingTimeAndLogTime(shard int, accountId, projectId, taskId Id, timeRemaining uint64, myId Id, duration uint64, note *string) *timeLog {
-	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
+func (a *api) SetRemainingTimeAndLogTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining uint64, duration uint64, note *string) *timeLog {
+	return a.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, &timeRemaining, &duration, note)
+}
+
+func (a *api) setRemainingTimeAndOrLogTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining *uint64, duration *uint64, note *string) *timeLog {
+	if duration != nil {
+		ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
+	} else if timeRemaining != nil {
+		ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
+	} else {
+		InvalidArgumentsErr.Panic()
+	}
 
 	loggedOn := Now()
-	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, &timeRemaining, &loggedOn, &duration, note)
-	return &timeLog{
-		Project:  projectId,
-		Task:     taskId,
-		Member:   myId,
-		LoggedOn: loggedOn,
-		Duration: duration,
-		Note:     note,
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, timeRemaining, &loggedOn, duration, note)
+	if duration != nil {
+		return &timeLog{
+			Project:  projectId,
+			Task:     taskId,
+			Member:   myId,
+			LoggedOn: loggedOn,
+			Duration: *duration,
+			Note:     note,
+		}
 	}
+	return nil
 }
 
 func (a *api) MoveTask(shard int, accountId, projectId, taskId, myId, parentId Id, nextSibling *Id) {

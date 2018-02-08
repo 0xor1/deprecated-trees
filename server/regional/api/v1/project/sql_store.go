@@ -90,7 +90,7 @@ func (s *sqlStore) setMemberRole(shard int, accountId, projectId, myId, member I
 }
 
 func (s *sqlStore) setMemberInactive(shard int, accountId, projectId, myId Id, member Id) {
-	MakeChangeHelper(s.shards[shard],`CALL setProjectMemberInactive(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), []byte(member))
+	MakeChangeHelper(s.shards[shard], `CALL setProjectMemberInactive(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(myId), []byte(member))
 }
 
 func (s *sqlStore) getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameOrDisplayNameContains *string, after *Id, limit int) ([]*member, bool) {
