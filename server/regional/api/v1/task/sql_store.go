@@ -35,7 +35,7 @@ func (s *sqlStore) getAccountAndProjectRolesAndProjectIsPublic(shard int, accoun
 	return GetAccountAndProjectRolesAndProjectIsPublic(s.shards[shard], accountId, projectId, memberId)
 }
 
-func (s *sqlStore) createNode(shard int, accountId, projectId, parentId, myId Id, nextSibling *Id, newNode *node) {
+func (s *sqlStore) createTask(shard int, accountId, projectId, parentId, myId Id, nextSibling *Id, newTask *task) {
 	args := make([]interface{}, 0, 18)
 	args = append(args, []byte(accountId), []byte(projectId), []byte(parentId), []byte(myId))
 	if nextSibling != nil {
@@ -43,80 +43,80 @@ func (s *sqlStore) createNode(shard int, accountId, projectId, parentId, myId Id
 	} else {
 		args = append(args, nil)
 	}
-	args = append(args, []byte(newNode.Id))
-	args = append(args, newNode.IsAbstract)
-	args = append(args, newNode.Name)
-	args = append(args, newNode.Description)
-	args = append(args, newNode.CreatedOn)
-	args = append(args, newNode.TotalRemainingTime)
-	args = append(args, newNode.IsParallel)
-	if newNode.Member != nil {
-		args = append(args, []byte(*newNode.Member))
+	args = append(args, []byte(newTask.Id))
+	args = append(args, newTask.IsAbstract)
+	args = append(args, newTask.Name)
+	args = append(args, newTask.Description)
+	args = append(args, newTask.CreatedOn)
+	args = append(args, newTask.TotalRemainingTime)
+	args = append(args, newTask.IsParallel)
+	if newTask.Member != nil {
+		args = append(args, []byte(*newTask.Member))
 	} else {
 		args = append(args, nil)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL createNode(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
+	MakeChangeHelper(s.shards[shard], `CALL createTask(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
 }
 
-func (s *sqlStore) setName(shard int, accountId, projectId, nodeId, myId Id, name string) {
-	_, err := s.shards[shard].Exec(`CALL setNodeName(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), name)
+func (s *sqlStore) setName(shard int, accountId, projectId, taskId, myId Id, name string) {
+	_, err := s.shards[shard].Exec(`CALL setTaskName(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(myId), name)
 	PanicIf(err)
 }
 
-func (s *sqlStore) setDescription(shard int, accountId, projectId, nodeId, myId Id, description *string) {
-	_, err := s.shards[shard].Exec(`CALL setNodeDescription(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), description)
+func (s *sqlStore) setDescription(shard int, accountId, projectId, taskId, myId Id, description *string) {
+	_, err := s.shards[shard].Exec(`CALL setTaskDescription(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(myId), description)
 	PanicIf(err)
 }
 
-func (s *sqlStore) setIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool) {
-	MakeChangeHelper(s.shards[shard], `CALL setNodeIsParallel(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), isParallel)
+func (s *sqlStore) setIsParallel(shard int, accountId, projectId, taskId, myId Id, isParallel bool) {
+	MakeChangeHelper(s.shards[shard], `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(myId), isParallel)
 }
 
-func (s *sqlStore) setMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id) {
+func (s *sqlStore) setMember(shard int, accountId, projectId, taskId, myId Id, memberId *Id) {
 	var memArg []byte
 	if memberId != nil {
 		memArg = []byte(*memberId)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL setNodeMember(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), memArg)
+	MakeChangeHelper(s.shards[shard], `CALL setTaskMember(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(myId), memArg)
 }
 
-func (s *sqlStore) setRemainingTimeAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	MakeChangeHelper(s.shards[shard], `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(myId), timeRemaining, loggedOn, duration, note)
+func (s *sqlStore) setRemainingTimeAndOrLogTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string) {
+	MakeChangeHelper(s.shards[shard], `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(myId), timeRemaining, loggedOn, duration, note)
 }
 
-func (s *sqlStore) moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, newPreviousSibling *Id) {
+func (s *sqlStore) moveTask(shard int, accountId, projectId, taskId, parentId, myId Id, newPreviousSibling *Id) {
 	var prevSib []byte
 	if newPreviousSibling != nil {
 		prevSib = []byte(*newPreviousSibling)
 	}
-	MakeChangeHelper(s.shards[shard], `CALL moveNode(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId), []byte(parentId), []byte(myId), prevSib)
+	MakeChangeHelper(s.shards[shard], `CALL moveTask(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(parentId), []byte(myId), prevSib)
 }
 
-func (s *sqlStore) deleteNode(shard int, accountId, projectId, nodeId Id) {
-	MakeChangeHelper(s.shards[shard], `CALL deleteNode(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(nodeId))
+func (s *sqlStore) deleteTask(shard int, accountId, projectId, taskId Id) {
+	MakeChangeHelper(s.shards[shard], `CALL deleteTask(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId))
 }
 
-func (s *sqlStore) getNodes(shard int, accountId, projectId Id, nodeId []Id) []*node {
+func (s *sqlStore) getTasks(shard int, accountId, projectId Id, taskId []Id) []*task {
 	row := s.shards[shard].QueryRow(`SELECT ... shit`, []byte(accountId), []byte(projectId))
-	n := node{}
+	n := task{}
 	PanicIf(row.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
 	nilOutPropertiesThatAreNotNilInTheDb(&n)
-	return []*node{}
+	return []*task{}
 }
 
-func (s *sqlStore) getChildNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node {
+func (s *sqlStore) getChildTasks(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*task {
 	var fromSib []byte
 	if fromSibling != nil {
 		fromSib = []byte(*fromSibling)
 	}
-	rows, err := s.shards[shard].Query(`CALL getNodes(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(parentId), fromSib, limit)
+	rows, err := s.shards[shard].Query(`CALL getChildTasks(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(parentId), fromSib, limit)
 	if rows != nil {
 		defer rows.Close()
 	}
 	PanicIf(err)
-	res := make([]*node, 0, limit)
+	res := make([]*task, 0, limit)
 	for rows.Next() {
-		n := node{}
+		n := task{}
 		PanicIf(rows.Scan(&n.Id, &n.IsAbstract, &n.Name, &n.Description, &n.CreatedOn, &n.TotalRemainingTime, &n.TotalLoggedTime, &n.MinimumRemainingTime, &n.LinkedFileCount, &n.ChatCount, &n.ChildCount, &n.DescendantCount, &n.IsParallel, &n.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&n)
 		res = append(res, &n)
@@ -124,7 +124,7 @@ func (s *sqlStore) getChildNodes(shard int, accountId, projectId, parentId Id, f
 	return res
 }
 
-func nilOutPropertiesThatAreNotNilInTheDb(n *node) {
+func nilOutPropertiesThatAreNotNilInTheDb(n *task) {
 	if !n.IsAbstract {
 		n.MinimumRemainingTime = nil
 		n.ChildCount = nil

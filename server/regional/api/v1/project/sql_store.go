@@ -53,7 +53,7 @@ func (s *sqlStore) setIsPublic(shard int, accountId, projectId, myId Id, isPubli
 }
 
 func (s *sqlStore) getProject(shard int, accountId, projectId Id) *project {
-	row := s.shards[shard].QueryRow(`SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, n.description, n.totalRemainingTime, n.totalLoggedTime, n.minimumRemainingTime, n.linkedFileCount, n.chatCount, n.childCount, n.descendantCount, n.isParallel FROM projects p, nodes n WHERE p.account=? AND p.id=? AND n.account=? AND n.project=? AND n.id=?`, []byte(accountId), []byte(projectId), []byte(accountId), []byte(projectId), []byte(projectId))
+	row := s.shards[shard].QueryRow(`SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, []byte(accountId), []byte(projectId), []byte(accountId), []byte(projectId), []byte(projectId))
 	result := project{}
 	PanicIf(row.Scan(&result.Id, &result.IsArchived, &result.Name, &result.CreatedOn, &result.StartOn, &result.DueOn, &result.FileCount, &result.FileSize, &result.IsPublic, &result.Description, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel))
 	return &result
@@ -237,7 +237,7 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		resIdx[proj.Id.String()] = idx
 		idx++
 	}
-	if len(res) > 0 { //populate node properties
+	if len(res) > 0 { //populate task properties
 		var id Id
 		var description *string
 		var totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount uint64
@@ -245,7 +245,7 @@ func getProjects(shard isql.ReplicaSet, specificSqlFilterTxt string, accountId I
 		query.Reset()
 		args = make([]interface{}, 0, len(res)+1)
 		args = append(args, []byte(accountId), []byte(res[0].Id))
-		query.WriteString(`SELECT id, description, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel FROM nodes WHERE account=? AND project=id AND project IN (?`)
+		query.WriteString(`SELECT id, description, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel FROM tasks WHERE account=? AND project=id AND project IN (?`)
 		for _, proj := range res[1:] {
 			query.WriteString(`,?`)
 			args = append(args, []byte(proj.Id))

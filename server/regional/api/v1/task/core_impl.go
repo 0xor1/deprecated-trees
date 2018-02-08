@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	itemType = "node"
+	itemType = "task"
 )
 
 type api struct {
@@ -14,7 +14,7 @@ type api struct {
 	maxProcessEntityCount int
 }
 
-func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) *node {
+func (a *api) CreateTask(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) *task {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	if (isAbstract && (isParallel == nil || memberId != nil || totalRemainingTime != nil)) || (!isAbstract && (isParallel != nil || totalRemainingTime == nil)) {
 		InvalidArgumentsErr.Panic()
@@ -26,10 +26,10 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, pre
 	} else {
 		totalRemainingTime = zeroPtr
 	}
-	if memberId != nil { //if a member is being assigned to the node then we need to check they have project write access
+	if memberId != nil { //if a member is being assigned to the task then we need to check they have project write access
 		ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, *memberId))
 	}
-	newNode := &node{
+	newTask := &task{
 		Id:                   NewId(),
 		IsAbstract:           isAbstract,
 		Name:                 name,
@@ -42,54 +42,54 @@ func (a *api) CreateNode(shard int, accountId, projectId, parentId, myId Id, pre
 		IsParallel:           isParallel,
 		Member:               memberId,
 	}
-	a.store.createNode(shard, accountId, projectId, parentId, myId, previousSibling, newNode)
-	return newNode
+	a.store.createTask(shard, accountId, projectId, parentId, myId, previousSibling, newTask)
+	return newTask
 }
 
-func (a *api) SetName(shard int, accountId, projectId, nodeId, myId Id, name string) {
-	if projectId.Equal(nodeId) {
+func (a *api) SetName(shard int, accountId, projectId, taskId, myId Id, name string) {
+	if projectId.Equal(taskId) {
 		ValidateMemberHasAccountAdminAccess(a.store.getAccountRole(shard, accountId, myId))
 	} else {
 		ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	}
 
-	a.store.setName(shard, accountId, projectId, nodeId, myId, name)
+	a.store.setName(shard, accountId, projectId, taskId, myId, name)
 }
 
-func (a *api) SetDescription(shard int, accountId, projectId, nodeId, myId Id, description *string) {
+func (a *api) SetDescription(shard int, accountId, projectId, taskId, myId Id, description *string) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setDescription(shard, accountId, projectId, nodeId, myId, description)
+	a.store.setDescription(shard, accountId, projectId, taskId, myId, description)
 }
 
-func (a *api) SetIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool) {
+func (a *api) SetIsParallel(shard int, accountId, projectId, taskId, myId Id, isParallel bool) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setIsParallel(shard, accountId, projectId, nodeId, myId, isParallel)
+	a.store.setIsParallel(shard, accountId, projectId, taskId, myId, isParallel)
 }
 
-func (a *api) SetMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id) {
+func (a *api) SetMember(shard int, accountId, projectId, taskId, myId Id, memberId *Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 	if memberId != nil {
 		ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, *memberId))
 	}
-	a.store.setMember(shard, accountId, projectId, nodeId, myId, memberId)
+	a.store.setMember(shard, accountId, projectId, taskId, myId, memberId)
 }
 
-func (a *api) SetRemainingTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining uint64) {
+func (a *api) SetRemainingTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining uint64) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, nil, nil, nil)
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, &timeRemaining, nil, nil, nil)
 }
 
-func (a *api) LogTime(shard int, accountId, projectId, nodeId Id, myId Id, duration uint64, note *string) *timeLog {
+func (a *api) LogTime(shard int, accountId, projectId, taskId Id, myId Id, duration uint64, note *string) *timeLog {
 	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
 	loggedOn := Now()
-	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, nodeId, myId,nil, &loggedOn, &duration, note)
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId,nil, &loggedOn, &duration, note)
 	return &timeLog{
 		Project:  projectId,
-		Node:     nodeId,
+		Task:     taskId,
 		Member:   myId,
 		LoggedOn: loggedOn,
 		Duration: duration,
@@ -97,14 +97,14 @@ func (a *api) LogTime(shard int, accountId, projectId, nodeId Id, myId Id, durat
 	}
 }
 
-func (a *api) SetRemainingTimeAndLogTime(shard int, accountId, projectId, nodeId Id, timeRemaining uint64, myId Id, duration uint64, note *string) *timeLog {
+func (a *api) SetRemainingTimeAndLogTime(shard int, accountId, projectId, taskId Id, timeRemaining uint64, myId Id, duration uint64, note *string) *timeLog {
 	ValidateMemberIsAProjectMemberWithWriteAccess(a.store.getProjectRole(shard, accountId, projectId, myId))
 
 	loggedOn := Now()
-	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, nodeId, myId, &timeRemaining, &loggedOn, &duration, note)
+	a.store.setRemainingTimeAndOrLogTime(shard, accountId, projectId, taskId, myId, &timeRemaining, &loggedOn, &duration, note)
 	return &timeLog{
 		Project:  projectId,
-		Node:     nodeId,
+		Task:     taskId,
 		Member:   myId,
 		LoggedOn: loggedOn,
 		Duration: duration,
@@ -112,27 +112,27 @@ func (a *api) SetRemainingTimeAndLogTime(shard int, accountId, projectId, nodeId
 	}
 }
 
-func (a *api) MoveNode(shard int, accountId, projectId, nodeId, myId, parentId Id, nextSibling *Id) {
+func (a *api) MoveTask(shard int, accountId, projectId, taskId, myId, parentId Id, nextSibling *Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.moveNode(shard, accountId, projectId, nodeId, parentId, myId, nextSibling)
+	a.store.moveTask(shard, accountId, projectId, taskId, parentId, myId, nextSibling)
 }
 
-func (a *api) DeleteNode(shard int, accountId, projectId, nodeId, myId Id) {
+func (a *api) DeleteTask(shard int, accountId, projectId, taskId, myId Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.deleteNode(shard, accountId, projectId, nodeId)
-	//TODO put in Stored Proc a.store.logProjectActivity(shard, accountId, projectId, myId, nodeId, itemType, "moveNode", nil)
+	a.store.deleteTask(shard, accountId, projectId, taskId)
+	//TODO put in Stored Proc a.store.logProjectActivity(shard, accountId, projectId, myId, taskId, itemType, "moveTask", nil)
 }
 
-func (a *api) GetNodes(shard int, accountId, projectId, myId Id, nodeIds []Id) []*node {
+func (a *api) GetTasks(shard int, accountId, projectId, myId Id, taskIds []Id) []*task {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getNodes(shard, accountId, projectId, nodeIds)
+	return a.store.getTasks(shard, accountId, projectId, taskIds)
 }
 
-func (a *api) GetChildNodes(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*node {
+func (a *api) GetChildTasks(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*task {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getChildNodes(shard, accountId, projectId, parentId, fromSibling, limit)
+	return a.store.getChildTasks(shard, accountId, projectId, parentId, fromSibling, limit)
 }
 
 type store interface {
@@ -140,19 +140,19 @@ type store interface {
 	getAccountAndProjectRoles(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole)
 	getProjectRole(shard int, accountId, projectId, memberId Id) *ProjectRole
 	getAccountAndProjectRolesAndProjectIsPublic(shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool)
-	createNode(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, newNode *node)
-	setName(shard int, accountId, projectId, nodeId, myId Id, name string)
-	setDescription(shard int, accountId, projectId, nodeId, myId Id, description *string)
-	setIsParallel(shard int, accountId, projectId, nodeId, myId Id, isParallel bool)
-	setMember(shard int, accountId, projectId, nodeId, myId Id, memberId *Id)
-	setRemainingTimeAndOrLogTime(shard int, accountId, projectId, nodeId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
-	moveNode(shard int, accountId, projectId, nodeId, parentId, myId Id, nextSibling *Id)
-	deleteNode(shard int, accountId, projectId, nodeId Id)
-	getNodes(shard int, accountId, projectId Id, nodeIds []Id) []*node
-	getChildNodes(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*node
+	createTask(shard int, accountId, projectId, parentId, myId Id, previousSibling *Id, newTask *task)
+	setName(shard int, accountId, projectId, taskId, myId Id, name string)
+	setDescription(shard int, accountId, projectId, taskId, myId Id, description *string)
+	setIsParallel(shard int, accountId, projectId, taskId, myId Id, isParallel bool)
+	setMember(shard int, accountId, projectId, taskId, myId Id, memberId *Id)
+	setRemainingTimeAndOrLogTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
+	moveTask(shard int, accountId, projectId, taskId, parentId, myId Id, nextSibling *Id)
+	deleteTask(shard int, accountId, projectId, taskId Id)
+	getTasks(shard int, accountId, projectId Id, taskIds []Id) []*task
+	getChildTasks(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*task
 }
 
-type node struct {
+type task struct {
 	Id                   Id        `json:"id"`
 	IsAbstract           bool      `json:"isAbstract"`
 	Name                 string    `json:"name"`
@@ -160,21 +160,21 @@ type node struct {
 	CreatedOn            time.Time `json:"createdOn"`
 	TotalRemainingTime   uint64    `json:"totalRemainingTime"`
 	TotalLoggedTime      uint64    `json:"totalLoggedTime"`
-	MinimumRemainingTime *uint64   `json:"minimumRemainingTime,omitempty"` //only abstract nodes
+	MinimumRemainingTime *uint64   `json:"minimumRemainingTime,omitempty"` //only abstract tasks
 	LinkedFileCount      uint64    `json:"linkedFileCount"`
 	ChatCount            uint64    `json:"chatCount"`
-	ChildCount           *uint64   `json:"childCount,omitempty"`      //only abstract nodes
-	DescendantCount      *uint64   `json:"descendantCount,omitempty"` //only abstract nodes
-	IsParallel           *bool     `json:"isParallel,omitempty"`      //only abstract nodes
-	Member               *Id       `json:"member,omitempty"`          //only task nodes
+	ChildCount           *uint64   `json:"childCount,omitempty"`      //only abstract tasks
+	DescendantCount      *uint64   `json:"descendantCount,omitempty"` //only abstract tasks
+	IsParallel           *bool     `json:"isParallel,omitempty"`      //only abstract tasks
+	Member               *Id       `json:"member,omitempty"`          //only task tasks
 }
 
 type timeLog struct {
 	Project  Id        `json:"project"`
-	Node     Id        `json:"node"`
+	Task     Id        `json:"task"`
 	Member   Id        `json:"member"`
 	LoggedOn time.Time `json:"loggedOn"`
-	NodeName string    `json:"nodeName"`
+	TaskName string    `json:"taskName"`
 	Duration uint64    `json:"duration"`
 	Note     *string   `json:"note"`
 }
