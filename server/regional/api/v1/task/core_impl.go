@@ -1,7 +1,7 @@
 package task
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"time"
 )
 
@@ -121,8 +121,7 @@ func (a *api) MoveTask(shard int, accountId, projectId, taskId, myId, parentId I
 func (a *api) DeleteTask(shard int, accountId, projectId, taskId, myId Id) {
 	ValidateMemberHasProjectWriteAccess(a.store.getAccountAndProjectRoles(shard, accountId, projectId, myId))
 
-	a.store.deleteTask(shard, accountId, projectId, taskId)
-	//TODO put in Stored Proc a.store.logProjectActivity(shard, accountId, projectId, myId, taskId, itemType, "moveTask", nil)
+	a.store.deleteTask(shard, accountId, projectId, taskId, myId)
 }
 
 func (a *api) GetTasks(shard int, accountId, projectId, myId Id, taskIds []Id) []*task {
@@ -149,7 +148,7 @@ type store interface {
 	setMember(shard int, accountId, projectId, taskId, myId Id, memberId *Id)
 	setRemainingTimeAndOrLogTime(shard int, accountId, projectId, taskId, myId Id, timeRemaining *uint64, loggedOn *time.Time, duration *uint64, note *string)
 	moveTask(shard int, accountId, projectId, taskId, parentId, myId Id, nextSibling *Id)
-	deleteTask(shard int, accountId, projectId, taskId Id)
+	deleteTask(shard int, accountId, projectId, taskId, myId Id)
 	getTasks(shard int, accountId, projectId Id, taskIds []Id) []*task
 	getChildTasks(shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*task
 }

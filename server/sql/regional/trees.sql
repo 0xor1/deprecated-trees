@@ -36,7 +36,7 @@ CREATE TABLE accountActivities(
   itemType VARCHAR(100) NOT NULL,
   action VARCHAR(100) NOT NULL,
   itemName VARCHAR(250) NULL,
-  newValue VARCHAR(1250) NULL,
+  extraInfo VARCHAR(1250) NULL,
   PRIMARY KEY (account, occurredOn, item, member),
   UNIQUE INDEX (account, item, occurredOn, member),
   UNIQUE INDEX (account, member, occurredOn, item)
@@ -71,7 +71,7 @@ CREATE TABLE projectActivities(
   itemType VARCHAR(100) NOT NULL,
   action VARCHAR(100) NOT NULL,
   itemName VARCHAR(250) NULL,
-  newValue VARCHAR(1250) NULL,
+  extraInfo VARCHAR(1250) NULL,
   PRIMARY KEY (account, project, occurredOn, item, member),
   UNIQUE INDEX (account, project, item, occurredOn, member),
   UNIQUE INDEX (account, project, member, occurredOn, item),
@@ -154,7 +154,7 @@ CREATE PROCEDURE registerAccount(_accountId BINARY(16), _myId BINARY(16), _myNam
 BEGIN
 	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_accountId, false);
   INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_accountId, _myId, _myName, _myDisplayName, true, 0);
-  INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'created', NULL, NULL);
+  INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'created', NULL, NULL);
 END;
 $$
 DELIMITER ;
@@ -226,9 +226,9 @@ CREATE PROCEDURE setPublicProjectsEnabled(_accountId BINARY(16), _myId BINARY(16
       UPDATE projects SET isPublic=FALSE WHERE account=_accountId;
     END IF;
     IF _enabled THEN
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'setPublicProjectsEnabled', NULL, 'true');
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'setPublicProjectsEnabled', NULL, 'true');
     ELSE
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'setPublicProjectsEnabled', NULL, 'false');
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _accountId, 'account', 'setPublicProjectsEnabled', NULL, 'false');
     END IF;
   END;
 $$
@@ -243,7 +243,7 @@ CREATE PROCEDURE setAccountMemberRole(_accountId BINARY(16), _myId BINARY(16), _
     START TRANSACTION;
     IF memberExists THEN
       UPDATE accountMembers SET role=_role WHERE account=_accountId AND id=_memberId AND isActive=TRUE;
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setRole', NULL, CAST(_role as char character set utf8));
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setRole', NULL, CAST(_role as char character set utf8));
     END IF;
     COMMIT;
     SELECT memberExists;
@@ -258,8 +258,8 @@ CREATE PROCEDURE createProject(_accountId BINARY(16), _id BINARY(16), _myId BINA
     INSERT INTO projectLocks (account, id) VALUES(_accountId, _id);
     INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_accountId, _id, FALSE, _name, _createdOn, _startOn, _dueOn, 0, 0, _isPublic);
     INSERT INTO tasks (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId, _id, _id, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, 0, 0, 0, 0, 0, 0, 0, _isParallel, NULL);
-    INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _id, 'project', 'created', _name, NULL);
-    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _id, UTC_TIMESTAMP(6), _myId, _id, 'project', 'created', NULL, NULL);
+    INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _id, 'project', 'created', _name, NULL);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _id, UTC_TIMESTAMP(6), _myId, _id, 'project', 'created', NULL, NULL);
   END;
 $$
 DELIMITER ;
@@ -272,11 +272,11 @@ CREATE PROCEDURE setProjectIsPublic(_accountId BINARY(16), _projectId BINARY(16)
     SELECT name INTO projName FROM projects WHERE account=_accountId AND id=_projectId;
     UPDATE projects SET isPublic=_isPublic WHERE account=_accountId AND id=_projectId;
     IF _isPublic THEN
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'true');
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', NULL, 'true');
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'true');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', NULL, 'true');
     ELSE
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'false');
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', NULL, 'false');
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', projName, 'false');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsPublic', NULL, 'false');
     END IF;
   END;
 $$
@@ -290,11 +290,11 @@ CREATE PROCEDURE setProjectIsArchived(_accountId BINARY(16), _projectId BINARY(1
     SELECT name INTO projName FROM projects WHERE account=_accountId AND id=_projectId;
     UPDATE projects SET isArchived=_isArchived WHERE account=_accountId AND id=_projectId;
     IF _isArchived THEN
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'true');
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', NULL, 'true');
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'true');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', NULL, 'true');
     ELSE
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'false');
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', NULL, 'false');
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', projName, 'false');
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'setIsArchived', NULL, 'false');
     END IF;
   END;
 $$
@@ -312,7 +312,7 @@ BEGIN
 	DELETE FROM projects WHERE account=_accountId AND id=_projectId;
 	DELETE FROM tasks WHERE account=_accountId AND project=_projectId;
 	DELETE FROM timeLogs WHERE account=_accountId AND project=_projectId;
-  INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'deleted', projName, NULL);
+  INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, UTC_TIMESTAMP(6), _myId, _projectId, 'project', 'deleted', projName, NULL);
 END;
 $$
 DELIMITER ;
@@ -330,7 +330,7 @@ BEGIN
   IF projMemberExists AND projMemberIsActive=false THEN #setting previous member back to active, still need to check if they are an active account member
     IF (SELECT COUNT(*) FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true) THEN #if active account member then add them to the project
       UPDATE projectMembers SET role=_role, isActive=true WHERE account=_accountId AND project=_projectId AND id=_id;
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'added', NULL, NULL);
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'added', NULL, NULL);
       SET changeMade = true;
     END IF;
 	ELSEIF NOT projMemberExists THEN #adding new project member, need to check if they are active account member
@@ -338,7 +338,7 @@ BEGIN
 			SELECT name, displayName INTO accMemberName, accMemberDisplayName FROM accountMembers WHERE account=_accountId AND id=_id AND isActive=true LOCK IN SHARE MODE;
 			IF accMemberName IS NOT NULL AND accMemberName <> '' THEN #if active account member then add them to the project
 				INSERT INTO projectMembers (account, project, id, name, displayName, isActive, totalRemainingTime, totalLoggedTime, role) VALUES (_accountId, _projectId, _id, accMemberName, accMemberDisplayName, true, 0, 0, _role);
-        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'added', NULL, NULL);
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'added', NULL, NULL);
         SET changeMade = true;
 			END IF;
     COMMIT;
@@ -363,7 +363,7 @@ BEGIN
       IF projMemberExists THEN
         UPDATE tasks SET member=NULL WHERE account=_accountId AND project=_projectId AND member=_id;
         UPDATE projectMembers SET totalRemainingTime=0 WHERE account=_accountId AND project=_projectId AND id=_id;
-        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'removed', NULL, NULL);
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _id, 'member', 'removed', NULL, NULL);
         SET changeMade = true;
       END IF;
     END IF;
@@ -382,7 +382,7 @@ CREATE PROCEDURE setProjectMemberRole(_accountId BINARY(16), _projectId BINARY(1
     START TRANSACTION;
     IF memberExists THEN
       UPDATE projectMembers SET role=_role WHERE account=_accountId AND project=_projectId AND id=_memberId AND isActive=TRUE;
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setRole', NULL, CAST(_role as char character set utf8));
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _memberId, 'member', 'setRole', NULL, CAST(_role as char character set utf8));
     END IF;
     COMMIT;
     SELECT memberExists;
@@ -435,7 +435,7 @@ BEGIN
       SET _isParallel=FALSE;
     END IF;
     INSERT INTO tasks (account,	project, id, parent, firstChild, nextSibling, isAbstract, name,	description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_accountId,	_projectId, _taskId, _parentId, NULL, nextSiblingToUse, _isAbstract, _name, _description, _createdOn, _totalRemainingTime, 0, _totalRemainingTime, 0, 0, 0, 0, _isParallel, _memberId);
-    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'created', _name, NULL);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'created', _name, NULL);
     #update siblings and parent firstChild value if required
     IF _previousSiblingId IS NULL THEN #update parents firstChild
       UPDATE tasks SET firstChild=_taskId WHERE account=_accountId AND project=_projectId AND id=_parentId;
@@ -459,14 +459,16 @@ DROP PROCEDURE IF EXISTS setTaskName;
 DELIMITER $$
 CREATE PROCEDURE setTaskName(_accountId BINARY(16), _projectId BINARY(16), _taskId BINARY(16), _myId BINARY(16), _name VARCHAR(250))
   BEGIN
+    DECLARE oldName VARCHAR(250) DEFAULT '';
+    SELECT name INTO oldName FROM tasks WHERE account=_accountId AND project=_projectId AND id=_taskId;
     UPDATE tasks SET name=_name WHERE account=_accountId AND project=_projectId AND id=_taskId;
     IF _projectId=_taskId THEN
       UPDATE projects SET name=_name WHERE account=_accountId AND id=_taskId;
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'project', 'setName', NULL, _name);
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'project', 'setName', NULL, oldName);
       UPDATE accountActivities SET itemName=_name WHERE account=_accountId AND item=_taskId;
     ELSE
       UPDATE timeLogs SET taskName=_name WHERE account=_accountId AND project=_projectId AND task=_taskId;
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setName', NULL, _name);
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setName', NULL, oldName);
       UPDATE projectActivities SET itemName=_name WHERE account=_accountId AND project=_projectId AND item=_taskId;
     END IF;
   END;
@@ -478,7 +480,7 @@ DELIMITER $$
 CREATE PROCEDURE setTaskDescription(_accountId BINARY(16), _projectId BINARY(16), _taskId BINARY(16), _myId BINARY(16), _description VARCHAR(250))
   BEGIN
     UPDATE tasks SET description=_description WHERE account=_accountId AND project=_projectId AND id=_taskId;
-    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setDescription', NULL, _description);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setDescription', NULL, _description);
   END;
 $$
 DELIMITER ;
@@ -500,9 +502,9 @@ BEGIN
     IF taskExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
       SET changeMade = TRUE;
       IF _isParallel THEN
-        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setIsParallel', NULL, 'true');
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setIsParallel', NULL, 'true');
       ELSE
-        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setIsParallel', NULL, 'false');
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setIsParallel', NULL, 'false');
       END IF;
       UPDATE tasks SET isParallel=_isParallel WHERE account=_accountId AND project=_projectId AND id=_taskId;
       IF currentMinimumRemainingTime <> 0 THEN
@@ -555,9 +557,9 @@ BEGIN
         UPDATE tasks SET member=_memberId WHERE account=_accountId AND project=_projectId AND id=_taskId;
         SET changeMade = TRUE;
         IF _memberId IS NOT NULL THEN
-          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setMember', NULL, LOWER(HEX(_memberId)));
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setMember', NULL, LOWER(HEX(_memberId)));
         ELSE
-          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setMember', NULL, NULL);
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'setMember', NULL, NULL);
         END IF;
       END IF;
     END IF;
@@ -608,13 +610,13 @@ BEGIN
         IF memberExists THEN
           INSERT INTO timeLogs (account, project, task, member, loggedOn, taskName, duration, note) VALUES (_accountId, _projectId, _taskId, _myId, _loggedOn, taskName, _duration, _note);
           UPDATE projectMembers SET totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_myId;
-          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'loggedTime', taskName, _note);
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'loggedTime', taskName, _note);
         END IF;
       END IF;
 
       UPDATE tasks SET totalRemainingTime=_timeRemaining, minimumRemainingTime=_timeRemaining, totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_taskId;
       IF _timeRemaining <> originalMinimumRemainingTime THEN
-        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _myId, _taskId, 'task', 'setRemainingTime', taskName, CAST(_timeRemaining as char character set utf8));
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _myId, _taskId, 'task', 'setRemainingTime', taskName, CAST(_timeRemaining as char character set utf8));
       END IF;
       CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, nextTask);
     END IF;
@@ -722,7 +724,7 @@ BEGIN
     END IF;
   END IF;
   IF changeMade THEN
-    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'moved', taskName, NULL);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'moved', taskName, NULL);
   END IF;
   SELECT changeMade;
   COMMIT;
@@ -732,7 +734,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS deleteTask;
 DELIMITER $$
-CREATE PROCEDURE deleteTask(_accountId BINARY(16), _projectId BINARY(16), _taskId BINARY(16))
+CREATE PROCEDURE deleteTask(_accountId BINARY(16), _projectId BINARY(16), _taskId BINARY(16), _myId BINARY(16))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
@@ -740,7 +742,11 @@ BEGIN
   DECLARE originalNextSiblingId BINARY(16) DEFAULT NULL;
   DECLARE originalPreviousSiblingId BINARY(16) DEFAULT NULL;
   DECLARE originalDescendantCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE originalTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE originalTotalLoggedTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE deleteCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE taskName VARCHAR(250) DEFAULT '';
   DECLARE changeMade BOOL DEFAULT FALSE;
   DROP TEMPORARY TABLE IF EXISTS tempAllIds;
   CREATE TEMPORARY TABLE tempAllIds(
@@ -759,31 +765,36 @@ BEGIN
   );
   START TRANSACTION;
 
-  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
-  IF projectExists THEN
-    SELECT COUNT(*)=1, parent, descendantCount, nextSibling INTO taskExists, originalParentId, originalDescendantCount, originalNextSiblingId FROM tasks WHERE account=_accountId AND project=_projectId AND id=_taskId;
-    IF taskExists THEN
-      SELECT id INTO originalPreviousSiblingId FROM tasks WHERE account=_accountId AND project=_projectId AND nextSibling=_taskId;
-      INSERT INTO tempCurrentIds VALUES (_taskId);
-      WHILE (SELECT COUNT(*) FROM tempCurrentIds) > 0 DO
-        INSERT INTO tempLatestIds SELECT id FROM tasks WHERE account=_accountId AND project=_projectId AND parent IN (SELECT id FROM tempCurrentIds);
-        INSERT INTO tempAllIds SELECT id FROM tempCurrentIds;
-        TRUNCATE tempCurrentIds;
-        INSERT INTO tempCurrentIds SELECT id FROM tempLatestIds;
-        TRUNCATE tempLatestIds;
-      END WHILE;
-      SELECT COUNT(*) INTO deleteCount FROM tempAllIds;
-      IF deleteCount = originalDescendantCount + 1 THEN
-        IF originalPreviousSiblingId IS NULL THEN
-          UPDATE tasks SET firstChild = originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
-        ELSE
-          UPDATE tasks SET nextSibling = originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
+  IF _projectId <> _taskId THEN
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
+    IF projectExists THEN
+      SELECT COUNT(*)=1, parent, descendantCount, totalRemainingTime, totalLoggedTime, minimumRemainingTime, nextSibling, name INTO taskExists, originalParentId, originalDescendantCount, originalTotalRemainingTime, originalTotalLoggedTime, originalMinimumRemainingTime, originalNextSiblingId, taskName FROM tasks WHERE account=_accountId AND project=_projectId AND id=_taskId;
+      IF taskExists THEN
+        SELECT id INTO originalPreviousSiblingId FROM tasks WHERE account=_accountId AND project=_projectId AND nextSibling=_taskId;
+        INSERT INTO tempCurrentIds VALUES (_taskId);
+        WHILE (SELECT COUNT(*) FROM tempCurrentIds) > 0 DO
+          INSERT INTO tempLatestIds SELECT id FROM tasks WHERE account=_accountId AND project=_projectId AND parent IN (SELECT id FROM tempCurrentIds);
+          INSERT INTO tempAllIds SELECT id FROM tempCurrentIds;
+          TRUNCATE tempCurrentIds;
+          INSERT INTO tempCurrentIds SELECT id FROM tempLatestIds;
+          TRUNCATE tempLatestIds;
+        END WHILE;
+        SELECT COUNT(*) INTO deleteCount FROM tempAllIds;
+        IF deleteCount = originalDescendantCount + 1 THEN
+          IF originalPreviousSiblingId IS NULL THEN
+            UPDATE tasks SET firstChild = originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+          ELSE
+            UPDATE tasks SET nextSibling = originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
+          END IF;
+          DELETE FROM tasks WHERE id IN (SELECT id FROM tempAllIds);
+          CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, originalParentId);
+          SET changeMade = TRUE;
         END IF;
-        DELETE FROM tasks WHERE id IN (SELECT id FROM tempAllIds);
-        CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, originalParentId);
-        SET changeMade = TRUE;
       END IF;
     END IF;
+  END IF;
+  IF changeMade THEN
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'deleted', taskName, CONCAT('{"totalRemainingTime":', CAST(originalTotalRemainingTime as char character set utf8), ',"totalLoggedTime":', CAST(originalTotalLoggedTime as char character set utf8), ',"descendantCount":', CAST(originalDescendantCount as char character set utf8), '}'));
   END IF;
 
   DROP TEMPORARY TABLE IF EXISTS tempAllIds;

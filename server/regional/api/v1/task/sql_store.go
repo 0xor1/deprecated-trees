@@ -1,7 +1,7 @@
 package task
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"bytes"
 	"github.com/0xor1/isql"
 	"time"
@@ -93,8 +93,8 @@ func (s *sqlStore) moveTask(shard int, accountId, projectId, taskId, parentId, m
 	MakeChangeHelper(s.shards[shard], `CALL moveTask(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(parentId), []byte(myId), prevSib)
 }
 
-func (s *sqlStore) deleteTask(shard int, accountId, projectId, taskId Id) {
-	MakeChangeHelper(s.shards[shard], `CALL deleteTask(?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId))
+func (s *sqlStore) deleteTask(shard int, accountId, projectId, taskId, myId Id) {
+	MakeChangeHelper(s.shards[shard], `CALL deleteTask(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(myId))
 }
 
 func (s *sqlStore) getTasks(shard int, accountId, projectId Id, taskIds []Id) []*task {

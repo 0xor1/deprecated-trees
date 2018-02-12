@@ -1,4 +1,4 @@
-package misc
+package util
 
 type PrivateRegionClient interface {
 	GetRegions() []string

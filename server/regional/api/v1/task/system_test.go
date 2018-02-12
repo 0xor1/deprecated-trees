@@ -1,7 +1,7 @@
 package task
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
 	"github.com/0xor1/isql"
@@ -110,5 +110,5 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 1, len(res))
 	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, &taskF.Id, 100)
 	assert.Equal(t, 0, len(res))
-	privateApi.DeleteAccount(0, orgId, ali.Id)
+	//privateApi.DeleteAccount(0, orgId, ali.Id)
 }

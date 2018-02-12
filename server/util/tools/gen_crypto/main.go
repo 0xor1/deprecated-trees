@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/0xor1/task/server/misc"
+	"bitbucket.org/0xor1/task/server/util"
 	"flag"
 	"fmt"
 	"os"
@@ -20,11 +20,11 @@ func main() {
 	l := int(lTmp)
 	if t == "s" {
 		for i := 0; i < n; i++ {
-			fmt.Println(misc.CryptoUrlSafeString(l))
+			fmt.Println(util.CryptoUrlSafeString(l))
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%x", misc.CryptoBytes(l)))
+			fmt.Println(fmt.Sprintf("%x", util.CryptoBytes(l)))
 		}
 	}
 }

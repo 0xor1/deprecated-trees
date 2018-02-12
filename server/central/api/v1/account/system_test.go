@@ -1,7 +1,7 @@
 package account
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"encoding/base64"
 	"github.com/0xor1/isql"

@@ -1,4 +1,4 @@
-package misc
+package util
 
 import (
 	"bytes"
@@ -62,5 +62,5 @@ type Activity struct {
 	ItemType   string    `json:"itemType"`
 	Action     string    `json:"action"`
 	ItemName   *string   `json:"itemName,omitempty"`
-	NewValue   *string   `json:"newValue,omitempty"`
+	ExtraInfo  *string   `json:"extraInfo,omitempty"`
 }

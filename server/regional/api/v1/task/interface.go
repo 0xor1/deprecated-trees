@@ -1,7 +1,7 @@
 package task
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"github.com/0xor1/isql"
 )
 

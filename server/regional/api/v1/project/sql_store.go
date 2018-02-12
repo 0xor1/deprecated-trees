@@ -1,7 +1,7 @@
 package project
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/isql"
@@ -145,7 +145,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
 		InvalidArgumentsErr.Panic()
 	}
-	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, newValue FROM projectActivities WHERE account=? AND project=?`)
+	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM projectActivities WHERE account=? AND project=?`)
 	args := make([]interface{}, 0, limit)
 	args = append(args, []byte(accountId), []byte(projectId))
 	if item != nil {
@@ -178,7 +178,7 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 	res := make([]*Activity, 0, limit)
 	for rows.Next() {
 		act := Activity{}
-		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.NewValue))
+		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	return res

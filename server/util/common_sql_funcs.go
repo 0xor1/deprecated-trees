@@ -1,4 +1,4 @@
-package misc
+package util
 
 import (
 	"github.com/0xor1/isql"

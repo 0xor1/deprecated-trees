@@ -1,7 +1,7 @@
 package private
 
 import (
-	. "bitbucket.org/0xor1/task/server/misc"
+	. "bitbucket.org/0xor1/task/server/util"
 	"bytes"
 	"github.com/0xor1/isql"
 	"math/rand"
@@ -122,7 +122,7 @@ func (s *sqlStore) setMemberDisplayName(shard int, accountId Id, member Id, newD
 }
 
 func (s *sqlStore) logAccountBatchAddOrRemoveMembersActivity(shard int, accountId, member Id, members []Id, action string) {
-	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, newValue) VALUES (?,?,?,?,?,?,?,?)`)
+	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
 	args = append(args, []byte(accountId), Now(), []byte(member), []byte(members[0]), "member", action, nil, nil)
 	for _, memId := range members[1:] {
