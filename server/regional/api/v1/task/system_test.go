@@ -110,5 +110,5 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 1, len(res))
 	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, &taskF.Id, 100)
 	assert.Equal(t, 0, len(res))
-	//privateApi.DeleteAccount(0, orgId, ali.Id)
+	privateApi.DeleteAccount(0, orgId, ali.Id)
 }
