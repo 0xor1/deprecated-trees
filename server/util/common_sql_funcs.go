@@ -8,13 +8,6 @@ var (
 	noChangeMadeErr = &AppError{Code: "r_v1_p_nc", Message: "no change made", Public: true}
 )
 
-func GetProjectExists(shard isql.ReplicaSet, accountId, projectId Id) bool {
-	row := shard.QueryRow(`SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
-	exists := false
-	PanicIf(row.Scan(&exists))
-	return exists
-}
-
 func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole {
 	row := shard.QueryRow(`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)
@@ -22,15 +15,6 @@ func GetAccountRole(shard isql.ReplicaSet, accountId, memberId Id) *AccountRole 
 		return nil
 	}
 	return &res
-}
-
-func GetProjectRole(shard isql.ReplicaSet, accountId, projectId, memberId Id) *ProjectRole {
-	row := shard.QueryRow(`SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
-	var projRole *ProjectRole
-	if IsSqlErrNoRowsAndPanicIf(row.Scan(&projRole)) {
-		return nil
-	}
-	return projRole
 }
 
 func GetAccountAndProjectRoles(shard isql.ReplicaSet, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole) {

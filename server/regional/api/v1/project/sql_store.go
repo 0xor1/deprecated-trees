@@ -35,7 +35,10 @@ func (s *sqlStore) getAccountAndProjectRolesAndProjectIsPublic(shard int, accoun
 }
 
 func (s *sqlStore) getProjectExists(shard int, accountId, projectId Id) bool {
-	return GetProjectExists(s.shards[shard], accountId, projectId)
+	row := s.shards[shard].QueryRow(`SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
+	exists := false
+	PanicIf(row.Scan(&exists))
+	return exists
 }
 
 func (s *sqlStore) getPublicProjectsEnabled(shard int, accountId Id) bool {
