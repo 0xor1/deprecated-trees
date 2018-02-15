@@ -144,8 +144,8 @@ func (s *sqlStore) getMember(shard int, accountId, projectId, memberId Id) *memb
 	return &res
 }
 
-func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
-	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
+func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+	if occurredAfter != nil && occurredBefore != nil {
 		InvalidArgumentsErr.Panic()
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM projectActivities WHERE account=? AND project=?`)
@@ -159,15 +159,15 @@ func (s *sqlStore) getActivities(shard int, accountId, projectId Id, item, membe
 		query.WriteString(` AND member=?`)
 		args = append(args, []byte(*member))
 	}
-	if occurredAfterUnixMillis != nil {
+	if occurredAfter != nil {
 		query.WriteString(` AND occurredOn>? ORDER BY occurredOn ASC`)
-		args = append(args, occurredAfterUnixMillis)
+		args = append(args, occurredAfter)
 	}
-	if occurredBeforeUnixMillis != nil {
+	if occurredBefore != nil {
 		query.WriteString(` AND occurredOn<? ORDER BY occurredOn DESC`)
-		args = append(args, occurredBeforeUnixMillis)
+		args = append(args, occurredBefore)
 	}
-	if occurredAfterUnixMillis == nil && occurredBeforeUnixMillis == nil {
+	if occurredAfter == nil && occurredBefore == nil {
 		query.WriteString(` ORDER BY occurredOn DESC`)
 	}
 	query.WriteString(` LIMIT ?`)

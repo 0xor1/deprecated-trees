@@ -17,8 +17,8 @@ func (e *InvalidStringParamErr) Error() string {
 	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.ParamPurpose, e.MinRuneCount, e.MaxRuneCount, e.RegexMatchers)
 }
 
-func (e *InvalidStringParamErr) IsPrivate() bool {
-	return false
+func (e *InvalidStringParamErr) IsPublic() bool {
+	return true
 }
 
 func newInvalidStringParamErr(paramPurpose string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) *InvalidStringParamErr {

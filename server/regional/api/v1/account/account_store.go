@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/0xor1/isql"
 	"strings"
+	"time"
 )
 
 func newSqlStore(shards map[int]isql.ReplicaSet) store {
@@ -119,8 +120,8 @@ func (s *sqlStore) getMembers(shard int, accountId Id, role *AccountRole, nameOr
 	return res, false
 }
 
-func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
-	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
+func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+	if occurredAfter != nil && occurredBefore != nil {
 		InvalidArgumentsErr.Panic()
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
@@ -134,15 +135,15 @@ func (s *sqlStore) getActivities(shard int, accountId Id, item *Id, member *Id, 
 		query.WriteString(` AND member=?`)
 		args = append(args, []byte(*member))
 	}
-	if occurredAfterUnixMillis != nil {
+	if occurredAfter != nil {
 		query.WriteString(` AND occurredOn>? ORDER BY occurredOn ASC`)
-		args = append(args, occurredAfterUnixMillis)
+		args = append(args, occurredAfter)
 	}
-	if occurredBeforeUnixMillis != nil {
+	if occurredBefore != nil {
 		query.WriteString(` AND occurredOn<? ORDER BY occurredOn DESC`)
-		args = append(args, occurredBeforeUnixMillis)
+		args = append(args, occurredBefore)
 	}
-	if occurredAfterUnixMillis == nil && occurredBeforeUnixMillis == nil {
+	if occurredAfter == nil && occurredBefore == nil {
 		query.WriteString(` ORDER BY occurredOn DESC`)
 	}
 	query.WriteString(` LIMIT ?`)

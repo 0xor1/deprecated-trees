@@ -32,7 +32,7 @@ type Api interface {
 	//for anyone
 	GetMe(shard int, accountId, projectId, myId Id) *member
 	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
+	GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 }
 
 func New(shards map[int]isql.ReplicaSet, maxProcessEntityCount int) Api {

@@ -151,12 +151,12 @@ func (a *api) GetMe(shard int, accountId, projectId, myId Id) *member {
 	return a.store.getMember(shard, accountId, projectId, myId)
 }
 
-func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity {
-	if occurredAfterUnixMillis != nil && occurredBeforeUnixMillis != nil {
+func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+	if occurredAfter != nil && occurredBefore != nil {
 		InvalidArgumentsErr.Panic()
 	}
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfterUnixMillis, occurredBeforeUnixMillis, ValidateLimitParam(limit, a.maxProcessEntityCount))
+	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfter, occurredBefore, ValidateLimitParam(limit, a.maxProcessEntityCount))
 }
 
 type store interface {
@@ -178,7 +178,7 @@ type store interface {
 	setMemberInactive(shard int, accountId, projectId, myId Id, member Id)
 	getMembers(shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	getMember(shard int, accountId, projectId, member Id) *member
-	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
+	getActivities(shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 }
 
 type member struct {

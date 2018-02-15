@@ -1,21 +1,21 @@
 package util
 
-import(
-	"net/http"
+import (
 	"encoding/json"
-	"github.com/julienschmidt/httprouter"
-	"time"
-	"github.com/gorilla/sessions"
 	"fmt"
+	"github.com/gorilla/sessions"
+	"github.com/julienschmidt/httprouter"
+	"net/http"
 	"runtime/debug"
+	"time"
 )
 
 var (
-	unauthorizedErr = &AppError{Code: "p_ns", Message: "unauthorized"}
+	unauthorizedErr   = &AppError{Code: "p_ns", Message: "unauthorized"}
 	internalServerErr = &AppError{Code: "p_is", Message: "internal server error"}
 )
 
-type HttpHandler interface{
+type HttpHandler interface {
 	Handle(handler func(s *session, params interface{}) interface{}, paramStructGen func() interface{}, requiresSession bool) httprouter.Handle
 }
 
@@ -40,19 +40,19 @@ func NewHttpHandler(sessionKeyPairs []*AuthEncrKeyPair, sessionMaxAge int, sessi
 	sessionStore.Options.MaxAge = sessionMaxAge
 	//TODO register session types with gob
 	return &httpHandler{
-		sessionName: sessionName,
+		sessionName:  sessionName,
 		sessionStore: sessionStore,
 	}
 }
 
-type httpHandler struct{
-	sessionName string
+type httpHandler struct {
+	sessionName  string
 	sessionStore *sessions.CookieStore
 }
 
 func (h *httpHandler) Handle(handler func(s *session, params interface{}) interface{}, paramStructGen func() interface{}, requiresSession bool) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		defer func(){
+		defer func() {
 			r := recover()
 			if r != nil {
 				pErr := r.(PermissionedError)
@@ -91,7 +91,7 @@ func (h *httpHandler) Handle(handler func(s *session, params interface{}) interf
 	}
 }
 
-type AuthEncrKeyPair struct{
+type AuthEncrKeyPair struct {
 	AuthKey64 []byte
 	EncrKey32 []byte
 }
@@ -115,20 +115,20 @@ func writeJson(w http.ResponseWriter, code int, body interface{}) {
 	PanicIf(err)
 }
 
-type session struct{
-	MyId Id
-	CsrfToken string
-	LogginTime time.Time
+type session struct {
+	MyId                Id
+	CsrfToken           string
+	LogginTime          time.Time
 	RecentInstallations map[string]*recentAccountAccess
-	RecentProjects map[string]map[string]*recentProjectAccess
+	RecentProjects      map[string]map[string]*recentProjectAccess
 }
 
-type recentAccountAccess struct{
+type recentAccountAccess struct {
 	Role AccountRole
 	Time time.Time
 }
 
-type recentProjectAccess struct{
+type recentProjectAccess struct {
 	Role ProjectRole
 	Time time.Time
 }

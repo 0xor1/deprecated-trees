@@ -3,6 +3,7 @@ package account
 import (
 	. "bitbucket.org/0xor1/task/server/util"
 	"github.com/0xor1/isql"
+	"time"
 )
 
 type Api interface {
@@ -15,7 +16,7 @@ type Api interface {
 	//pointers are optional filters
 	GetMembers(shard int, accountId, myId Id, role *AccountRole, nameContains *string, after *Id, limit int) ([]*member, bool)
 	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(shard int, accountId, myId Id, item, member *Id, occurredAfterUnixMillis, occurredBeforeUnixMillis *uint64, limit int) []*Activity
+	GetActivities(shard int, accountId, myId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity
 	//for anyone
 	GetMe(shard int, accountId, myId Id) *member
 	//
