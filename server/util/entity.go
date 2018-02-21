@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	. "github.com/pborman/uuid"
-	"time"
+	t "time"
 )
 
 //returns version 1 uuid as a byte slice
@@ -14,6 +14,14 @@ func NewId() Id {
 		idGenerationErr.Panic()
 	}
 	return Id(id)
+}
+
+func ParseId(id string) Id {
+	bytes, err := hex.DecodeString(id)
+	if err != nil || len(bytes) != 16 {
+		idParseErr.Panic()
+	}
+	return Id(bytes)
 }
 
 type Id UUID
@@ -34,10 +42,6 @@ func (id Id) Copy() Id {
 	return Id(append(make([]byte, 0, 16), []byte(id)...))
 }
 
-func Now() time.Time {
-	return time.Now().UTC()
-}
-
 type AddMemberPrivate struct {
 	Id          Id          `json:"id"`
 	Name        string      `json:"name"`
@@ -56,11 +60,11 @@ type AddProjectMember struct {
 }
 
 type Activity struct {
-	OccurredOn time.Time `json:"occurredOn"`
-	Member     Id        `json:"member"`
-	Item       Id        `json:"item"`
-	ItemType   string    `json:"itemType"`
-	Action     string    `json:"action"`
-	ItemName   *string   `json:"itemName,omitempty"`
-	ExtraInfo  *string   `json:"extraInfo,omitempty"`
+	OccurredOn t.Time  `json:"occurredOn"`
+	Member     Id      `json:"member"`
+	Item       Id      `json:"item"`
+	ItemType   string  `json:"itemType"`
+	Action     string  `json:"action"`
+	ItemName   *string `json:"itemName,omitempty"`
+	ExtraInfo  *string `json:"extraInfo,omitempty"`
 }

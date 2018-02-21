@@ -31,7 +31,7 @@ func (s *sqlStore) getAccountAndProjectRoles(shard int, accountId, projectId, me
 func (s *sqlStore) getProjectRole(shard int, accountId, projectId, memberId Id) *ProjectRole {
 	row := s.shards[shard].QueryRow(`SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
 	var projRole *ProjectRole
-	if IsSqlErrNoRowsAndPanicIf(row.Scan(&projRole)) {
+	if IsSqlErrNoRowsElsePanicIf(row.Scan(&projRole)) {
 		return nil
 	}
 	return projRole

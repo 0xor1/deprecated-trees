@@ -62,7 +62,7 @@ func (a *api) GetProject(shard int, accountId, projectId, myId Id) *project {
 
 func (a *api) GetProjects(shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) ([]*project, bool) {
 	myAccountRole := a.store.getAccountRole(shard, accountId, myId)
-	limit = ValidateLimitParam(limit, a.maxProcessEntityCount)
+	limit = ValidateLimitArg(limit, a.maxProcessEntityCount)
 	if myAccountRole == nil {
 		return a.store.getPublicProjects(shard, accountId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 	}
@@ -144,7 +144,7 @@ func (a *api) RemoveMembers(shard int, accountId, projectId, myId Id, members []
 
 func (a *api) GetMembers(shard int, accountId, projectId, myId Id, role *ProjectRole, nameContains *string, after *Id, limit int) ([]*member, bool) {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getMembers(shard, accountId, projectId, role, nameContains, after, ValidateLimitParam(limit, a.maxProcessEntityCount))
+	return a.store.getMembers(shard, accountId, projectId, role, nameContains, after, ValidateLimitArg(limit, a.maxProcessEntityCount))
 }
 
 func (a *api) GetMe(shard int, accountId, projectId, myId Id) *member {
@@ -156,7 +156,7 @@ func (a *api) GetActivities(shard int, accountId, projectId, myId Id, item, memb
 		InvalidArgumentsErr.Panic()
 	}
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfter, occurredBefore, ValidateLimitParam(limit, a.maxProcessEntityCount))
+	return a.store.getActivities(shard, accountId, projectId, item, member, occurredAfter, occurredBefore, ValidateLimitArg(limit, a.maxProcessEntityCount))
 }
 
 type store interface {

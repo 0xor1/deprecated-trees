@@ -12,19 +12,19 @@ import (
 
 var (
 	unauthorizedErr   = &AppError{Code: "p_ns", Message: "unauthorized"}
-	internalServerErr = &AppError{Code: "p_is", Message: "internal server error"}
+	internalServerErr = &AppError{Code: "p_is", Message: "internal server err"}
 )
 
 type HttpHandler interface {
-	Handle(handler func(s *session, params interface{}) interface{}, paramStructGen func() interface{}, requiresSession bool) httprouter.Handle
+	Handle(handler func(s *session, args interface{}) interface{}, argStructGen func() interface{}, requiresSession bool) httprouter.Handle
 }
 
 // handles:
 // * sessions
 // * csrf token validation
-// * parsing request params
+// * parsing request args
 // * writing responses
-// * error logging
+// * err logging
 func NewHttpHandler(sessionKeyPairs []*AuthEncrKeyPair, sessionMaxAge int, sessionName string) HttpHandler {
 	if len(sessionKeyPairs) == 0 || sessionMaxAge < 60 || sessionName == "" {
 		InvalidArgumentsErr.Panic()
@@ -50,8 +50,8 @@ type httpHandler struct {
 	sessionStore *sessions.CookieStore
 }
 
-func (h *httpHandler) Handle(handler func(s *session, params interface{}) interface{}, paramStructGen func() interface{}, requiresSession bool) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (h *httpHandler) Handle(handler func(s *session, args interface{}) interface{}, argStructGen func() interface{}, requiresSession bool) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, _ httprouter.Args) {
 		defer func() {
 			r := recover()
 			if r != nil {
@@ -76,18 +76,18 @@ func (h *httpHandler) Handle(handler func(s *session, params interface{}) interf
 				s = i.(*session)
 			}
 		}
-		if requiresSession && (s == nil || r.Header.Get("Csrf-Token") != s.CsrfToken) {
+		if requiresSession && (s == nil || r.Header.Get("X-Csrf-Token") != s.CsrfToken) {
 			writeJson(w, http.StatusUnauthorized, unauthorizedErr)
 			return
 		}
-		params := paramStructGen()
-		paramsStr := r.URL.Query().Get("params")
-		if paramsStr != "" {
-			PanicIf(json.Unmarshal([]byte(paramsStr), params))
+		args := argStructGen()
+		argsStr := r.URL.Query().Get("args")
+		if argsStr != "" {
+			PanicIf(json.Unmarshal([]byte(argsStr), args))
 		} else { //check body
-			PanicIf(json.NewDecoder(r.Body).Decode(params))
+			PanicIf(json.NewDecoder(r.Body).Decode(args))
 		}
-		writeJson(w, http.StatusOK, handler(s, params))
+		writeJson(w, http.StatusOK, handler(s, args))
 	}
 }
 
@@ -113,22 +113,4 @@ func writeJson(w http.ResponseWriter, code int, body interface{}) {
 	PanicIf(err)
 	_, err = w.Write(bodyBytes)
 	PanicIf(err)
-}
-
-type session struct {
-	MyId                Id
-	CsrfToken           string
-	LogginTime          time.Time
-	RecentInstallations map[string]*recentAccountAccess
-	RecentProjects      map[string]map[string]*recentProjectAccess
-}
-
-type recentAccountAccess struct {
-	Role AccountRole
-	Time time.Time
-}
-
-type recentProjectAccess struct {
-	Role ProjectRole
-	Time time.Time
 }
