@@ -4,155 +4,281 @@ import (
 	. "bitbucket.org/0xor1/task/server/util"
 	"bytes"
 	"math/rand"
+	"strings"
 )
 
 var (
 	zeroOwnerCountErr = &AppError{Code: "r_v1_pr_zoc", Message: "zero owner count", Public: true}
+	noSuchRegionErr   = &AppError{Code: "r_v1_pr_nsr", Message: "no such region", Public: true}
 )
 
-type Api interface {
-	CreateAccount(ctx RegionalCtx, accountId, myId Id, myName string, myDisplayName *string) int
-	DeleteAccount(ctx RegionalCtx, shard int, accountId, myId Id)
-	AddMembers(ctx RegionalCtx, shard int, accountId, myId Id, members []*AddMemberPrivate)
-	RemoveMembers(ctx RegionalCtx, shard int, accountId, myId Id, members []Id)
-	MemberIsOnlyAccountOwner(ctx RegionalCtx, shard int, accountId, memberId Id) bool
-	SetMemberName(ctx RegionalCtx, shard int, accountId, memberId Id, newName string)
-	SetMemberDisplayName(ctx RegionalCtx, shard int, accountId, memberId Id, newDisplayName *string)
-	MemberIsAccountOwner(ctx RegionalCtx, shard int, accountId, memberId Id) bool
+type createAccountArgs struct {
+	AccountId     Id      `json:"accountId"`
+	MyId          Id      `json:"myId"`
+	MyName        string  `json:"myName"`
+	MyDisplayName *string `json:"myDisplayName"`
 }
 
-func New() Api {
-	return &api{}
+var createAccount = &Endpoint{
+	Method:    POST,
+	Path:      "/api/v1/private/createAccount",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &createAccountArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*createAccountArgs)
+		return dbCreateAccount(ctx, args.AccountId, args.MyId, args.MyName, args.MyDisplayName)
+	},
 }
 
-type api struct{}
-
-func (a *api) CreateAccount(ctx RegionalCtx, accountId, myId Id, myName string, myDisplayName *string) int {
-	return dbCreateAccount(ctx, accountId, myId, myName, myDisplayName)
+type deleteAccountArgs struct {
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	MyId      Id  `json:"myId"`
 }
 
-func (a *api) DeleteAccount(ctx RegionalCtx, shard int, accountId, myId Id) {
-	if !myId.Equal(accountId) {
-		ctx.Validate().MemberHasAccountOwnerAccess(dbGetAccountRole(ctx, shard, accountId, myId))
-	}
-	dbDeleteAccount(ctx, shard, accountId)
-	//TODO delete s3 data, uploaded files etc
-}
-
-func (a *api) AddMembers(ctx RegionalCtx, shard int, accountId, myId Id, members []*AddMemberPrivate) {
-	ctx.Validate().EntityCount(len(members))
-	if accountId.Equal(myId) {
-		InvalidOperationErr.Panic()
-	}
-	accountRole := dbGetAccountRole(ctx, shard, accountId, myId)
-	ctx.Validate().MemberHasAccountAdminAccess(accountRole)
-
-	allIds := make([]Id, 0, len(members))
-	newMembersMap := map[string]*AddMemberPrivate{}
-	for _, mem := range members { //loop over all the new entries and check permissions and build up useful id map and allIds slice
-		mem.Role.Validate()
-		if mem.Role == AccountOwner {
-			ctx.Validate().MemberHasAccountOwnerAccess(accountRole)
+var deleteAccount = &Endpoint{
+	Method:    POST,
+	Path:      "/api/v1/private/deleteAccount",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &deleteAccountArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*deleteAccountArgs)
+		if !args.MyId.Equal(args.AccountId) {
+			ctx.Validate().MemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId))
 		}
-		newMembersMap[mem.Id.String()] = mem
-		allIds = append(allIds, mem.Id)
-	}
-
-	inactiveMemberIds := dbGetAllInactiveMemberIdsFromInputSet(ctx, shard, accountId, allIds)
-	inactiveMembers := make([]*AddMemberPrivate, 0, len(inactiveMemberIds))
-	for _, inactiveMemberId := range inactiveMemberIds {
-		idStr := inactiveMemberId.String()
-		inactiveMembers = append(inactiveMembers, newMembersMap[idStr])
-		delete(newMembersMap, idStr)
-	}
-
-	newMembers := make([]*AddMemberPrivate, 0, len(newMembersMap))
-	for _, newMem := range newMembersMap {
-		newMembers = append(newMembers, newMem)
-	}
-
-	if len(newMembers) > 0 {
-		dbAddMembers(ctx, shard, accountId, newMembers)
-	}
-	if len(inactiveMembers) > 0 {
-		dbUpdateMembersAndSetActive(ctx, shard, accountId, inactiveMembers) //has to be AddMemberPrivate in case the member changed their name whilst they were inactive on the account
-	}
-	dbLogAccountBatchAddOrRemoveMembersActivity(ctx, shard, accountId, myId, allIds, "added")
+		dbDeleteAccount(ctx, args.Shard, args.AccountId)
+		//TODO delete s3 data, uploaded files etc
+		return nil
+	},
 }
 
-func (a *api) RemoveMembers(ctx RegionalCtx, shard int, accountId, myId Id, members []Id) {
-	ctx.Validate().EntityCount(len(members))
-	if accountId.Equal(myId) {
-		InvalidOperationErr.Panic()
-	}
+type addMembersArgs struct {
+	Shard     int                 `json:"shard"`
+	AccountId Id                  `json:"accountId"`
+	MyId      Id                  `json:"myId"`
+	Members   []*AddMemberPrivate `json:"members"`
+}
 
-	accountRole := dbGetAccountRole(ctx, shard, accountId, myId)
-	if accountRole == nil {
-		InsufficientPermissionErr.Panic()
-	}
+var addMembers = &Endpoint{
+	Method:    POST,
+	Path:      "/api/v1/private/addMembers",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &addMembersArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*addMembersArgs)
+		ctx.Validate().EntityCount(len(args.Members))
+		if args.AccountId.Equal(args.MyId) {
+			InvalidOperationErr.Panic()
+		}
+		accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
+		ctx.Validate().MemberHasAccountAdminAccess(accountRole)
 
-	switch *accountRole {
-	case AccountOwner:
-		totalOwnerCount := dbGetTotalOwnerCount(ctx, shard, accountId)
-		ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, shard, accountId, members)
-		if totalOwnerCount == ownerCountInRemoveSet {
-			zeroOwnerCountErr.Panic()
+		allIds := make([]Id, 0, len(args.Members))
+		newMembersMap := map[string]*AddMemberPrivate{}
+		for _, mem := range args.Members { //loop over all the new entries and check permissions and build up useful id map and allIds slice
+			mem.Role.Validate()
+			if mem.Role == AccountOwner {
+				ctx.Validate().MemberHasAccountOwnerAccess(accountRole)
+			}
+			newMembersMap[mem.Id.String()] = mem
+			allIds = append(allIds, mem.Id)
 		}
 
-	case AccountAdmin:
-		ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, shard, accountId, members)
-		if ownerCountInRemoveSet > 0 {
+		inactiveMemberIds := dbGetAllInactiveMemberIdsFromInputSet(ctx, args.Shard, args.AccountId, allIds)
+		inactiveMembers := make([]*AddMemberPrivate, 0, len(inactiveMemberIds))
+		for _, inactiveMemberId := range inactiveMemberIds {
+			idStr := inactiveMemberId.String()
+			inactiveMembers = append(inactiveMembers, newMembersMap[idStr])
+			delete(newMembersMap, idStr)
+		}
+
+		newMembers := make([]*AddMemberPrivate, 0, len(newMembersMap))
+		for _, newMem := range newMembersMap {
+			newMembers = append(newMembers, newMem)
+		}
+
+		if len(newMembers) > 0 {
+			dbAddMembers(ctx, args.Shard, args.AccountId, newMembers)
+		}
+		if len(inactiveMembers) > 0 {
+			dbUpdateMembersAndSetActive(ctx, args.Shard, args.AccountId, inactiveMembers) //has to be AddMemberPrivate in case the member changed their name whilst they were inactive on the account
+		}
+		dbLogAccountBatchAddOrRemoveMembersActivity(ctx, args.Shard, args.AccountId, args.MyId, allIds, "added")
+		return nil
+	},
+}
+
+type removeMembersArgs struct {
+	Shard     int  `json:"shard"`
+	AccountId Id   `json:"accountId"`
+	MyId      Id   `json:"myId"`
+	Members   []Id `json:"members"`
+}
+
+var removeMembers = &Endpoint{
+	Method:    POST,
+	Path:      "/api/v1/private/removeMembers",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &removeMembersArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*removeMembersArgs)
+		ctx.Validate().EntityCount(len(args.Members))
+		if args.AccountId.Equal(args.MyId) {
+			InvalidOperationErr.Panic()
+		}
+
+		accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
+		if accountRole == nil {
 			InsufficientPermissionErr.Panic()
 		}
-	default:
-		if len(members) != 1 || !members[0].Equal(myId) { //any member can remove themselves
-			InsufficientPermissionErr.Panic()
+
+		switch *accountRole {
+		case AccountOwner:
+			totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.AccountId)
+			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, args.Members)
+			if totalOwnerCount == ownerCountInRemoveSet {
+				zeroOwnerCountErr.Panic()
+			}
+
+		case AccountAdmin:
+			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, args.Members)
+			if ownerCountInRemoveSet > 0 {
+				InsufficientPermissionErr.Panic()
+			}
+		default:
+			if len(args.Members) != 1 || !args.Members[0].Equal(args.MyId) { //any member can remove themselves
+				InsufficientPermissionErr.Panic()
+			}
 		}
-	}
 
-	dbSetMembersInactive(ctx, shard, accountId, members)
-	dbLogAccountBatchAddOrRemoveMembersActivity(ctx, shard, accountId, myId, members, "removed")
+		dbSetMembersInactive(ctx, args.Shard, args.AccountId, args.Members)
+		dbLogAccountBatchAddOrRemoveMembersActivity(ctx, args.Shard, args.AccountId, args.MyId, args.Members, "removed")
+		return nil
+	},
 }
 
-func (a *api) MemberIsOnlyAccountOwner(ctx RegionalCtx, shard int, accountId, myId Id) bool {
-	if accountId.Equal(myId) {
-		return true
-	}
-	totalOwnerCount := dbGetTotalOwnerCount(ctx, shard, accountId)
-	ownerCount := dbGetOwnerCountInSet(ctx, shard, accountId, []Id{myId})
-	return totalOwnerCount == 1 && ownerCount == 1
+type memberIsOnlyAccountOwnerArgs struct {
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	MyId      Id  `json:"myId"`
 }
 
-func (a *api) SetMemberName(ctx RegionalCtx, shard int, accountId, myId Id, newName string) {
-	dbSetMemberName(ctx, shard, accountId, myId, newName)
-}
-
-func (a *api) SetMemberDisplayName(ctx RegionalCtx, shard int, accountId, myId Id, newDisplayName *string) {
-	dbSetMemberDisplayName(ctx, shard, accountId, myId, newDisplayName)
-}
-
-func (a *api) MemberIsAccountOwner(ctx RegionalCtx, shard int, accountId, myId Id) bool {
-	if !myId.Equal(accountId) {
-		accountRole := dbGetAccountRole(ctx, shard, accountId, myId)
-		if accountRole != nil && *accountRole == AccountOwner {
+var memberIsOnlyAccountOwner = &Endpoint{
+	Method:    GET,
+	Path:      "/api/v1/private/memberIsOnlyAccountOwner",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &memberIsOnlyAccountOwnerArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*memberIsOnlyAccountOwnerArgs)
+		if args.AccountId.Equal(args.MyId) {
 			return true
-		} else {
-			return false
 		}
-	}
-	return true
+		totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.AccountId)
+		ownerCount := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, []Id{args.MyId})
+		return totalOwnerCount == 1 && ownerCount == 1
+	},
+}
+
+type setMemberNameArgs struct {
+	Shard     int    `json:"shard"`
+	AccountId Id     `json:"accountId"`
+	MyId      Id     `json:"myId"`
+	NewName   string `json:"newName"`
+}
+
+var setMemberName = &Endpoint{
+	Method:    POST,
+	Path:      "/api/v1/private/setMemberName",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &setMemberNameArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*setMemberNameArgs)
+		dbSetMemberName(ctx, args.Shard, args.AccountId, args.MyId, args.NewName)
+		return nil
+	},
+}
+
+type setMemberDisplayNameArgs struct {
+	Shard          int     `json:"shard"`
+	AccountId      Id      `json:"accountId"`
+	MyId           Id      `json:"myId"`
+	NewDisplayName *string `json:"newDisplayName"`
+}
+
+var setMemberDisplayName = &Endpoint{
+	Method:    POST,
+	Path:      "/api/v1/private/setMemberDisplayName",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &setMemberNameArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*setMemberDisplayNameArgs)
+		dbSetMemberDisplayName(ctx, args.Shard, args.AccountId, args.MyId, args.NewDisplayName)
+		return nil
+	},
+}
+
+type memberIsAccountOwnerArgs struct {
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	MyId      Id  `json:"myId"`
+}
+
+var memberIsAccountOwner = &Endpoint{
+	Method:    GET,
+	Path:      "/api/v1/private/memberIsAccountOwner",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &memberIsAccountOwnerArgs{}
+	},
+	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+		args := a.(*memberIsAccountOwnerArgs)
+		if !args.MyId.Equal(args.AccountId) {
+			accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
+			if accountRole != nil && *accountRole == AccountOwner {
+				return true
+			} else {
+				return false
+			}
+		}
+		return true
+	},
+}
+
+var Endpoints = []*Endpoint{
+	createAccount,
+	deleteAccount,
+	addMembers,
+	removeMembers,
+	memberIsOnlyAccountOwner,
+	setMemberName,
+	setMemberDisplayName,
+	memberIsAccountOwner,
 }
 
 func dbCreateAccount(ctx RegionalCtx, id Id, myId Id, myName string, myDisplayName *string) int {
 	shardId := rand.Intn(ctx.Db().TreeShardCount())
 	_, err := ctx.Db().Tree(shardId).Exec(`CALL registerAccount(?, ?, ?, ?)`, []byte(id), []byte(myId), myName, myDisplayName)
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 	return shardId
 }
 
 func dbDeleteAccount(ctx RegionalCtx, shard int, account Id) {
 	_, err := ctx.Db().Tree(shard).Exec(`CALL deleteAccount(?)`, []byte(account))
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 }
 
 func dbGetAllInactiveMemberIdsFromInputSet(ctx RegionalCtx, shard int, accountId Id, members []Id) []Id {
@@ -169,7 +295,7 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx RegionalCtx, shard int, accountId
 	if rows != nil {
 		defer rows.Close()
 	}
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 	for rows.Next() {
 		id := make([]byte, 0, 16)
 		rows.Scan(&id)
@@ -181,7 +307,7 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx RegionalCtx, shard int, accountId
 func dbGetAccountRole(ctx RegionalCtx, shard int, accountId, memberId Id) *AccountRole {
 	row := ctx.Db().Tree(shard).QueryRow(`SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)
-	if ctx.Error().IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
+	if IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
 		return nil
 	}
 	return &res
@@ -196,19 +322,19 @@ func dbAddMembers(ctx RegionalCtx, shard int, accountId Id, members []*AddMember
 		queryArgs = append(queryArgs, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
 	}
 	_, err := ctx.Db().Tree(shard).Exec(query.String(), queryArgs...)
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 }
 
 func dbUpdateMembersAndSetActive(ctx RegionalCtx, shard int, accountId Id, members []*AddMemberPrivate) {
 	for _, mem := range members {
 		_, err := ctx.Db().Tree(shard).Exec(`CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
-		ctx.Error().PanicIf(err)
+		PanicIf(err)
 	}
 }
 
 func dbGetTotalOwnerCount(ctx RegionalCtx, shard int, accountId Id) int {
 	count := 0
-	ctx.Error().IsSqlErrNoRowsElsePanicIf(ctx.Db().Tree(shard).QueryRow(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count))
+	IsSqlErrNoRowsElsePanicIf(ctx.Db().Tree(shard).QueryRow(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count))
 	return count
 }
 
@@ -222,7 +348,7 @@ func dbGetOwnerCountInSet(ctx RegionalCtx, shard int, accountId Id, members []Id
 	}
 	query.WriteString(`)`)
 	count := 0
-	ctx.Error().IsSqlErrNoRowsElsePanicIf(ctx.Db().Tree(shard).QueryRow(query.String(), queryArgs...).Scan(&count))
+	IsSqlErrNoRowsElsePanicIf(ctx.Db().Tree(shard).QueryRow(query.String(), queryArgs...).Scan(&count))
 	return count
 }
 
@@ -230,29 +356,152 @@ func dbSetMembersInactive(ctx RegionalCtx, shard int, accountId Id, members []Id
 	accountIdBytes := []byte(accountId)
 	for _, mem := range members {
 		_, err := ctx.Db().Tree(shard).Exec(`CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem))
-		ctx.Error().PanicIf(err)
+		PanicIf(err)
 	}
 }
 
 func dbSetMemberName(ctx RegionalCtx, shard int, accountId Id, member Id, newName string) {
 	_, err := ctx.Db().Tree(shard).Exec(`CALL setMemberName(?, ?, ?)`, []byte(accountId), []byte(member), newName)
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 }
 
 func dbSetMemberDisplayName(ctx RegionalCtx, shard int, accountId Id, member Id, newDisplayName *string) {
 	_, err := ctx.Db().Tree(shard).Exec(`CALL setMemberDisplayName(?, ?, ?)`, []byte(accountId), []byte(member), newDisplayName)
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 }
 
 func dbLogAccountBatchAddOrRemoveMembersActivity(ctx RegionalCtx, shard int, accountId, member Id, members []Id, action string) {
 	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
-	now := ctx.Time().Now()
+	now := Now()
 	args = append(args, []byte(accountId), now, []byte(member), []byte(members[0]), "member", action, nil, nil)
 	for _, memId := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
 		args = append(args, []byte(accountId), now, []byte(member), []byte(memId), "member", action, nil, nil)
 	}
 	_, err := ctx.Db().Tree(shard).Exec(query.String(), args...)
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
+}
+
+func NewClient(regions map[string]string) *client {
+	lowerRegionsMap := map[string]string{}
+	for k, v := range regions {
+		regions[strings.ToLower(k)] = v
+	}
+	return &client{
+		regions: lowerRegionsMap,
+	}
+}
+
+type client struct {
+	regions map[string]string
+}
+
+func (c *client) getHost(region string) string {
+	host, exists := c.regions[strings.ToLower(region)]
+	if !exists {
+		noSuchRegionErr.Panic()
+	}
+	return host
+}
+
+func (c *client) GetRegions() []string {
+	regions := make([]string, 0, len(c.regions))
+	for r := range c.regions {
+		regions = append(regions, r)
+	}
+	return regions
+}
+
+func (c *client) IsValidRegion(region string) bool {
+	_, exists := c.regions[strings.ToLower(region)]
+	return exists
+}
+
+func (c *client) CreateAccount(region string, account, myId Id, myName string, myDisplayName *string) (int, error) {
+	respVal := 0
+	val, err := createAccount.DoRequest(c.getHost(region), &createAccountArgs{
+		AccountId:     account,
+		MyId:          myId,
+		MyName:        myName,
+		MyDisplayName: myDisplayName,
+	}, nil, &respVal)
+	if val != nil {
+		return *val.(*int), err
+	}
+	return 0, err
+}
+
+func (c *client) DeleteAccount(region string, shard int, account, myId Id) error {
+	_, err := deleteAccount.DoRequest(c.getHost(region), &deleteAccountArgs{
+		Shard:     shard,
+		AccountId: account,
+		MyId:      myId,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) AddMembers(region string, shard int, account, myId Id, members []*AddMemberPrivate) error {
+	_, err := addMembers.DoRequest(c.getHost(region), &addMembersArgs{
+		Shard:     shard,
+		AccountId: account,
+		MyId:      myId,
+		Members:   members,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) RemoveMembers(region string, shard int, account, myId Id, members []Id) error {
+	_, err := removeMembers.DoRequest(c.getHost(region), &removeMembersArgs{
+		Shard:     shard,
+		AccountId: account,
+		MyId:      myId,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, myId Id) (bool, error) {
+	respVal := false
+	val, err := memberIsOnlyAccountOwner.DoRequest(c.getHost(region), &memberIsOnlyAccountOwnerArgs{
+		Shard:     shard,
+		AccountId: account,
+		MyId:      myId,
+	}, nil, &respVal)
+	if val != nil {
+		return *val.(*bool), err
+	}
+	return false, err
+}
+
+func (c *client) SetMemberName(region string, shard int, account, myId Id, newName string) error {
+	_, err := setMemberName.DoRequest(c.getHost(region), &setMemberNameArgs{
+		Shard:     shard,
+		AccountId: account,
+		MyId:      myId,
+		NewName:   newName,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) SetMemberDisplayName(region string, shard int, account, myId Id, newDisplayName *string) error {
+	_, err := setMemberDisplayName.DoRequest(c.getHost(region), &setMemberDisplayNameArgs{
+		Shard:          shard,
+		AccountId:      account,
+		MyId:           myId,
+		NewDisplayName: newDisplayName,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) MemberIsAccountOwner(region string, shard int, account, myId Id) (bool, error) {
+	respVal := false
+	val, err := memberIsAccountOwner.DoRequest(c.getHost(region), &memberIsAccountOwnerArgs{
+		Shard:     shard,
+		AccountId: account,
+		MyId:      myId,
+	}, nil, &respVal)
+	if val != nil {
+		return *val.(*bool), err
+	}
+	return false, err
 }

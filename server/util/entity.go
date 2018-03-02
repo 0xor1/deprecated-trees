@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	. "github.com/pborman/uuid"
-	t "time"
+	"time"
 )
 
-//returns version 1 uuid as a byte slice
+func Now() time.Time {
+	return time.Now().UTC()
+}
+
+//returns Version 1 uuid as a byte slice
 func NewId() Id {
 	id := NewUUID()
 	if id == nil {
@@ -60,11 +64,11 @@ type AddProjectMember struct {
 }
 
 type Activity struct {
-	OccurredOn t.Time  `json:"occurredOn"`
-	Member     Id      `json:"member"`
-	Item       Id      `json:"item"`
-	ItemType   string  `json:"itemType"`
-	Action     string  `json:"action"`
-	ItemName   *string `json:"itemName,omitempty"`
-	ExtraInfo  *string `json:"extraInfo,omitempty"`
+	OccurredOn time.Time `json:"occurredOn"`
+	Member     Id        `json:"member"`
+	Item       Id        `json:"item"`
+	ItemType   string    `json:"itemType"`
+	Action     string    `json:"action"`
+	ItemName   *string   `json:"itemName,omitempty"`
+	ExtraInfo  *string   `json:"extraInfo,omitempty"`
 }

@@ -1,15 +1,11 @@
 package main
 
 import (
-	"crypto/rand"
+	"bitbucket.org/0xor1/task/server/util"
 	"flag"
 	"fmt"
-	"io"
-	"math/big"
 	"os"
 )
-
-var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func main() {
 	fs := flag.NewFlagSet("util", flag.ExitOnError)
@@ -24,33 +20,11 @@ func main() {
 	l := int(lTmp)
 	if t == "s" {
 		for i := 0; i < n; i++ {
-			fmt.Println(createUrlSafeString(l))
+			fmt.Println(util.CryptUrlSafeString(l))
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%x", createBytes(l)))
+			fmt.Println(fmt.Sprintf("%x", util.CryptBytes(l)))
 		}
 	}
-}
-
-func createUrlSafeString(l int) string {
-	buf := make([]rune, l)
-	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
-	for i := range buf {
-		randomIdx, err := rand.Int(rand.Reader, urlSafeRunesLength)
-		if err != nil {
-			panic(err)
-		}
-		buf[i] = urlSafeRunes[int(randomIdx.Int64())]
-	}
-	return string(buf)
-}
-
-func createBytes(l int) []byte {
-	k := make([]byte, l)
-	_, err := io.ReadFull(rand.Reader, k)
-	if err != nil {
-		panic(err)
-	}
-	return k
 }

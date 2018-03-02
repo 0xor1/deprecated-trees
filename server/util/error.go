@@ -1,6 +1,7 @@
 package util
 
 import (
+	"database/sql"
 	"fmt"
 	"regexp"
 	"unicode/utf8"
@@ -9,15 +10,15 @@ import (
 var (
 	NotImplementedErr         = &AppError{Code: "g_ni", Message: "not implemented", Public: true}
 	InvalidArgumentsErr       = &AppError{Code: "g_ia", Message: "invalid arguments", Public: true}
-	idGenerationErr           = &AppError{Code: "g_ig", Message: "failed to generate id", Public: false}
-	idParseErr                = &AppError{Code: "g_ip", Message: "failed to parse id", Public: false}
 	InsufficientPermissionErr = &AppError{Code: "g_ip", Message: "insufficient permissions", Public: true}
 	InvalidOperationErr       = &AppError{Code: "g_io", Message: "invalid operation", Public: true}
 	InvalidEntityCountErr     = &AppError{Code: "g_iec", Message: "invalid entity count", Public: true}
 	NoSuchEntityErr           = &AppError{Code: "g_nse", Message: "no such entity", Public: true}
-	noChangeMadeErr           = &AppError{Code: "g_nc", Message: "no change made", Public: true}
-	invalidRegionErr          = &AppError{Code: "g_ir", Message: "invalid region", Public: false}
+	idGenerationErr           = &AppError{Code: "g_ig", Message: "failed to generate id", Public: false}
+	idParseErr                = &AppError{Code: "g_idp", Message: "failed to parse id", Public: true}
 	invalidEndpointErr        = &AppError{Code: "g_ie", Message: "invalid endpoint", Public: false}
+	unauthorizedErr           = &AppError{Code: "g_ns", Message: "unauthorized", Public: true}
+	internalServerErr         = &AppError{Code: "g_is", Message: "internal server error", Public: true}
 	externalAppErr            = &AppError{Code: "g_ea", Message: "external error occurred", Public: false}
 )
 
@@ -37,12 +38,12 @@ func (e *AppError) Error() string {
 	return fmt.Sprintf("code: %q message: %q", e.Code, e.Message)
 }
 
-func (e *AppError) Panic() {
-	panic(e)
-}
-
 func (e *AppError) IsPublic() bool {
 	return e.Public
+}
+
+func (e *AppError) Panic() {
+	panic(e)
 }
 
 type externalError struct {
@@ -51,47 +52,11 @@ type externalError struct {
 }
 
 func (e *externalError) Error() string {
-	return fmt.Sprintf("code: %q message: %q original err: %q", e.Code, e.Message, e.OriginalError.Error())
+	return fmt.Sprintf("code: %q message: %q original errorClient: %q", e.Code, e.Message, e.OriginalError.Error())
 }
 
 func (e *externalError) Panic() {
 	panic(e)
-}
-
-type invalidStringArgErr struct {
-	ArgPurpose    string
-	MinRuneCount  int
-	MaxRuneCount  int
-	RegexMatchers []*regexp.Regexp
-}
-
-func (e *invalidStringArgErr) Error() string {
-	return fmt.Sprintf("%s must be between %d and %d utf8 characters long and match all regexs %v", e.ArgPurpose, e.MinRuneCount, e.MaxRuneCount, e.RegexMatchers)
-}
-
-func (e *invalidStringArgErr) IsPublic() bool {
-	return true
-}
-
-func newInvalidStringArgErr(argPurpose string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) *invalidStringArgErr {
-	return &invalidStringArgErr{
-		ArgPurpose:    argPurpose,
-		MinRuneCount:  minRuneCount,
-		MaxRuneCount:  maxRuneCount,
-		RegexMatchers: append(make([]*regexp.Regexp, 0, len(regexMatchers)), regexMatchers...),
-	}
-}
-
-func validateStringArg(argPurpose, arg string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) {
-	valRuneCount := utf8.RuneCountInString(arg)
-	if valRuneCount < minRuneCount || valRuneCount > maxRuneCount {
-		panic(newInvalidStringArgErr(argPurpose, minRuneCount, maxRuneCount, regexMatchers))
-	}
-	for _, regex := range regexMatchers {
-		if matches := regex.MatchString(arg); !matches {
-			panic(newInvalidStringArgErr(argPurpose, minRuneCount, maxRuneCount, regexMatchers))
-		}
-	}
 }
 
 type missingDlmErr struct {
@@ -107,11 +72,31 @@ func (e *missingDlmErr) IsPublic() bool {
 	return false
 }
 
-func panicIf(e error) {
+func (e *missingDlmErr) Panic() {
+	panic(e)
+}
+
+func PanicIf(e error) {
 	if e != nil {
-		(&externalError{
-			AppError:      *externalAppErr,
-			OriginalError: e,
-		}).Panic()
+		if pErr, ok := e.(PermissionedError); !ok {
+			(&externalError{
+				AppError:      *externalAppErr,
+				OriginalError: e,
+			}).Panic()
+		} else {
+			pErr.Panic()
+		}
 	}
+}
+
+func IsSqlErrNoRowsElsePanicIf(err error) bool {
+	if err == sql.ErrNoRows {
+		return true
+	}
+	PanicIf(err)
+	return false
+}
+
+func FmtPanic(format string, a ...interface{}) {
+	panic(fmt.Errorf(format, a...))
 }

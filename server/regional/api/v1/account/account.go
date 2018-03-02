@@ -72,7 +72,7 @@ func dbGetAccountRole(ctx RegionalCtx, shard int, accountId, memberId Id) *Accou
 
 func dbSetPublicProjectsEnabled(ctx RegionalCtx, shard int, accountId, myId Id, publicProjectsEnabled bool) {
 	_, err := ctx.Db().Tree(shard).Exec(`CALL setPublicProjectsEnabled(?, ?, ?)`, []byte(accountId), []byte(ctx.MyId()), publicProjectsEnabled)
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 }
 
 func dbGetPublicProjectsEnabled(ctx RegionalCtx, shard int, accountId Id) bool {
@@ -86,7 +86,7 @@ func dbSetMemberRole(ctx RegionalCtx, shard int, accountId, myId, memberId Id, r
 func dbGetMember(ctx RegionalCtx, shard int, accountId, memberId Id) *member {
 	row := ctx.Db().Tree(shard).QueryRow(`SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := member{}
-	ctx.Error().PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
+	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 
@@ -151,11 +151,11 @@ func dbGetMembers(ctx RegionalCtx, shard int, accountId Id, role *AccountRole, n
 	if rows != nil {
 		defer rows.Close()
 	}
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 	res := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
-		ctx.Error().PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
+		PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
 	if len(res) == limit+1 {
@@ -196,12 +196,12 @@ func dbGetActivities(ctx RegionalCtx, shard int, accountId Id, item *Id, member 
 	if rows != nil {
 		defer rows.Close()
 	}
-	ctx.Error().PanicIf(err)
+	PanicIf(err)
 
 	res := make([]*Activity, 0, limit)
 	for rows.Next() {
 		act := Activity{}
-		ctx.Error().PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
+		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	return res

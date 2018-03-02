@@ -9,22 +9,25 @@ import (
 )
 
 type Endpoint struct {
+	Note              string
 	Method            string
 	Path              string
+	IsPrivate         bool
 	RequiresSession   bool
 	ResponseStructure interface{}
 	IsAuthentication  bool
-	PermissionDlmKeys func(ctx Ctx, args interface{}) []string
-	ValueDlmKeys      func(ctx Ctx, args interface{}) []string
+	PermissionDlmKeys func(ctx *Ctx, args interface{}) []string
+	ValueDlmKeys      func(ctx *Ctx, args interface{}) []string
+	FormStruct        map[string]string
 	ProcessForm       func(http.ResponseWriter, *http.Request) interface{}
 	GetArgsStruct     func() interface{}
-	PermissionCheck   func(ctx Ctx, args interface{})
-	CentralHandler    func(ctx CentralCtx, args interface{}) interface{}
-	RegionalHandler   func(ctx RegionalCtx, args interface{}) interface{}
+	PermissionCheck   func(ctx *Ctx, args interface{})
+	CtxHandler        func(ctx *Ctx, args interface{}) interface{}
+	RawHandler        func(w http.ResponseWriter, r *http.Request)
 }
 
-func (e *Endpoint) Validate() {
-	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || ((e.CentralHandler == nil && e.RegionalHandler == nil) || (e.CentralHandler != nil && e.RegionalHandler != nil)) {
+func (e *Endpoint) ValidateEndpoint() {
+	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || (e.ProcessForm != nil && len(e.FormStruct) == 0) || (e.CtxHandler != nil && e.RawHandler != nil) || (e.CtxHandler == nil && e.RawHandler == nil) {
 		invalidEndpointErr.Panic()
 	}
 }
@@ -35,7 +38,7 @@ var (
 	form        = "Form"
 )
 
-func (e *Endpoint) Documentation() *endpointDocumentation {
+func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	var argsLocation *string
 	if e.GetArgsStruct != nil {
 		argsLocation = &queryString
@@ -47,25 +50,36 @@ func (e *Endpoint) Documentation() *endpointDocumentation {
 			}
 		}
 	}
+	var note *string
+	if e.Note != "" {
+		note = &e.Note
+	}
+	var argsStruct interface{}
+	if e.GetArgsStruct != nil {
+		argsStruct = e.GetArgsStruct()
+	} else if e.ProcessForm != nil {
+		argsStruct = e.FormStruct
+	}
+	var isAuth *bool
+	if e.IsAuthentication {
+		isAuth = &e.IsAuthentication
+	}
 	return &endpointDocumentation{
+		Note:              note,
 		Method:            e.Method,
 		Path:              e.Path,
 		RequiresSession:   e.RequiresSession,
 		ArgsLocation:      argsLocation,
-		ArgsStructure:     e.GetArgsStruct(),
+		ArgsStructure:     argsStruct,
 		ResponseStructure: e.ResponseStructure,
-		IsAuthentication:  e.IsAuthentication,
+		IsAuthentication:  isAuth,
 	}
 }
 
-func (e *Endpoint) CreateRequest(schema, host string, args interface{}, buildForm func(r *http.Request, args interface{})) (*http.Request, error) {
-	req := &http.Request{
-		Method: e.Method,
-		URL: &url.URL{
-			Scheme: schema,
-			Path:   e.Path,
-		},
-		Header: http.Header{},
+func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r *http.Request, args interface{})) (*http.Request, error) {
+	req, err := http.NewRequest(e.Method, host+e.Path, nil)
+	if err != nil {
+		return nil, err
 	}
 	if buildForm != nil {
 		if e.Method != POST {
@@ -89,8 +103,8 @@ func (e *Endpoint) CreateRequest(schema, host string, args interface{}, buildFor
 	return req, nil
 }
 
-func (e *Endpoint) DoRequest(schema, host string, args interface{}, buildForm func(r *http.Request, args interface{}), respVal interface{}) (interface{}, error) {
-	req, err := e.CreateRequest(schema, host, args, buildForm)
+func (e *Endpoint) DoRequest(host string, args interface{}, buildForm func(r *http.Request, args interface{}), respVal interface{}) (interface{}, error) {
+	req, err := e.createRequest(host, args, buildForm)
 	if err != nil {
 		return nil, err
 	}
@@ -110,12 +124,48 @@ func (e *Endpoint) DoRequest(schema, host string, args interface{}, buildForm fu
 	return respVal, nil
 }
 
+func (e *Endpoint) handleRequest(ctx *Ctx) {
+	var args interface{}
+	if e.Method == GET && e.GetArgsStruct != nil {
+		args = e.GetArgsStruct()
+		PanicIf(json.Unmarshal([]byte(ctx.r.URL.Query().Get("args")), args))
+	} else if e.Method == POST && e.GetArgsStruct != nil {
+		args = e.GetArgsStruct()
+		PanicIf(json.NewDecoder(ctx.r.Body).Decode(args))
+	} else if e.Method == POST && e.ProcessForm != nil {
+		args = e.ProcessForm(ctx.w, ctx.r)
+	}
+	if e.CtxHandler != nil {
+		e.CtxHandler(ctx, args)
+	} else {
+		e.RawHandler(ctx.w, ctx.r)
+	}
+}
+
 type endpointDocumentation struct {
+	Note              *string     `json:"note,omitempty"`
 	Method            string      `json:"method"`
 	Path              string      `json:"path"`
 	RequiresSession   bool        `json:"requiresSession"`
 	ArgsLocation      *string     `json:"argsLocation,omitempty"`
 	ArgsStructure     interface{} `json:"argsStructure,omitempty"`
 	ResponseStructure interface{} `json:"responseStructure,omitempty"`
-	IsAuthentication  bool        `json:"isAuthentication"`
+	IsAuthentication  *bool       `json:"isAuthentication,omitempty"`
+}
+
+func writeJsonOk(w http.ResponseWriter, body interface{}) {
+	writeJson(w, http.StatusOK, body)
+}
+
+func writeJson(w http.ResponseWriter, code int, body interface{}) {
+	bodyBytes, err := json.Marshal(body)
+	PanicIf(err)
+	writeRawJson(w, code, bodyBytes)
+}
+
+func writeRawJson(w http.ResponseWriter, code int, body []byte) {
+	w.WriteHeader(code)
+	w.Header().Add("Content-Type", "application/json;charset=utf-8")
+	_, err := w.Write(body)
+	PanicIf(err)
 }

@@ -400,6 +400,11 @@ BEGIN
 	DECLARE nextSiblingToUse BINARY(16) DEFAULT NULL;
   DECLARE memberExistsAndIsActive BOOL DEFAULT FALSE;
   DECLARE changeMade BOOL DEFAULT FALSE;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
 
   #assume parameters are already validated against themselves in the business logic
 
@@ -439,8 +444,10 @@ BEGIN
     #update siblings and parent firstChild value if required
     IF _previousSiblingId IS NULL THEN #update parents firstChild
       UPDATE tasks SET firstChild=_taskId WHERE account=_accountId AND project=_projectId AND id=_parentId;
+      INSERT INTO tempUpdatedIds VALUES (_parentId) ON DUPLICATE KEY UPDATE id=id;
     ELSE #update previousSiblings nextSibling value
       UPDATE tasks SET nextSibling=_taskId WHERE account=_accountId AND project=_projectId AND id=_previousSiblingId;
+      INSERT INTO tempUpdatedIds VALUES (_previousSiblingId) ON DUPLICATE KEY UPDATE id=id;
     END IF;
     #update member if needed
     IF _memberId IS NOT NULL AND _totalRemainingTime <> 0 THEN
@@ -449,7 +456,8 @@ BEGIN
 
     CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, _parentId);
   END IF;
-  SELECT changeMade;
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   COMMIT;
 END;
 $$
@@ -495,6 +503,11 @@ BEGIN
   DECLARE currentIsParallel BOOL DEFAULT FALSE;
   DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE changeMade BOOL DEFAULT FALSE;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
@@ -512,7 +525,8 @@ BEGIN
       END IF;
     END IF;
   END IF;
-  SELECT changeMade;
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   COMMIT;
 END;
 $$
@@ -584,12 +598,17 @@ BEGIN
   DECLARE nextTask BINARY(16) DEFAULT NULL;
   DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE changeMade BOOL DEFAULT FALSE;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
   IF projectExists THEN
     SELECT COUNT(*)=1, name, member, parent, totalRemainingTime INTO taskExists, taskName, existingMember, nextTask, originalMinimumRemainingTime FROM tasks WHERE account=_accountId AND project=_projectId AND id=_taskId AND isAbstract=FALSE;
     IF _timeRemaining IS NULL THEN
-      SET _timeRemaining= originalMinimumRemainingTime;
+      SET _timeRemaining = originalMinimumRemainingTime;
     END IF;
     IF _duration IS NULL THEN
       SET _duration=0;
@@ -615,13 +634,15 @@ BEGIN
       END IF;
 
       UPDATE tasks SET totalRemainingTime=_timeRemaining, minimumRemainingTime=_timeRemaining, totalLoggedTime=totalLoggedTime+_duration WHERE account=_accountId AND project=_projectId AND id=_taskId;
+      INSERT INTO tempUpdatedIds VALUES (_taskId) ON DUPLICATE KEY UPDATE id=id;
       IF _timeRemaining <> originalMinimumRemainingTime THEN
         INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _myId, _taskId, 'task', 'setRemainingTime', taskName, CAST(_timeRemaining as char character set utf8));
       END IF;
       CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, nextTask);
     END IF;
   END IF;
-  SELECT changeMade;
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   COMMIT;
 END;
 $$
@@ -648,6 +669,11 @@ BEGIN
   DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE idVariable BINARY(16) DEFAULT _newParentId;
   DECLARE changeMade BOOL DEFAULT FALSE;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
   START TRANSACTION;
   IF _newParentId IS NOT NULL AND _projectId <> _taskId AND _newParentId <> _taskId THEN #check newParent is not null AND _taskId is not the project or the new parent
     SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account=_accountId AND id=_projectId FOR UPDATE;
@@ -667,18 +693,22 @@ BEGIN
               UPDATE tasks SET nextSibling=originalParentFirstChildId WHERE account=_accountId AND project=_projectId AND id=_taskId;
               UPDATE tasks SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
               UPDATE tasks SET firstChild=_taskId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+              INSERT INTO tempUpdatedIds VALUES (_taskId), (originalPreviousSiblingId), (originalParentId) ON DUPLICATE KEY UPDATE id=id;
               SET changeMade = TRUE;
             ELSEIF _newPreviousSiblingId IS NOT NULL AND ((newNextSiblingId IS NULL AND originalNextSiblingId IS NOT NULL) OR (newNextSiblingId IS NOT NULL AND newNextSiblingId <> _taskId AND originalNextSiblingId IS NULL) OR (newNextSiblingId IS NOT NULL AND newNextSiblingId <> _taskId AND originalNextSiblingId IS NOT NULL AND newNextSiblingId <> originalNextSiblingId)) THEN
               IF originalParentFirstChildId = _taskId AND originalNextSiblingId IS NOT NULL THEN #moving the first child task
                 UPDATE tasks SET firstChild=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+                INSERT INTO tempUpdatedIds VALUES (originalParentId) ON DUPLICATE KEY UPDATE id=id;
               ELSE #moving a none first child task
                 SELECT id INTO originalPreviousSiblingId FROM tasks WHERE account=_accountId AND project=_projectId AND nextSibling=_taskId;
                 IF originalPreviousSiblingId IS NOT NULL THEN
                   UPDATE tasks SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
+                  INSERT INTO tempUpdatedIds VALUES (originalPreviousSiblingId) ON DUPLICATE KEY UPDATE id=id;
                 END IF;
               END IF;
               UPDATE tasks SET nextSibling=newNextSiblingId WHERE account=_accountId AND project=_projectId AND id=_taskId;
               UPDATE tasks SET nextSibling=_taskId WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId;
+              INSERT INTO tempUpdatedIds VALUES (_taskId), (_newPreviousSiblingId) ON DUPLICATE KEY UPDATE id=id;
               SET changeMade = TRUE;
             END IF;
           ELSE # this is the expensive complex move to make, to simplify we do not work out a shared ancestor task and perform operations up to that task
@@ -699,21 +729,26 @@ BEGIN
               #remove from original location
               IF originalParentFirstChildId = _taskId THEN #removing from first child position
                 UPDATE tasks SET firstChild=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalParentId;
+                INSERT INTO tempUpdatedIds VALUES (originalParentId) ON DUPLICATE KEY UPDATE id=id;
               ELSE #removing from none first child position
                 SELECT id INTO originalPreviousSiblingId FROM tasks WHERE account=_accountId AND project=_projectId AND nextSibling=_taskId;
                 UPDATE tasks SET nextSibling=originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
+                INSERT INTO tempUpdatedIds VALUES (originalPreviousSiblingId) ON DUPLICATE KEY UPDATE id=id;
               END IF;
               ##remove parent id so it isn't included in update in setAncestralChainAggregateValuesFromTask call
               UPDATE tasks SET parent=NULL WHERE account=_accountId AND project=_projectId AND id=_taskId;
+              INSERT INTO tempUpdatedIds VALUES (_taskId) ON DUPLICATE KEY UPDATE id=id;
               CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, originalParentId);
 
               #now add in the new position
               IF _newPreviousSiblingId IS NULL THEN #moving to firstChild position
                 UPDATE tasks SET firstChild=_taskId WHERE account=_accountId AND project=_projectId AND id=_newParentId;
                 UPDATE tasks SET parent=_newParentId, nextSibling=newParentFirstChildId WHERE account=_accountId AND project=_projectId AND id=_taskId;
+                INSERT INTO tempUpdatedIds VALUES (_newParentId), (_taskId) ON DUPLICATE KEY UPDATE id=id;
               ELSE #moving to none firstChild position
                 UPDATE tasks SET nextSibling=_taskId WHERE account=_accountId AND project=_projectId AND id=_newPreviousSiblingId;
                 UPDATE tasks SET parent=_newParentId, nextSibling=newNextSiblingId WHERE account=_accountId AND project=_projectId AND id=_taskId;
+                INSERT INTO tempUpdatedIds VALUES (_newPreviousSiblingId), (_taskId) ON DUPLICATE KEY UPDATE id=id;
               END IF;
               CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, _newParentId);
               SET changeMade=TRUE;
@@ -726,7 +761,8 @@ BEGIN
   IF changeMade THEN
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'moved', taskName, NULL);
   END IF;
-  SELECT changeMade;
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   COMMIT;
 END;
 $$
@@ -748,6 +784,11 @@ BEGIN
   DECLARE deleteCount BIGINT UNSIGNED DEFAULT 0;
   DECLARE taskName VARCHAR(250) DEFAULT '';
   DECLARE changeMade BOOL DEFAULT FALSE;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
   DROP TEMPORARY TABLE IF EXISTS tempAllIds;
   CREATE TEMPORARY TABLE tempAllIds(
     id BINARY(16) NOT NULL,
@@ -787,6 +828,7 @@ BEGIN
             UPDATE tasks SET nextSibling = originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
           END IF;
           DELETE FROM tasks WHERE id IN (SELECT id FROM tempAllIds);
+          INSERT INTO tempUpdatedIds SELECT id FROM tempAllIds ON DUPLICATE KEY UPDATE id=id;
           CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, originalParentId);
           SET changeMade = TRUE;
         END IF;
@@ -797,10 +839,11 @@ BEGIN
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_accountId, _projectId, UTC_TIMESTAMP(6), _myId, _taskId, 'task', 'deleted', taskName, CONCAT('{"totalRemainingTime":', CAST(originalTotalRemainingTime as char character set utf8), ',"totalLoggedTime":', CAST(originalTotalLoggedTime as char character set utf8), ',"descendantCount":', CAST(originalDescendantCount as char character set utf8), '}'));
   END IF;
 
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempAllIds;
   DROP TEMPORARY TABLE IF EXISTS tempCurrentIds;
   DROP TEMPORARY TABLE IF EXISTS tempLatestIds;
-  SELECT changeMade;
   COMMIT;
 END;
 $$
@@ -919,6 +962,7 @@ CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_accountId BINARY(16)
 
     #the first task updated is special, it could have had a new child added or removed from it, so the childCount can be updated, no other ancestor will have the childCount updated
     UPDATE tasks SET totalRemainingTime = totalRemainingTimeChange, totalLoggedTime = totalLoggedTimeChange, minimumRemainingTime = postChangeMinimumRemainingTime, childCount = newChildCount, descendantCount = descendantCountChange WHERE account = _accountId AND project = _projectId AND id = _taskId;
+    INSERT INTO tempUpdatedIds VALUES (_taskId) ON DUPLICATE KEY UPDATE id=id;
 
     IF totalRemainingTimeChange >= originalTotalRemainingTime THEN
       SET totalRemainingTimeChange = totalRemainingTimeChange - originalTotalRemainingTime;
@@ -979,6 +1023,8 @@ CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_accountId BINARY(16)
       ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
         UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account=_accountId AND project=_projectId AND id=_taskId;
       END IF;
+
+      INSERT INTO tempUpdatedIds VALUES (_taskId) ON DUPLICATE KEY UPDATE id=id;
 
       SET _taskId=nextTask;
 
