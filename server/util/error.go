@@ -3,8 +3,6 @@ package util
 import (
 	"database/sql"
 	"fmt"
-	"regexp"
-	"unicode/utf8"
 )
 
 var (

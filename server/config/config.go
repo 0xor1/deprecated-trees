@@ -1,37 +1,33 @@
 package config
 
 import (
+	centralAccount "bitbucket.org/0xor1/task/server/central/api/v1/account"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/task"
 	. "bitbucket.org/0xor1/task/server/util"
+	"encoding/base64"
 	"encoding/gob"
-	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/0xor1/iredis"
 	"github.com/0xor1/isql"
 	"github.com/garyburd/redigo/redis"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/spf13/viper"
-	"io"
-	"io/ioutil"
-	"os"
-	"path"
 	"regexp"
 	"runtime/debug"
-	"strings"
-	"sync"
-	"time"
-	_ "github.com/go-sql-driver/mysql"
-	"encoding/json"
-	centralAccount "bitbucket.org/0xor1/task/server/central/api/v1/account"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/task"
 	"strconv"
+	"strings"
+	"time"
 )
 
 // pass in empty strings for no config file
 func Config(configFile, configPath string) *StaticResources {
+	sr := &StaticResources{}
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "127.0.0.1:8787"
 	viper.SetDefault("serverAddress", "127.0.0.1:8787")
@@ -49,15 +45,15 @@ func Config(configFile, configPath string) *StaticResources {
 	viper.SetDefault("sessionDomain", "127.0.0.1")
 	// session cookie store
 	viper.SetDefault("sessionAuthKey64s", []string{
-		"6b84169d73a9a21f83171033f9872429c35a9507d2afa0c0754cd825b03868f3136976c9da57ddd3b939bb4c85d512298920244e349e3de3a107eb8b4e76f4e8",
-		"51fe9e96c2623046e528842b0677b9661f132f1f3b5957eda86a7e7c7cba15c6ca3c7942adefabf3a1c687f286d4ee574b48eed9f43763b2961789c53bbd9141",
+		"2Kt39ndjI2praE8+rTBDb9OwEgR/JXXf8hO1Tl/mjx4SBpvugYSYRYkx3zBn+ofsRYFFr42Ap07NavrBjv1tzQ==",
+		"co1AGV8VPSMOzjcokXEaxtKmKsi/BUXsidpaNHRyGyx0PwbnwNOMs0FzUWxhg+SO0AcqRATVtMWlhvGyLjtOIg==",
 	})
 	viper.SetDefault("sessionEncrKey32s", []string{
-		"3d4a4819b4058e312057c096853842b160bb6406544cceb40ef6241d6a772ed8",
-		"919fa4311c2127f15ec9d75bbfafd496110d7451012e12966af16de2e7e6e0fc",
+		"HQSpwNjT8Ra4RQkaZwYPPXMnF+sHHvJbZ0H7O+hQa/A=",
+		"1V0QdFGKMGIFb4N5ss9f4q8c5QW0lZ5+yvA93aoJYmY=",
 	})
-	// incremental hex value
-	viper.SetDefault("masterCacheKey", "A")
+	// incremental base64 value
+	viper.SetDefault("masterCacheKey", "0")
 	// regexes that account names must match to be valid during account creation or name setting
 	viper.SetDefault("nameRegexMatchers", []string{})
 	// regexes that account pwds must match to be valid during account creation or pwd setting
@@ -84,6 +80,8 @@ func Config(configFile, configPath string) *StaticResources {
 	viper.SetDefault("scryptP", 1)
 	// scrypt key length
 	viper.SetDefault("scryptKeyLen", 32)
+	// private client secret base64 encoded
+	viper.SetDefault("regionalV1PrivateClientSecret", "d8RBy1UvIT/u3bhEZlrZAHrKusB6c3UNFqz2tl3pT56ENN3f+kFjGxY2BvqTNM8pngMiuwBBMeuQRjl1Gcazlg==")
 	// private client config
 	viper.SetDefault("regionalV1PrivateClientConfig", map[string]string{
 		"lcl": "http//127.0.0.1:8787",
@@ -118,12 +116,12 @@ func Config(configFile, configPath string) *StaticResources {
 	encrKey32s := viper.GetStringSlice("sessionEncrKey32s")
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
 	for i := range authKey64s {
-		authBytes, err := hex.DecodeString(authKey64s[i])
+		authBytes, err := base64.StdEncoding.DecodeString(authKey64s[i])
 		PanicIf(err)
 		if len(authBytes) != 64 {
 			FmtPanic("sessionAuthBytes length is not 64")
 		}
-		encrBytes, err := hex.DecodeString(encrKey32s[i])
+		encrBytes, err := base64.StdEncoding.DecodeString(encrKey32s[i])
 		PanicIf(err)
 		if len(encrBytes) != 32 {
 			FmtPanic("sessionEncrBytes length is not 32")
@@ -142,8 +140,7 @@ func Config(configFile, configPath string) *StaticResources {
 	var log func(error)
 	var avatarClient AvatarClient
 	var mailClient MailClient
-	endpoints := make([]*Endpoint, 0, len(centralAccount.Endpoints) + len(private.Endpoints) + len(account.Endpoints) + len(project.Endpoints) + len(task.Endpoints))
-
+	endpoints := make([]*Endpoint, 0, len(centralAccount.Endpoints)+len(private.Endpoints)+len(account.Endpoints)+len(project.Endpoints)+len(task.Endpoints))
 
 	if viper.GetString("env") == "lcl" {
 		//setup all routes on lcl environment
@@ -158,8 +155,8 @@ func Config(configFile, configPath string) *StaticResources {
 			fmt.Println(err)
 			fmt.Println(string(debug.Stack()))
 		}
-		avatarClient = newLocalAvatarStore(viper.GetString("lclAvatarDir"), uint(viper.GetInt("maxAvatarDim")))
-		mailClient = newLocalMailClient()
+		avatarClient = NewLocalAvatarStore(viper.GetString("lclAvatarDir"), uint(viper.GetInt("maxAvatarDim")))
+		mailClient = NewLocalMailClient()
 	} else {
 		//setup deployed environment interfaces
 		//TODO setup aws s3 avatarStore storage
@@ -175,6 +172,7 @@ func Config(configFile, configPath string) *StaticResources {
 			FmtPanic("duplicate endpoint path %q", lowerPath)
 		}
 		routes[lowerPath] = ep
+		ep.StaticResources = sr
 	}
 	routeDocs := make([]interface{}, 0, len(routes))
 	for _, ep := range routes {
@@ -235,85 +233,35 @@ func Config(configFile, configPath string) *StaticResources {
 		}
 	}
 
-	return &StaticResources{
-		ServerAddress:           viper.GetString("serverAddress"),
-		Env:                     viper.GetString("env"),
-		Region:                  viper.GetString("region"),
-		Version:                 viper.GetString("version"),
-		ApiDocsRoute:            viper.GetString("apiDocsRoute"),
-		SessionName:             viper.GetString("sessionName"),
-		SessionStore: sessionStore,
-		Routes: routes,
-		ApiDocs: apiDocs,
-		MasterCacheKey: viper.GetString("masterCacheKey"),
-		NameRegexMatchers: nameRegexMatchers,
-		PwdRegexMatchers: pwdRegexMatchers,
-		NameMinRuneCount: viper.GetInt("nameMinRuneCount"),
-		NameMaxRuneCount: viper.GetInt("nameMaxRuneCount"),
-		PwdMinRuneCount:         viper.GetInt("pwdMinRuneCount"),
-		PwdMaxRuneCount:         viper.GetInt("pwdMaxRuneCount"),
-		MaxProcessEntityCount:   viper.GetInt("maxProcessEntityCount"),
-		CryptCodeLen:            viper.GetInt("cryptCodeLen"),
-		SaltLen:                 viper.GetInt("saltLen"),
-		ScryptR:                 viper.GetInt("scryptR"),
-		ScryptP:                 viper.GetInt("scryptP"),
-		ScryptKeyLen:            viper.GetInt("scryptKeyLen"),
-		RegionalV1PrivateClient: private.NewClient(viper.GetStringMapString("regionalV1PrivateClientConfig")),
-		MailClient:              mailClient,
-		AvatarClient:            avatarClient,
-		Log:                     log,
-		AccountDb: accountDb,
-		PwdDb: pwdDb,
-		TreeShards: treeShardDbs,
-		RedisPool: redisPool,
-	}
-}
-
-func newLocalAvatarStore(relDirPath string, maxAvatarDim uint) AvatarClient {
-	if relDirPath == "" {
-		InvalidArgumentsErr.Panic()
-	}
-	wd, err := os.Getwd()
-	PanicIf(err)
-	absDirPath := path.Join(wd, relDirPath)
-	os.MkdirAll(absDirPath, os.ModeDir)
-	return &localAvatarStore{
-		mtx:          &sync.Mutex{},
-		maxAvatarDim: maxAvatarDim,
-		absDirPath:   absDirPath,
-	}
-}
-
-type localAvatarStore struct {
-	mtx          *sync.Mutex
-	maxAvatarDim uint
-	absDirPath   string
-}
-
-func (s *localAvatarStore) MaxAvatarDim() uint {
-	return s.maxAvatarDim
-}
-
-func (s *localAvatarStore) Save(key string, mimeType string, data io.Reader) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	avatarBytes, err := ioutil.ReadAll(data)
-	PanicIf(err)
-	PanicIf(ioutil.WriteFile(path.Join(s.absDirPath, key), avatarBytes, os.ModePerm))
-}
-
-func (s *localAvatarStore) Delete(key string) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	PanicIf(os.Remove(path.Join(s.absDirPath, key)))
-}
-
-func newLocalMailClient() MailClient {
-	return &localMailClient{}
-}
-
-type localMailClient struct{}
-
-func (s *localMailClient) Send(sendTo []string, content string) {
-	fmt.Println(sendTo, content)
+	sr.ServerAddress = viper.GetString("serverAddress")
+	sr.Env = viper.GetString("env")
+	sr.Region = viper.GetString("region")
+	sr.Version = viper.GetString("version")
+	sr.ApiDocsRoute = strings.ToLower(viper.GetString("apiDocsRoute"))
+	sr.SessionName = viper.GetString("sessionName")
+	sr.SessionStore = sessionStore
+	sr.Routes = routes
+	sr.ApiDocs = apiDocs
+	sr.MasterCacheKey = viper.GetString("masterCacheKey")
+	sr.NameRegexMatchers = nameRegexMatchers
+	sr.PwdRegexMatchers = pwdRegexMatchers
+	sr.NameMinRuneCount = viper.GetInt("nameMinRuneCount")
+	sr.NameMaxRuneCount = viper.GetInt("nameMaxRuneCount")
+	sr.PwdMinRuneCount = viper.GetInt("pwdMinRuneCount")
+	sr.PwdMaxRuneCount = viper.GetInt("pwdMaxRuneCount")
+	sr.MaxProcessEntityCount = viper.GetInt("maxProcessEntityCount")
+	sr.CryptCodeLen = viper.GetInt("cryptCodeLen")
+	sr.SaltLen = viper.GetInt("saltLen")
+	sr.ScryptR = viper.GetInt("scryptR")
+	sr.ScryptP = viper.GetInt("scryptP")
+	sr.ScryptKeyLen = viper.GetInt("scryptKeyLen")
+	sr.RegionalV1PrivateClient = private.NewClient(viper.GetStringMapString("regionalV1PrivateClientConfig"))
+	sr.MailClient = mailClient
+	sr.AvatarClient = avatarClient
+	sr.Log = log
+	sr.AccountDb = accountDb
+	sr.PwdDb = pwdDb
+	sr.TreeShards = treeShardDbs
+	sr.RedisPool = redisPool
+	return sr
 }

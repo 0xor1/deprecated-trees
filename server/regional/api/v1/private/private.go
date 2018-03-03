@@ -26,7 +26,7 @@ var createAccount = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &createAccountArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*createAccountArgs)
 		return dbCreateAccount(ctx, args.AccountId, args.MyId, args.MyName, args.MyDisplayName)
 	},
@@ -45,10 +45,10 @@ var deleteAccount = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &deleteAccountArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		if !args.MyId.Equal(args.AccountId) {
-			ctx.Validate().MemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId))
+			ValidateMemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId))
 		}
 		dbDeleteAccount(ctx, args.Shard, args.AccountId)
 		//TODO delete s3 data, uploaded files etc
@@ -70,21 +70,21 @@ var addMembers = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
-		ctx.Validate().EntityCount(len(args.Members))
+		ValidateEntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(args.MyId) {
 			InvalidOperationErr.Panic()
 		}
 		accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
-		ctx.Validate().MemberHasAccountAdminAccess(accountRole)
+		ValidateMemberHasAccountAdminAccess(accountRole)
 
 		allIds := make([]Id, 0, len(args.Members))
 		newMembersMap := map[string]*AddMemberPrivate{}
 		for _, mem := range args.Members { //loop over all the new entries and check permissions and build up useful id map and allIds slice
 			mem.Role.Validate()
 			if mem.Role == AccountOwner {
-				ctx.Validate().MemberHasAccountOwnerAccess(accountRole)
+				ValidateMemberHasAccountOwnerAccess(accountRole)
 			}
 			newMembersMap[mem.Id.String()] = mem
 			allIds = append(allIds, mem.Id)
@@ -128,9 +128,9 @@ var removeMembers = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
-		ctx.Validate().EntityCount(len(args.Members))
+		ValidateEntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(args.MyId) {
 			InvalidOperationErr.Panic()
 		}
@@ -178,7 +178,7 @@ var memberIsOnlyAccountOwner = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &memberIsOnlyAccountOwnerArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*memberIsOnlyAccountOwnerArgs)
 		if args.AccountId.Equal(args.MyId) {
 			return true
@@ -203,7 +203,7 @@ var setMemberName = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &setMemberNameArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*setMemberNameArgs)
 		dbSetMemberName(ctx, args.Shard, args.AccountId, args.MyId, args.NewName)
 		return nil
@@ -224,7 +224,7 @@ var setMemberDisplayName = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &setMemberNameArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*setMemberDisplayNameArgs)
 		dbSetMemberDisplayName(ctx, args.Shard, args.AccountId, args.MyId, args.NewDisplayName)
 		return nil
@@ -244,7 +244,7 @@ var memberIsAccountOwner = &Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &memberIsAccountOwnerArgs{}
 	},
-	CtxHandler: func(ctx RegionalCtx, a interface{}) interface{} {
+	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*memberIsAccountOwnerArgs)
 		if !args.MyId.Equal(args.AccountId) {
 			accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
@@ -269,19 +269,19 @@ var Endpoints = []*Endpoint{
 	memberIsAccountOwner,
 }
 
-func dbCreateAccount(ctx RegionalCtx, id Id, myId Id, myName string, myDisplayName *string) int {
-	shardId := rand.Intn(ctx.Db().TreeShardCount())
-	_, err := ctx.Db().Tree(shardId).Exec(`CALL registerAccount(?, ?, ?, ?)`, []byte(id), []byte(myId), myName, myDisplayName)
+func dbCreateAccount(ctx *Ctx, id Id, myId Id, myName string, myDisplayName *string) int {
+	shard := rand.Intn(ctx.TreeShardCount())
+	_, err := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, []byte(id), []byte(myId), myName, myDisplayName)
 	PanicIf(err)
-	return shardId
+	return shard
 }
 
-func dbDeleteAccount(ctx RegionalCtx, shard int, account Id) {
-	_, err := ctx.Db().Tree(shard).Exec(`CALL deleteAccount(?)`, []byte(account))
+func dbDeleteAccount(ctx *Ctx, shard int, account Id) {
+	_, err := ctx.TreeExec(shard, `CALL deleteAccount(?)`, []byte(account))
 	PanicIf(err)
 }
 
-func dbGetAllInactiveMemberIdsFromInputSet(ctx RegionalCtx, shard int, accountId Id, members []Id) []Id {
+func dbGetAllInactiveMemberIdsFromInputSet(ctx *Ctx, shard int, accountId Id, members []Id) []Id {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, []byte(accountId), []byte(members[0]))
 	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (?`)
@@ -291,7 +291,7 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx RegionalCtx, shard int, accountId
 	}
 	query.WriteString(`)`)
 	res := make([]Id, 0, len(members))
-	rows, err := ctx.Db().Tree(shard).Query(query.String(), queryArgs...)
+	rows, err := ctx.TreeQuery(shard, query.String(), queryArgs...)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -304,8 +304,8 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx RegionalCtx, shard int, accountId
 	return res
 }
 
-func dbGetAccountRole(ctx RegionalCtx, shard int, accountId, memberId Id) *AccountRole {
-	row := ctx.Db().Tree(shard).QueryRow(`SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+func dbGetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
+	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
 	res := AccountRole(3)
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
 		return nil
@@ -313,7 +313,7 @@ func dbGetAccountRole(ctx RegionalCtx, shard int, accountId, memberId Id) *Accou
 	return &res
 }
 
-func dbAddMembers(ctx RegionalCtx, shard int, accountId Id, members []*AddMemberPrivate) {
+func dbAddMembers(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate) {
 	queryArgs := make([]interface{}, 0, 3*len(members))
 	queryArgs = append(queryArgs, []byte(accountId), []byte(members[0].Id), members[0].Name, members[0].DisplayName, members[0].Role)
 	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, displayName, role) VALUES (?,?,?,?,?)`)
@@ -321,24 +321,24 @@ func dbAddMembers(ctx RegionalCtx, shard int, accountId Id, members []*AddMember
 		query.WriteString(`,(?,?,?,?,?)`)
 		queryArgs = append(queryArgs, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
 	}
-	_, err := ctx.Db().Tree(shard).Exec(query.String(), queryArgs...)
+	_, err := ctx.TreeExec(shard, query.String(), queryArgs...)
 	PanicIf(err)
 }
 
-func dbUpdateMembersAndSetActive(ctx RegionalCtx, shard int, accountId Id, members []*AddMemberPrivate) {
+func dbUpdateMembersAndSetActive(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate) {
 	for _, mem := range members {
-		_, err := ctx.Db().Tree(shard).Exec(`CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
+		_, err := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
 		PanicIf(err)
 	}
 }
 
-func dbGetTotalOwnerCount(ctx RegionalCtx, shard int, accountId Id) int {
+func dbGetTotalOwnerCount(ctx *Ctx, shard int, accountId Id) int {
 	count := 0
-	IsSqlErrNoRowsElsePanicIf(ctx.Db().Tree(shard).QueryRow(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count))
+	IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count))
 	return count
 }
 
-func dbGetOwnerCountInSet(ctx RegionalCtx, shard int, accountId Id, members []Id) int {
+func dbGetOwnerCountInSet(ctx *Ctx, shard int, accountId Id, members []Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, []byte(accountId), []byte(members[0]))
 	query := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (?`)
@@ -348,29 +348,29 @@ func dbGetOwnerCountInSet(ctx RegionalCtx, shard int, accountId Id, members []Id
 	}
 	query.WriteString(`)`)
 	count := 0
-	IsSqlErrNoRowsElsePanicIf(ctx.Db().Tree(shard).QueryRow(query.String(), queryArgs...).Scan(&count))
+	IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, query.String(), queryArgs...).Scan(&count))
 	return count
 }
 
-func dbSetMembersInactive(ctx RegionalCtx, shard int, accountId Id, members []Id) {
+func dbSetMembersInactive(ctx *Ctx, shard int, accountId Id, members []Id) {
 	accountIdBytes := []byte(accountId)
 	for _, mem := range members {
-		_, err := ctx.Db().Tree(shard).Exec(`CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem))
+		_, err := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem))
 		PanicIf(err)
 	}
 }
 
-func dbSetMemberName(ctx RegionalCtx, shard int, accountId Id, member Id, newName string) {
-	_, err := ctx.Db().Tree(shard).Exec(`CALL setMemberName(?, ?, ?)`, []byte(accountId), []byte(member), newName)
+func dbSetMemberName(ctx *Ctx, shard int, accountId Id, member Id, newName string) {
+	_, err := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, []byte(accountId), []byte(member), newName)
 	PanicIf(err)
 }
 
-func dbSetMemberDisplayName(ctx RegionalCtx, shard int, accountId Id, member Id, newDisplayName *string) {
-	_, err := ctx.Db().Tree(shard).Exec(`CALL setMemberDisplayName(?, ?, ?)`, []byte(accountId), []byte(member), newDisplayName)
+func dbSetMemberDisplayName(ctx *Ctx, shard int, accountId Id, member Id, newDisplayName *string) {
+	_, err := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, []byte(accountId), []byte(member), newDisplayName)
 	PanicIf(err)
 }
 
-func dbLogAccountBatchAddOrRemoveMembersActivity(ctx RegionalCtx, shard int, accountId, member Id, members []Id, action string) {
+func dbLogAccountBatchAddOrRemoveMembersActivity(ctx *Ctx, shard int, accountId, member Id, members []Id, action string) {
 	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
 	now := Now()
@@ -379,7 +379,7 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx RegionalCtx, shard int, acc
 		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
 		args = append(args, []byte(accountId), now, []byte(member), []byte(memId), "member", action, nil, nil)
 	}
-	_, err := ctx.Db().Tree(shard).Exec(query.String(), args...)
+	_, err := ctx.TreeExec(shard, query.String(), args...)
 	PanicIf(err)
 }
 

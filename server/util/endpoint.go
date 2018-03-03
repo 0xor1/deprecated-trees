@@ -2,7 +2,9 @@ package util
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -24,6 +26,7 @@ type Endpoint struct {
 	PermissionCheck   func(ctx *Ctx, args interface{})
 	CtxHandler        func(ctx *Ctx, args interface{}) interface{}
 	RawHandler        func(w http.ResponseWriter, r *http.Request)
+	StaticResources   *StaticResources
 }
 
 func (e *Endpoint) ValidateEndpoint() {
@@ -86,15 +89,43 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r
 			return nil, invalidEndpointErr
 		}
 		buildForm(req, args)
+		if e.IsPrivate {
+			InvalidOperationErr.Panic() //private endpoints dont support sending form data
+		}
 	} else if args != nil {
 		argsBytes, err := json.Marshal(args)
 		if err != nil {
 			return nil, err
 		}
 		if e.Method == GET {
-			req.URL.RawQuery = url.Values{"args": []string{string(argsBytes)}}.Encode()
+			if e.IsPrivate {
+				ts := fmt.Sprintf("%d", Now().UTC().UnixNano()/1000)
+				key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
+				req.URL.RawQuery = url.Values{
+					"args": []string{string(argsBytes)},
+					"_":    []string{base64.StdEncoding.EncodeToString(key)},
+					"ts":   []string{ts},
+				}.Encode()
+			} else {
+				req.URL.RawQuery = url.Values{"args": []string{string(argsBytes)}}.Encode()
+			}
 		} else if e.Method == POST {
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
+			if e.IsPrivate {
+				ts := []byte(fmt.Sprintf("%d", Now().UTC().UnixNano()/1000))
+				key := ScryptKey(append(argsBytes, ts...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
+				privateArgs := &privateArgs{
+					Args:      argsBytes,
+					Timestamp: ts,
+					Key:       key,
+				}
+				privateArgsBytes, err := json.Marshal(privateArgs)
+				if err != nil {
+					return nil, err
+				}
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(privateArgsBytes))
+			} else {
+				req.Body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
+			}
 		} else {
 			return nil, invalidEndpointErr
 		}
@@ -125,18 +156,18 @@ func (e *Endpoint) DoRequest(host string, args interface{}, buildForm func(r *ht
 }
 
 func (e *Endpoint) handleRequest(ctx *Ctx) {
-	var args interface{}
-	if e.Method == GET && e.GetArgsStruct != nil {
-		args = e.GetArgsStruct()
-		PanicIf(json.Unmarshal([]byte(ctx.r.URL.Query().Get("args")), args))
-	} else if e.Method == POST && e.GetArgsStruct != nil {
-		args = e.GetArgsStruct()
-		PanicIf(json.NewDecoder(ctx.r.Body).Decode(args))
-	} else if e.Method == POST && e.ProcessForm != nil {
-		args = e.ProcessForm(ctx.w, ctx.r)
-	}
 	if e.CtxHandler != nil {
-		e.CtxHandler(ctx, args)
+		var args interface{}
+		if e.Method == GET && e.GetArgsStruct != nil {
+			args = e.GetArgsStruct()
+			PanicIf(json.Unmarshal([]byte(ctx.r.URL.Query().Get("args")), args))
+		} else if e.Method == POST && e.GetArgsStruct != nil {
+			args = e.GetArgsStruct()
+			PanicIf(json.NewDecoder(ctx.r.Body).Decode(args))
+		} else if e.Method == POST && e.ProcessForm != nil {
+			args = e.ProcessForm(ctx.w, ctx.r)
+		}
+		writeJsonOk(ctx.w, e.CtxHandler(ctx, args))
 	} else {
 		e.RawHandler(ctx.w, ctx.r)
 	}
@@ -168,4 +199,10 @@ func writeRawJson(w http.ResponseWriter, code int, body []byte) {
 	w.Header().Add("Content-Type", "application/json;charset=utf-8")
 	_, err := w.Write(body)
 	PanicIf(err)
+}
+
+type privateArgs struct {
+	Args      []byte `json:"args"`
+	Timestamp []byte `json:"ts"`
+	Key       []byte `json:"_"`
 }

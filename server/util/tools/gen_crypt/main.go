@@ -2,6 +2,7 @@ package main
 
 import (
 	"bitbucket.org/0xor1/task/server/util"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"os"
@@ -10,11 +11,11 @@ import (
 func main() {
 	fs := flag.NewFlagSet("util", flag.ExitOnError)
 	var t string
-	fs.StringVar(&t, "t", "b", "b for hex bytes array or s for ASCII string")
+	fs.StringVar(&t, "t", "b", "b for base64 bytes array or s for ASCII string")
 	var nTmp uint
-	fs.UintVar(&nTmp, "n", 1, "number of crypto bytes or ASCII characters to generate")
+	fs.UintVar(&nTmp, "n", 1, "number of crypt bytes or ASCII characters to generate")
 	var lTmp uint
-	fs.UintVar(&lTmp, "l", 64, "length of each crypto byte array or ASCII string")
+	fs.UintVar(&lTmp, "l", 64, "length of each crypt byte array or ASCII string")
 	fs.Parse(os.Args[1:])
 	n := int(nTmp)
 	l := int(lTmp)
@@ -24,7 +25,7 @@ func main() {
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%x", util.CryptBytes(l)))
+			fmt.Println(fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(util.CryptBytes(l))))
 		}
 	}
 }

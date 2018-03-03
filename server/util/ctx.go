@@ -3,12 +3,16 @@ package util
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/0xor1/iredis"
 	"github.com/0xor1/isql"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -428,6 +432,7 @@ type AvatarClient interface {
 	MaxAvatarDim() uint
 	Save(key string, mimeType string, data io.Reader)
 	Delete(key string)
+	DeleteAll()
 }
 
 type RegionalV1PrivateClient interface {
@@ -466,7 +471,7 @@ type StaticResources struct {
 	Routes map[string]*Endpoint
 	// indented json api docs
 	ApiDocs []byte
-	// incremental hex value
+	// incremental base64 value
 	MasterCacheKey string
 	// regexes that account names must match to be valid during account creation or name setting
 	NameRegexMatchers []*regexp.Regexp
@@ -494,6 +499,8 @@ type StaticResources struct {
 	ScryptP int
 	// scrypt key length
 	ScryptKeyLen int
+	// regional v1 private client secret
+	RegionalV1PrivateClientSecret []byte
 	// regional v1 private client used by central endpoints
 	RegionalV1PrivateClient RegionalV1PrivateClient
 	// mail client for sending emails
@@ -556,4 +563,59 @@ func (sr *StaticResources) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 	endpoint.handleRequest(newCtx(&myId, w, r, sr))
 	cookieSession.Save(r, w)
+}
+
+func NewLocalAvatarStore(relDirPath string, maxAvatarDim uint) AvatarClient {
+	if relDirPath == "" {
+		InvalidArgumentsErr.Panic()
+	}
+	wd, err := os.Getwd()
+	PanicIf(err)
+	absDirPath := path.Join(wd, relDirPath)
+	os.MkdirAll(absDirPath, os.ModeDir)
+	return &localAvatarStore{
+		mtx:          &sync.Mutex{},
+		maxAvatarDim: maxAvatarDim,
+		absDirPath:   absDirPath,
+	}
+}
+
+type localAvatarStore struct {
+	mtx          *sync.Mutex
+	maxAvatarDim uint
+	absDirPath   string
+}
+
+func (s *localAvatarStore) MaxAvatarDim() uint {
+	return s.maxAvatarDim
+}
+
+func (s *localAvatarStore) Save(key string, mimeType string, data io.Reader) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	avatarBytes, err := ioutil.ReadAll(data)
+	PanicIf(err)
+	PanicIf(ioutil.WriteFile(path.Join(s.absDirPath, key), avatarBytes, os.ModePerm))
+}
+
+func (s *localAvatarStore) Delete(key string) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	PanicIf(os.Remove(path.Join(s.absDirPath, key)))
+}
+
+func (s *localAvatarStore) DeleteAll() {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	PanicIf(os.RemoveAll(s.absDirPath))
+}
+
+func NewLocalMailClient() MailClient {
+	return &localMailClient{}
+}
+
+type localMailClient struct{}
+
+func (s *localMailClient) Send(sendTo []string, content string) {
+	fmt.Println(sendTo, content)
 }

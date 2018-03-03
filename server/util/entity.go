@@ -2,7 +2,7 @@ package util
 
 import (
 	"bytes"
-	"encoding/hex"
+	"encoding/base64"
 	. "github.com/pborman/uuid"
 	"time"
 )
@@ -21,7 +21,7 @@ func NewId() Id {
 }
 
 func ParseId(id string) Id {
-	bytes, err := hex.DecodeString(id)
+	bytes, err := base64.StdEncoding.DecodeString(id)
 	if err != nil || len(bytes) != 16 {
 		idParseErr.Panic()
 	}
@@ -31,7 +31,7 @@ func ParseId(id string) Id {
 type Id UUID
 
 func (id Id) String() string {
-	return hex.EncodeToString(id)
+	return base64.StdEncoding.EncodeToString(id)
 }
 
 func (id Id) Equal(other Id) bool {
