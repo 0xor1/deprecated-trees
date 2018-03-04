@@ -96,7 +96,10 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r
 			return nil, err
 		}
 		if e.IsPrivate {
-			e.addPrivateArgsToReqQuery(req, argsBytes)
+			ts := fmt.Sprintf("%d", NowUnixMillis())
+			key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
+			req.URL.Query().Set("_", base64.URLEncoding.EncodeToString(key))
+			req.URL.Query().Set("ts", ts)
 		}
 		if e.Method == GET {
 			req.URL.Query().Set("args", string(argsBytes))
@@ -108,13 +111,6 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r
 
 	}
 	return req, nil
-}
-
-func (e *Endpoint) addPrivateArgsToReqQuery(r *http.Request, argsBytes []byte) {
-	ts := fmt.Sprintf("%d", NowUnixMillis())
-	key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
-	r.URL.Query().Set("_", base64.URLEncoding.EncodeToString(key))
-	r.URL.Query().Set("ts", ts)
 }
 
 func (e *Endpoint) DoRequest(host string, args interface{}, buildForm func(r *http.Request, args interface{}), respVal interface{}) (interface{}, error) {

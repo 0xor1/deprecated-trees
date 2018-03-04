@@ -19,7 +19,6 @@ import (
 	"time"
 	"encoding/base64"
 	"strconv"
-	"github.com/teamwork/twbot/plugins/req"
 	"bytes"
 )
 
@@ -566,20 +565,21 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	//get a cookie session
 	cookieSession, _ := sr.SessionStore.Get(r, sr.SessionName)
-	var myId Id
+	var myId *Id
 	if cookieSession != nil {
 		iMyId := cookieSession.Values["myId"]
 		if iMyId != nil {
-			myId = iMyId.(Id)
+			id := iMyId.(Id)
+			myId = &id
 		}
 	}
 	//check for valid myId value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
-	if ep.RequiresSession && len(myId) == 0 || r.Method == POST && r.Header.Get("X-Client") == "" {
+	if ep.RequiresSession && myId == nil || r.Method == POST && r.Header.Get("X-Client") == "" {
 		writeJson(w, http.StatusUnauthorized, unauthorizedErr)
 		return
 	}
 	//setup ctx
-	ctx = newCtx(&myId, cookieSession, w, r, sr)
+	ctx = newCtx(myId, cookieSession, w, r, sr)
 	//process args
 	var err error
 	var argsBytes []byte
@@ -614,10 +614,24 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		cnn := sr.PrivateKeyRedisPool.Get()
 		defer cnn.Close()
 		cnn.Send("MULTI")
-		cnn.Send("SETNX", r.URL.Query().Get("_"))
-		cnn.Send("EXPIRE", r.URL.Query().Get("_"))
-		cnn.Do("EXEC")
-		//TODO continue from here
+		cnn.Send("SETNX", r.URL.Query().Get("_"), "")
+		cnn.Send("EXPIRE", r.URL.Query().Get("_"), 60)
+		vals, err := redis.Ints(cnn.Do("EXEC"))
+		PanicIf(err)
+		if len(vals) != 2 {
+			FmtPanic("vals should have exactly two integer values")
+		}
+		if vals[0] != 1 {
+			FmtPanic("private request key duplication, replay attack detection")
+		}
+		if vals[1] != 1 {
+			FmtPanic("failed to set expiry on private request key")
+		}
+		//at this point private request is valid
+	}
+	if len(argsBytes) > 0 {
+		args = ep.GetArgsStruct()
+		PanicIf(json.Unmarshal(argsBytes, args))
 	}
 	//if this endpoint is the authentication endpoint it should return just the users Id, add it to the session cookie
 	if ep.IsAuthentication {
