@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 )
 
 type Endpoint struct {
@@ -25,12 +24,11 @@ type Endpoint struct {
 	GetArgsStruct     func() interface{}
 	PermissionCheck   func(ctx *Ctx, args interface{})
 	CtxHandler        func(ctx *Ctx, args interface{}) interface{}
-	RawHandler        func(w http.ResponseWriter, r *http.Request)
 	StaticResources   *StaticResources
 }
 
 func (e *Endpoint) ValidateEndpoint() {
-	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || (e.ProcessForm != nil && len(e.FormStruct) == 0) || (e.CtxHandler != nil && e.RawHandler != nil) || (e.CtxHandler == nil && e.RawHandler == nil) {
+	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || (e.ProcessForm != nil && len(e.FormStruct) == 0) || e.CtxHandler == nil  {
 		invalidEndpointErr.Panic()
 	}
 }
@@ -97,41 +95,26 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r
 		if err != nil {
 			return nil, err
 		}
+		if e.IsPrivate {
+			e.addPrivateArgsToReqQuery(req, argsBytes)
+		}
 		if e.Method == GET {
-			if e.IsPrivate {
-				ts := fmt.Sprintf("%d", Now().UTC().UnixNano()/1000)
-				key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
-				req.URL.RawQuery = url.Values{
-					"args": []string{string(argsBytes)},
-					"_":    []string{base64.StdEncoding.EncodeToString(key)},
-					"ts":   []string{ts},
-				}.Encode()
-			} else {
-				req.URL.RawQuery = url.Values{"args": []string{string(argsBytes)}}.Encode()
-			}
+			req.URL.Query().Set("args", string(argsBytes))
 		} else if e.Method == POST {
-			if e.IsPrivate {
-				ts := []byte(fmt.Sprintf("%d", Now().UTC().UnixNano()/1000))
-				key := ScryptKey(append(argsBytes, ts...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
-				privateArgs := &privateArgs{
-					Args:      argsBytes,
-					Timestamp: ts,
-					Key:       key,
-				}
-				privateArgsBytes, err := json.Marshal(privateArgs)
-				if err != nil {
-					return nil, err
-				}
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(privateArgsBytes))
-			} else {
-				req.Body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
-			}
+			req.Body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
 		} else {
 			return nil, invalidEndpointErr
 		}
 
 	}
 	return req, nil
+}
+
+func (e *Endpoint) addPrivateArgsToReqQuery(r *http.Request, argsBytes []byte) {
+	ts := fmt.Sprintf("%d", NowUnixMillis())
+	key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
+	r.URL.Query().Set("_", base64.URLEncoding.EncodeToString(key))
+	r.URL.Query().Set("ts", ts)
 }
 
 func (e *Endpoint) DoRequest(host string, args interface{}, buildForm func(r *http.Request, args interface{}), respVal interface{}) (interface{}, error) {
@@ -155,24 +138,6 @@ func (e *Endpoint) DoRequest(host string, args interface{}, buildForm func(r *ht
 	return respVal, nil
 }
 
-func (e *Endpoint) handleRequest(ctx *Ctx) {
-	if e.CtxHandler != nil {
-		var args interface{}
-		if e.Method == GET && e.GetArgsStruct != nil {
-			args = e.GetArgsStruct()
-			PanicIf(json.Unmarshal([]byte(ctx.r.URL.Query().Get("args")), args))
-		} else if e.Method == POST && e.GetArgsStruct != nil {
-			args = e.GetArgsStruct()
-			PanicIf(json.NewDecoder(ctx.r.Body).Decode(args))
-		} else if e.Method == POST && e.ProcessForm != nil {
-			args = e.ProcessForm(ctx.w, ctx.r)
-		}
-		writeJsonOk(ctx.w, e.CtxHandler(ctx, args))
-	} else {
-		e.RawHandler(ctx.w, ctx.r)
-	}
-}
-
 type endpointDocumentation struct {
 	Note              *string     `json:"note,omitempty"`
 	Method            string      `json:"method"`
@@ -182,27 +147,4 @@ type endpointDocumentation struct {
 	ArgsStructure     interface{} `json:"argsStructure,omitempty"`
 	ResponseStructure interface{} `json:"responseStructure,omitempty"`
 	IsAuthentication  *bool       `json:"isAuthentication,omitempty"`
-}
-
-func writeJsonOk(w http.ResponseWriter, body interface{}) {
-	writeJson(w, http.StatusOK, body)
-}
-
-func writeJson(w http.ResponseWriter, code int, body interface{}) {
-	bodyBytes, err := json.Marshal(body)
-	PanicIf(err)
-	writeRawJson(w, code, bodyBytes)
-}
-
-func writeRawJson(w http.ResponseWriter, code int, body []byte) {
-	w.WriteHeader(code)
-	w.Header().Add("Content-Type", "application/json;charset=utf-8")
-	_, err := w.Write(body)
-	PanicIf(err)
-}
-
-type privateArgs struct {
-	Args      []byte `json:"args"`
-	Timestamp []byte `json:"ts"`
-	Key       []byte `json:"_"`
 }

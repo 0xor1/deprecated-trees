@@ -17,11 +17,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"encoding/base64"
+	"strconv"
+	"github.com/teamwork/twbot/plugins/req"
+	"bytes"
 )
 
 // per request info fields
 type Ctx struct {
 	myId                   *Id
+	session 			   *sessions.Session
 	requestStartUnixMillis int64
 	w                      http.ResponseWriter
 	r                      *http.Request
@@ -106,7 +111,7 @@ func (c *Ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args 
 		c.Log(err)
 		return false
 	}
-	cnn := c.staticResources.RedisPool.Get()
+	cnn := c.staticResources.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	start := time.Now()
 	jsonBytes, err = redis.Bytes(cnn.Do(GET, jsonBytes))
@@ -337,7 +342,7 @@ func getDlm(ctx *Ctx, dlmKeys []string) (int64, error) {
 		}
 	}
 	if len(dlmsToFetch) > 0 {
-		cnn := ctx.staticResources.RedisPool.Get()
+		cnn := ctx.staticResources.DlmAndDataRedisPool.Get()
 		defer cnn.Close()
 		start := time.Now()
 		dlms, err := redis.Int64s(cnn.Do("MGET", dlmsToFetch...))
@@ -375,7 +380,7 @@ func doCacheUpdate(ctx *Ctx) {
 	for k := range ctx.cacheKeysToDelete {
 		delArgs = append(delArgs, k)
 	}
-	cnn := ctx.staticResources.RedisPool.Get()
+	cnn := ctx.staticResources.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	if len(setArgs) > 0 {
 		start := time.Now()
@@ -396,9 +401,10 @@ func doCacheUpdate(ctx *Ctx) {
 
 }
 
-func newCtx(myId *Id, w http.ResponseWriter, r *http.Request, staticResources *StaticResources) *Ctx {
+func newCtx(myId *Id, session *sessions.Session, w http.ResponseWriter, r *http.Request, staticResources *StaticResources) *Ctx {
 	return &Ctx{
 		myId: myId,
+		session: session,
 		requestStartUnixMillis: Now().UnixNano() / 1000,
 		w:                  w,
 		r:                  r,
@@ -516,10 +522,14 @@ type StaticResources struct {
 	// tree shard sql connections
 	TreeShards map[int]isql.ReplicaSet
 	// redis pool for caching layer
-	RedisPool iredis.Pool
+	DlmAndDataRedisPool iredis.Pool
+	// redis pool for private request keys to check for replay attacks
+	PrivateKeyRedisPool iredis.Pool
 }
 
-func (sr *StaticResources) Handle(w http.ResponseWriter, r *http.Request) {
+func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var ctx *Ctx
+	// defer func handles logging panic errors and returning 500s and logging request/response/database/cache stats to datadog in none lcl env
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -536,19 +546,25 @@ func (sr *StaticResources) Handle(w http.ResponseWriter, r *http.Request) {
 		}
 		//TODO datadog req/resp stats and
 	}()
+	//must make sure to close the request body
 	if r != nil && r.Body != nil {
 		defer r.Body.Close()
 	}
+	//always do case insensitive path routing
 	lowerPath := strings.ToLower(r.URL.Path)
+	//check for special case of api docs first
 	if lowerPath == sr.ApiDocsRoute {
 		writeRawJson(w, 200, sr.ApiDocs)
 		return
 	}
-	endpoint := sr.Routes[lowerPath]
-	if endpoint == nil || endpoint.Method != strings.ToUpper(r.Method) {
+	//get endpoint
+	ep := sr.Routes[lowerPath]
+	// check for 404
+	if ep == nil || ep.Method != strings.ToUpper(r.Method) {
 		http.NotFound(w, r)
 		return
 	}
+	//get a cookie session
 	cookieSession, _ := sr.SessionStore.Get(r, sr.SessionName)
 	var myId Id
 	if cookieSession != nil {
@@ -557,12 +573,84 @@ func (sr *StaticResources) Handle(w http.ResponseWriter, r *http.Request) {
 			myId = iMyId.(Id)
 		}
 	}
-	if endpoint.RequiresSession && len(myId) == 0 || r.Method == POST && r.Header.Get("X-Client") == "" {
+	//check for valid myId value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
+	if ep.RequiresSession && len(myId) == 0 || r.Method == POST && r.Header.Get("X-Client") == "" {
 		writeJson(w, http.StatusUnauthorized, unauthorizedErr)
 		return
 	}
-	endpoint.handleRequest(newCtx(&myId, w, r, sr))
+	//setup ctx
+	ctx = newCtx(&myId, cookieSession, w, r, sr)
+	//process args
+	var err error
+	var argsBytes []byte
+	var args interface{}
+	if ep.Method == GET && ep.GetArgsStruct != nil {
+		argsBytes = []byte(r.URL.Query().Get("args"))
+	} else if ep.Method == POST && ep.GetArgsStruct != nil {
+		argsBytes, err = ioutil.ReadAll(r.Body)
+		PanicIf(err)
+	} else if ep.Method == POST && ep.ProcessForm != nil {
+		if ep.IsPrivate {
+			// private endpoints dont support post requests with form data
+			invalidEndpointErr.Panic()
+		}
+		args = ep.ProcessForm(w, r)
+	}
+	//process private ts and key args
+	if ep.IsPrivate {
+		ts, err := strconv.ParseInt(r.URL.Query().Get("ts"), 10, 64)
+		PanicIf(err)
+		//if the timestamp the req was sent is over a minute ago, reject the request
+		if NowUnixMillis() - ts > 60000 {
+			FmtPanic("suspicious private request sent over a minute ago")
+		}
+		key, err := base64.URLEncoding.DecodeString(r.URL.Query().Get("_"))
+		PanicIf(err)
+		// check the args/timestamp/key are valid
+		if !bytes.Equal(key, ScryptKey(append(argsBytes, []byte(r.URL.Query().Get("ts"))...), sr.RegionalV1PrivateClientSecret, sr.ScryptN, sr.ScryptR, sr.ScryptP, sr.ScryptKeyLen)) {
+			FmtPanic("invalid private request keys don't match")
+		}
+		//check redis cache to ensure key has not appeared in the last minute, to prevent replay attacks
+		cnn := sr.PrivateKeyRedisPool.Get()
+		defer cnn.Close()
+		cnn.Send("MULTI")
+		cnn.Send("SETNX", r.URL.Query().Get("_"))
+		cnn.Send("EXPIRE", r.URL.Query().Get("_"))
+		cnn.Do("EXEC")
+		//TODO continue from here
+	}
+	//if this endpoint is the authentication endpoint it should return just the users Id, add it to the session cookie
+	if ep.IsAuthentication {
+		iId := ep.CtxHandler(ctx, args)
+		if myId, ok := iId.(Id); !ok {
+			FmtPanic("isAuthentication did not return Id type")
+		} else {
+			ctx.myId = &myId //set myId on ctx for logging info in defer above
+			cookieSession.Values["myId"] = myId
+			cookieSession.Values["AuthedOn"] = NowUnixMillis()
+			writeJsonOk(ctx.w, myId)
+		}
+	} else {
+		writeJsonOk(ctx.w, ep.CtxHandler(ctx, args))
+	}
 	cookieSession.Save(r, w)
+}
+
+func writeJsonOk(w http.ResponseWriter, body interface{}) {
+	writeJson(w, http.StatusOK, body)
+}
+
+func writeJson(w http.ResponseWriter, code int, body interface{}) {
+	bodyBytes, err := json.Marshal(body)
+	PanicIf(err)
+	writeRawJson(w, code, bodyBytes)
+}
+
+func writeRawJson(w http.ResponseWriter, code int, body []byte) {
+	w.WriteHeader(code)
+	w.Header().Add("Content-Type", "application/json;charset=utf-8")
+	_, err := w.Write(body)
+	PanicIf(err)
 }
 
 func NewLocalAvatarStore(relDirPath string, maxAvatarDim uint) AvatarClient {

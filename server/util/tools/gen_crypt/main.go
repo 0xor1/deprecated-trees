@@ -11,7 +11,7 @@ import (
 func main() {
 	fs := flag.NewFlagSet("util", flag.ExitOnError)
 	var t string
-	fs.StringVar(&t, "t", "b", "b for base64 bytes array or s for ASCII string")
+	fs.StringVar(&t, "t", "b", "b for url base64 encoded bytes array or s for ASCII string")
 	var nTmp uint
 	fs.UintVar(&nTmp, "n", 1, "number of crypt bytes or ASCII characters to generate")
 	var lTmp uint
@@ -25,7 +25,7 @@ func main() {
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%s", base64.StdEncoding.EncodeToString(util.CryptBytes(l))))
+			fmt.Println(fmt.Sprintf("%s", base64.URLEncoding.EncodeToString(util.CryptBytes(l))))
 		}
 	}
 }

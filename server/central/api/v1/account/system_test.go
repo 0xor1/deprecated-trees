@@ -95,7 +95,7 @@ func Test_system(t *testing.T) {
 	err = aliClient.SetAccountName(aliId, "aliNew")
 	aliDisplayName = "ZZZ ali ZZZ"
 	err = aliClient.SetAccountDisplayName(aliId, &aliDisplayName)
-	err = aliClient.SetAccountAvatar(aliId, ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))))
+	err = aliClient.SetAccountAvatar(aliId, ioutil.NopCloser(base64.NewDecoder(base64.URLEncoding, strings.NewReader(testImgOk))))
 
 	err = aliClient.MigrateAccount(aliId, "usw")
 

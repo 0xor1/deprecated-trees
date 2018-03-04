@@ -172,7 +172,7 @@ var activate = &Endpoint{
 		}
 
 		acc.activationCode = nil
-		activationTime := time.Now().UTC()
+		activationTime := Now()
 		acc.activatedOn = &activationTime
 		dbUpdatePersonalAccount(ctx, acc)
 		return nil

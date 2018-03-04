@@ -11,6 +11,10 @@ func Now() time.Time {
 	return time.Now().UTC()
 }
 
+func NowUnixMillis() int64 {
+	return Now().UnixNano() / 1000
+}
+
 //returns Version 1 uuid as a byte slice
 func NewId() Id {
 	id := NewUUID()
@@ -21,7 +25,7 @@ func NewId() Id {
 }
 
 func ParseId(id string) Id {
-	bytes, err := base64.StdEncoding.DecodeString(id)
+	bytes, err := base64.URLEncoding.DecodeString(id)
 	if err != nil || len(bytes) != 16 {
 		idParseErr.Panic()
 	}
@@ -31,7 +35,7 @@ func ParseId(id string) Id {
 type Id UUID
 
 func (id Id) String() string {
-	return base64.StdEncoding.EncodeToString(id)
+	return base64.URLEncoding.EncodeToString(id)
 }
 
 func (id Id) Equal(other Id) bool {

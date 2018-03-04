@@ -45,12 +45,12 @@ func Config(configFile, configPath string) *StaticResources {
 	viper.SetDefault("sessionDomain", "127.0.0.1")
 	// session cookie store
 	viper.SetDefault("sessionAuthKey64s", []string{
-		"2Kt39ndjI2praE8+rTBDb9OwEgR/JXXf8hO1Tl/mjx4SBpvugYSYRYkx3zBn+ofsRYFFr42Ap07NavrBjv1tzQ==",
-		"co1AGV8VPSMOzjcokXEaxtKmKsi/BUXsidpaNHRyGyx0PwbnwNOMs0FzUWxhg+SO0AcqRATVtMWlhvGyLjtOIg==",
+		"fxMXxPH5uq4CJTqyBytCQ7YWPbIM9ny-djeBnONVykXjPT0DeoEkWCX4kBJ0DiiHtqffRama1EGkrBY2hE4eWw==",
+		"hcyr27fSuglI0tZdgOVNxGs2aovFZth9wxvlhUCI1uighxF73Gjw8D9IkeDmBlMbQkhMhxGWHj7zW-X4w26egg==",
 	})
 	viper.SetDefault("sessionEncrKey32s", []string{
-		"HQSpwNjT8Ra4RQkaZwYPPXMnF+sHHvJbZ0H7O+hQa/A=",
-		"1V0QdFGKMGIFb4N5ss9f4q8c5QW0lZ5+yvA93aoJYmY=",
+		"dmGy7YtKIM65-8BoxE6MHOdj5IBDqO9_H4h-3IEc2Dc=",
+		"nMNUSbG1hAG02NoZDfMBERx4k8xZA-PKt9nxU85yQeA=",
 	})
 	// incremental base64 value
 	viper.SetDefault("masterCacheKey", "0")
@@ -81,7 +81,7 @@ func Config(configFile, configPath string) *StaticResources {
 	// scrypt key length
 	viper.SetDefault("scryptKeyLen", 32)
 	// private client secret base64 encoded
-	viper.SetDefault("regionalV1PrivateClientSecret", "d8RBy1UvIT/u3bhEZlrZAHrKusB6c3UNFqz2tl3pT56ENN3f+kFjGxY2BvqTNM8pngMiuwBBMeuQRjl1Gcazlg==")
+	viper.SetDefault("regionalV1PrivateClientSecret", "cRafTwI5N270GDN8B573IfAInpq_W2p11RAPifm5Z4tfztDXfDOKsY3OM_qnTDeWmepRdzBNyk8LM1MLXu0_pw==")
 	// private client config
 	viper.SetDefault("regionalV1PrivateClientConfig", map[string]string{
 		"lcl": "http//127.0.0.1:8787",
@@ -103,7 +103,9 @@ func Config(configFile, configPath string) *StaticResources {
 		"0": {"t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true"},
 	})
 	// redis pool for caching layer
-	viper.SetDefault("redisPool", "127.0.0.1:6379")
+	viper.SetDefault("dlmAndDataRedisPool", "127.0.0.1:6379")
+	// redis pool for private request keys to check for replay attacks
+	viper.SetDefault("privateKeyRedisPool", "127.0.0.1:6379")
 	if configFile != "" && configPath != "" {
 		viper.SetConfigName(configFile)
 		viper.AddConfigPath(configPath)
@@ -116,12 +118,12 @@ func Config(configFile, configPath string) *StaticResources {
 	encrKey32s := viper.GetStringSlice("sessionEncrKey32s")
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
 	for i := range authKey64s {
-		authBytes, err := base64.StdEncoding.DecodeString(authKey64s[i])
+		authBytes, err := base64.URLEncoding.DecodeString(authKey64s[i])
 		PanicIf(err)
 		if len(authBytes) != 64 {
 			FmtPanic("sessionAuthBytes length is not 64")
 		}
-		encrBytes, err := base64.StdEncoding.DecodeString(encrKey32s[i])
+		encrBytes, err := base64.URLEncoding.DecodeString(encrKey32s[i])
 		PanicIf(err)
 		if len(encrBytes) != 32 {
 			FmtPanic("sessionEncrBytes length is not 32")
@@ -210,27 +212,14 @@ func Config(configFile, configPath string) *StaticResources {
 		}
 	}
 
-	var redisPool iredis.Pool
-	if viper.GetString("redisPool") != "" {
-		redisPool = &redis.Pool{
-			MaxIdle:     300,
-			IdleTimeout: time.Minute,
-			Dial: func() (redis.Conn, error) {
-				conn, err := redis.Dial("tcp", viper.GetString("redisPool"), redis.DialDatabase(0), redis.DialConnectTimeout(1*time.Second), redis.DialReadTimeout(2*time.Second), redis.DialWriteTimeout(2*time.Second))
-				// Log any Redis connection error on stdout
-				if err != nil {
-					log(err)
-				}
+	var dlmAndDataRedisPool iredis.Pool
+	if viper.GetString("dlmAndDataRedisPool") != "" {
+		dlmAndDataRedisPool = createRedisPool(viper.GetString("dlmAndDataRedisPool"), log)
+	}
 
-				return conn, err
-			},
-			TestOnBorrow: func(c redis.Conn, ti time.Time) error {
-				if time.Since(ti) < time.Minute {
-					return nil
-				}
-				return errors.New("Redis connection timed out")
-			},
-		}
+	var privateKeyRedisPool iredis.Pool
+	if viper.GetString("privateKeyRedisPool") != "" {
+		dlmAndDataRedisPool = createRedisPool(viper.GetString("privateKeyRedisPool"), log)
 	}
 
 	sr.ServerAddress = viper.GetString("serverAddress")
@@ -262,6 +251,29 @@ func Config(configFile, configPath string) *StaticResources {
 	sr.AccountDb = accountDb
 	sr.PwdDb = pwdDb
 	sr.TreeShards = treeShardDbs
-	sr.RedisPool = redisPool
+	sr.DlmAndDataRedisPool = dlmAndDataRedisPool
+	sr.PrivateKeyRedisPool = privateKeyRedisPool
 	return sr
+}
+
+func createRedisPool(address string, log func(error)) iredis.Pool {
+	return &redis.Pool{
+		MaxIdle:     300,
+		IdleTimeout: time.Minute,
+		Dial: func() (redis.Conn, error) {
+			conn, err := redis.Dial("tcp", address, redis.DialDatabase(0), redis.DialConnectTimeout(1*time.Second), redis.DialReadTimeout(2*time.Second), redis.DialWriteTimeout(2*time.Second))
+			// Log any Redis connection error on stdout
+			if err != nil {
+				log(err)
+			}
+
+			return conn, err
+		},
+		TestOnBorrow: func(c redis.Conn, ti time.Time) error {
+			if time.Since(ti) < time.Minute {
+				return nil
+			}
+			return errors.New("Redis connection timed out")
+		},
+	}
 }
