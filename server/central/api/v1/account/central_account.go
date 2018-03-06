@@ -1170,7 +1170,7 @@ func (c *client) SetMyEmail(newEmail string) error {
 }
 
 func (c *client) ResendMyNewEmailConfirmationEmail() error {
-	_, err := resendActivationEmail.DoRequest(c.cookieStore, c.host, nil, nil, nil)
+	_, err := resendMyNewEmailConfirmationEmail.DoRequest(c.cookieStore, c.host, nil, nil, nil)
 	return err
 }
 

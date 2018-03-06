@@ -35,8 +35,8 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	viper.SetDefault("version", "lcl")
 	// api docs path
 	viper.SetDefault("apiDocsRoute", "/api/docs")
-	// cookie session name
-	viper.SetDefault("sessionName", "t")
+	// session cookie name
+	viper.SetDefault("sessionCookieName", "t")
 	// cookie session domain
 	viper.SetDefault("sessionDomain", "127.0.0.1")
 	// session cookie store
@@ -215,7 +215,7 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	sr.Region = viper.GetString("region")
 	sr.Version = viper.GetString("version")
 	sr.ApiDocsRoute = strings.ToLower(viper.GetString("apiDocsRoute"))
-	sr.SessionName = viper.GetString("sessionName")
+	sr.SessionCookieName = viper.GetString("sessionCookieName")
 	sr.SessionStore = sessionStore
 	sr.Routes = routes
 	sr.ApiDocs = apiDocs

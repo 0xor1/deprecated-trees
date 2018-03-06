@@ -127,12 +127,22 @@ func (e *Endpoint) DoRequest(cookieStore *CookieStore, host string, args interfa
 	if err != nil {
 		return nil, err
 	}
+	if cookieStore != nil {
+		for name, value := range cookieStore.Cookies {
+			req.AddCookie(&http.Cookie{
+				Name: name,
+				Value: value,
+			})
+		}
+	}
 	resp, err := http.DefaultClient.Do(req)
-	fmt.Println(resp.Status, req, err)
+	fmt.Println(resp.Status, req.Method, req.URL.String(), err)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
-	//TODO write Set-Cookie header values to cookie store
+	for _, cookie := range resp.Cookies() {
+		cookieStore.Cookies[cookie.Name] = cookie.Value
+	}
 	if err != nil {
 		return nil, err
 	}

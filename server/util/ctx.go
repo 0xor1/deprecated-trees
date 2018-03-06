@@ -20,6 +20,7 @@ import (
 	"encoding/base64"
 	"strconv"
 	"bytes"
+	"github.com/gorilla/context"
 )
 
 // per request info fields
@@ -468,8 +469,8 @@ type StaticResources struct {
 	Version string
 	// api docs path
 	ApiDocsRoute string
-	// cookie session name
-	SessionName string
+	// session cookie name
+	SessionCookieName string
 	// session cookie store
 	SessionStore *sessions.CookieStore
 	// lowercase paths to endpoints map
@@ -530,6 +531,7 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var ctx *Ctx
 	// defer func handles logging panic errors and returning 500s and logging request/response/database/cache stats to datadog in none lcl env
 	defer func() {
+		context.Clear(r) //required for guerilla cookie session usage, or resources will leak
 		r := recover()
 		if r != nil {
 			pErr, ok := r.(PermissionedError)
@@ -568,7 +570,7 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// only none private endpoints use sessions
 	if !ep.IsPrivate {
 		//get a cookie session
-		cookieSession, _ = sr.SessionStore.Get(r, sr.SessionName)
+		cookieSession, _ = sr.SessionStore.Get(r, sr.SessionCookieName)
 		if cookieSession != nil {
 			iMyId := cookieSession.Values["myId"]
 			if iMyId != nil {
@@ -647,13 +649,11 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ctx.myId = &myId //set myId on ctx for logging info in defer above
 			cookieSession.Values["myId"] = myId
 			cookieSession.Values["AuthedOn"] = NowUnixMillis()
+			cookieSession.Save(r, w)
 			writeJsonOk(ctx.w, myId)
 		}
 	} else {
 		writeJsonOk(ctx.w, ep.CtxHandler(ctx, args))
-	}
-	if cookieSession != nil {
-		cookieSession.Save(r, w)
 	}
 }
 

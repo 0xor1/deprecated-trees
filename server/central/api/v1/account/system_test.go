@@ -30,38 +30,38 @@ func Test_system(t *testing.T) {
 	aliDisplayName := "Ali O'Mally"
 	aliClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, DarkTheme)
 
-	//aliClient.ResendActivationEmail("ali@ali.com")
-	//activationCode := ""
-	//staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
-	//
-	//aliClient.Activate("ali@ali.com", activationCode)
-	//aliId, err := aliClient.Authenticate("ali@ali.com", "al1-Pwd-W00")
-	//
-	//err = aliClient.SetMyEmail("aliNew@aliNew.com")
-	//
-	//err = aliClient.ResendMyNewEmailConfirmationEmail()
-	//newEmailConfirmationCode := ""
-	//staticResources.AccountDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
-	//
-	//aliClient.ConfirmNewEmail("ali@ali.com", "aliNew@aliNew.com", newEmailConfirmationCode)
-	//
-	//aliClient.ResetPwd("aliNew@aliNew.com")
-	//resetPwdCode := ""
-	//staticResources.AccountDb.QueryRow(`SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
-	//
-	//aliClient.SetNewPwdFromPwdReset("al1-Pwd-W00-2", "aliNew@aliNew.com", resetPwdCode)
-	//
-	//acc, err := aliClient.GetAccount("ali")
-	//assert.True(t, acc.Id.Equal(aliId))
-	//assert.Equal(t, "ali", acc.Name)
-	//assert.Equal(t, aliDisplayName, *acc.DisplayName)
-	//assert.InDelta(t, Now().Unix(), acc.CreatedOn.Unix(), 5)
-	//assert.Equal(t, false, acc.HasAvatar)
-	//assert.Equal(t, true, acc.IsPersonal)
-	//assert.Nil(t, acc.NewRegion)
-	//assert.Equal(t, region, acc.Region)
-	//assert.Equal(t, 0, acc.Shard)
-	//
+	aliClient.ResendActivationEmail("ali@ali.com")
+	activationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
+
+	aliClient.Activate("ali@ali.com", activationCode)
+	aliId, err := aliClient.Authenticate("ali@ali.com", "al1-Pwd-W00")
+
+	err = aliClient.SetMyEmail("aliNew@aliNew.com")
+
+	err = aliClient.ResendMyNewEmailConfirmationEmail()
+	newEmailConfirmationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
+
+	aliClient.ConfirmNewEmail("ali@ali.com", "aliNew@aliNew.com", newEmailConfirmationCode)
+
+	aliClient.ResetPwd("aliNew@aliNew.com")
+	resetPwdCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
+
+	aliClient.SetNewPwdFromPwdReset("al1-Pwd-W00-2", "aliNew@aliNew.com", resetPwdCode)
+
+	acc, err := aliClient.GetAccount("ali")
+	assert.True(t, acc.Id.Equal(aliId))
+	assert.Equal(t, "ali", acc.Name)
+	assert.Equal(t, aliDisplayName, *acc.DisplayName)
+	assert.InDelta(t, Now().Unix(), acc.CreatedOn.Unix(), 5)
+	assert.Equal(t, false, acc.HasAvatar)
+	assert.Equal(t, true, acc.IsPersonal)
+	assert.Nil(t, acc.NewRegion)
+	assert.Equal(t, region, acc.Region)
+	assert.Equal(t, 0, acc.Shard)
+
 	//accs, err := aliClient.GetAccounts([]Id{aliId})
 	//assert.True(t, accs[0].Id.Equal(aliId))
 	//assert.Equal(t, "ali", accs[0].Name)
