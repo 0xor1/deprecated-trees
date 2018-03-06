@@ -995,7 +995,7 @@ type Client interface {
 	Register(name, email, pwd, region, language string, displayName *string, theme Theme) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) error
-	Authenticate(email, pwd string) (Id, error)
+	Authenticate(css *ClientSessionStore, email, pwd string) (Id, error)
 	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
@@ -1004,38 +1004,34 @@ type Client interface {
 	SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
 	SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) ([]*account, error)
 	//requires active session to access
-	GetMe() (*me, error)
-	SetMyPwd(oldPwd, newPwd string) error
-	SetMyEmail(newEmail string) error
-	ResendMyNewEmailConfirmationEmail() error
-	SetAccountName(accountId Id, newName string) error
-	SetAccountDisplayName(accountId Id, newDisplayName *string) error
-	SetAccountAvatar(accountId Id, avatarImage io.ReadCloser) error
-	MigrateAccount(accountId Id, newRegion string) error
-	CreateAccount(name, region string, displayName *string) (*account, error)
-	GetMyAccounts(after *Id, limit int) (*getMyAccountsResp, error)
-	DeleteAccount(accountId Id) error
+	GetMe(css *ClientSessionStore) (*me, error)
+	SetMyPwd(css *ClientSessionStore, oldPwd, newPwd string) error
+	SetMyEmail(css *ClientSessionStore, newEmail string) error
+	ResendMyNewEmailConfirmationEmail(css *ClientSessionStore) error
+	SetAccountName(css *ClientSessionStore, accountId Id, newName string) error
+	SetAccountDisplayName(css *ClientSessionStore, accountId Id, newDisplayName *string) error
+	SetAccountAvatar(css *ClientSessionStore, accountId Id, avatarImage io.ReadCloser) error
+	MigrateAccount(css *ClientSessionStore, accountId Id, newRegion string) error
+	CreateAccount(css *ClientSessionStore, name, region string, displayName *string) (*account, error)
+	GetMyAccounts(css *ClientSessionStore, after *Id, limit int) (*getMyAccountsResp, error)
+	DeleteAccount(css *ClientSessionStore, accountId Id) error
 	//member centric - must be an owner or admin
-	AddMembers(accountId Id, newMembers []*AddMemberPublic) error
-	RemoveMembers(accountId Id, existingMembers []Id) error
+	AddMembers(css *ClientSessionStore, accountId Id, newMembers []*AddMemberPublic) error
+	RemoveMembers(css *ClientSessionStore, accountId Id, existingMembers []Id) error
 }
 
 func NewClient(host string) Client {
 	return &client{
-		cookieStore: &CookieStore{
-			Cookies: map[string]string{},
-		},
 		host:   host,
 	}
 }
 
 type client struct {
-	cookieStore *CookieStore
 	host   string
 }
 
 func (c *client) GetRegions() ([]string, error) {
-	val, err := getRegions.DoRequest(c.cookieStore, c.host, nil, nil, &[]string{})
+	val, err := getRegions.DoRequest(nil, c.host, nil, nil, &[]string{})
 	if val != nil {
 		return *(val.(*[]string)), err
 	}
@@ -1043,7 +1039,7 @@ func (c *client) GetRegions() ([]string, error) {
 }
 
 func (c *client) Register(name, email, pwd, region, language string, displayName *string, theme Theme) error {
-	_, err := register.DoRequest(c.cookieStore, c.host, &registerArgs{
+	_, err := register.DoRequest(nil, c.host, &registerArgs{
 		Name:        name,
 		Email:       email,
 		Pwd:         pwd,
@@ -1056,22 +1052,22 @@ func (c *client) Register(name, email, pwd, region, language string, displayName
 }
 
 func (c *client) ResendActivationEmail(email string) error {
-	_, err := resendActivationEmail.DoRequest(c.cookieStore, c.host, &resendActivationEmailArgs{
+	_, err := resendActivationEmail.DoRequest(nil, c.host, &resendActivationEmailArgs{
 		Email: email,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) Activate(email, activationCode string) error {
-	_, err := activate.DoRequest(c.cookieStore, c.host, &activateArgs{
+	_, err := activate.DoRequest(nil, c.host, &activateArgs{
 		Email:          email,
 		ActivationCode: activationCode,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) Authenticate(email, pwdTry string) (Id, error) {
-	val, err := authenticate.DoRequest(c.cookieStore, c.host, &authenticateArgs{
+func (c *client) Authenticate(css *ClientSessionStore, email, pwdTry string) (Id, error) {
+	val, err := authenticate.DoRequest(css, c.host, &authenticateArgs{
 		Email:  email,
 		PwdTry: pwdTry,
 	}, nil, &Id{})
@@ -1082,7 +1078,7 @@ func (c *client) Authenticate(email, pwdTry string) (Id, error) {
 }
 
 func (c *client) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error {
-	_, err := confirmNewEmail.DoRequest(c.cookieStore, c.host, &confirmNewEmailArgs{
+	_, err := confirmNewEmail.DoRequest(nil, c.host, &confirmNewEmailArgs{
 		CurrentEmail:     currentEmail,
 		NewEmail:         newEmail,
 		ConfirmationCode: confirmationCode,
@@ -1091,14 +1087,14 @@ func (c *client) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string
 }
 
 func (c *client) ResetPwd(email string) error {
-	_, err := resetPwd.DoRequest(c.cookieStore, c.host, &resetPwdArgs{
+	_, err := resetPwd.DoRequest(nil, c.host, &resetPwdArgs{
 		Email: email,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error {
-	_, err := setNewPwdFromPwdReset.DoRequest(c.cookieStore, c.host, &setNewPwdFromPwdResetArgs{
+	_, err := setNewPwdFromPwdReset.DoRequest(nil, c.host, &setNewPwdFromPwdResetArgs{
 		NewPwd:       newPwd,
 		Email:        email,
 		ResetPwdCode: resetPwdCode,
@@ -1107,7 +1103,7 @@ func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
 }
 
 func (c *client) GetAccount(name string) (*account, error) {
-	val, err := getAccount.DoRequest(c.cookieStore, c.host, &getAccountArgs{
+	val, err := getAccount.DoRequest(nil, c.host, &getAccountArgs{
 		Name: name,
 	}, nil, &account{})
 	if val != nil {
@@ -1117,98 +1113,98 @@ func (c *client) GetAccount(name string) (*account, error) {
 }
 
 func (c *client) GetAccounts(ids []Id) ([]*account, error) {
-	val, err := getAccounts.DoRequest(c.cookieStore, c.host, &getAccountsArgs{
+	val, err := getAccounts.DoRequest(nil, c.host, &getAccountsArgs{
 		Accounts: ids,
-	}, nil, []*account{})
+	}, nil, &[]*account{})
 	if val != nil {
-		return val.([]*account), err
+		return *val.(*[]*account), err
 	}
 	return nil, err
 }
 
 func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) {
-	val, err := searchAccounts.DoRequest(c.cookieStore, c.host, &searchAccountsArgs{
+	val, err := searchAccounts.DoRequest(nil, c.host, &searchAccountsArgs{
 		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
-	}, nil, []*account{})
+	}, nil, &[]*account{})
 	if val != nil {
-		return val.([]*account), err
+		return *val.(*[]*account), err
 	}
 	return nil, err
 }
 
 func (c *client) SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) ([]*account, error) {
-	val, err := searchPersonalAccounts.DoRequest(c.cookieStore, c.host, &searchPersonalAccountsArgs{
+	val, err := searchPersonalAccounts.DoRequest(nil, c.host, &searchPersonalAccountsArgs{
 		NameOrDisplayNameOrEmailStartsWith: nameOrDisplayNameOrEmailStartsWith,
-	}, nil, []*account{})
+	}, nil, &[]*account{})
 	if val != nil {
-		return val.([]*account), err
+		return *val.(*[]*account), err
 	}
 	return nil, err
 }
 
-func (c *client) GetMe() (*me, error) {
-	val, err := getMe.DoRequest(c.cookieStore, c.host, nil, nil, &me{})
+func (c *client) GetMe(css *ClientSessionStore) (*me, error) {
+	val, err := getMe.DoRequest(css, c.host, nil, nil, &me{})
 	if val != nil {
 		return val.(*me), err
 	}
 	return nil, err
 }
 
-func (c *client) SetMyPwd(oldPwd, newPwd string) error {
-	_, err := setMyPwd.DoRequest(c.cookieStore, c.host, &setMyPwdArgs{
+func (c *client) SetMyPwd(css *ClientSessionStore, oldPwd, newPwd string) error {
+	_, err := setMyPwd.DoRequest(css, c.host, &setMyPwdArgs{
 		OldPwd: oldPwd,
 		NewPwd: newPwd,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) SetMyEmail(newEmail string) error {
-	_, err := setMyEmail.DoRequest(c.cookieStore, c.host, &setMyEmailArgs{
+func (c *client) SetMyEmail(css *ClientSessionStore, newEmail string) error {
+	_, err := setMyEmail.DoRequest(css, c.host, &setMyEmailArgs{
 		NewEmail: newEmail,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) ResendMyNewEmailConfirmationEmail() error {
-	_, err := resendMyNewEmailConfirmationEmail.DoRequest(c.cookieStore, c.host, nil, nil, nil)
+func (c *client) ResendMyNewEmailConfirmationEmail(css *ClientSessionStore) error {
+	_, err := resendMyNewEmailConfirmationEmail.DoRequest(css, c.host, nil, nil, nil)
 	return err
 }
 
-func (c *client) SetAccountName(accountId Id, newName string) error {
-	_, err := setAccountName.DoRequest(c.cookieStore, c.host, &setAccountNameArgs{
+func (c *client) SetAccountName(css *ClientSessionStore, accountId Id, newName string) error {
+	_, err := setAccountName.DoRequest(css, c.host, &setAccountNameArgs{
 		AccountId: accountId,
 		NewName:   newName,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) SetAccountDisplayName(accountId Id, newDisplayName *string) error {
-	_, err := setAccountDisplayName.DoRequest(c.cookieStore, c.host, &setAccountDisplayNameArgs{
+func (c *client) SetAccountDisplayName(css *ClientSessionStore, accountId Id, newDisplayName *string) error {
+	_, err := setAccountDisplayName.DoRequest(css, c.host, &setAccountDisplayNameArgs{
 		AccountId:      accountId,
 		NewDisplayName: newDisplayName,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) SetAccountAvatar(accountId Id, avatarImageData io.ReadCloser) error {
+func (c *client) SetAccountAvatar(css *ClientSessionStore, accountId Id, avatarImageData io.ReadCloser) error {
 	defer avatarImageData.Close()
-	_, err := setAccountAvatar.DoRequest(c.cookieStore, c.host, &setAccountAvatarArgs{
+	_, err := setAccountAvatar.DoRequest(css, c.host, &setAccountAvatarArgs{
 		AccountId:       accountId,
 		AvatarImageData: avatarImageData,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) MigrateAccount(accountId Id, newRegion string) error {
-	_, err := migrateAccount.DoRequest(c.cookieStore, c.host, &migrateAccountArgs{
+func (c *client) MigrateAccount(css *ClientSessionStore, accountId Id, newRegion string) error {
+	_, err := migrateAccount.DoRequest(css, c.host, &migrateAccountArgs{
 		AccountId: accountId,
 		NewRegion: newRegion,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) CreateAccount(name, region string, displayName *string) (*account, error) {
-	val, err := createAccount.DoRequest(c.cookieStore, c.host, &createAccountArgs{
+func (c *client) CreateAccount(css *ClientSessionStore, name, region string, displayName *string) (*account, error) {
+	val, err := createAccount.DoRequest(css, c.host, &createAccountArgs{
 		Name:        name,
 		Region:      region,
 		DisplayName: displayName,
@@ -1219,8 +1215,8 @@ func (c *client) CreateAccount(name, region string, displayName *string) (*accou
 	return nil, err
 }
 
-func (c *client) GetMyAccounts(after *Id, limit int) (*getMyAccountsResp, error) {
-	val, err := getMyAccounts.DoRequest(c.cookieStore, c.host, &getMyAccountsArgs{
+func (c *client) GetMyAccounts(css *ClientSessionStore, after *Id, limit int) (*getMyAccountsResp, error) {
+	val, err := getMyAccounts.DoRequest(css, c.host, &getMyAccountsArgs{
 		After: after,
 		Limit: limit,
 	}, nil, &getMyAccountsResp{})
@@ -1230,23 +1226,23 @@ func (c *client) GetMyAccounts(after *Id, limit int) (*getMyAccountsResp, error)
 	return nil, err
 }
 
-func (c *client) DeleteAccount(accountId Id) error {
-	_, err := deleteAccount.DoRequest(c.cookieStore, c.host, &deleteAccountArgs{
+func (c *client) DeleteAccount(css *ClientSessionStore, accountId Id) error {
+	_, err := deleteAccount.DoRequest(css, c.host, &deleteAccountArgs{
 		AccountId: accountId,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) AddMembers(accountId Id, newMembers []*AddMemberPublic) error {
-	_, err := addMembers.DoRequest(c.cookieStore, c.host, &addMembersArgs{
+func (c *client) AddMembers(css *ClientSessionStore, accountId Id, newMembers []*AddMemberPublic) error {
+	_, err := addMembers.DoRequest(css, c.host, &addMembersArgs{
 		AccountId:  accountId,
 		NewMembers: newMembers,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) RemoveMembers(accountId Id, existingMembers []Id) error {
-	_, err := removeMembers.DoRequest(c.cookieStore, c.host, &removeMembersArgs{
+func (c *client) RemoveMembers(css *ClientSessionStore, accountId Id, existingMembers []Id) error {
+	_, err := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
 		AccountId:       accountId,
 		ExistingMembers: existingMembers,
 	}, nil, nil)

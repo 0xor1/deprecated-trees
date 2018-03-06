@@ -122,13 +122,13 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(a
 	return req, nil
 }
 
-func (e *Endpoint) DoRequest(cookieStore *CookieStore, host string, args interface{}, buildForm func(args interface{}) io.ReadCloser, respVal interface{}) (interface{}, error) {
+func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interface{}, buildForm func(args interface{}) io.ReadCloser, respVal interface{}) (interface{}, error) {
 	req, err := e.createRequest(host, args, buildForm)
 	if err != nil {
 		return nil, err
 	}
-	if cookieStore != nil {
-		for name, value := range cookieStore.Cookies {
+	if css != nil {
+		for name, value := range css.Cookies {
 			req.AddCookie(&http.Cookie{
 				Name: name,
 				Value: value,
@@ -140,8 +140,10 @@ func (e *Endpoint) DoRequest(cookieStore *CookieStore, host string, args interfa
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
-	for _, cookie := range resp.Cookies() {
-		cookieStore.Cookies[cookie.Name] = cookie.Value
+	if css != nil {
+		for _, cookie := range resp.Cookies() {
+			css.Cookies[cookie.Name] = cookie.Value
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -167,6 +169,12 @@ type endpointDocumentation struct {
 	IsAuthentication  *bool       `json:"isAuthentication,omitempty"`
 }
 
-type CookieStore struct{
+func NewClientSessionStore() *ClientSessionStore {
+	return &ClientSessionStore{
+		Cookies: map[string]string{},
+	}
+}
+
+type ClientSessionStore struct{
 	Cookies map[string]string
 }
