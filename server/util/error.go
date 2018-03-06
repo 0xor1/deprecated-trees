@@ -50,7 +50,7 @@ type externalError struct {
 }
 
 func (e *externalError) Error() string {
-	return fmt.Sprintf("code: %q message: %q original errorClient: %q", e.Code, e.Message, e.OriginalError.Error())
+	return fmt.Sprintf("code: %q message: %q original error: %q", e.Code, e.Message, e.OriginalError.Error())
 }
 
 func (e *externalError) Panic() {

@@ -563,29 +563,34 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	//get a cookie session
-	cookieSession, _ := sr.SessionStore.Get(r, sr.SessionName)
+	var cookieSession *sessions.Session
 	var myId *Id
-	if cookieSession != nil {
-		iMyId := cookieSession.Values["myId"]
-		if iMyId != nil {
-			id := iMyId.(Id)
-			myId = &id
+	// only none private endpoints use sessions
+	if !ep.IsPrivate {
+		//get a cookie session
+		cookieSession, _ = sr.SessionStore.Get(r, sr.SessionName)
+		if cookieSession != nil {
+			iMyId := cookieSession.Values["myId"]
+			if iMyId != nil {
+				id := iMyId.(Id)
+				myId = &id
+			}
 		}
+		//check for valid myId value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
+		if ep.RequiresSession && myId == nil || r.Method == POST && r.Header.Get("X-Client") == "" {
+			writeJson(w, http.StatusUnauthorized, unauthorizedErr)
+			return
+		}
+		//setup ctx
 	}
-	//check for valid myId value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
-	if ep.RequiresSession && myId == nil || r.Method == POST && r.Header.Get("X-Client") == "" {
-		writeJson(w, http.StatusUnauthorized, unauthorizedErr)
-		return
-	}
-	//setup ctx
 	ctx = newCtx(myId, cookieSession, w, r, sr)
 	//process args
 	var err error
 	var argsBytes []byte
 	var args interface{}
+	reqQueryValues := r.URL.Query()
 	if ep.Method == GET && ep.GetArgsStruct != nil {
-		argsBytes = []byte(r.URL.Query().Get("args"))
+		argsBytes = []byte(reqQueryValues.Get("args"))
 	} else if ep.Method == POST && ep.GetArgsStruct != nil {
 		argsBytes, err = ioutil.ReadAll(r.Body)
 		PanicIf(err)
@@ -598,24 +603,24 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	//process private ts and key args
 	if ep.IsPrivate {
-		ts, err := strconv.ParseInt(r.URL.Query().Get("ts"), 10, 64)
+		ts, err := strconv.ParseInt(reqQueryValues.Get("ts"), 10, 64)
 		PanicIf(err)
 		//if the timestamp the req was sent is over a minute ago, reject the request
 		if NowUnixMillis() - ts > 60000 {
 			FmtPanic("suspicious private request sent over a minute ago")
 		}
-		key, err := base64.URLEncoding.DecodeString(r.URL.Query().Get("_"))
+		key, err := base64.URLEncoding.DecodeString(reqQueryValues.Get("_"))
 		PanicIf(err)
 		// check the args/timestamp/key are valid
-		if !bytes.Equal(key, ScryptKey(append(argsBytes, []byte(r.URL.Query().Get("ts"))...), sr.RegionalV1PrivateClientSecret, sr.ScryptN, sr.ScryptR, sr.ScryptP, sr.ScryptKeyLen)) {
+		if !bytes.Equal(key, ScryptKey(append(argsBytes, []byte(reqQueryValues.Get("ts"))...), sr.RegionalV1PrivateClientSecret, sr.ScryptN, sr.ScryptR, sr.ScryptP, sr.ScryptKeyLen)) {
 			FmtPanic("invalid private request keys don't match")
 		}
 		//check redis cache to ensure key has not appeared in the last minute, to prevent replay attacks
 		cnn := sr.PrivateKeyRedisPool.Get()
 		defer cnn.Close()
 		cnn.Send("MULTI")
-		cnn.Send("SETNX", r.URL.Query().Get("_"), "")
-		cnn.Send("EXPIRE", r.URL.Query().Get("_"), 60)
+		cnn.Send("SETNX", reqQueryValues.Get("_"), "")
+		cnn.Send("EXPIRE", reqQueryValues.Get("_"), 60)
 		vals, err := redis.Ints(cnn.Do("EXEC"))
 		PanicIf(err)
 		if len(vals) != 2 {
@@ -647,7 +652,9 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		writeJsonOk(ctx.w, ep.CtxHandler(ctx, args))
 	}
-	cookieSession.Save(r, w)
+	if cookieSession != nil {
+		cookieSession.Save(r, w)
+	}
 }
 
 func writeJsonOk(w http.ResponseWriter, body interface{}) {

@@ -1,11 +1,7 @@
 package config
 
 import (
-	centralAccount "bitbucket.org/0xor1/task/server/central/api/v1/account"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/task"
 	. "bitbucket.org/0xor1/task/server/util"
 	"encoding/base64"
 	"encoding/gob"
@@ -26,7 +22,7 @@ import (
 )
 
 // pass in empty strings for no config file
-func Config(configFile, configPath string) *StaticResources {
+func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResources {
 	sr := &StaticResources{}
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "127.0.0.1:8787"
@@ -142,16 +138,8 @@ func Config(configFile, configPath string) *StaticResources {
 	var log func(error)
 	var avatarClient AvatarClient
 	var mailClient MailClient
-	endpoints := make([]*Endpoint, 0, len(centralAccount.Endpoints)+len(private.Endpoints)+len(account.Endpoints)+len(project.Endpoints)+len(task.Endpoints))
 
 	if viper.GetString("env") == "lcl" {
-		//setup all routes on lcl environment
-		endpoints = append(endpoints, centralAccount.Endpoints...)
-		endpoints = append(endpoints, private.Endpoints...)
-		endpoints = append(endpoints, account.Endpoints...)
-		endpoints = append(endpoints, project.Endpoints...)
-		endpoints = append(endpoints, task.Endpoints...)
-
 		//setup local environment interfaces
 		log = func(err error) {
 			fmt.Println(err)
@@ -219,7 +207,7 @@ func Config(configFile, configPath string) *StaticResources {
 
 	var privateKeyRedisPool iredis.Pool
 	if viper.GetString("privateKeyRedisPool") != "" {
-		dlmAndDataRedisPool = createRedisPool(viper.GetString("privateKeyRedisPool"), log)
+		privateKeyRedisPool = createRedisPool(viper.GetString("privateKeyRedisPool"), log)
 	}
 
 	sr.ServerAddress = viper.GetString("serverAddress")
@@ -241,6 +229,7 @@ func Config(configFile, configPath string) *StaticResources {
 	sr.MaxProcessEntityCount = viper.GetInt("maxProcessEntityCount")
 	sr.CryptCodeLen = viper.GetInt("cryptCodeLen")
 	sr.SaltLen = viper.GetInt("saltLen")
+	sr.ScryptN = viper.GetInt("scryptN")
 	sr.ScryptR = viper.GetInt("scryptR")
 	sr.ScryptP = viper.GetInt("scryptP")
 	sr.ScryptKeyLen = viper.GetInt("scryptKeyLen")

@@ -12,7 +12,7 @@ func Now() time.Time {
 }
 
 func NowUnixMillis() int64 {
-	return Now().UnixNano() / 1000
+	return Now().UnixNano() / 1000000
 }
 
 //returns Version 1 uuid as a byte slice
@@ -33,6 +33,15 @@ func ParseId(id string) Id {
 }
 
 type Id UUID
+
+func (id Id) MarshalJSON() ([]byte, error) {
+	return []byte(`"`+id.String()+`"`), nil
+}
+
+func (id *Id) UnmarshalJSON(data []byte) error {
+	*id = ParseId(string(bytes.Trim(data, `"`)))
+	return nil
+}
 
 func (id Id) String() string {
 	return base64.URLEncoding.EncodeToString(id)

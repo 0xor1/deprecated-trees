@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"io"
 )
 
 type Endpoint struct {
@@ -77,16 +79,18 @@ func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	}
 }
 
-func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r *http.Request, args interface{})) (*http.Request, error) {
-	req, err := http.NewRequest(e.Method, host+e.Path, nil)
+func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(args interface{}) io.ReadCloser) (*http.Request, error) {
+	reqUrl, err := url.Parse(host+e.Path)
 	if err != nil {
 		return nil, err
 	}
+	urlVals := url.Values{}
+	var body io.ReadCloser
 	if buildForm != nil {
 		if e.Method != POST {
 			return nil, invalidEndpointErr
 		}
-		buildForm(req, args)
+		body = buildForm(args)
 		if e.IsPrivate {
 			InvalidOperationErr.Panic() //private endpoints dont support sending form data
 		}
@@ -98,34 +102,42 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(r
 		if e.IsPrivate {
 			ts := fmt.Sprintf("%d", NowUnixMillis())
 			key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
-			req.URL.Query().Set("_", base64.URLEncoding.EncodeToString(key))
-			req.URL.Query().Set("ts", ts)
+			urlVals.Set("_", base64.URLEncoding.EncodeToString(key))
+			urlVals.Set("ts", ts)
 		}
 		if e.Method == GET {
-			req.URL.Query().Set("args", string(argsBytes))
+			urlVals.Set("args", string(argsBytes))
 		} else if e.Method == POST {
-			req.Body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
+			body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
 		} else {
 			return nil, invalidEndpointErr
 		}
-
 	}
+	reqUrl.RawQuery = urlVals.Encode()
+	req, err := http.NewRequest(e.Method, reqUrl.String(), body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("X-Client", "go-client")
 	return req, nil
 }
 
-func (e *Endpoint) DoRequest(host string, args interface{}, buildForm func(r *http.Request, args interface{}), respVal interface{}) (interface{}, error) {
+func (e *Endpoint) DoRequest(cookieStore *CookieStore, host string, args interface{}, buildForm func(args interface{}) io.ReadCloser, respVal interface{}) (interface{}, error) {
 	req, err := e.createRequest(host, args, buildForm)
 	if err != nil {
 		return nil, err
 	}
 	resp, err := http.DefaultClient.Do(req)
+	fmt.Println(resp.Status, req, err)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
+	//TODO write Set-Cookie header values to cookie store
 	if err != nil {
 		return nil, err
 	}
 	if respVal != nil {
+
 		err = json.NewDecoder(resp.Body).Decode(respVal)
 		if err != nil {
 			return nil, err
@@ -143,4 +155,8 @@ type endpointDocumentation struct {
 	ArgsStructure     interface{} `json:"argsStructure,omitempty"`
 	ResponseStructure interface{} `json:"responseStructure,omitempty"`
 	IsAuthentication  *bool       `json:"isAuthentication,omitempty"`
+}
+
+type CookieStore struct{
+	Cookies map[string]string
 }
