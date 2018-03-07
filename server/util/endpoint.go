@@ -136,7 +136,6 @@ func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interfac
 		}
 	}
 	resp, err := http.DefaultClient.Do(req)
-	fmt.Println(resp.Status, req.Method, req.URL.String(), err)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}

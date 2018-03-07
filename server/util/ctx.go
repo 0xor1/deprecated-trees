@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 	"encoding/base64"
 	"strconv"
 	"bytes"
@@ -26,12 +25,12 @@ import (
 // per request info fields
 type Ctx struct {
 	myId                   *Id
-	session 			   *sessions.Session
+	session                *sessions.Session
 	requestStartUnixMillis int64
-	w                      http.ResponseWriter
-	r                      *http.Request
+	resp                   http.ResponseWriter
+	req                    *http.Request
 	queryInfosMtx          *sync.RWMutex
-	queryInfos             []*queryInfo
+	queryInfos             []*QueryInfo
 	retrievedDlms          map[string]int64
 	dlmsToUpdate           map[string]interface{}
 	cacheItemsToUpdate     map[string]interface{}
@@ -51,7 +50,7 @@ func (c *Ctx) MyId() Id {
 }
 
 func (c *Ctx) Log(err error) {
-	c.staticResources.Log(err)
+	c.staticResources.LogError(err)
 }
 
 func (c *Ctx) AccountExec(query string, args ...interface{}) (sql.Result, error) {
@@ -113,9 +112,9 @@ func (c *Ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args 
 	}
 	cnn := c.staticResources.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
-	start := time.Now()
+	start := NowUnixMillis()
 	jsonBytes, err = redis.Bytes(cnn.Do(GET, jsonBytes))
-	writeQueryInfo(c, &queryInfo{Query: GET, Args: jsonBytes, Duration: time.Now().Sub(start)})
+	writeQueryInfo(c, &QueryInfo{Query: GET, Args: jsonBytes, Duration: NowUnixMillis() - start})
 	if err != nil {
 		c.Log(err)
 		return false
@@ -280,36 +279,36 @@ func (c *Ctx) AvatarClient() AvatarClient {
 // helpers
 
 func sqlExec(ctx *Ctx, rs isql.ReplicaSet, query string, args ...interface{}) (sql.Result, error) {
-	start := time.Now()
+	start := NowUnixMillis()
 	res, err := rs.Exec(query, args...)
-	writeQueryInfo(ctx, &queryInfo{Query: query, Args: args, Duration: time.Now().Sub(start)})
+	writeQueryInfo(ctx, &QueryInfo{Query: query, Args: args, Duration: NowUnixMillis() - start})
 	return res, err
 }
 
 func sqlQuery(ctx *Ctx, rs isql.ReplicaSet, query string, args ...interface{}) (isql.Rows, error) {
-	start := time.Now()
+	start := NowUnixMillis()
 	rows, err := rs.Query(query, args...)
-	writeQueryInfo(ctx, &queryInfo{Query: query, Args: args, Duration: time.Now().Sub(start)})
+	writeQueryInfo(ctx, &QueryInfo{Query: query, Args: args, Duration: NowUnixMillis() - start})
 	return rows, err
 }
 
 func sqlQueryRow(ctx *Ctx, rs isql.ReplicaSet, query string, args ...interface{}) isql.Row {
-	start := time.Now()
+	start := NowUnixMillis()
 	row := rs.QueryRow(query, args...)
-	writeQueryInfo(ctx, &queryInfo{Query: query, Args: args, Duration: time.Now().Sub(start)})
+	writeQueryInfo(ctx, &QueryInfo{Query: query, Args: args, Duration: NowUnixMillis() - start})
 	return row
 }
 
-func writeQueryInfo(ctx *Ctx, qi *queryInfo) {
+func writeQueryInfo(ctx *Ctx, qi *QueryInfo) {
 	ctx.queryInfosMtx.Lock()
 	defer ctx.queryInfosMtx.Unlock()
 	ctx.queryInfos = append(ctx.queryInfos, qi)
 }
 
-func getQueryInfos(ctx *Ctx) []*queryInfo {
+func getQueryInfos(ctx *Ctx) []*QueryInfo {
 	ctx.queryInfosMtx.RLock()
 	defer ctx.queryInfosMtx.RUnlock()
-	cpy := make([]*queryInfo, 0, len(ctx.queryInfos))
+	cpy := make([]*QueryInfo, 0, len(ctx.queryInfos))
 	for _, qi := range ctx.queryInfos {
 		cpy = append(cpy, qi)
 	}
@@ -333,7 +332,7 @@ func getDlm(ctx *Ctx, dlmKeys []string) (int64, error) {
 			if panicIfRetrievedDlmsAreMissingEntries {
 				panic(&missingDlmErr{
 					dlmKey:  dlmKey,
-					reqPath: ctx.r.URL.Path,
+					reqPath: ctx.req.URL.Path,
 				})
 			}
 			dlmsToFetch = append(dlmsToFetch, dlmKey)
@@ -344,9 +343,9 @@ func getDlm(ctx *Ctx, dlmKeys []string) (int64, error) {
 	if len(dlmsToFetch) > 0 {
 		cnn := ctx.staticResources.DlmAndDataRedisPool.Get()
 		defer cnn.Close()
-		start := time.Now()
+		start := NowUnixMillis()
 		dlms, err := redis.Int64s(cnn.Do("MGET", dlmsToFetch...))
-		writeQueryInfo(ctx, &queryInfo{Query: "MGET", Args: dlmsToFetch, Duration: time.Now().Sub(start)})
+		writeQueryInfo(ctx, &QueryInfo{Query: "MGET", Args: dlmsToFetch, Duration: NowUnixMillis() - start})
 		if err != nil {
 			return 0, err
 		}
@@ -383,39 +382,22 @@ func doCacheUpdate(ctx *Ctx) {
 	cnn := ctx.staticResources.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	if len(setArgs) > 0 {
-		start := time.Now()
+		start := NowUnixMillis()
 		_, err := cnn.Do("MSET", setArgs...)
-		writeQueryInfo(ctx, &queryInfo{Query: "MSET", Args: setArgs, Duration: time.Now().Sub(start)})
+		writeQueryInfo(ctx, &QueryInfo{Query: "MSET", Args: setArgs, Duration: NowUnixMillis() - start})
 		if err != nil {
 			ctx.Log(err)
 		}
 	}
 	if len(delArgs) > 0 {
-		start := time.Now()
+		start := NowUnixMillis()
 		_, err := cnn.Do("DEL", setArgs...)
-		writeQueryInfo(ctx, &queryInfo{Query: "DEL", Args: setArgs, Duration: time.Now().Sub(start)})
+		writeQueryInfo(ctx, &QueryInfo{Query: "DEL", Args: setArgs, Duration: NowUnixMillis() - start})
 		if err != nil {
 			ctx.Log(err)
 		}
 	}
 
-}
-
-func newCtx(myId *Id, session *sessions.Session, w http.ResponseWriter, r *http.Request, staticResources *StaticResources) *Ctx {
-	return &Ctx{
-		myId: myId,
-		session: session,
-		requestStartUnixMillis: Now().UnixNano() / 1000,
-		w:                  w,
-		r:                  r,
-		retrievedDlms:      map[string]int64{},
-		dlmsToUpdate:       map[string]interface{}{},
-		cacheItemsToUpdate: map[string]interface{}{},
-		cacheKeysToDelete:  map[string]interface{}{},
-		queryInfosMtx:      &sync.RWMutex{},
-		queryInfos:         make([]*queryInfo, 0, 10),
-		staticResources:    staticResources,
-	}
 }
 
 type valueCacheKey struct {
@@ -424,10 +406,10 @@ type valueCacheKey struct {
 	Args      interface{} `json:"args"`
 }
 
-type queryInfo struct {
+type QueryInfo struct {
 	Query    string        `json:"query"`
 	Args     interface{}   `json:"args"`
-	Duration time.Duration `json:"duration"`
+	Duration int64		   `json:"duration"`
 }
 
 type MailClient interface {
@@ -514,7 +496,9 @@ type StaticResources struct {
 	// avatar client for storing avatar images
 	AvatarClient AvatarClient
 	// error logging function
-	Log func(error)
+	LogError func(error)
+	// stats logging function
+	LogStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*QueryInfo)
 	// account sql connection
 	AccountDb isql.ReplicaSet
 	// pwd sql connection
@@ -527,81 +511,90 @@ type StaticResources struct {
 	PrivateKeyRedisPool iredis.Pool
 }
 
-func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var ctx *Ctx
+func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	resp := &responseWrapper{code: 0,w: w}
+	ctx := &Ctx{
+		requestStartUnixMillis: NowUnixMillis(),
+		resp:                   resp,
+		req:                    req,
+		retrievedDlms:          map[string]int64{},
+		dlmsToUpdate:           map[string]interface{}{},
+		cacheItemsToUpdate:     map[string]interface{}{},
+		cacheKeysToDelete:      map[string]interface{}{},
+		queryInfosMtx:          &sync.RWMutex{},
+		queryInfos:             make([]*QueryInfo, 0, 10),
+		staticResources:        sr,
+	}
+	//always do case insensitive path routing
+	lowerPath := strings.ToLower(req.URL.Path)
 	// defer func handles logging panic errors and returning 500s and logging request/response/database/cache stats to datadog in none lcl env
 	defer func() {
-		context.Clear(r) //required for guerilla cookie session usage, or resources will leak
+		context.Clear(req) //required for guerilla cookie session usage, or resources will leak
 		r := recover()
 		if r != nil {
 			pErr, ok := r.(PermissionedError)
 			if ok && pErr != nil && pErr.IsPublic() {
-				writeJson(w, http.StatusInternalServerError, pErr)
+				writeJson(resp, http.StatusInternalServerError, pErr)
 			} else {
-				writeJson(w, http.StatusInternalServerError, internalServerErr)
+				writeJson(resp, http.StatusInternalServerError, internalServerErr)
 			}
 			err := r.(error)
 			if err != nil {
-				sr.Log(err)
+				sr.LogError(err)
 			}
 		}
-		//TODO datadog req/resp stats and
+		sr.LogStats(resp.code, req.Method, lowerPath, ctx.requestStartUnixMillis, getQueryInfos(ctx))
 	}()
 	//must make sure to close the request body
-	if r != nil && r.Body != nil {
-		defer r.Body.Close()
+	if req != nil && req.Body != nil {
+		defer req.Body.Close()
 	}
-	//always do case insensitive path routing
-	lowerPath := strings.ToLower(r.URL.Path)
 	//check for special case of api docs first
 	if lowerPath == sr.ApiDocsRoute {
-		writeRawJson(w, 200, sr.ApiDocs)
+		writeRawJson(resp, 200, sr.ApiDocs)
 		return
 	}
 	//get endpoint
 	ep := sr.Routes[lowerPath]
 	// check for 404
-	if ep == nil || ep.Method != strings.ToUpper(r.Method) {
-		http.NotFound(w, r)
+	if ep == nil || ep.Method != strings.ToUpper(req.Method) {
+		http.NotFound(resp, req)
 		return
 	}
-	var cookieSession *sessions.Session
-	var myId *Id
 	// only none private endpoints use sessions
 	if !ep.IsPrivate {
 		//get a cookie session
-		cookieSession, _ = sr.SessionStore.Get(r, sr.SessionCookieName)
-		if cookieSession != nil {
-			iMyId := cookieSession.Values["myId"]
+		ctx.session, _ = sr.SessionStore.Get(req, sr.SessionCookieName)
+		if ctx.session != nil {
+			iMyId := ctx.session.Values["myId"]
 			if iMyId != nil {
 				id := iMyId.(Id)
-				myId = &id
+				ctx.myId = &id
 			}
 		}
 		//check for valid myId value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
-		if ep.RequiresSession && myId == nil || r.Method == POST && r.Header.Get("X-Client") == "" {
-			writeJson(w, http.StatusUnauthorized, unauthorizedErr)
+		if ep.RequiresSession && ctx.myId == nil || req.Method == POST && req.Header.Get("X-Client") == "" {
+			writeJson(resp, http.StatusUnauthorized, unauthorizedErr)
 			return
 		}
 		//setup ctx
 	}
-	ctx = newCtx(myId, cookieSession, w, r, sr)
 	//process args
 	var err error
 	var argsBytes []byte
 	var args interface{}
-	reqQueryValues := r.URL.Query()
+	reqQueryValues := req.URL.Query()
 	if ep.Method == GET && ep.GetArgsStruct != nil {
 		argsBytes = []byte(reqQueryValues.Get("args"))
 	} else if ep.Method == POST && ep.GetArgsStruct != nil {
-		argsBytes, err = ioutil.ReadAll(r.Body)
+		argsBytes, err = ioutil.ReadAll(req.Body)
 		PanicIf(err)
 	} else if ep.Method == POST && ep.ProcessForm != nil {
 		if ep.IsPrivate {
 			// private endpoints dont support post requests with form data
 			invalidEndpointErr.Panic()
 		}
-		args = ep.ProcessForm(w, r)
+		args = ep.ProcessForm(resp, req)
 	}
 	//process private ts and key args
 	if ep.IsPrivate {
@@ -647,13 +640,13 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			FmtPanic("isAuthentication did not return Id type")
 		} else {
 			ctx.myId = &myId //set myId on ctx for logging info in defer above
-			cookieSession.Values["myId"] = myId
-			cookieSession.Values["AuthedOn"] = NowUnixMillis()
-			cookieSession.Save(r, w)
-			writeJsonOk(ctx.w, myId)
+			ctx.session.Values["myId"] = myId
+			ctx.session.Values["AuthedOn"] = NowUnixMillis()
+			ctx.session.Save(req, resp)
+			writeJsonOk(ctx.resp, myId)
 		}
 	} else {
-		writeJsonOk(ctx.w, ep.CtxHandler(ctx, args))
+		writeJsonOk(ctx.resp, ep.CtxHandler(ctx, args))
 	}
 }
 
@@ -727,4 +720,22 @@ type localMailClient struct{}
 
 func (s *localMailClient) Send(sendTo []string, content string) {
 	fmt.Println(sendTo, content)
+}
+
+type responseWrapper struct{
+	code int
+	w http.ResponseWriter
+}
+
+func (r *responseWrapper) Header() http.Header {
+	return r.w.Header()
+}
+
+func (r *responseWrapper) Write(data []byte) (int, error) {
+	return r.w.Write(data)
+}
+
+func (r *responseWrapper) WriteHeader(code int) {
+	r.code = code
+	r.w.WriteHeader(code)
 }

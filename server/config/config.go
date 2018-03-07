@@ -135,15 +135,22 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 
 	routes := map[string]*Endpoint{}
 
-	var log func(error)
+	var logError func(error)
+	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*QueryInfo)
 	var avatarClient AvatarClient
 	var mailClient MailClient
 
 	if viper.GetString("env") == "lcl" {
 		//setup local environment interfaces
-		log = func(err error) {
+		logError = func(err error) {
 			fmt.Println(err)
 			fmt.Println(string(debug.Stack()))
+		}
+		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*QueryInfo) {
+			fmt.Println(status, fmt.Sprintf("%dms", NowUnixMillis() - reqStartUnixMillis), method, path)
+			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
+			//queryInfosBytes, _ := json.Marshal(queryInfos)
+			//fmt.Println(string(queryInfosBytes))
 		}
 		avatarClient = NewLocalAvatarStore(viper.GetString("lclAvatarDir"), uint(viper.GetInt("maxAvatarDim")))
 		mailClient = NewLocalMailClient()
@@ -202,12 +209,12 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 
 	var dlmAndDataRedisPool iredis.Pool
 	if viper.GetString("dlmAndDataRedisPool") != "" {
-		dlmAndDataRedisPool = createRedisPool(viper.GetString("dlmAndDataRedisPool"), log)
+		dlmAndDataRedisPool = createRedisPool(viper.GetString("dlmAndDataRedisPool"), logError)
 	}
 
 	var privateKeyRedisPool iredis.Pool
 	if viper.GetString("privateKeyRedisPool") != "" {
-		privateKeyRedisPool = createRedisPool(viper.GetString("privateKeyRedisPool"), log)
+		privateKeyRedisPool = createRedisPool(viper.GetString("privateKeyRedisPool"), logError)
 	}
 
 	sr.ServerAddress = viper.GetString("serverAddress")
@@ -236,7 +243,8 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	sr.RegionalV1PrivateClient = private.NewClient(viper.GetStringMapString("regionalV1PrivateClientConfig"))
 	sr.MailClient = mailClient
 	sr.AvatarClient = avatarClient
-	sr.Log = log
+	sr.LogError = logError
+	sr.LogStats = logStats
 	sr.AccountDb = accountDb
 	sr.PwdDb = pwdDb
 	sr.TreeShards = treeShardDbs

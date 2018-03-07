@@ -222,7 +222,7 @@ var setMemberDisplayName = &Endpoint{
 	Path:      "/api/v1/private/setMemberDisplayName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
-		return &setMemberNameArgs{}
+		return &setMemberDisplayNameArgs{}
 	},
 	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
 		args := a.(*setMemberDisplayNameArgs)
