@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"mime/multipart"
+	"io/ioutil"
 )
 
 var (
@@ -652,15 +654,17 @@ var setAccountAvatar = &Endpoint{
 	Path:            "/api/v1/account/setAccountAvatar",
 	RequiresSession: true,
 	FormStruct: map[string]string{
-		"accountId": "Id",
-		"avatar":    "file (png, jpeg, gif)",
+		"account": "Id",
+		"avatar":  "file (png, jpeg, gif)",
 	},
 	ProcessForm: func(w http.ResponseWriter, r *http.Request) interface{} {
 		r.Body = http.MaxBytesReader(w, r.Body, 600000) //limit to 6kb
 		f, _, err := r.FormFile("avatar")
-		PanicIf(err)
+		if err != nil {
+			f = nil
+		}
 		return &setAccountAvatarArgs{
-			AccountId:       ParseId(r.FormValue("accountId")),
+			AccountId:       ParseId(r.FormValue("account")),
 			AvatarImageData: f,
 		}
 	},
@@ -1191,7 +1195,17 @@ func (c *client) SetAccountAvatar(css *ClientSessionStore, accountId Id, avatarI
 	_, err := setAccountAvatar.DoRequest(css, c.host, &setAccountAvatarArgs{
 		AccountId:       accountId,
 		AvatarImageData: avatarImageData,
-	}, nil, nil)
+	}, func() (io.ReadCloser, string) {
+		body := bytes.NewBuffer([]byte{})
+		writer := multipart.NewWriter(body)
+		part, err := writer.CreateFormFile("avatar", "avatar")
+		PanicIf(err)
+		_, err = io.Copy(part, avatarImageData)
+		PanicIf(err)
+		PanicIf(writer.WriteField("account", accountId.String()))
+		PanicIf(writer.Close())
+		return ioutil.NopCloser(body), writer.FormDataContentType()
+	}, nil)
 	return err
 }
 

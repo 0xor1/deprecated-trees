@@ -79,18 +79,19 @@ func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	}
 }
 
-func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(args interface{}) io.ReadCloser) (*http.Request, error) {
+func (e *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
 	reqUrl, err := url.Parse(host+e.Path)
 	if err != nil {
 		return nil, err
 	}
 	urlVals := url.Values{}
 	var body io.ReadCloser
+	var contentType string
 	if buildForm != nil {
 		if e.Method != POST {
 			return nil, invalidEndpointErr
 		}
-		body = buildForm(args)
+		body, contentType = buildForm()
 		if e.IsPrivate {
 			InvalidOperationErr.Panic() //private endpoints dont support sending form data
 		}
@@ -119,10 +120,13 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func(a
 		return nil, err
 	}
 	req.Header.Add("X-Client", "go-client")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
 	return req, nil
 }
 
-func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interface{}, buildForm func(args interface{}) io.ReadCloser, respVal interface{}) (interface{}, error) {
+func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
 	req, err := e.createRequest(host, args, buildForm)
 	if err != nil {
 		return nil, err

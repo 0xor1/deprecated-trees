@@ -3,18 +3,11 @@ package account
 import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	. "bitbucket.org/0xor1/task/server/util"
-	//"encoding/base64"
 	"github.com/stretchr/testify/assert"
-	//"io/ioutil"
-	//"os"
-	//"path"
-	//"strings"
 	"testing"
 	"bitbucket.org/0xor1/task/server/config"
 	"net/http/httptest"
 	"encoding/base64"
-	"os"
-	"path"
 	"io/ioutil"
 	"strings"
 )
@@ -99,7 +92,7 @@ func Test_system(t *testing.T) {
 	err = client.SetAccountName(aliCss, aliId, "aliNew")
 	aliDisplayName = "ZZZ ali ZZZ"
 	err = client.SetAccountDisplayName(aliCss, aliId, &aliDisplayName)
-	err = client.SetAccountAvatar(aliCss, aliId, ioutil.NopCloser(base64.NewDecoder(base64.URLEncoding, strings.NewReader(testImgOk))))
+	err = client.SetAccountAvatar(aliCss, aliId, ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))))
 
 	err = client.MigrateAccount(aliCss, aliId, "usw")
 
@@ -222,8 +215,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, catDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	wd, err := os.Getwd()
-	os.RemoveAll(path.Join(wd, "avatar"))
+	staticResources.AvatarClient.DeleteAll()
 	client.DeleteAccount(aliCss, org.Id)
 	client.DeleteAccount(aliCss, org2.Id)
 	client.DeleteAccount(aliCss, aliId)
