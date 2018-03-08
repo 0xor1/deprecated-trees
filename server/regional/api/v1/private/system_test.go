@@ -2,18 +2,24 @@ package private
 
 import (
 	. "bitbucket.org/0xor1/task/server/util"
-	"github.com/0xor1/isql"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"bitbucket.org/0xor1/task/server/config"
+	"net/http/httptest"
 )
 
 func Test_system(t *testing.T) {
-	maxProcessEntityCount := 100
-	api := New(map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}, maxProcessEntityCount)
+	staticResources := config.Config("", "", NewClient, Endpoints)
+	testServer := httptest.NewServer(staticResources)
+	region := "lcl"
+	staticResources.RegionalV1PrivateClient = NewClient(map[string]string{
+		region: testServer.URL,
+	})
+	client := staticResources.RegionalV1PrivateClient
 
 	aliId := NewId()
 	orgId := NewId()
-	api.CreateAccount(orgId, aliId, "ali", nil)
+	client.CreateAccount(region, orgId, aliId, "ali", nil)
 	bob := AddMemberPrivate{}
 	bob.Id = NewId()
 	bob.Name = "bob"
@@ -22,10 +28,14 @@ func Test_system(t *testing.T) {
 	cat.Id = NewId()
 	cat.Name = "cat"
 	cat.Role = AccountMemberOfOnlySpecificProjects
-	api.AddMembers(0, orgId, aliId, []*AddMemberPrivate{&bob, &cat})
-	assert.True(t, api.MemberIsOnlyAccountOwner(0, orgId, aliId))
-	api.SetMemberName(0, orgId, aliId, "aliNew")
-	assert.True(t, api.MemberIsAccountOwner(0, orgId, aliId))
-	api.RemoveMembers(0, orgId, aliId, []Id{bob.Id})
-	api.DeleteAccount(0, orgId, aliId)
+	client.AddMembers(region, 0, orgId, aliId, []*AddMemberPrivate{&bob, &cat})
+	val, err := client.MemberIsOnlyAccountOwner(region, 0, orgId, aliId)
+	assert.Nil(t, err)
+	assert.True(t, val)
+	client.SetMemberName(region, 0, orgId, aliId, "aliNew")
+	val, err = client.MemberIsAccountOwner(region, 0, orgId, aliId)
+	assert.Nil(t, err)
+	assert.True(t, val)
+	client.RemoveMembers(region, 0, orgId, aliId, []Id{bob.Id})
+	client.DeleteAccount(region, 0, orgId, aliId)
 }

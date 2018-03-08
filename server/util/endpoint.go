@@ -12,21 +12,21 @@ import (
 )
 
 type Endpoint struct {
-	Note              string
-	Method            string
-	Path              string
-	IsPrivate         bool
-	RequiresSession   bool
-	ResponseStructure interface{}
-	IsAuthentication  bool
-	PermissionDlmKeys func(ctx *Ctx, args interface{}) []string
-	ValueDlmKeys      func(ctx *Ctx, args interface{}) []string
-	FormStruct        map[string]string
-	ProcessForm       func(http.ResponseWriter, *http.Request) interface{}
-	GetArgsStruct     func() interface{}
-	PermissionCheck   func(ctx *Ctx, args interface{})
-	CtxHandler        func(ctx *Ctx, args interface{}) interface{}
-	StaticResources   *StaticResources
+	Note                     string
+	Method                   string
+	Path                     string
+	IsPrivate                bool
+	RequiresSession          bool
+	ExampleResponseStructure interface{}
+	IsAuthentication         bool
+	PermissionDlmKeys        func(ctx *Ctx, args interface{}) []string
+	ValueDlmKeys             func(ctx *Ctx, args interface{}) []string
+	FormStruct               map[string]string
+	ProcessForm              func(http.ResponseWriter, *http.Request) interface{}
+	GetArgsStruct            func() interface{}
+	PermissionCheck          func(ctx *Ctx, args interface{})
+	CtxHandler               func(ctx *Ctx, args interface{}) interface{}
+	StaticResources          *StaticResources
 }
 
 func (e *Endpoint) ValidateEndpoint() {
@@ -68,14 +68,14 @@ func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 		isAuth = &e.IsAuthentication
 	}
 	return &endpointDocumentation{
-		Note:              note,
-		Method:            e.Method,
-		Path:              e.Path,
-		RequiresSession:   e.RequiresSession,
-		ArgsLocation:      argsLocation,
-		ArgsStructure:     argsStruct,
-		ResponseStructure: e.ResponseStructure,
-		IsAuthentication:  isAuth,
+		Note:                     note,
+		Method:                   e.Method,
+		Path:                     e.Path,
+		RequiresSession:          e.RequiresSession,
+		ArgsLocation:             argsLocation,
+		ArgsStructure:            argsStruct,
+		ExampleResponseStructure: e.ExampleResponseStructure,
+		IsAuthentication:         isAuth,
 	}
 }
 
@@ -103,7 +103,7 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func()
 		if e.IsPrivate {
 			ts := fmt.Sprintf("%d", NowUnixMillis())
 			key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
-			urlVals.Set("_", base64.URLEncoding.EncodeToString(key))
+			urlVals.Set("_", base64.RawURLEncoding.EncodeToString(key))
 			urlVals.Set("ts", ts)
 		}
 		if e.Method == GET {
@@ -162,14 +162,14 @@ func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interfac
 }
 
 type endpointDocumentation struct {
-	Note              *string     `json:"note,omitempty"`
-	Method            string      `json:"method"`
-	Path              string      `json:"path"`
-	RequiresSession   bool        `json:"requiresSession"`
-	ArgsLocation      *string     `json:"argsLocation,omitempty"`
-	ArgsStructure     interface{} `json:"argsStructure,omitempty"`
-	ResponseStructure interface{} `json:"responseStructure,omitempty"`
-	IsAuthentication  *bool       `json:"isAuthentication,omitempty"`
+	Note                     *string     `json:"note,omitempty"`
+	Method                   string      `json:"method"`
+	Path                     string      `json:"path"`
+	RequiresSession          bool        `json:"requiresSession"`
+	ArgsLocation             *string     `json:"argsLocation,omitempty"`
+	ArgsStructure            interface{} `json:"argsStructure,omitempty"`
+	ExampleResponseStructure interface{} `json:"exampleResponseStructure,omitempty"`
+	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
 }
 
 func NewClientSessionStore() *ClientSessionStore {

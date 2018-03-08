@@ -25,7 +25,7 @@ func main() {
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%s", base64.URLEncoding.EncodeToString(util.CryptBytes(l))))
+			fmt.Println(fmt.Sprintf("%s", base64.RawURLEncoding.EncodeToString(util.CryptBytes(l))))
 		}
 	}
 }

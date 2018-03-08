@@ -132,7 +132,7 @@ func (a *api) GetTasks(shard int, accountId, projectId, myId Id, taskIds []Id) [
 
 func (a *api) GetChildTasks(shard int, accountId, projectId, parentId, myId Id, fromSibling *Id, limit int) []*task {
 	ValidateMemberHasProjectReadAccess(a.store.getAccountAndProjectRolesAndProjectIsPublic(shard, accountId, projectId, myId))
-	ValidateLimitArg(limit, a.maxProcessEntityCount)
+	ValidateLimit(limit, a.maxProcessEntityCount)
 	return a.store.getChildTasks(shard, accountId, projectId, parentId, fromSibling, limit)
 }
 

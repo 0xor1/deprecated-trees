@@ -9,7 +9,6 @@ import (
 
 var (
 	zeroOwnerCountErr = &AppError{Code: "r_v1_pr_zoc", Message: "zero owner count", Public: true}
-	noSuchRegionErr   = &AppError{Code: "r_v1_pr_nsr", Message: "no such region", Public: true}
 )
 
 type createAccountArgs struct {
@@ -383,7 +382,7 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx *Ctx, shard int, accountId,
 	PanicIf(err)
 }
 
-func NewClient(regions map[string]string) *client {
+func NewClient(regions map[string]string) RegionalV1PrivateClient {
 	lowerRegionsMap := map[string]string{}
 	for k, v := range regions {
 		lowerRegionsMap[strings.ToLower(k)] = v
@@ -400,7 +399,7 @@ type client struct {
 func (c *client) getHost(region string) string {
 	host, exists := c.regions[strings.ToLower(region)]
 	if !exists {
-		noSuchRegionErr.Panic()
+		NoSuchRegionErr.Panic()
 	}
 	return host
 }
@@ -456,6 +455,7 @@ func (c *client) RemoveMembers(region string, shard int, account, myId Id, membe
 		Shard:     shard,
 		AccountId: account,
 		MyId:      myId,
+		Members: members,
 	}, nil, nil)
 	return err
 }

@@ -1,4 +1,4 @@
-package account
+package centralaccount
 
 import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
@@ -13,7 +13,7 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	staticResources := config.Config("", "", append(Endpoints, private.Endpoints...))
+	staticResources := config.Config("", "", private.NewClient, Endpoints, private.Endpoints)
 	testServer := httptest.NewServer(staticResources)
 	aliCss := NewClientSessionStore()
 	client := NewClient(testServer.URL)
@@ -94,7 +94,7 @@ func Test_system(t *testing.T) {
 	err = client.SetAccountDisplayName(aliCss, aliId, &aliDisplayName)
 	err = client.SetAccountAvatar(aliCss, aliId, ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))))
 
-	err = client.MigrateAccount(aliCss, aliId, "usw")
+	//err = client.MigrateAccount(aliCss, aliId, "usw")
 
 	orgDisplayName := "Big Corp"
 	org, err := client.CreateAccount(aliCss, "org", region, &orgDisplayName)

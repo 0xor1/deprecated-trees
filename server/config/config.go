@@ -1,7 +1,6 @@
 package config
 
 import (
-	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	. "bitbucket.org/0xor1/task/server/util"
 	"encoding/base64"
 	"encoding/gob"
@@ -22,7 +21,7 @@ import (
 )
 
 // pass in empty strings for no config file
-func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResources {
+func Config(configFile, configPath string, createRegionalV1PrivateClient func(regions map[string]string) RegionalV1PrivateClient, endpointSets ...[]*Endpoint) *StaticResources {
 	sr := &StaticResources{}
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "127.0.0.1:8787"
@@ -41,12 +40,12 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	viper.SetDefault("sessionDomain", "127.0.0.1")
 	// session cookie store
 	viper.SetDefault("sessionAuthKey64s", []string{
-		"fxMXxPH5uq4CJTqyBytCQ7YWPbIM9ny-djeBnONVykXjPT0DeoEkWCX4kBJ0DiiHtqffRama1EGkrBY2hE4eWw==",
-		"hcyr27fSuglI0tZdgOVNxGs2aovFZth9wxvlhUCI1uighxF73Gjw8D9IkeDmBlMbQkhMhxGWHj7zW-X4w26egg==",
+		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
+		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
 	})
 	viper.SetDefault("sessionEncrKey32s", []string{
-		"dmGy7YtKIM65-8BoxE6MHOdj5IBDqO9_H4h-3IEc2Dc=",
-		"nMNUSbG1hAG02NoZDfMBERx4k8xZA-PKt9nxU85yQeA=",
+		"3ICuYRUelY-4Fhak0Iw0_5CW24bJvxFWM0jAA78IIp8",
+		"u80sYkgbBav52fJXbENYhN3Iyof7WhuLHHMaS_rmUQw",
 	})
 	// incremental base64 value
 	viper.SetDefault("masterCacheKey", "0")
@@ -77,7 +76,7 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	// scrypt key length
 	viper.SetDefault("scryptKeyLen", 32)
 	// private client secret base64 encoded
-	viper.SetDefault("regionalV1PrivateClientSecret", "cRafTwI5N270GDN8B573IfAInpq_W2p11RAPifm5Z4tfztDXfDOKsY3OM_qnTDeWmepRdzBNyk8LM1MLXu0_pw==")
+	viper.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	viper.SetDefault("regionalV1PrivateClientConfig", map[string]string{
 		"lcl": "http//127.0.0.1:8787",
@@ -114,12 +113,12 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	encrKey32s := viper.GetStringSlice("sessionEncrKey32s")
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
 	for i := range authKey64s {
-		authBytes, err := base64.URLEncoding.DecodeString(authKey64s[i])
+		authBytes, err := base64.RawURLEncoding.DecodeString(authKey64s[i])
 		PanicIf(err)
 		if len(authBytes) != 64 {
 			FmtPanic("sessionAuthBytes length is not 64")
 		}
-		encrBytes, err := base64.URLEncoding.DecodeString(encrKey32s[i])
+		encrBytes, err := base64.RawURLEncoding.DecodeString(encrKey32s[i])
 		PanicIf(err)
 		if len(encrBytes) != 32 {
 			FmtPanic("sessionEncrBytes length is not 32")
@@ -162,14 +161,16 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 		NotImplementedErr.Panic()
 	}
 
-	for _, ep := range endpoints {
-		ep.ValidateEndpoint()
-		lowerPath := strings.ToLower(ep.Path)
-		if _, exists := routes[lowerPath]; exists {
-			FmtPanic("duplicate endpoint path %q", lowerPath)
+	for _, endpointSet := range endpointSets {
+		for _, ep := range endpointSet {
+			ep.ValidateEndpoint()
+			lowerPath := strings.ToLower(ep.Path)
+			if _, exists := routes[lowerPath]; exists {
+				FmtPanic("duplicate endpoint path %q", lowerPath)
+			}
+			routes[lowerPath] = ep
+			ep.StaticResources = sr
 		}
-		routes[lowerPath] = ep
-		ep.StaticResources = sr
 	}
 	routeDocs := make([]interface{}, 0, len(routes))
 	for _, ep := range routes {
@@ -240,7 +241,7 @@ func Config(configFile, configPath string, endpoints []*Endpoint) *StaticResourc
 	sr.ScryptR = viper.GetInt("scryptR")
 	sr.ScryptP = viper.GetInt("scryptP")
 	sr.ScryptKeyLen = viper.GetInt("scryptKeyLen")
-	sr.RegionalV1PrivateClient = private.NewClient(viper.GetStringMapString("regionalV1PrivateClientConfig"))
+	sr.RegionalV1PrivateClient = createRegionalV1PrivateClient(viper.GetStringMapString("regionalV1PrivateClientConfig"))
 	sr.MailClient = mailClient
 	sr.AvatarClient = avatarClient
 	sr.LogError = logError

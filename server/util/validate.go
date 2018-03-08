@@ -57,7 +57,7 @@ func ValidateEmail(email string) {
 	ValidateStringArg("email", email, 6, 254, []*regexp.Regexp{emailRegex})
 }
 
-func ValidateLimitArg(limit, maxLimit int) int {
+func ValidateLimit(limit, maxLimit int) int {
 	if limit < 1 || limit > maxLimit {
 		limit = maxLimit
 	}

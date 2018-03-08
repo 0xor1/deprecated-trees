@@ -25,7 +25,7 @@ func NewId() Id {
 }
 
 func ParseId(id string) Id {
-	bytes, err := base64.URLEncoding.DecodeString(id)
+	bytes, err := base64.RawURLEncoding.DecodeString(id)
 	if err != nil || len(bytes) != 16 {
 		idParseErr.Panic()
 	}
@@ -44,7 +44,7 @@ func (id *Id) UnmarshalJSON(data []byte) error {
 }
 
 func (id Id) String() string {
-	return base64.URLEncoding.EncodeToString(id)
+	return base64.RawURLEncoding.EncodeToString(id)
 }
 
 func (id Id) Equal(other Id) bool {

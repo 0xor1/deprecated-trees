@@ -604,7 +604,7 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if NowUnixMillis() - ts > 60000 {
 			FmtPanic("suspicious private request sent over a minute ago")
 		}
-		key, err := base64.URLEncoding.DecodeString(reqQueryValues.Get("_"))
+		key, err := base64.RawURLEncoding.DecodeString(reqQueryValues.Get("_"))
 		PanicIf(err)
 		// check the args/timestamp/key are valid
 		if !bytes.Equal(key, ScryptKey(append(argsBytes, []byte(reqQueryValues.Get("ts"))...), sr.RegionalV1PrivateClientSecret, sr.ScryptN, sr.ScryptR, sr.ScryptP, sr.ScryptKeyLen)) {
