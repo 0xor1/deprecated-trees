@@ -3,8 +3,10 @@ package util
 import (
 	"bytes"
 	"encoding/base64"
-	. "github.com/pborman/uuid"
+	"github.com/oklog/ulid"
 	"time"
+	"sync"
+	"math/rand"
 )
 
 func Now() time.Time {
@@ -15,13 +17,17 @@ func NowUnixMillis() int64 {
 	return Now().UnixNano() / 1000000
 }
 
-//returns Version 1 uuid as a byte slice
+var(
+	entropyMtx = &sync.Mutex{}
+	entropy = rand.New(rand.NewSource(NowUnixMillis()))
+)
+
+//returns ulid as a byte slice
 func NewId() Id {
-	id := NewUUID()
-	if id == nil {
-		idGenerationErr.Panic()
-	}
-	return Id(id)
+	entropyMtx.Lock() //rand source is not safe for concurrent use :(
+	defer entropyMtx.Unlock()
+	id := ulid.MustNew(ulid.Timestamp(Now()), entropy)
+	return Id(id[:])
 }
 
 func ParseId(id string) Id {
@@ -32,7 +38,7 @@ func ParseId(id string) Id {
 	return Id(bytes)
 }
 
-type Id UUID
+type Id []byte
 
 func (id Id) MarshalJSON() ([]byte, error) {
 	return []byte(`"`+id.String()+`"`), nil
@@ -56,7 +62,7 @@ func (id Id) GreaterThanOrEqualTo(other Id) bool {
 }
 
 func (id Id) Copy() Id {
-	return Id(append(make([]byte, 0, 16), []byte(id)...))
+	return Id(append(make([]byte, 0, 16), id...))
 }
 
 type AddMemberPrivate struct {

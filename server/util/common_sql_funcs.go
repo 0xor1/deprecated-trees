@@ -1,5 +1,7 @@
 package util
 
+import "fmt"
+
 var (
 	noChangeMadeErr = &AppError{Code: "r_v1_p_nc", Message: "no change made", Public: true}
 )
@@ -69,4 +71,17 @@ func MakeChangeHelper(ctx *Ctx, shard int, sql string, args ...interface{}) {
 	if !changeMade {
 		noChangeMadeErr.Panic()
 	}
+}
+
+func TreeChangeHelper(ctx *Ctx, shard int, sql string, args ...interface{}) {
+	rows, err := ctx.TreeQuery(shard, sql, args...)
+	PanicIf(err)
+	res := make([]Id, 0, 100)
+	for rows.Next() {
+		var id Id
+		rows.Scan(&id)
+		res = append(res, id)
+	}
+	//TODO break cache for all returned items
+	fmt.Println("YOLO", res)
 }

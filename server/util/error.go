@@ -13,7 +13,6 @@ var (
 	InvalidOperationErr       = &AppError{Code: "g_io", Message: "invalid operation", Public: true}
 	InvalidEntityCountErr     = &AppError{Code: "g_iec", Message: "invalid entity count", Public: true}
 	NoSuchEntityErr           = &AppError{Code: "g_nse", Message: "no such entity", Public: true}
-	idGenerationErr           = &AppError{Code: "g_ig", Message: "failed to generate id", Public: false}
 	idParseErr                = &AppError{Code: "g_idp", Message: "failed to parse id", Public: true}
 	invalidEndpointErr        = &AppError{Code: "g_ie", Message: "invalid endpoint", Public: false}
 	unauthorizedErr           = &AppError{Code: "g_ns", Message: "unauthorized", Public: true}

@@ -27,8 +27,8 @@ func Test_IdCopy(t *testing.T) {
 	id1 := NewId()
 	id2 := id1.Copy()
 	assert.True(t, id1.Equal(id2))
-	tmp := []byte(id2)[0]
-	([]byte(id2))[0] = []byte(id2)[1]
-	([]byte(id2))[1] = tmp
+	tmp := id2[0]
+	id2[0] = id2[1]
+	id2[1] = tmp
 	assert.False(t, id1.Equal(id2))
 }

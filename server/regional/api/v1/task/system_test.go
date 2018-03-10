@@ -4,42 +4,73 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
 	. "bitbucket.org/0xor1/task/server/util"
-	"github.com/0xor1/isql"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+	"net/http/httptest"
+	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
+	"bitbucket.org/0xor1/task/server/config"
 )
 
 func Test_system(t *testing.T) {
-	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
-	maxProcessEntityCount := 100
-	privateApi := private.New(shards, maxProcessEntityCount)
-	projectApi := project.New(shards, maxProcessEntityCount)
-	api := New(shards, maxProcessEntityCount)
+	staticResources := config.Config("", "", private.NewClient, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, Endpoints)
+	testServer := httptest.NewServer(staticResources)
+	aliCss := NewClientSessionStore()
+	centralClient := centralaccount.NewClient(testServer.URL)
+	projectClient := project.NewClient(testServer.URL)
+	client := NewClient(testServer.URL)
+	region := "lcl"
+	staticResources.RegionalV1PrivateClient = private.NewClient(map[string]string{
+		region: testServer.URL,
+	})
 
-	orgId := NewId()
-	ali := AddMemberPrivate{}
-	ali.Id = NewId()
-	ali.Name = "ali"
-	ali.Role = AccountOwner
-	bob := AddMemberPrivate{}
-	bob.Id = NewId()
-	bob.Name = "bob"
+	aliDisplayName := "Ali O'Mally"
+	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, DarkTheme)
+	activationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
+	centralClient.Activate("ali@ali.com", activationCode)
+	aliId, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	assert.Nil(t, err)
+	bobDisplayName := "Fat Bob"
+	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, LightTheme)
+	catDisplayName := "Lap Cat"
+	centralClient.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, ColorBlindTheme)
+	danDisplayName := "Dan the Man"
+	centralClient.Register("dan", "dan@dan.com", "d@n-Pwd-W00", region, "en", &danDisplayName, DarkTheme)
+	bobActivationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
+	centralClient.Activate("bob@bob.com", bobActivationCode)
+	bobCss := NewClientSessionStore()
+	bobId, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	catActivationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
+	centralClient.Activate("cat@cat.com", catActivationCode)
+	catCss := NewClientSessionStore()
+	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	danActivationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "dan@dan.com").Scan(&danActivationCode)
+	centralClient.Activate("dan@dan.com", danActivationCode)
+	danCss := NewClientSessionStore()
+	danId, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
+
+	org, err := centralClient.CreateAccount(aliCss, "org", region , nil)
+	bob := AddMemberPublic{}
+	bob.Id = bobId
 	bob.Role = AccountAdmin
-	cat := AddMemberPrivate{}
-	cat.Id = NewId()
-	cat.Name = "cat"
+	cat := AddMemberPublic{}
+	cat.Id = catId
 	cat.Role = AccountMemberOfAllProjects
-	dan := AddMemberPrivate{}
-	dan.Id = NewId()
-	dan.Name = "dan"
+	dan := AddMemberPublic{}
+	dan.Id = danId
 	dan.Role = AccountMemberOfOnlySpecificProjects
-	privateApi.CreateAccount(orgId, ali.Id, ali.Name, nil)
-	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
+	centralClient.AddMembers(aliCss, org.Id, []*AddMemberPublic{&bob, &cat, &dan})
+
+
 	start := Now()
 	end := start.Add(5 * 24 * time.Hour)
 	desc := "desc"
-	project := projectApi.CreateProject(0, orgId, ali.Id, "proj", &desc, &start, &end, true, false, []*AddProjectMember{{Id: ali.Id, Role: ProjectAdmin}, {Id: bob.Id, Role: ProjectAdmin}, {Id: cat.Id, Role: ProjectWriter}, {Id: dan.Id, Role: ProjectReader}})
+	project, err := projectClient.CreateProject(aliCss, 0, org.Id, "proj", &desc, &start, &end, true, false, []*AddProjectMember{{Id: aliId, Role: ProjectAdmin}, {Id: bobId, Role: ProjectAdmin}, {Id: catId, Role: ProjectWriter}, {Id: danId, Role: ProjectReader}})
 
 	oneVal := uint64(1)
 	twoVal := uint64(2)
@@ -48,7 +79,7 @@ func Test_system(t *testing.T) {
 	falseVal := false
 	trueVal := true
 	//create task needs extensive testing to test every avenue of the stored procedure
-	taskA := api.CreateTask(0, orgId, project.Id, project.Id, ali.Id, nil, "A", &desc, true, &falseVal, nil, nil)
+	taskA, err := client.CreateTask(aliCss, 0, org.Id, project.Id, project.Id, nil, "A", &desc, true, &falseVal, nil, nil)
 	assert.Equal(t, true, taskA.IsAbstract)
 	assert.Equal(t, "A", taskA.Name)
 	assert.Equal(t, "desc", *taskA.Description)
@@ -62,53 +93,57 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, uint64(0), *taskA.DescendantCount)
 	assert.Equal(t, false, *taskA.IsParallel)
 	assert.Nil(t, taskA.Member)
-	api.CreateTask(0, orgId, project.Id, project.Id, ali.Id, &taskA.Id, "B", &desc, true, &falseVal, nil, nil)
-	taskC := api.CreateTask(0, orgId, project.Id, project.Id, ali.Id, nil, "C", &desc, true, &trueVal, nil, nil)
-	taskD := api.CreateTask(0, orgId, project.Id, project.Id, ali.Id, &taskA.Id, "D", &desc, false, nil, &ali.Id, &fourVal)
-	taskE := api.CreateTask(0, orgId, project.Id, taskC.Id, ali.Id, nil, "E", &desc, false, nil, &ali.Id, &twoVal)
-	taskF := api.CreateTask(0, orgId, project.Id, taskC.Id, ali.Id, &taskE.Id, "F", &desc, false, nil, &ali.Id, &oneVal)
-	taskG := api.CreateTask(0, orgId, project.Id, taskC.Id, ali.Id, nil, "G", &desc, false, nil, &ali.Id, &fourVal)
-	taskH := api.CreateTask(0, orgId, project.Id, taskC.Id, ali.Id, &taskE.Id, "H", &desc, false, nil, &ali.Id, &threeVal)
-	taskI := api.CreateTask(0, orgId, project.Id, taskA.Id, ali.Id, nil, "I", &desc, false, nil, &ali.Id, &twoVal)
-	taskJ := api.CreateTask(0, orgId, project.Id, taskA.Id, ali.Id, &taskI.Id, "J", &desc, false, nil, &ali.Id, &oneVal)
-	taskK := api.CreateTask(0, orgId, project.Id, taskA.Id, ali.Id, nil, "K", &desc, false, nil, &ali.Id, &fourVal)
-	taskL := api.CreateTask(0, orgId, project.Id, taskA.Id, ali.Id, &taskI.Id, "L", &desc, true, &trueVal, nil, nil)
-	taskM := api.CreateTask(0, orgId, project.Id, taskL.Id, ali.Id, nil, "M", &desc, false, nil, &ali.Id, &threeVal)
+	client.CreateTask(aliCss, 0, org.Id, project.Id, project.Id, &taskA.Id, "B", &desc, true, &falseVal, nil, nil)
+	taskC, err := client.CreateTask(aliCss, 0, org.Id, project.Id, project.Id, nil, "C", &desc, true, &trueVal, nil, nil)
+	taskD, err := client.CreateTask(aliCss, 0, org.Id, project.Id, project.Id, &taskA.Id, "D", &desc, false, nil, &aliId, &fourVal)
+	taskE, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskC.Id, nil, "E", &desc, false, nil, &aliId, &twoVal)
+	taskF, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskC.Id, &taskE.Id, "F", &desc, false, nil, &aliId, &oneVal)
+	taskG, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskC.Id, nil, "G", &desc, false, nil, &aliId, &fourVal)
+	taskH, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskC.Id, &taskE.Id, "H", &desc, false, nil, &aliId, &threeVal)
+	taskI, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskA.Id, nil, "I", &desc, false, nil, &aliId, &twoVal)
+	taskJ, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskA.Id, &taskI.Id, "J", &desc, false, nil, &aliId, &oneVal)
+	taskK, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskA.Id, nil, "K", &desc, false, nil, &aliId, &fourVal)
+	taskL, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskA.Id, &taskI.Id, "L", &desc, true, &trueVal, nil, nil)
+	taskM, err := client.CreateTask(aliCss, 0, org.Id, project.Id, taskL.Id, nil, "M", &desc, false, nil, &aliId, &threeVal)
 
-	api.SetName(0, orgId, project.Id, project.Id, ali.Id, "PROJ")
-	api.SetName(0, orgId, project.Id, taskA.Id, ali.Id, "AAA")
-	api.SetDescription(0, orgId, project.Id, taskA.Id, ali.Id, nil)
-	api.SetIsParallel(0, orgId, project.Id, taskA.Id, ali.Id, true)
-	api.SetIsParallel(0, orgId, project.Id, project.Id, ali.Id, false)
-	api.SetMember(0, orgId, project.Id, taskM.Id, ali.Id, &bob.Id)
-	api.SetMember(0, orgId, project.Id, taskM.Id, ali.Id, &cat.Id)
-	api.SetMember(0, orgId, project.Id, taskM.Id, ali.Id, nil)
-	api.SetMember(0, orgId, project.Id, taskM.Id, ali.Id, &cat.Id)
-	api.SetRemainingTime(0, orgId, project.Id, taskG.Id, cat.Id, 1)
+	client.SetName(aliCss, 0, org.Id, project.Id, project.Id, "PROJ")
+	client.SetName(aliCss, 0, org.Id, project.Id, taskA.Id, "AAA")
+	client.SetDescription(aliCss, 0, org.Id, project.Id, taskA.Id, nil)
+	client.SetIsParallel(aliCss, 0, org.Id, project.Id, taskA.Id, true)
+	client.SetIsParallel(aliCss, 0, org.Id, project.Id, project.Id, false)
+	client.SetMember(aliCss, 0, org.Id, project.Id, taskM.Id, &bob.Id)
+	client.SetMember(aliCss, 0, org.Id, project.Id, taskM.Id, &cat.Id)
+	client.SetMember(aliCss, 0, org.Id, project.Id, taskM.Id, nil)
+	client.SetMember(aliCss, 0, org.Id, project.Id, taskM.Id, &cat.Id)
+	client.SetRemainingTime(catCss, 0, org.Id, project.Id, taskG.Id, 1)
 	note := "word up!"
-	tl := api.SetRemainingTimeAndLogTime(0, orgId, project.Id, taskG.Id, cat.Id, 30, 40, &note)
+	tl, err := client.SetRemainingTimeAndLogTime(catCss, 0, org.Id, project.Id, taskG.Id, 30, 40, &note)
 	assert.Equal(t, uint64(40), tl.Duration)
 
-	api.MoveTask(0, orgId, project.Id, taskG.Id, ali.Id, taskA.Id, nil)
-	api.MoveTask(0, orgId, project.Id, taskG.Id, ali.Id, taskA.Id, &taskK.Id)
-	api.MoveTask(0, orgId, project.Id, taskG.Id, ali.Id, taskA.Id, &taskJ.Id)
-	api.MoveTask(0, orgId, project.Id, taskG.Id, ali.Id, taskL.Id, &taskM.Id)
+	client.MoveTask(aliCss, 0, org.Id, project.Id, taskG.Id, taskA.Id, nil)
+	client.MoveTask(aliCss, 0, org.Id, project.Id, taskG.Id, taskA.Id, &taskK.Id)
+	client.MoveTask(aliCss, 0, org.Id, project.Id, taskG.Id, taskA.Id, &taskJ.Id)
+	client.MoveTask(aliCss, 0, org.Id, project.Id, taskG.Id, taskL.Id, &taskM.Id)
 
-	api.DeleteTask(0, orgId, project.Id, taskA.Id, ali.Id)
-	api.DeleteTask(0, orgId, project.Id, taskD.Id, ali.Id)
+	client.DeleteTask(aliCss, 0, org.Id, project.Id, taskA.Id)
+	client.DeleteTask(aliCss, 0, org.Id, project.Id, taskD.Id)
 
-	res := api.GetTasks(0, orgId, project.Id, ali.Id, []Id{taskC.Id, taskH.Id})
+	res, err := client.GetTasks(aliCss, 0, org.Id, project.Id, []Id{taskC.Id, taskH.Id})
 	assert.Equal(t, 2, len(res))
-	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, nil, 100)
+	res, err = client.GetChildTasks(aliCss, 0, org.Id, project.Id, taskC.Id, nil, 100)
 	assert.Equal(t, 3, len(res))
-	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, nil, 2)
+	res, err = client.GetChildTasks(aliCss, 0, org.Id, project.Id, taskC.Id, nil, 2)
 	assert.Equal(t, 2, len(res))
-	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, &taskE.Id, 100)
+	res, err = client.GetChildTasks(aliCss, 0, org.Id, project.Id, taskC.Id, &taskE.Id, 100)
 	assert.Equal(t, 2, len(res))
-	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, &taskH.Id, 100)
+	res, err = client.GetChildTasks(aliCss, 0, org.Id, project.Id, taskC.Id, &taskH.Id, 100)
 	assert.Equal(t, 1, len(res))
-	res = api.GetChildTasks(0, orgId, project.Id, taskC.Id, ali.Id, &taskF.Id, 100)
+	res, err = client.GetChildTasks(aliCss, 0, org.Id, project.Id, taskC.Id, &taskF.Id, 100)
 	assert.Equal(t, 0, len(res))
-	privateApi.DeleteAccount(0, orgId, ali.Id)
+	centralClient.DeleteAccount(aliCss, org.Id)
+	centralClient.DeleteAccount(aliCss, aliId)
+	centralClient.DeleteAccount(bobCss, bobId)
+	centralClient.DeleteAccount(catCss, catId)
+	centralClient.DeleteAccount(danCss, danId)
 	staticResources.AvatarClient.DeleteAll()
 }

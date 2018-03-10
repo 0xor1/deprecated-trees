@@ -828,7 +828,7 @@ BEGIN
             UPDATE tasks SET nextSibling = originalNextSiblingId WHERE account=_accountId AND project=_projectId AND id=originalPreviousSiblingId;
           END IF;
           DELETE FROM tasks WHERE id IN (SELECT id FROM tempAllIds);
-          INSERT INTO tempUpdatedIds SELECT id FROM tempAllIds ON DUPLICATE KEY UPDATE id=id;
+          INSERT INTO tempUpdatedIds SELECT id FROM tempAllIds tmpAll ON DUPLICATE KEY UPDATE id=tmpAll.id;
           CALL _setAncestralChainAggregateValuesFromTask(_accountId, _projectId, originalParentId);
           SET changeMade = TRUE;
         END IF;

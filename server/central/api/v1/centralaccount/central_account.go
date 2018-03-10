@@ -1282,7 +1282,7 @@ func dbGetAccountByCiName(ctx *Ctx, name string) *account {
 }
 
 func dbCreatePersonalAccount(ctx *Ctx, account *fullPersonalAccountInfo, pwdInfo *pwdInfo) {
-	id := []byte(account.Id)
+	id := account.Id
 	_, err := ctx.AccountExec(`CALL createPersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.Email, account.Language, account.Theme, account.NewEmail, account.activationCode, account.activatedOn, account.newEmailConfirmationCode, account.resetPwdCode)
 	PanicIf(err)
 	_, err = ctx.PwdExec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?)`, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
@@ -1300,7 +1300,7 @@ func dbGetPersonalAccountByEmail(ctx *Ctx, email string) *fullPersonalAccountInf
 }
 
 func dbGetPersonalAccountById(ctx *Ctx, id Id) *fullPersonalAccountInfo {
-	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode FROM personalAccounts WHERE id = ?`, []byte(id))
+	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode FROM personalAccounts WHERE id = ?`, id)
 	account := fullPersonalAccountInfo{}
 	account.IsPersonal = true
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
@@ -1310,7 +1310,7 @@ func dbGetPersonalAccountById(ctx *Ctx, id Id) *fullPersonalAccountInfo {
 }
 
 func dbGetPwdInfo(ctx *Ctx, id Id) *pwdInfo {
-	row := ctx.PwdQueryRow(`SELECT salt, pwd, n, r, p, keyLen FROM pwds WHERE id = ?`, []byte(id))
+	row := ctx.PwdQueryRow(`SELECT salt, pwd, n, r, p, keyLen FROM pwds WHERE id = ?`, id)
 	pwd := pwdInfo{}
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&pwd.salt, &pwd.pwd, &pwd.n, &pwd.r, &pwd.p, &pwd.keyLen)) {
 		return nil
@@ -1319,22 +1319,22 @@ func dbGetPwdInfo(ctx *Ctx, id Id) *pwdInfo {
 }
 
 func dbUpdatePersonalAccount(ctx *Ctx, personalAccountInfo *fullPersonalAccountInfo) {
-	_, err := ctx.AccountExec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(personalAccountInfo.Id), personalAccountInfo.Name, personalAccountInfo.DisplayName, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activatedOn, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode)
+	_, err := ctx.AccountExec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, personalAccountInfo.Id, personalAccountInfo.Name, personalAccountInfo.DisplayName, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activatedOn, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode)
 	PanicIf(err)
 }
 
 func dbUpdateAccount(ctx *Ctx, account *account) {
-	_, err := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(account.Id), account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
+	_, err := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
 	PanicIf(err)
 }
 
 func dbUpdatePwdInfo(ctx *Ctx, id Id, pwdInfo *pwdInfo) {
-	_, err := ctx.PwdExec(`UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?`, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, []byte(id))
+	_, err := ctx.PwdExec(`UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?`, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, id)
 	PanicIf(err)
 }
 
 func dbDeleteAccountAndAllAssociatedMemberships(ctx *Ctx, id Id) {
-	castId := []byte(id)
+	castId := id
 	_, err := ctx.AccountExec(`CALL deleteAccountAndAllAssociatedMemberships(?)`, castId)
 	PanicIf(err)
 	_, err = ctx.PwdExec(`DELETE FROM pwds WHERE id = ?`, castId)
@@ -1342,7 +1342,7 @@ func dbDeleteAccountAndAllAssociatedMemberships(ctx *Ctx, id Id) {
 }
 
 func dbGetAccount(ctx *Ctx, id Id) *account {
-	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id = ?`, []byte(id))
+	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id = ?`, id)
 	a := account{}
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal)) {
 		return nil
@@ -1352,11 +1352,11 @@ func dbGetAccount(ctx *Ctx, id Id) *account {
 
 func dbGetAccounts(ctx *Ctx, ids []Id) []*account {
 	castedIds := make([]interface{}, 0, len(ids))
-	castedIds = append(castedIds, []byte(ids[0]))
+	castedIds = append(castedIds, ids[0])
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (?`)
 	for _, id := range ids[1:] {
 		query.WriteString(`,?`)
-		castedIds = append(castedIds, []byte(id))
+		castedIds = append(castedIds, id)
 	}
 	query.WriteString(`)`)
 	rows, err := ctx.AccountQuery(query.String(), castedIds...)
@@ -1414,11 +1414,11 @@ func dbSearchPersonalAccounts(ctx *Ctx, nameOrDisplayNameOrEmailStartsWith strin
 
 func dbGetPersonalAccounts(ctx *Ctx, ids []Id) []*account {
 	castedIds := make([]interface{}, 0, len(ids))
-	castedIds = append(castedIds, []byte(ids[0]))
+	castedIds = append(castedIds, ids[0])
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE activatedOn IS NOT NULL AND id IN (?`)
 	for _, id := range ids[1:] {
 		query.WriteString(`,?`)
-		castedIds = append(castedIds, []byte(id))
+		castedIds = append(castedIds, id)
 	}
 	query.WriteString(`)`)
 	rows, err := ctx.AccountQuery(query.String(), castedIds...)
@@ -1437,17 +1437,17 @@ func dbGetPersonalAccounts(ctx *Ctx, ids []Id) []*account {
 }
 
 func dbCreateGroupAccountAndMembership(ctx *Ctx, account *account, memberId Id) {
-	_, err := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, []byte(account.Id), account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, []byte(memberId))
+	_, err := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, memberId)
 	PanicIf(err)
 }
 
 func dbGetGroupAccounts(ctx *Ctx, memberId Id, after *Id, limit int) ([]*account, bool) {
 	args := make([]interface{}, 0, 3)
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
-	args = append(args, []byte(memberId))
+	args = append(args, memberId)
 	if after != nil {
 		query.WriteString(` AND name > (SELECT name FROM accounts WHERE id = ?)`)
-		args = append(args, []byte(*after))
+		args = append(args, *after)
 	}
 	query.WriteString(` ORDER BY name ASC LIMIT ?`)
 	args = append(args, limit+1)
@@ -1470,11 +1470,11 @@ func dbGetGroupAccounts(ctx *Ctx, memberId Id, after *Id, limit int) ([]*account
 
 func dbCreateMemberships(ctx *Ctx, accountId Id, members []Id) {
 	args := make([]interface{}, 0, len(members)*2)
-	args = append(args, []byte(accountId), []byte(members[0]))
+	args = append(args, accountId, members[0])
 	query := bytes.NewBufferString(`INSERT INTO memberships (account, member) VALUES (?,?)`)
 	for _, member := range members[1:] {
 		query.WriteString(`,(?,?)`)
-		args = append(args, []byte(accountId), []byte(member))
+		args = append(args, accountId, member)
 	}
 	_, err := ctx.AccountExec(query.String(), args...)
 	PanicIf(err)
@@ -1482,11 +1482,11 @@ func dbCreateMemberships(ctx *Ctx, accountId Id, members []Id) {
 
 func dbDeleteMemberships(ctx *Ctx, accountId Id, members []Id) {
 	castedIds := make([]interface{}, 0, len(members)+1)
-	castedIds = append(castedIds, []byte(accountId), []byte(members[0]))
+	castedIds = append(castedIds, accountId, members[0])
 	query := bytes.NewBufferString(`DELETE FROM memberships WHERE account=? AND member IN (?`)
 	for _, member := range members[1:] {
 		query.WriteString(`,?`)
-		castedIds = append(castedIds, []byte(member))
+		castedIds = append(castedIds, member)
 	}
 	query.WriteString(`)`)
 	_, err := ctx.AccountExec(query.String(), castedIds...)
