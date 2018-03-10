@@ -8,11 +8,10 @@ import (
 	"net/http/httptest"
 	"bitbucket.org/0xor1/task/server/config"
 	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
-	"fmt"
 )
 
 func Test_System(t *testing.T) {
-	staticResources := config.Config("", "", private.NewClient, centralaccount.Endpoints, Endpoints, private.Endpoints)
+	staticResources := config.Config("", "", private.NewClient, centralaccount.Endpoints, private.Endpoints, Endpoints)
 	testServer := httptest.NewServer(staticResources)
 	aliCss := NewClientSessionStore()
 	centralClient := centralaccount.NewClient(testServer.URL)
@@ -79,4 +78,5 @@ func Test_System(t *testing.T) {
 	centralClient.DeleteAccount(aliCss, org.Id)
 	centralClient.DeleteAccount(aliCss, aliId)
 	centralClient.DeleteAccount(bobCss, bobId)
+	staticResources.AvatarClient.DeleteAll()
 }

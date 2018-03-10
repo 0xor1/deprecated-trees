@@ -39,8 +39,7 @@ var (
 type Theme uint8
 
 func (t *Theme) Validate() {
-	if t == nil || !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme) {
-		*t = LightTheme
+	if t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme) {
 		invalidConstantValueErr.Panic()
 	}
 }
@@ -65,8 +64,7 @@ func (t *Theme) UnmarshalJSON(raw []byte) error {
 type AccountRole uint8
 
 func (r *AccountRole) Validate() {
-	if r == nil || !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects) {
-		*r = AccountMemberOfOnlySpecificProjects
+	if r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects) {
 		invalidConstantValueErr.Panic()
 	}
 }
@@ -91,8 +89,7 @@ func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 type ProjectRole uint8
 
 func (r *ProjectRole) Validate() {
-	if r == nil || !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader) {
-		*r = ProjectReader
+	if r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader) {
 		invalidConstantValueErr.Panic()
 	}
 }
@@ -117,8 +114,7 @@ func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 type SortDir string
 
 func (sd *SortDir) Validate() {
-	if sd == nil || !(*sd == SortDirAsc || *sd == SortDirDesc) {
-		*sd = SortDirAsc
+	if sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc) {
 		invalidConstantValueErr.Panic()
 	}
 }
@@ -128,7 +124,7 @@ func (sd *SortDir) String() string {
 }
 
 func (sd *SortDir) UnmarshalJSON(raw []byte) error {
-	val := strings.Trim(strings.ToLower(string(raw)), " ")
+	val := strings.Trim(strings.ToLower(string(raw)), `"`)
 	*sd = SortDir(val)
 	sd.Validate()
 	return nil
@@ -145,8 +141,7 @@ func (sd *SortDir) GtLtSymbol() string {
 type SortBy string
 
 func (sb *SortBy) Validate() {
-	if sb == nil || !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn) {
-		*sb = SortByName
+	if sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn) {
 		invalidConstantValueErr.Panic()
 	}
 }
@@ -156,7 +151,7 @@ func (sb *SortBy) String() string {
 }
 
 func (sb *SortBy) UnmarshalJSON(raw []byte) error {
-	val := strings.Trim(strings.ToLower(string(raw)), " ")
+	val := strings.Trim(strings.ToLower(string(raw)), `"`)
 	*sb = SortBy(val)
 	sb.Validate()
 	return nil

@@ -4,67 +4,86 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	. "bitbucket.org/0xor1/task/server/util"
-	"github.com/0xor1/isql"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"net/http/httptest"
+	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
+	"bitbucket.org/0xor1/task/server/config"
 )
 
 func Test_system(t *testing.T) {
-	shards := map[int]isql.ReplicaSet{0: isql.NewReplicaSet("mysql", "t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true", nil)}
-	maxProcessEntityCount := 100
-	privateApi := private.New(shards, maxProcessEntityCount)
-	accountApi := account.New(shards, maxProcessEntityCount)
-	api := New(shards, maxProcessEntityCount)
+	staticResources := config.Config("", "", private.NewClient, centralaccount.Endpoints, private.Endpoints, account.Endpoints, Endpoints)
+	testServer := httptest.NewServer(staticResources)
+	aliCss := NewClientSessionStore()
+	centralClient := centralaccount.NewClient(testServer.URL)
+	accountClient := account.NewClient(testServer.URL)
+	client := NewClient(testServer.URL)
+	region := "lcl"
+	staticResources.RegionalV1PrivateClient = private.NewClient(map[string]string{
+		region: testServer.URL,
+	})
 
-	orgId := NewId()
-	ali := AddMemberPrivate{}
-	ali.Id = NewId()
-	ali.Name = "ali"
-	ali.Role = AccountOwner
-	bob := AddMemberPrivate{}
-	bob.Id = NewId()
-	bob.Name = "bob"
+	aliDisplayName := "Ali O'Mally"
+	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, DarkTheme)
+	activationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
+	centralClient.Activate("ali@ali.com", activationCode)
+	aliId, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	assert.Nil(t, err)
+	bobDisplayName := "Fat Bob"
+	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, LightTheme)
+	catDisplayName := "Lap Cat"
+	centralClient.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, ColorBlindTheme)
+	bobActivationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
+	centralClient.Activate("bob@bob.com", bobActivationCode)
+	bobCss := NewClientSessionStore()
+	bobId, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	catActivationCode := ""
+	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
+	centralClient.Activate("cat@cat.com", catActivationCode)
+	catCss := NewClientSessionStore()
+	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+
+	org, err := centralClient.CreateAccount(aliCss, "org", region , nil)
+	bob := AddMemberPublic{}
+	bob.Id = bobId
 	bob.Role = AccountAdmin
-	cat := AddMemberPrivate{}
-	cat.Id = NewId()
-	cat.Name = "cat"
-	cat.Role = AccountMemberOfAllProjects
-	dan := AddMemberPrivate{}
-	dan.Id = NewId()
-	dan.Name = "dan"
-	dan.Role = AccountMemberOfOnlySpecificProjects
-	privateApi.CreateAccount(orgId, ali.Id, ali.Name, nil)
-	privateApi.AddMembers(0, orgId, ali.Id, []*AddMemberPrivate{&bob, &cat, &dan})
-	accountApi.SetPublicProjectsEnabled(0, orgId, ali.Id, true)
+	cat := AddMemberPublic{}
+	cat.Id = catId
+	cat.Role = AccountMemberOfOnlySpecificProjects
+	centralClient.AddMembers(aliCss, org.Id, []*AddMemberPublic{&bob, &cat})
+
+	accountClient.SetPublicProjectsEnabled(aliCss, 0, org.Id, true)
 
 	p1Desc := "p1_desc"
 	p2Desc := "p2_desc"
 	p3Desc := "p3_desc"
-	proj := api.CreateProject(0, orgId, ali.Id, "a-p1", &p1Desc, nil, nil, true, false, nil)
-	proj2 := api.CreateProject(0, orgId, ali.Id, "b-p2", &p2Desc, nil, nil, true, false, nil)
-	proj3 := api.CreateProject(0, orgId, ali.Id, "c-p3", &p3Desc, nil, nil, true, false, nil)
-	api.SetIsPublic(0, orgId, proj.Id, ali.Id, true)
-	proj = api.GetProject(0, orgId, proj.Id, ali.Id)
+	proj, err := client.CreateProject(aliCss, 0, org.Id, "a-p1", &p1Desc, nil, nil, true, false, nil)
+	proj2, err := client.CreateProject(aliCss, 0, org.Id, "b-p2", &p2Desc, nil, nil, true, false, nil)
+	proj3, err := client.CreateProject(aliCss, 0, org.Id, "c-p3", &p3Desc, nil, nil, true, false, nil)
+	client.SetIsPublic(aliCss, 0, org.Id, proj.Id, true)
+	proj, err = client.GetProject(aliCss, 0, org.Id, proj.Id)
 	assert.Equal(t, "a-p1", proj.Name)
 	assert.Equal(t, "p1_desc", *proj.Description)
 	assert.Equal(t, true, proj.IsParallel)
 	assert.Equal(t, true, proj.IsPublic)
-	projs, more := api.GetProjects(0, orgId, ali.Id, nil, nil, nil, nil, nil, nil, nil, false, SortByCreatedOn, SortDirAsc, nil, 1)
-	assert.Equal(t, 1, len(projs))
-	assert.True(t, more)
-	assert.Equal(t, proj.Name, projs[0].Name)
-	projs, more = api.GetProjects(0, orgId, ali.Id, nil, nil, nil, nil, nil, nil, nil, false, SortByCreatedOn, SortDirAsc, &proj.Id, 100)
-	assert.Equal(t, 2, len(projs))
-	assert.False(t, more)
-	assert.Equal(t, proj2.Name, projs[0].Name)
-	assert.Equal(t, proj3.Name, projs[1].Name)
-	api.ArchiveProject(0, orgId, proj.Id, ali.Id)
-	projs, more = api.GetProjects(0, orgId, ali.Id, nil, nil, nil, nil, nil, nil, nil, true, SortByCreatedOn, SortDirAsc, nil, 100)
-	assert.Equal(t, 1, len(projs))
-	assert.False(t, more)
-	api.UnarchiveProject(0, orgId, proj.Id, ali.Id)
+	projRes, err := client.GetProjects(aliCss, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, false, SortByCreatedOn, SortDirAsc, nil, 1)
+	assert.Equal(t, 1, len(projRes.Projects))
+	assert.True(t, projRes.More)
+	assert.Equal(t, proj.Name, projRes.Projects[0].Name)
+	projRes, err = client.GetProjects(aliCss, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, false, SortByCreatedOn, SortDirAsc, &proj.Id, 100)
+	assert.Equal(t, 2, len(projRes.Projects))
+	assert.False(t, projRes.More)
+	assert.Equal(t, proj2.Name, projRes.Projects[0].Name)
+	assert.Equal(t, proj3.Name, projRes.Projects[1].Name)
+	client.SetIsArchived(aliCss, 0, org.Id, proj.Id, true)
+	projRes, err = client.GetProjects(aliCss, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, true, SortByCreatedOn, SortDirAsc, nil, 100)
+	assert.Equal(t, 1, len(projRes.Projects))
+	assert.False(t, projRes.More)
+	client.SetIsArchived(aliCss, 0, org.Id, proj.Id, false)
 	aliP := &AddProjectMember{}
-	aliP.Id = ali.Id
+	aliP.Id = aliId
 	aliP.Role = ProjectAdmin
 	bobP := &AddProjectMember{}
 	bobP.Id = bob.Id
@@ -72,21 +91,25 @@ func Test_system(t *testing.T) {
 	catP := &AddProjectMember{}
 	catP.Id = cat.Id
 	catP.Role = ProjectReader
-	api.AddMembers(0, orgId, proj.Id, ali.Id, []*AddProjectMember{aliP, bobP, catP})
-	accountApi.SetMemberRole(0, orgId, ali.Id, bobP.Id, AccountMemberOfOnlySpecificProjects)
-	api.SetMemberRole(0, orgId, proj.Id, ali.Id, bobP.Id, ProjectReader)
-	mems, more := api.GetMembers(0, orgId, proj.Id, ali.Id, nil, nil, nil, 100)
-	assert.Equal(t, 3, len(mems))
-	assert.False(t, more)
-	assert.True(t, mems[0].Id.Equal(ali.Id))
-	assert.True(t, mems[1].Id.Equal(bob.Id))
-	assert.True(t, mems[2].Id.Equal(cat.Id))
-	bobMe := api.GetMe(0, orgId, proj.Id, bob.Id)
+	client.AddMembers(aliCss, 0, org.Id, proj.Id, []*AddProjectMember{aliP, bobP, catP})
+	accountClient.SetMemberRole(aliCss, 0, org.Id, bobP.Id, AccountMemberOfOnlySpecificProjects)
+	client.SetMemberRole(aliCss, 0, org.Id, proj.Id, bobP.Id, ProjectReader)
+	memRes, err := client.GetMembers(aliCss, 0, org.Id, proj.Id, nil, nil, nil, 100)
+	assert.Equal(t, 3, len(memRes.Members))
+	assert.False(t, memRes.More)
+	assert.True(t, memRes.Members[0].Id.Equal(aliId))
+	assert.True(t, memRes.Members[1].Id.Equal(bob.Id))
+	assert.True(t, memRes.Members[2].Id.Equal(cat.Id))
+	bobMe, err := client.GetMe(bobCss, 0, org.Id, proj.Id)
 	assert.True(t, bobMe.Id.Equal(bob.Id))
-	activities := api.GetActivities(0, orgId, proj.Id, ali.Id, nil, nil, nil, nil, 100)
+	activities, err := client.GetActivities(aliCss, 0, org.Id, proj.Id, nil, nil, nil, nil, 100)
 	assert.Equal(t, 8, len(activities))
-	api.RemoveMembers(0, orgId, proj.Id, ali.Id, []Id{bob.Id, cat.Id})
-	api.DeleteProject(0, orgId, proj.Id, ali.Id)
+	client.RemoveMembers(aliCss, 0, org.Id, proj.Id, []Id{bob.Id, cat.Id})
+	client.DeleteProject(aliCss, 0, org.Id, proj.Id)
 
-	privateApi.DeleteAccount(0, orgId, ali.Id)
+	centralClient.DeleteAccount(aliCss, aliId)
+	centralClient.DeleteAccount(aliCss, org.Id)
+	centralClient.DeleteAccount(bobCss, bobId)
+	centralClient.DeleteAccount(catCss, catId)
+	staticResources.AvatarClient.DeleteAll()
 }

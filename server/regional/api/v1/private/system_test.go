@@ -38,4 +38,5 @@ func Test_system(t *testing.T) {
 	assert.True(t, val)
 	client.RemoveMembers(region, 0, orgId, aliId, []Id{bob.Id})
 	client.DeleteAccount(region, 0, orgId, aliId)
+	staticResources.AvatarClient.DeleteAll()
 }
