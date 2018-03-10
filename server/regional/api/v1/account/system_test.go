@@ -78,5 +78,6 @@ func Test_System(t *testing.T) {
 	centralClient.DeleteAccount(aliCss, org.Id)
 	centralClient.DeleteAccount(aliCss, aliId)
 	centralClient.DeleteAccount(bobCss, bobId)
+	centralClient.DeleteAccount(catCss, catId)
 	staticResources.AvatarClient.DeleteAll()
 }

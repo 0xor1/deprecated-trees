@@ -535,13 +535,13 @@ func (c *client) GetChildTasks(css *ClientSessionStore, shard int, accountId, pr
 
 func dbCreateTask(ctx *Ctx, shard int, accountId, projectId, parentId Id, nextSibling *Id, newTask *task) {
 	args := make([]interface{}, 0, 18)
-	args = append(args, []byte(accountId), []byte(projectId), []byte(parentId), []byte(ctx.MyId()))
+	args = append(args, accountId, projectId, parentId, ctx.MyId())
 	if nextSibling != nil {
-		args = append(args, []byte(*nextSibling))
+		args = append(args, *nextSibling)
 	} else {
 		args = append(args, nil)
 	}
-	args = append(args, []byte(newTask.Id))
+	args = append(args, newTask.Id)
 	args = append(args, newTask.IsAbstract)
 	args = append(args, newTask.Name)
 	args = append(args, newTask.Description)
@@ -549,7 +549,7 @@ func dbCreateTask(ctx *Ctx, shard int, accountId, projectId, parentId Id, nextSi
 	args = append(args, newTask.TotalRemainingTime)
 	args = append(args, newTask.IsParallel)
 	if newTask.Member != nil {
-		args = append(args, []byte(*newTask.Member))
+		args = append(args, *newTask.Member)
 	} else {
 		args = append(args, nil)
 	}
@@ -557,41 +557,41 @@ func dbCreateTask(ctx *Ctx, shard int, accountId, projectId, parentId Id, nextSi
 }
 
 func dbSetName(ctx *Ctx, shard int, accountId, projectId, taskId Id, name string) {
-	_, err := ctx.TreeExec(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(ctx.MyId()), name)
+	_, err := ctx.TreeExec(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), name)
 	PanicIf(err)
 }
 
 func dbSetDescription(ctx *Ctx, shard int, accountId, projectId, taskId Id, description *string) {
-	_, err := ctx.TreeExec(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(ctx.MyId()), description)
+	_, err := ctx.TreeExec(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), description)
 	PanicIf(err)
 }
 
 func dbSetIsParallel(ctx *Ctx, shard int, accountId, projectId, taskId Id, isParallel bool) {
-	TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(ctx.MyId()), isParallel)
+	TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), isParallel)
 }
 
 func dbSetMember(ctx *Ctx, shard int, accountId, projectId, taskId Id, memberId *Id) {
 	var memArg []byte
 	if memberId != nil {
-		memArg = []byte(*memberId)
+		memArg = *memberId
 	}
-	MakeChangeHelper(ctx, shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(ctx.MyId()), memArg)
+	MakeChangeHelper(ctx, shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), memArg)
 }
 
 func dbSetRemainingTimeAndOrLogTime(ctx *Ctx, shard int, accountId, projectId, taskId Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(ctx.MyId()), remainingTime, loggedOn, duration, note)
+	TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), remainingTime, loggedOn, duration, note)
 }
 
 func dbMoveTask(ctx *Ctx, shard int, accountId, projectId, taskId, newParentId Id, newPreviousSibling *Id) {
 	var prevSib []byte
 	if newPreviousSibling != nil {
-		prevSib = []byte(*newPreviousSibling)
+		prevSib = *newPreviousSibling
 	}
-	TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(newParentId), []byte(ctx.MyId()), prevSib)
+	TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, newParentId, ctx.MyId(), prevSib)
 }
 
 func dbDeleteTask(ctx *Ctx, shard int, accountId, projectId, taskId Id) {
-	TreeChangeHelper(ctx, shard, `CALL deleteTask(?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(taskId), []byte(ctx.MyId()))
+	TreeChangeHelper(ctx, shard, `CALL deleteTask(?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId())
 }
 
 func dbGetTasks(ctx *Ctx, shard int, accountId, projectId Id, taskIds []Id) []*task {
@@ -599,7 +599,7 @@ func dbGetTasks(ctx *Ctx, shard int, accountId, projectId Id, taskIds []Id) []*t
 	for _, id := range taskIds {
 		idsStr.WriteString(hex.EncodeToString(id))
 	}
-	rows, err := ctx.TreeQuery(shard, `CALL getTasks(?, ?, ?)`, []byte(accountId), []byte(projectId), idsStr.String())
+	rows, err := ctx.TreeQuery(shard, `CALL getTasks(?, ?, ?)`, accountId, projectId, idsStr.String())
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -617,9 +617,9 @@ func dbGetTasks(ctx *Ctx, shard int, accountId, projectId Id, taskIds []Id) []*t
 func dbGetChildTasks(ctx *Ctx, shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*task {
 	var fromSib []byte
 	if fromSibling != nil {
-		fromSib = []byte(*fromSibling)
+		fromSib = *fromSibling
 	}
-	rows, err := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, []byte(accountId), []byte(projectId), []byte(parentId), fromSib, limit)
+	rows, err := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, accountId, projectId, parentId, fromSib, limit)
 	if rows != nil {
 		defer rows.Close()
 	}

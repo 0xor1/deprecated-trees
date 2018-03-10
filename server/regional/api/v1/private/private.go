@@ -270,23 +270,23 @@ var Endpoints = []*Endpoint{
 
 func dbCreateAccount(ctx *Ctx, id Id, myId Id, myName string, myDisplayName *string) int {
 	shard := rand.Intn(ctx.TreeShardCount())
-	_, err := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, []byte(id), []byte(myId), myName, myDisplayName)
+	_, err := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, id, myId, myName, myDisplayName)
 	PanicIf(err)
 	return shard
 }
 
 func dbDeleteAccount(ctx *Ctx, shard int, account Id) {
-	_, err := ctx.TreeExec(shard, `CALL deleteAccount(?)`, []byte(account))
+	_, err := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
 	PanicIf(err)
 }
 
 func dbGetAllInactiveMemberIdsFromInputSet(ctx *Ctx, shard int, accountId Id, members []Id) []Id {
 	queryArgs := make([]interface{}, 0, len(members)+1)
-	queryArgs = append(queryArgs, []byte(accountId), []byte(members[0]))
+	queryArgs = append(queryArgs, accountId, members[0])
 	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (?`)
 	for _, mem := range members[1:] {
 		query.WriteString(`,?`)
-		queryArgs = append(queryArgs, []byte(mem))
+		queryArgs = append(queryArgs, mem)
 	}
 	query.WriteString(`)`)
 	res := make([]Id, 0, len(members))
@@ -304,7 +304,7 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx *Ctx, shard int, accountId Id, me
 }
 
 func dbGetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
-	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
 	res := AccountRole(3)
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
 		return nil
@@ -314,11 +314,11 @@ func dbGetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole 
 
 func dbAddMembers(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate) {
 	queryArgs := make([]interface{}, 0, 3*len(members))
-	queryArgs = append(queryArgs, []byte(accountId), []byte(members[0].Id), members[0].Name, members[0].DisplayName, members[0].Role)
+	queryArgs = append(queryArgs, accountId, members[0].Id, members[0].Name, members[0].DisplayName, members[0].Role)
 	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, displayName, role) VALUES (?,?,?,?,?)`)
 	for _, mem := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?)`)
-		queryArgs = append(queryArgs, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
+		queryArgs = append(queryArgs, accountId, mem.Id, mem.Name, mem.DisplayName, mem.Role)
 	}
 	_, err := ctx.TreeExec(shard, query.String(), queryArgs...)
 	PanicIf(err)
@@ -326,24 +326,24 @@ func dbAddMembers(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate
 
 func dbUpdateMembersAndSetActive(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate) {
 	for _, mem := range members {
-		_, err := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, []byte(accountId), []byte(mem.Id), mem.Name, mem.DisplayName, mem.Role)
+		_, err := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, accountId, mem.Id, mem.Name, mem.DisplayName, mem.Role)
 		PanicIf(err)
 	}
 }
 
 func dbGetTotalOwnerCount(ctx *Ctx, shard int, accountId Id) int {
 	count := 0
-	IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, []byte(accountId)).Scan(&count))
+	IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, accountId).Scan(&count))
 	return count
 }
 
 func dbGetOwnerCountInSet(ctx *Ctx, shard int, accountId Id, members []Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
-	queryArgs = append(queryArgs, []byte(accountId), []byte(members[0]))
+	queryArgs = append(queryArgs, accountId, members[0])
 	query := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (?`)
 	for _, mem := range members[1:] {
 		query.WriteString(`,?`)
-		queryArgs = append(queryArgs, []byte(mem))
+		queryArgs = append(queryArgs, mem)
 	}
 	query.WriteString(`)`)
 	count := 0
@@ -352,20 +352,20 @@ func dbGetOwnerCountInSet(ctx *Ctx, shard int, accountId Id, members []Id) int {
 }
 
 func dbSetMembersInactive(ctx *Ctx, shard int, accountId Id, members []Id) {
-	accountIdBytes := []byte(accountId)
+	accountIdBytes := accountId
 	for _, mem := range members {
-		_, err := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, accountIdBytes, []byte(mem))
+		_, err := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, accountIdBytes, mem)
 		PanicIf(err)
 	}
 }
 
 func dbSetMemberName(ctx *Ctx, shard int, accountId Id, member Id, newName string) {
-	_, err := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, []byte(accountId), []byte(member), newName)
+	_, err := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, accountId, member, newName)
 	PanicIf(err)
 }
 
 func dbSetMemberDisplayName(ctx *Ctx, shard int, accountId Id, member Id, newDisplayName *string) {
-	_, err := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, []byte(accountId), []byte(member), newDisplayName)
+	_, err := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, accountId, member, newDisplayName)
 	PanicIf(err)
 }
 
@@ -373,10 +373,10 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx *Ctx, shard int, accountId,
 	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
 	now := Now()
-	args = append(args, []byte(accountId), now, []byte(member), []byte(members[0]), "member", action, nil, nil)
+	args = append(args, accountId, now, member, members[0], "member", action, nil, nil)
 	for _, memId := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
-		args = append(args, []byte(accountId), now, []byte(member), []byte(memId), "member", action, nil, nil)
+		args = append(args, accountId, now, member, memId, "member", action, nil, nil)
 	}
 	_, err := ctx.TreeExec(shard, query.String(), args...)
 	PanicIf(err)

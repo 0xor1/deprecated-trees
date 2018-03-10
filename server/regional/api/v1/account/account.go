@@ -248,7 +248,7 @@ func dbGetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole 
 }
 
 func dbSetPublicProjectsEnabled(ctx *Ctx, shard int, accountId, myId Id, publicProjectsEnabled bool) {
-	_, err := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, []byte(accountId), []byte(ctx.MyId()), publicProjectsEnabled)
+	_, err := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.MyId(), publicProjectsEnabled)
 	PanicIf(err)
 }
 
@@ -257,11 +257,11 @@ func dbGetPublicProjectsEnabled(ctx *Ctx, shard int, accountId Id) bool {
 }
 
 func dbSetMemberRole(ctx *Ctx, shard int, accountId, myId, memberId Id, role AccountRole) {
-	MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, []byte(accountId), []byte(ctx.MyId()), []byte(memberId), role)
+	MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.MyId(), memberId, role)
 }
 
 func dbGetMember(ctx *Ctx, shard int, accountId, memberId Id) *member {
-	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, []byte(accountId), []byte(memberId))
+	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
 	res := member{}
 	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
@@ -307,10 +307,10 @@ func dbGetMembers(ctx *Ctx, shard int, accountId Id, role *AccountRole, nameOrDi
 		query.WriteString(`, accountMembers a2`)
 	}
 	query.WriteString(` WHERE a1.account=? AND a1.isActive=true`)
-	args = append(args, []byte(accountId))
+	args = append(args, accountId)
 	if after != nil {
 		query.WriteString(` AND a2.account=? AND a2.id=? AND ((a1.name>a2.name AND a1.role=a2.role) OR a1.role>a2.role)`)
-		args = append(args, []byte(accountId), []byte(*after))
+		args = append(args, accountId, *after)
 	}
 	if role != nil {
 		query.WriteString(` AND a1.role=?`)
@@ -347,14 +347,14 @@ func dbGetActivities(ctx *Ctx, shard int, accountId Id, item *Id, member *Id, oc
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
-	args = append(args, []byte(accountId))
+	args = append(args, accountId)
 	if item != nil {
 		query.WriteString(` AND item=?`)
-		args = append(args, []byte(*item))
+		args = append(args, *item)
 	}
 	if member != nil {
 		query.WriteString(` AND member=?`)
-		args = append(args, []byte(*member))
+		args = append(args, *member)
 	}
 	if occurredAfter != nil {
 		query.WriteString(` AND occurredOn>? ORDER BY occurredOn ASC`)

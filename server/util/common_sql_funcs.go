@@ -7,14 +7,14 @@ var (
 )
 
 func GetProjectExists(ctx *Ctx, shard int, accountId, projectId Id) bool {
-	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, []byte(accountId), []byte(projectId))
+	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, accountId, projectId)
 	exists := false
 	PanicIf(row.Scan(&exists))
 	return exists
 }
 
 func GetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
-	row := ctx.TreeQueryRow(shard ,`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, []byte(accountId), []byte(memberId))
+	row := ctx.TreeQueryRow(shard ,`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountId, memberId)
 	res := AccountRole(3)
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
 		return nil
@@ -23,7 +23,7 @@ func GetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
 }
 
 func GetProjectRole(ctx *Ctx, shard int, accountId, projectId, memberId Id) *ProjectRole {
-	row := ctx.TreeQueryRow(shard, `SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?`, []byte(accountId), []byte(projectId), []byte(memberId))
+	row := ctx.TreeQueryRow(shard, `SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?`, accountId, projectId, memberId)
 	var projRole *ProjectRole
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&projRole)) {
 		return nil
@@ -32,9 +32,7 @@ func GetProjectRole(ctx *Ctx, shard int, accountId, projectId, memberId Id) *Pro
 }
 
 func GetAccountAndProjectRoles(ctx *Ctx, shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole) {
-	accountIdBytes := []byte(accountId)
-	memberIdBytes := []byte(memberId)
-	row := ctx.TreeQueryRow(shard, `SELECT role accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountIdBytes, []byte(projectId), memberIdBytes, accountIdBytes, memberIdBytes)
+	row := ctx.TreeQueryRow(shard, `SELECT role accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountId, projectId, memberId, accountId, memberId)
 	var accRole *AccountRole
 	var projRole *ProjectRole
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&accRole, &projRole)) {
@@ -44,10 +42,7 @@ func GetAccountAndProjectRoles(ctx *Ctx, shard int, accountId, projectId, member
 }
 
 func GetAccountAndProjectRolesAndProjectIsPublic(ctx *Ctx, shard int, accountId, projectId, memberId Id) (*AccountRole, *ProjectRole, *bool) {
-	accountIdBytes := []byte(accountId)
-	projectIdBytes := []byte(projectId)
-	memberIdBytes := []byte(memberId)
-	row := ctx.TreeQueryRow(shard, `SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND id=?`, accountIdBytes, memberIdBytes, accountIdBytes, projectIdBytes, memberIdBytes, accountIdBytes, projectIdBytes)
+	row := ctx.TreeQueryRow(shard, `SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND id=?`, accountId, memberId, accountId, projectId, memberId, accountId, projectId)
 	isPublic := false
 	var accRole *AccountRole
 	var projRole *ProjectRole
@@ -58,7 +53,7 @@ func GetAccountAndProjectRolesAndProjectIsPublic(ctx *Ctx, shard int, accountId,
 }
 
 func GetPublicProjectsEnabled(ctx *Ctx, shard int, accountId Id) bool {
-	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled FROM accounts WHERE id=?`, []byte(accountId))
+	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled FROM accounts WHERE id=?`, accountId)
 	res := false
 	PanicIf(row.Scan(&res))
 	return res
