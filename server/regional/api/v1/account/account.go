@@ -17,7 +17,7 @@ import (
 
 type setPublicProjectsEnabledArgs struct {
 	Shard                 int   `json:"shard"`
-	AccountId             id.Id `json:"accountId"`
+	Account               id.Id `json:"account"`
 	PublicProjectsEnabled bool  `json:"publicProjectsEnabled"`
 }
 
@@ -30,8 +30,8 @@ var setPublicProjectsEnabled = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setPublicProjectsEnabledArgs)
-		validate.MemberHasAccountOwnerAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		dbSetPublicProjectsEnabled(ctx, args.Shard, args.AccountId, args.PublicProjectsEnabled)
+		validate.MemberHasAccountOwnerAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
+		dbSetPublicProjectsEnabled(ctx, args.Shard, args.Account, args.PublicProjectsEnabled)
 		return nil
 	},
 }
@@ -50,7 +50,7 @@ var getPublicProjectsEnabled = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getPublicProjectsEnabledArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		return dbGetPublicProjectsEnabled(ctx, args.Shard, args.AccountId)
 	},
 }
@@ -71,7 +71,7 @@ var setMemberRole = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
-		accountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId())
+		accountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me())
 		validate.MemberHasAccountAdminAccess(accountRole)
 		args.Role.Validate()
 		if args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner {
@@ -105,7 +105,7 @@ var getMembers = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		return dbGetMembers(ctx, args.Shard, args.AccountId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
@@ -132,7 +132,7 @@ var getActivities = &core.Endpoint{
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
 			panic(err.InvalidArguments)
 		}
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		return dbGetActivities(ctx, args.Shard, args.AccountId, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
@@ -151,7 +151,7 @@ var getMe = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMeArgs)
-		return dbGetMember(ctx, args.Shard, args.AccountId, ctx.MyId())
+		return dbGetMember(ctx, args.Shard, args.AccountId, ctx.Me())
 	},
 }
 
@@ -192,7 +192,7 @@ type client struct {
 func (c *client) SetPublicProjectsEnabled(css *clientsession.Store, shard int, accountId id.Id, publicProjectsEnabled bool) error {
 	_, e := setPublicProjectsEnabled.DoRequest(css, c.host, &setPublicProjectsEnabledArgs{
 		Shard:                 shard,
-		AccountId:             accountId,
+		Account:               accountId,
 		PublicProjectsEnabled: publicProjectsEnabled,
 	}, nil, nil)
 	return e
@@ -251,7 +251,7 @@ func (c *client) GetMe(css *clientsession.Store, shard int, accountId id.Id) (*m
 }
 
 func dbSetPublicProjectsEnabled(ctx *core.Ctx, shard int, accountId id.Id, publicProjectsEnabled bool) {
-	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.MyId(), publicProjectsEnabled)
+	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.Me(), publicProjectsEnabled)
 	err.PanicIf(e)
 }
 
@@ -260,7 +260,7 @@ func dbGetPublicProjectsEnabled(ctx *core.Ctx, shard int, accountId id.Id) bool 
 }
 
 func dbSetMemberRole(ctx *core.Ctx, shard int, accountId, memberId id.Id, role cnst.AccountRole) {
-	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.MyId(), memberId, role)
+	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.Me(), memberId, role)
 }
 
 func dbGetMember(ctx *core.Ctx, shard int, accountId, memberId id.Id) *member {

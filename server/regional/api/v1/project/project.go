@@ -40,7 +40,7 @@ var createProject = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*createProjectArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
 			panic(publicProjectsDisabledErr)
 		}
@@ -54,12 +54,12 @@ var createProject = &core.Endpoint{
 		project.DueOn = args.DueOn
 		project.IsParallel = args.IsParallel
 		project.IsPublic = args.IsPublic
-		dbCreateProject(ctx, args.Shard, args.AccountId, ctx.MyId(), project)
-		if args.AccountId.Equal(ctx.MyId()) {
+		dbCreateProject(ctx, args.Shard, args.AccountId, ctx.Me(), project)
+		if args.AccountId.Equal(ctx.Me()) {
 			addMem := &AddProjectMember{}
-			addMem.Id = ctx.MyId()
+			addMem.Id = ctx.Me()
 			addMem.Role = cnst.ProjectAdmin
-			dbAddMemberOrSetActive(ctx, args.Shard, args.AccountId, project.Id, ctx.MyId(), addMem)
+			dbAddMemberOrSetActive(ctx, args.Shard, args.AccountId, project.Id, ctx.Me(), addMem)
 		}
 
 		if len(args.Members) > 0 {
@@ -90,13 +90,13 @@ var setIsPublic = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setIsPublicArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 
 		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
 			panic(publicProjectsDisabledErr)
 		}
 
-		dbSetIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), args.IsPublic)
+		dbSetIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me(), args.IsPublic)
 
 		return nil
 	},
@@ -117,8 +117,8 @@ var setIsArchived = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setIsArchivedArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		dbSetProjectIsArchived(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), args.IsArchived)
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
+		dbSetProjectIsArchived(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me(), args.IsArchived)
 		return nil
 	},
 }
@@ -137,7 +137,7 @@ var getProject = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		return dbGetProject(ctx, args.Shard, args.AccountId, args.ProjectId)
 	},
@@ -173,13 +173,13 @@ var getProjects = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectsArgs)
-		myAccountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId())
+		myAccountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me())
 		args.Limit = validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		if myAccountRole == nil {
 			return dbGetPublicProjects(ctx, args.Shard, args.AccountId, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
 		}
 		if *myAccountRole != cnst.AccountOwner && *myAccountRole != cnst.AccountAdmin {
-			return dbGetPublicAndSpecificAccessProjects(ctx, args.Shard, args.AccountId, ctx.MyId(), args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
+			return dbGetPublicAndSpecificAccessProjects(ctx, args.Shard, args.AccountId, ctx.Me(), args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
 		}
 		return dbGetAllProjects(ctx, args.Shard, args.AccountId, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
 	},
@@ -199,8 +199,8 @@ var deleteProject = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*deleteProjectArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		dbDeleteProject(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId())
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
+		dbDeleteProject(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me())
 		//TODO delete s3 data, uploaded files etc
 		return nil
 	},
@@ -222,11 +222,11 @@ var addMembers = &core.Endpoint{
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		if args.AccountId.Equal(ctx.MyId()) {
+		if args.AccountId.Equal(ctx.Me()) {
 			panic(err.InvalidOperation)
 		}
 
-		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		validate.Exists(dbGetProjectExists(ctx, args.Shard, args.AccountId, args.ProjectId))
 
 		for _, mem := range args.Members {
@@ -238,7 +238,7 @@ var addMembers = &core.Endpoint{
 			if *accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin {
 				mem.Role = cnst.ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 			}
-			dbAddMemberOrSetActive(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), mem)
+			dbAddMemberOrSetActive(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me(), mem)
 		}
 		return nil
 	},
@@ -260,12 +260,12 @@ var setMemberRole = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
-		if args.AccountId.Equal(ctx.MyId()) {
+		if args.AccountId.Equal(ctx.Me()) {
 			panic(err.InvalidOperation)
 		}
 		args.Role.Validate()
 
-		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		accRole, projectRole := db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, args.Member)
 		if projectRole == nil {
@@ -275,7 +275,7 @@ var setMemberRole = &core.Endpoint{
 			if args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin) {
 				panic(err.InvalidArguments) // account owners and admins can only be project admins
 			}
-			dbSetMemberRole(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), args.Member, args.Role)
+			dbSetMemberRole(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me(), args.Member, args.Role)
 		}
 		return nil
 	},
@@ -297,13 +297,13 @@ var removeMembers = &core.Endpoint{
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		if args.AccountId.Equal(ctx.MyId()) {
+		if args.AccountId.Equal(ctx.Me()) {
 			panic(err.InvalidOperation)
 		}
-		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		for _, mem := range args.Members {
-			dbSetMemberInactive(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), mem)
+			dbSetMemberInactive(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me(), mem)
 		}
 		return nil
 	},
@@ -332,7 +332,7 @@ var getMembers = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		return dbGetMembers(ctx, args.Shard, args.AccountId, args.ProjectId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
@@ -351,7 +351,7 @@ var getMe = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMeArgs)
-		return dbGetMember(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId())
+		return dbGetMember(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me())
 	},
 }
 
@@ -377,7 +377,7 @@ var getActivities = &core.Endpoint{
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
 			panic(err.InvalidArguments)
 		}
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		return dbGetActivities(ctx, args.Shard, args.AccountId, args.ProjectId, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }

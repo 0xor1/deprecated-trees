@@ -42,7 +42,11 @@ type Endpoint struct {
 }
 
 func (ep *Endpoint) ValidateEndpoint() {
-	if (ep.Method != cnst.GET && ep.Method != cnst.POST) || (ep.ProcessForm != nil && ep.Method != cnst.POST) || (ep.ProcessForm != nil && len(ep.FormStruct) == 0) || ep.CtxHandler == nil {
+	if (ep.Method != cnst.GET && ep.Method != cnst.POST) || // only GET and POST methods supported for read and write operations respectively
+		(ep.ProcessForm != nil && ep.Method != cnst.POST) || // if processForm is passed it must be a POST call
+		(ep.ProcessForm != nil && ep.IsPrivate) || // if processForm is passed it must not be a private call, private endpoints dont support forms
+		(ep.ProcessForm != nil && len(ep.FormStruct) == 0) || // if processForm is passed FormStruct must be given for documentation
+		ep.CtxHandler == nil { // every endpoint needs a handler
 		panic(invalidEndpointErr)
 	}
 }

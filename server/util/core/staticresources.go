@@ -155,14 +155,14 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		//get a cookie session
 		ctx.session, _ = sr.SessionStore.Get(req, sr.SessionCookieName)
 		if ctx.session != nil {
-			iMyId := ctx.session.Values["myId"]
+			iMyId := ctx.session.Values["me"]
 			if iMyId != nil {
 				id := iMyId.(id.Id)
-				ctx.myId = &id
+				ctx.me = &id
 			}
 		}
-		//check for valid myId value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
-		if ep.RequiresSession && ctx.myId == nil || req.Method == cnst.POST && req.Header.Get("X-Client") == "" {
+		//check for valid me value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
+		if ep.RequiresSession && ctx.me == nil || req.Method == cnst.POST && req.Header.Get("X-Client") == "" {
 			writeJson(resp, http.StatusUnauthorized, unauthorizedErr)
 			return
 		}
@@ -228,8 +228,8 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if myId, ok := iId.(id.Id); !ok {
 			err.FmtPanic("isAuthentication did not return id.Id type")
 		} else {
-			ctx.myId = &myId //set myId on ctx for logging info in defer above
-			ctx.session.Values["myId"] = myId
+			ctx.me = &myId //set me on ctx for logging info in defer above
+			ctx.session.Values["me"] = myId
 			ctx.session.Values["AuthedOn"] = time.NowUnixMillis()
 			ctx.session.Save(req, resp)
 			writeJsonOk(ctx.resp, myId)

@@ -24,7 +24,7 @@ var (
 
 // per request info fields
 type Ctx struct {
-	myId                   *id.Id
+	me                     *id.Id
 	session                *sessions.Session
 	requestStartUnixMillis int64
 	resp                   http.ResponseWriter
@@ -38,15 +38,15 @@ type Ctx struct {
 	staticResources        *StaticResources
 }
 
-func (c *Ctx) TryMyId() *id.Id {
-	return c.myId
+func (c *Ctx) TryMe() *id.Id {
+	return c.me
 }
 
-func (c *Ctx) MyId() id.Id {
-	if c.myId == nil {
+func (c *Ctx) Me() id.Id {
+	if c.me == nil {
 		panic(unauthorizedErr)
 	}
-	return *c.myId
+	return *c.me
 }
 
 func (c *Ctx) Log(err error) {
@@ -156,62 +156,6 @@ func (c *Ctx) DeleteDlmKeys(keys []string) {
 	}
 }
 
-func (c *Ctx) DlmKeyForSystem() string {
-	return "sys"
-}
-
-func (c *Ctx) DlmKeyForAccountMaster(accountId id.Id) string {
-	return dlmKeyFor("amstr", accountId)
-}
-
-func (c *Ctx) DlmKeyForAccount(accountId id.Id) string {
-	return dlmKeyFor("a", accountId)
-}
-
-func (c *Ctx) DlmKeyForAccountActivities(accountId id.Id) string {
-	return dlmKeyFor("aa", accountId)
-}
-
-func (c *Ctx) DlmKeyForAccountMember(accountId id.Id) string {
-	return dlmKeyFor("am", accountId)
-}
-
-func (c *Ctx) DlmKeyForAllAccountMembers(accountId id.Id) string {
-	return dlmKeyFor("ams", accountId)
-}
-
-func (c *Ctx) DlmKeyForProjectMaster(projectId id.Id) string {
-	return dlmKeyFor("pmstr", projectId)
-}
-
-func (c *Ctx) DlmKeyForProject(projectId id.Id) string {
-	return dlmKeyFor("p", projectId)
-}
-
-func (c *Ctx) DlmKeyForProjectActivities(projectId id.Id) string {
-	return dlmKeyFor("pa", projectId)
-}
-
-func (c *Ctx) DlmKeyForProjectMember(projectMemberId id.Id) string {
-	return dlmKeyFor("pm", projectMemberId)
-}
-
-func (c *Ctx) DlmKeyForAllProjectMembers(projectId id.Id) string {
-	return dlmKeyFor("pms", projectId)
-}
-
-func (c *Ctx) DlmKeyForTask(taskId id.Id) string {
-	return dlmKeyFor("t", taskId)
-}
-
-func (c *Ctx) DlmKeyForTasks(taskIds []id.Id) []string {
-	strs := make([]string, 0, len(taskIds))
-	for _, tId := range taskIds {
-		strs = append(strs, c.DlmKeyForTask(tId))
-	}
-	return strs
-}
-
 func (c *Ctx) NameRegexMatchers() []*regexp.Regexp {
 	return c.staticResources.NameRegexMatchers
 }
@@ -313,10 +257,6 @@ func getQueryInfos(ctx *Ctx) []*QueryInfo {
 		cpy = append(cpy, qi)
 	}
 	return cpy
-}
-
-func dlmKeyFor(typeKey string, id id.Id) string {
-	return typeKey + ":" + id.String()
 }
 
 func getDlm(ctx *Ctx, dlmKeys []string) (int64, error) {

@@ -36,7 +36,7 @@ var createTask = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*createTaskArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		if (args.IsAbstract && (args.IsParallel == nil || args.MemberId != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)) {
 			panic(err.InvalidArguments)
 		}
@@ -85,9 +85,9 @@ var setName = &core.Endpoint{
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setNameArgs)
 		if args.ProjectId.Equal(args.TaskId) {
-			validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+			validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		} else {
-			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		}
 
 		dbSetName(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.Name)
@@ -111,7 +111,7 @@ var setDescription = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setDescriptionArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		dbSetDescription(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.Description)
 		return nil
@@ -134,7 +134,7 @@ var setIsParallel = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setIsParallelArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		dbSetIsParallel(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.IsParallel)
 		return nil
@@ -157,7 +157,7 @@ var setMember = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		if args.MemberId != nil {
 			validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.AccountId, args.ProjectId, *args.MemberId))
 		}
@@ -231,9 +231,9 @@ var setRemainingTimeAndLogTime = &core.Endpoint{
 
 func setRemainingTimeAndOrLogTime(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
 	if duration != nil {
-		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, accountId, projectId, ctx.MyId()))
+		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, accountId, projectId, ctx.Me()))
 	} else if remainingTime != nil {
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, shard, accountId, projectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, shard, accountId, projectId, ctx.Me()))
 	} else {
 		panic(err.InvalidArguments)
 	}
@@ -244,7 +244,7 @@ func setRemainingTimeAndOrLogTime(ctx *core.Ctx, shard int, accountId, projectId
 		return &timeLog{
 			Project:  projectId,
 			Task:     taskId,
-			Member:   ctx.MyId(),
+			Member:   ctx.Me(),
 			LoggedOn: loggedOn,
 			Duration: *duration,
 			Note:     note,
@@ -270,7 +270,7 @@ var moveTask = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*moveTaskArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		dbMoveTask(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.NewParentId, args.NewPreviousSibling)
 		return nil
@@ -292,7 +292,7 @@ var deleteTask = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*deleteTaskArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
 		dbDeleteTask(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId)
 		return nil
@@ -314,7 +314,7 @@ var getTasks = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getTasksArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		validate.EntityCount(len(args.TaskIds), ctx.MaxProcessEntityCount())
 		return dbGetTasks(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskIds)
 	},
@@ -337,7 +337,7 @@ var getChildTasks = &core.Endpoint{
 	},
 	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getChildTasksArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		return dbGetChildTasks(ctx, args.Shard, args.AccountId, args.ProjectId, args.ParentId, args.FromSibling, args.Limit)
 	},
@@ -541,7 +541,7 @@ func (c *client) GetChildTasks(css *clientsession.Store, shard int, accountId, p
 
 func dbCreateTask(ctx *core.Ctx, shard int, accountId, projectId, parentId id.Id, nextSibling *id.Id, newTask *task) {
 	args := make([]interface{}, 0, 18)
-	args = append(args, accountId, projectId, parentId, ctx.MyId())
+	args = append(args, accountId, projectId, parentId, ctx.Me())
 	if nextSibling != nil {
 		args = append(args, *nextSibling)
 	} else {
@@ -563,17 +563,17 @@ func dbCreateTask(ctx *core.Ctx, shard int, accountId, projectId, parentId id.Id
 }
 
 func dbSetName(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, name string) {
-	_, e := ctx.TreeExec(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), name)
+	_, e := ctx.TreeExec(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.Me(), name)
 	err.PanicIf(e)
 }
 
 func dbSetDescription(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, description *string) {
-	_, e := ctx.TreeExec(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), description)
+	_, e := ctx.TreeExec(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.Me(), description)
 	err.PanicIf(e)
 }
 
 func dbSetIsParallel(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, isParallel bool) {
-	db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), isParallel)
+	db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.Me(), isParallel)
 }
 
 func dbSetMember(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, memberId *id.Id) {
@@ -581,11 +581,11 @@ func dbSetMember(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, m
 	if memberId != nil {
 		memArg = *memberId
 	}
-	db.MakeChangeHelper(ctx, shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), memArg)
+	db.MakeChangeHelper(ctx, shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.Me(), memArg)
 }
 
 func dbSetRemainingTimeAndOrLogTime(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	db.TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), remainingTime, loggedOn, duration, note)
+	db.TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.Me(), remainingTime, loggedOn, duration, note)
 }
 
 func dbMoveTask(ctx *core.Ctx, shard int, accountId, projectId, taskId, newParentId id.Id, newPreviousSibling *id.Id) {
@@ -593,11 +593,11 @@ func dbMoveTask(ctx *core.Ctx, shard int, accountId, projectId, taskId, newParen
 	if newPreviousSibling != nil {
 		prevSib = *newPreviousSibling
 	}
-	db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, newParentId, ctx.MyId(), prevSib)
+	db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, newParentId, ctx.Me(), prevSib)
 }
 
 func dbDeleteTask(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id) {
-	db.TreeChangeHelper(ctx, shard, `CALL deleteTask(?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId())
+	db.TreeChangeHelper(ctx, shard, `CALL deleteTask(?, ?, ?, ?)`, accountId, projectId, taskId, ctx.Me())
 }
 
 func dbGetTasks(ctx *core.Ctx, shard int, accountId, projectId id.Id, taskIds []id.Id) []*task {

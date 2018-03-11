@@ -9,7 +9,7 @@ import (
 func Test_ValidateStringParam_tooShort(t *testing.T) {
 	defer func() {
 		err := recover().(error)
-		assert.Equal(t, "test must be between 3 and 5 utf8 characters long and match all regexs [321]", err.Error())
+		assert.Equal(t, `invalid string arg: argName: "test", minRuneCount: 3, maxRuneCount: 5, regexMatchers: [321]`, err.Error())
 	}()
 	StringArg("test", "yo", 3, 5, []*regexp.Regexp{regexp.MustCompile("321")})
 }
