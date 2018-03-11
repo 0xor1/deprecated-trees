@@ -1,7 +1,15 @@
 package project
 
 import (
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/activity"
+	"bitbucket.org/0xor1/task/server/util/clientsession"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/db"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	t "bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/task/server/util/validate"
 	"bytes"
 	"fmt"
 	"strings"
@@ -9,12 +17,12 @@ import (
 )
 
 var (
-	publicProjectsDisabledErr = &AppError{Code: "r_v1_p_ppd", Message: "public projects disabled", Public: true}
+	publicProjectsDisabledErr = &err.Err{Code: "r_v1_p_ppd", Message: "public projects disabled"}
 )
 
 type createProjectArgs struct {
 	Shard       int                 `json:"shard"`
-	AccountId   Id                  `json:"accountId"`
+	AccountId   id.Id               `json:"accountId"`
 	Name        string              `json:"name"`
 	Description *string             `json:"description"`
 	StartOn     *time.Time          `json:"startOn"`
@@ -24,24 +32,24 @@ type createProjectArgs struct {
 	Members     []*AddProjectMember `json:"members"`
 }
 
-var createProject = &Endpoint{
-	Method: POST,
+var createProject = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/createProject",
 	GetArgsStruct: func() interface{} {
 		return &createProjectArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*createProjectArgs)
-		ValidateMemberHasAccountAdminAccess(GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		if args.IsPublic && !dbGetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
-			publicProjectsDisabledErr.Panic()
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
+			panic(publicProjectsDisabledErr)
 		}
 
 		project := &project{}
-		project.Id = NewId()
+		project.Id = id.New()
 		project.Name = args.Name
 		project.Description = args.Description
-		project.CreatedOn = Now()
+		project.CreatedOn = t.Now()
 		project.StartOn = args.StartOn
 		project.DueOn = args.DueOn
 		project.IsParallel = args.IsParallel
@@ -50,7 +58,7 @@ var createProject = &Endpoint{
 		if args.AccountId.Equal(ctx.MyId()) {
 			addMem := &AddProjectMember{}
 			addMem.Id = ctx.MyId()
-			addMem.Role = ProjectAdmin
+			addMem.Role = cnst.ProjectAdmin
 			dbAddMemberOrSetActive(ctx, args.Shard, args.AccountId, project.Id, ctx.MyId(), addMem)
 		}
 
@@ -68,24 +76,24 @@ var createProject = &Endpoint{
 }
 
 type setIsPublicArgs struct {
-	Shard     int  `json:"shard"`
-	AccountId Id   `json:"accountId"`
-	ProjectId Id   `json:"projectId"`
-	IsPublic  bool `json:"isPublic"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	ProjectId id.Id `json:"projectId"`
+	IsPublic  bool  `json:"isPublic"`
 }
 
-var setIsPublic = &Endpoint{
-	Method: POST,
+var setIsPublic = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsPublic",
 	GetArgsStruct: func() interface{} {
 		return &setIsPublicArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setIsPublicArgs)
-		ValidateMemberHasAccountAdminAccess(GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
 
-		if args.IsPublic && !dbGetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
-			publicProjectsDisabledErr.Panic()
+		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
+			panic(publicProjectsDisabledErr)
 		}
 
 		dbSetIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), args.IsPublic)
@@ -95,61 +103,61 @@ var setIsPublic = &Endpoint{
 }
 
 type setIsArchivedArgs struct {
-	Shard      int  `json:"shard"`
-	AccountId  Id   `json:"accountId"`
-	ProjectId  Id   `json:"projectId"`
-	IsArchived bool `json:"isArchived"`
+	Shard      int   `json:"shard"`
+	AccountId  id.Id `json:"accountId"`
+	ProjectId  id.Id `json:"projectId"`
+	IsArchived bool  `json:"isArchived"`
 }
 
-var setIsArchived = &Endpoint{
-	Method: POST,
+var setIsArchived = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsArchived",
 	GetArgsStruct: func() interface{} {
 		return &setIsArchivedArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setIsArchivedArgs)
-		ValidateMemberHasAccountAdminAccess(GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
 		dbSetProjectIsArchived(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), args.IsArchived)
 		return nil
 	},
 }
 
 type getProjectArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	ProjectId Id  `json:"projectId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	ProjectId id.Id `json:"projectId"`
 }
 
-var getProject = &Endpoint{
-	Method: GET,
+var getProject = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getProject",
 	GetArgsStruct: func() interface{} {
 		return &getProjectArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectArgs)
-		ValidateMemberHasProjectReadAccess(GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
 		return dbGetProject(ctx, args.Shard, args.AccountId, args.ProjectId)
 	},
 }
 
 type getProjectsArgs struct {
-	Shard           int        `json:"shard"`
-	AccountId       Id         `json:"accountId"`
-	NameContains    *string    `json:"nameContains"`
-	CreatedOnAfter  *time.Time `json:"createdOnAfter"`
-	CreatedOnBefore *time.Time `json:"createdOnBefore"`
-	StartOnAfter    *time.Time `json:"startOnAfter"`
-	StartOnBefore   *time.Time `json:"startOnBefore"`
-	DueOnAfter      *time.Time `json:"dueOnAfter"`
-	DueOnBefore     *time.Time `json:"dueOnBefore"`
-	IsArchived      bool       `json:"isArchived"`
-	SortBy          SortBy     `json:"sortBy"`
-	SortDir         SortDir    `json:"sortDir"`
-	After           *Id        `json:"after"`
-	Limit           int        `json:"limit"`
+	Shard           int          `json:"shard"`
+	AccountId       id.Id        `json:"accountId"`
+	NameContains    *string      `json:"nameContains"`
+	CreatedOnAfter  *time.Time   `json:"createdOnAfter"`
+	CreatedOnBefore *time.Time   `json:"createdOnBefore"`
+	StartOnAfter    *time.Time   `json:"startOnAfter"`
+	StartOnBefore   *time.Time   `json:"startOnBefore"`
+	DueOnAfter      *time.Time   `json:"dueOnAfter"`
+	DueOnBefore     *time.Time   `json:"dueOnBefore"`
+	IsArchived      bool         `json:"isArchived"`
+	SortBy          cnst.SortBy  `json:"sortBy"`
+	SortDir         cnst.SortDir `json:"sortDir"`
+	After           *id.Id       `json:"after"`
+	Limit           int          `json:"limit"`
 }
 
 type getProjectsResp struct {
@@ -157,20 +165,20 @@ type getProjectsResp struct {
 	More     bool       `json:"more"`
 }
 
-var getProjects = &Endpoint{
-	Method: GET,
+var getProjects = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getProjects",
 	GetArgsStruct: func() interface{} {
 		return &getProjectsArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectsArgs)
-		myAccountRole := GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId())
-		args.Limit = ValidateLimit(args.Limit, ctx.MaxProcessEntityCount())
+		myAccountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId())
+		args.Limit = validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		if myAccountRole == nil {
 			return dbGetPublicProjects(ctx, args.Shard, args.AccountId, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
 		}
-		if *myAccountRole != AccountOwner && *myAccountRole != AccountAdmin {
+		if *myAccountRole != cnst.AccountOwner && *myAccountRole != cnst.AccountAdmin {
 			return dbGetPublicAndSpecificAccessProjects(ctx, args.Shard, args.AccountId, ctx.MyId(), args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
 		}
 		return dbGetAllProjects(ctx, args.Shard, args.AccountId, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
@@ -178,20 +186,20 @@ var getProjects = &Endpoint{
 }
 
 type deleteProjectArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	ProjectId Id  `json:"projectId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	ProjectId id.Id `json:"projectId"`
 }
 
-var deleteProject = &Endpoint{
-	Method: POST,
+var deleteProject = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/deleteProject",
 	GetArgsStruct: func() interface{} {
 		return &deleteProjectArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*deleteProjectArgs)
-		ValidateMemberHasAccountAdminAccess(GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
 		dbDeleteProject(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId())
 		//TODO delete s3 data, uploaded files etc
 		return nil
@@ -200,35 +208,35 @@ var deleteProject = &Endpoint{
 
 type addMembersArgs struct {
 	Shard     int                 `json:"shard"`
-	AccountId Id                  `json:"accountId"`
-	ProjectId Id                  `json:"projectId"`
+	AccountId id.Id               `json:"accountId"`
+	ProjectId id.Id               `json:"projectId"`
 	Members   []*AddProjectMember `json:"members"`
 }
 
-var addMembers = &Endpoint{
-	Method: POST,
+var addMembers = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/addMembers",
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
-		ValidateEntityCount(len(args.Members), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(ctx.MyId()) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
 
-		ValidateMemberHasProjectAdminAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
-		ValidateExists(dbGetProjectExists(ctx, args.Shard, args.AccountId, args.ProjectId))
+		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.Exists(dbGetProjectExists(ctx, args.Shard, args.AccountId, args.ProjectId))
 
 		for _, mem := range args.Members {
 			mem.Role.Validate()
-			accRole := GetAccountRole(ctx, args.Shard, args.AccountId, mem.Id)
+			accRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, mem.Id)
 			if accRole == nil {
-				InvalidArgumentsErr.Panic()
+				panic(err.InvalidArguments)
 			}
-			if *accRole == AccountOwner || *accRole == AccountAdmin {
-				mem.Role = ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
+			if *accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin {
+				mem.Role = cnst.ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 			}
 			dbAddMemberOrSetActive(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), mem)
 		}
@@ -237,35 +245,35 @@ var addMembers = &Endpoint{
 }
 
 type setMemberRoleArgs struct {
-	Shard     int         `json:"shard"`
-	AccountId Id          `json:"accountId"`
-	ProjectId Id          `json:"projectId"`
-	Member    Id          `json:"member"`
-	Role      ProjectRole `json:"role"`
+	Shard     int              `json:"shard"`
+	AccountId id.Id            `json:"accountId"`
+	ProjectId id.Id            `json:"projectId"`
+	Member    id.Id            `json:"member"`
+	Role      cnst.ProjectRole `json:"role"`
 }
 
-var setMemberRole = &Endpoint{
-	Method: POST,
+var setMemberRole = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setMemberRole",
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
 		if args.AccountId.Equal(ctx.MyId()) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
 		args.Role.Validate()
 
-		ValidateMemberHasProjectAdminAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
-		accRole, projectRole := GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, args.Member)
+		accRole, projectRole := db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, args.Member)
 		if projectRole == nil {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
 		if *projectRole != args.Role {
-			if args.Role != ProjectAdmin && (*accRole == AccountOwner || *accRole == AccountAdmin) {
-				InvalidArgumentsErr.Panic() // account owners and admins can only be project admins
+			if args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin) {
+				panic(err.InvalidArguments) // account owners and admins can only be project admins
 			}
 			dbSetMemberRole(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), args.Member, args.Role)
 		}
@@ -274,25 +282,25 @@ var setMemberRole = &Endpoint{
 }
 
 type removeMembersArgs struct {
-	Shard     int  `json:"shard"`
-	AccountId Id   `json:"accountId"`
-	ProjectId Id   `json:"projectId"`
-	Members   []Id `json:"members"`
+	Shard     int     `json:"shard"`
+	AccountId id.Id   `json:"accountId"`
+	ProjectId id.Id   `json:"projectId"`
+	Members   []id.Id `json:"members"`
 }
 
-var removeMembers = &Endpoint{
-	Method: POST,
+var removeMembers = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/removeMembers",
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
-		ValidateEntityCount(len(args.Members), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(ctx.MyId()) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
-		ValidateMemberHasProjectAdminAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
 		for _, mem := range args.Members {
 			dbSetMemberInactive(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId(), mem)
@@ -302,13 +310,13 @@ var removeMembers = &Endpoint{
 }
 
 type getMembersArgs struct {
-	Shard        int          `json:"shard"`
-	AccountId    Id           `json:"accountId"`
-	ProjectId    Id           `json:"projectId"`
-	Role         *ProjectRole `json:"role,omitempty"`
-	NameContains *string      `json:"nameContains,omitempty"`
-	After        *Id          `json:"after,omitempty"`
-	Limit        int          `json:"limit"`
+	Shard        int               `json:"shard"`
+	AccountId    id.Id             `json:"accountId"`
+	ProjectId    id.Id             `json:"projectId"`
+	Role         *cnst.ProjectRole `json:"role,omitempty"`
+	NameContains *string           `json:"nameContains,omitempty"`
+	After        *id.Id            `json:"after,omitempty"`
+	Limit        int               `json:"limit"`
 }
 
 type getMembersResp struct {
@@ -316,32 +324,32 @@ type getMembersResp struct {
 	More    bool      `json:"more"`
 }
 
-var getMembers = &Endpoint{
-	Method: GET,
+var getMembers = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getMembers",
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
-		ValidateMemberHasProjectReadAccess(GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
-		return dbGetMembers(ctx, args.Shard, args.AccountId, args.ProjectId, args.Role, args.NameContains, args.After, ValidateLimit(args.Limit, ctx.MaxProcessEntityCount()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		return dbGetMembers(ctx, args.Shard, args.AccountId, args.ProjectId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 
 type getMeArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	ProjectId Id  `json:"projectId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	ProjectId id.Id `json:"projectId"`
 }
 
-var getMe = &Endpoint{
-	Method: GET,
+var getMe = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getMe",
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMeArgs)
 		return dbGetMember(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId())
 	},
@@ -349,32 +357,32 @@ var getMe = &Endpoint{
 
 type getActivitiesArgs struct {
 	Shard          int        `json:"shard"`
-	AccountId      Id         `json:"accountId"`
-	ProjectId      Id         `json:"projectId"`
-	Item           *Id        `json:"item,omitempty"`
-	Member         *Id        `json:"member,omitempty"`
+	AccountId      id.Id      `json:"accountId"`
+	ProjectId      id.Id      `json:"projectId"`
+	Item           *id.Id     `json:"item,omitempty"`
+	Member         *id.Id     `json:"member,omitempty"`
 	OccurredAfter  *time.Time `json:"occurredAfter,omitempty"`
 	OccurredBefore *time.Time `json:"occurredBefore,omitempty"`
 	Limit          int        `json:"limit"`
 }
 
-var getActivities = &Endpoint{
-	Method: GET,
+var getActivities = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getActivities",
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
-			InvalidArgumentsErr.Panic()
+			panic(err.InvalidArguments)
 		}
-		ValidateMemberHasProjectReadAccess(GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
-		return dbGetActivities(ctx, args.Shard, args.AccountId, args.ProjectId, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, ValidateLimit(args.Limit, ctx.MaxProcessEntityCount()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		return dbGetActivities(ctx, args.Shard, args.AccountId, args.ProjectId, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 
-var Endpoints = []*Endpoint{
+var Endpoints = []*core.Endpoint{
 	createProject,
 	setIsPublic,
 	setIsArchived,
@@ -391,29 +399,29 @@ var Endpoints = []*Endpoint{
 
 type Client interface {
 	//must be account owner/admin
-	CreateProject(css *ClientSessionStore, shard int, accountId Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error)
+	CreateProject(css *clientsession.Store, shard int, accountId id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error)
 	//must be account owner/admin and account.publicProjectsEnabled must be true
-	SetIsPublic(css *ClientSessionStore, shard int, accountId, projectId Id, isPublic bool) error
+	SetIsPublic(css *clientsession.Store, shard int, accountId, projectId id.Id, isPublic bool) error
 	//must be account owner/admin
-	SetIsArchived(css *ClientSessionStore, shard int, accountId, projectId Id, isArchived bool) error
+	SetIsArchived(css *clientsession.Store, shard int, accountId, projectId id.Id, isArchived bool) error
 	//check project access permission per user
-	GetProject(css *ClientSessionStore, shard int, accountId, projectId Id) (*project, error)
+	GetProject(css *clientsession.Store, shard int, accountId, projectId id.Id) (*project, error)
 	//check project access permission per user
-	GetProjects(css *ClientSessionStore, shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) (*getProjectsResp, error)
+	GetProjects(css *clientsession.Store, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*getProjectsResp, error)
 	//must be account owner/admin
-	DeleteProject(css *ClientSessionStore, shard int, accountId, projectId Id) error
+	DeleteProject(css *clientsession.Store, shard int, accountId, projectId id.Id) error
 	//must be account owner/admin or project admin
-	AddMembers(css *ClientSessionStore, shard int, accountId, projectId Id, members []*AddProjectMember) error
+	AddMembers(css *clientsession.Store, shard int, accountId, projectId id.Id, members []*AddProjectMember) error
 	//must be account owner/admin or project admin
-	SetMemberRole(css *ClientSessionStore, shard int, accountId, projectId Id, member Id, role ProjectRole) error
+	SetMemberRole(css *clientsession.Store, shard int, accountId, projectId id.Id, member id.Id, role cnst.ProjectRole) error
 	//must be account owner/admin or project admin
-	RemoveMembers(css *ClientSessionStore, shard int, accountId, projectId Id, members []Id) error
+	RemoveMembers(css *clientsession.Store, shard int, accountId, projectId id.Id, members []id.Id) error
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
-	GetMembers(css *ClientSessionStore, shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) (*getMembersResp, error)
+	GetMembers(css *clientsession.Store, shard int, accountId, projectId id.Id, role *cnst.ProjectRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error)
 	//for anyone
-	GetMe(css *ClientSessionStore, shard int, accountId, projectId Id) (*member, error)
+	GetMe(css *clientsession.Store, shard int, accountId, projectId id.Id) (*member, error)
 	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(css *ClientSessionStore, shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*Activity, error)
+	GetActivities(css *clientsession.Store, shard int, accountId, projectId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
 }
 
 func NewClient(host string) Client {
@@ -426,8 +434,8 @@ type client struct {
 	host string
 }
 
-func (c *client) CreateProject(css *ClientSessionStore, shard int, accountId Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error) {
-	val, err := createProject.DoRequest(css, c.host, &createProjectArgs{
+func (c *client) CreateProject(css *clientsession.Store, shard int, accountId id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error) {
+	val, e := createProject.DoRequest(css, c.host, &createProjectArgs{
 		Shard:       shard,
 		AccountId:   accountId,
 		Name:        name,
@@ -439,45 +447,45 @@ func (c *client) CreateProject(css *ClientSessionStore, shard int, accountId Id,
 		Members:     members,
 	}, nil, &project{})
 	if val != nil {
-		return val.(*project), err
+		return val.(*project), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) SetIsPublic(css *ClientSessionStore, shard int, accountId, projectId Id, isPublic bool) error {
-	_, err := setIsPublic.DoRequest(css, c.host, &setIsPublicArgs{
+func (c *client) SetIsPublic(css *clientsession.Store, shard int, accountId, projectId id.Id, isPublic bool) error {
+	_, e := setIsPublic.DoRequest(css, c.host, &setIsPublicArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		IsPublic:  isPublic,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetIsArchived(css *ClientSessionStore, shard int, accountId, projectId Id, isArchived bool) error {
-	_, err := setIsArchived.DoRequest(css, c.host, &setIsArchivedArgs{
+func (c *client) SetIsArchived(css *clientsession.Store, shard int, accountId, projectId id.Id, isArchived bool) error {
+	_, e := setIsArchived.DoRequest(css, c.host, &setIsArchivedArgs{
 		Shard:      shard,
 		AccountId:  accountId,
 		ProjectId:  projectId,
 		IsArchived: isArchived,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) GetProject(css *ClientSessionStore, shard int, accountId, projectId Id) (*project, error) {
-	val, err := getProject.DoRequest(css, c.host, &getProjectArgs{
+func (c *client) GetProject(css *clientsession.Store, shard int, accountId, projectId id.Id) (*project, error) {
+	val, e := getProject.DoRequest(css, c.host, &getProjectArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 	}, nil, &project{})
 	if val != nil {
-		return val.(*project), err
+		return val.(*project), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetProjects(css *ClientSessionStore, shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) (*getProjectsResp, error) {
-	val, err := getProjects.DoRequest(css, c.host, &getProjectsArgs{
+func (c *client) GetProjects(css *clientsession.Store, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*getProjectsResp, error) {
+	val, e := getProjects.DoRequest(css, c.host, &getProjectsArgs{
 		Shard:           shard,
 		AccountId:       accountId,
 		NameContains:    nameContains,
@@ -494,53 +502,53 @@ func (c *client) GetProjects(css *ClientSessionStore, shard int, accountId Id, n
 		Limit:           limit,
 	}, nil, &getProjectsResp{})
 	if val != nil {
-		return val.(*getProjectsResp), err
+		return val.(*getProjectsResp), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) DeleteProject(css *ClientSessionStore, shard int, accountId, projectId Id) error {
-	_, err := deleteProject.DoRequest(css, c.host, &deleteProjectArgs{
+func (c *client) DeleteProject(css *clientsession.Store, shard int, accountId, projectId id.Id) error {
+	_, e := deleteProject.DoRequest(css, c.host, &deleteProjectArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) AddMembers(css *ClientSessionStore, shard int, accountId, projectId Id, members []*AddProjectMember) error {
-	_, err := addMembers.DoRequest(css, c.host, &addMembersArgs{
+func (c *client) AddMembers(css *clientsession.Store, shard int, accountId, projectId id.Id, members []*AddProjectMember) error {
+	_, e := addMembers.DoRequest(css, c.host, &addMembersArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		Members:   members,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetMemberRole(css *ClientSessionStore, shard int, accountId, projectId, member Id, role ProjectRole) error {
-	_, err := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
+func (c *client) SetMemberRole(css *clientsession.Store, shard int, accountId, projectId, member id.Id, role cnst.ProjectRole) error {
+	_, e := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		Member:    member,
 		Role:      role,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) RemoveMembers(css *ClientSessionStore, shard int, accountId, projectId Id, members []Id) error {
-	_, err := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
+func (c *client) RemoveMembers(css *clientsession.Store, shard int, accountId, projectId id.Id, members []id.Id) error {
+	_, e := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		Members:   members,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) (*getMembersResp, error) {
-	val, err := getMembers.DoRequest(css, c.host, &getMembersArgs{
+func (c *client) GetMembers(css *clientsession.Store, shard int, accountId, projectId id.Id, role *cnst.ProjectRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
+	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
 		Shard:        shard,
 		AccountId:    accountId,
 		ProjectId:    projectId,
@@ -550,25 +558,25 @@ func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId, proje
 		Limit:        limit,
 	}, nil, &getMembersResp{})
 	if val != nil {
-		return val.(*getMembersResp), err
+		return val.(*getMembersResp), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetMe(css *ClientSessionStore, shard int, accountId, projectId Id) (*member, error) {
-	val, err := getMe.DoRequest(css, c.host, &getMeArgs{
+func (c *client) GetMe(css *clientsession.Store, shard int, accountId, projectId id.Id) (*member, error) {
+	val, e := getMe.DoRequest(css, c.host, &getMeArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 	}, nil, &member{})
 	if val != nil {
-		return val.(*member), err
+		return val.(*member), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetActivities(css *ClientSessionStore, shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*Activity, error) {
-	val, err := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
+func (c *client) GetActivities(css *clientsession.Store, shard int, accountId, projectId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error) {
+	val, e := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
 		Shard:          shard,
 		AccountId:      accountId,
 		ProjectId:      projectId,
@@ -577,76 +585,72 @@ func (c *client) GetActivities(css *ClientSessionStore, shard int, accountId, pr
 		OccurredAfter:  occurredAfter,
 		OccurredBefore: occurredBefore,
 		Limit:          limit,
-	}, nil, &[]*Activity{})
+	}, nil, &[]*activity.Activity{})
 	if val != nil {
-		return *val.(*[]*Activity), err
+		return *val.(*[]*activity.Activity), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func dbGetProjectExists(ctx *Ctx, shard int, accountId, projectId Id) bool {
+func dbGetProjectExists(ctx *core.Ctx, shard int, accountId, projectId id.Id) bool {
 	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, accountId, projectId)
 	exists := false
-	PanicIf(row.Scan(&exists))
+	err.PanicIf(row.Scan(&exists))
 	return exists
 }
 
-func dbGetPublicProjectsEnabled(ctx *Ctx, shard int, accountId Id) bool {
-	return GetPublicProjectsEnabled(ctx, shard, accountId)
+func dbCreateProject(ctx *core.Ctx, shard int, accountId, myId id.Id, project *project) {
+	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, accountId, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
+	err.PanicIf(e)
 }
 
-func dbCreateProject(ctx *Ctx, shard int, accountId, myId Id, project *project) {
-	_, err := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, accountId, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
-	PanicIf(err)
+func dbSetIsPublic(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, isPublic bool) {
+	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, accountId, projectId, myId, isPublic)
+	err.PanicIf(e)
 }
 
-func dbSetIsPublic(ctx *Ctx, shard int, accountId, projectId, myId Id, isPublic bool) {
-	_, err := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, accountId, projectId, myId, isPublic)
-	PanicIf(err)
-}
-
-func dbGetProject(ctx *Ctx, shard int, accountId, projectId Id) *project {
+func dbGetProject(ctx *core.Ctx, shard int, accountId, projectId id.Id) *project {
 	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, accountId, projectId, accountId, projectId, projectId)
 	result := project{}
-	PanicIf(row.Scan(&result.Id, &result.IsArchived, &result.Name, &result.CreatedOn, &result.StartOn, &result.DueOn, &result.FileCount, &result.FileSize, &result.IsPublic, &result.Description, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel))
+	err.PanicIf(row.Scan(&result.Id, &result.IsArchived, &result.Name, &result.CreatedOn, &result.StartOn, &result.DueOn, &result.FileCount, &result.FileSize, &result.IsPublic, &result.Description, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel))
 	return &result
 }
 
-func dbGetPublicProjects(ctx *Ctx, shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) *getProjectsResp {
+func dbGetPublicProjects(ctx *core.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	return dbGetProjects(ctx, shard, `AND isPublic=true`, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetPublicAndSpecificAccessProjects(ctx *Ctx, shard int, accountId, myId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) *getProjectsResp {
+func dbGetPublicAndSpecificAccessProjects(ctx *core.Ctx, shard int, accountId, myId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	return dbGetProjects(ctx, shard, `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetAllProjects(ctx *Ctx, shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) *getProjectsResp {
+func dbGetAllProjects(ctx *core.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	return dbGetProjects(ctx, shard, ``, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbSetProjectIsArchived(ctx *Ctx, shard int, accountId, projectId, myId Id, isArchived bool) {
-	_, err := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, accountId, projectId, myId, isArchived)
-	PanicIf(err)
+func dbSetProjectIsArchived(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, isArchived bool) {
+	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, accountId, projectId, myId, isArchived)
+	err.PanicIf(e)
 }
 
-func dbDeleteProject(ctx *Ctx, shard int, accountId, projectId, myId Id) {
-	_, err := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, accountId, projectId, myId)
-	PanicIf(err)
+func dbDeleteProject(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id) {
+	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, accountId, projectId, myId)
+	err.PanicIf(e)
 }
 
-func dbAddMemberOrSetActive(ctx *Ctx, shard int, accountId, projectId, myId Id, member *AddProjectMember) {
-	MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, accountId, projectId, myId, member.Id, member.Role)
+func dbAddMemberOrSetActive(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, member *AddProjectMember) {
+	db.MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, accountId, projectId, myId, member.Id, member.Role)
 }
 
-func dbSetMemberRole(ctx *Ctx, shard int, accountId, projectId, myId, member Id, role ProjectRole) {
-	MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, accountId, projectId, myId, member, role)
+func dbSetMemberRole(ctx *core.Ctx, shard int, accountId, projectId, myId, member id.Id, role cnst.ProjectRole) {
+	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, accountId, projectId, myId, member, role)
 }
 
-func dbSetMemberInactive(ctx *Ctx, shard int, accountId, projectId, myId Id, member Id) {
-	MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, accountId, projectId, myId, member)
+func dbSetMemberInactive(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, member id.Id) {
+	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, accountId, projectId, myId, member)
 }
 
-func dbGetMembers(ctx *Ctx, shard int, accountId, projectId Id, role *ProjectRole, nameOrDisplayNameContains *string, after *Id, limit int) *getMembersResp {
+func dbGetMembers(ctx *core.Ctx, shard int, accountId, projectId id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	query := bytes.NewBufferString(`SELECT p1.id, p1.isActive, p1.totalRemainingTime, p1.totalLoggedTime, p1.role FROM projectMembers p1`)
 	args := make([]interface{}, 0, 9)
 	if after != nil {
@@ -670,15 +674,15 @@ func dbGetMembers(ctx *Ctx, shard int, accountId, projectId Id, role *ProjectRol
 	}
 	query.WriteString(` ORDER BY p1.role ASC, p1.name ASC LIMIT ?`)
 	args = append(args, limit+1)
-	rows, err := ctx.TreeQuery(shard, query.String(), args...)
+	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
-		PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
+		err.PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
 		res = append(res, &mem)
 	}
 	if len(res) == limit+1 {
@@ -687,16 +691,16 @@ func dbGetMembers(ctx *Ctx, shard int, accountId, projectId Id, role *ProjectRol
 	return &getMembersResp{Members: res, More: false}
 }
 
-func dbGetMember(ctx *Ctx, shard int, accountId, projectId, memberId Id) *member {
+func dbGetMember(ctx *core.Ctx, shard int, accountId, projectId, memberId id.Id) *member {
 	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, accountId, projectId, memberId)
 	res := member{}
-	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
+	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 
-func dbGetActivities(ctx *Ctx, shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+func dbGetActivities(ctx *core.Ctx, shard int, accountId, projectId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
-		InvalidArgumentsErr.Panic()
+		panic(err.InvalidArguments)
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM projectActivities WHERE account=? AND project=?`)
 	args := make([]interface{}, 0, limit)
@@ -722,22 +726,22 @@ func dbGetActivities(ctx *Ctx, shard int, accountId, projectId Id, item, member 
 	}
 	query.WriteString(` LIMIT ?`)
 	args = append(args, limit)
-	rows, err := ctx.TreeQuery(shard, query.String(), args...)
+	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 
-	res := make([]*Activity, 0, limit)
+	res := make([]*activity.Activity, 0, limit)
 	for rows.Next() {
-		act := Activity{}
-		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
+		act := activity.Activity{}
+		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	return res
 }
 
-func dbGetProjects(ctx *Ctx, shard int, specificSqlFilterTxt string, accountId Id, myId *Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) *getProjectsResp {
+func dbGetProjects(ctx *core.Ctx, shard int, specificSqlFilterTxt string, accountId id.Id, myId *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
 	args := make([]interface{}, 0, 14)
 	args = append(args, accountId, isArchived)
@@ -778,20 +782,20 @@ func dbGetProjects(ctx *Ctx, shard int, specificSqlFilterTxt string, accountId I
 	}
 	query.WriteString(fmt.Sprintf(` ORDER BY %s %s, id LIMIT ?`, sortBy, sortDir))
 	args = append(args, limit+1)
-	rows, err := ctx.TreeQuery(shard, fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
-	PanicIf(err)
+	rows, e := ctx.TreeQuery(shard, fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
+	err.PanicIf(e)
 	res := make([]*project, 0, limit+1)
 	idx := 0
 	resIdx := map[string]int{}
 	for rows.Next() {
 		proj := project{}
-		PanicIf(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
+		err.PanicIf(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
 		res = append(res, &proj)
 		resIdx[proj.Id.String()] = idx
 		idx++
 	}
 	if len(res) > 0 { //populate task properties
-		var id Id
+		var i id.Id
 		var description *string
 		var totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount uint64
 		var isParallel bool
@@ -804,11 +808,11 @@ func dbGetProjects(ctx *Ctx, shard int, specificSqlFilterTxt string, accountId I
 			args = append(args, proj.Id)
 		}
 		query.WriteString(fmt.Sprintf(`) LIMIT %d`, len(res)))
-		rows, err := ctx.TreeQuery(shard, query.String(), args...)
-		PanicIf(err)
+		rows, e := ctx.TreeQuery(shard, query.String(), args...)
+		err.PanicIf(e)
 		for rows.Next() {
-			rows.Scan(&id, &description, &totalRemainingTime, &totalLoggedTime, &minimumRemainingTime, &linkedFileCount, &chatCount, &childCount, &descendantCount, &isParallel)
-			proj := res[resIdx[id.String()]]
+			rows.Scan(&i, &description, &totalRemainingTime, &totalLoggedTime, &minimumRemainingTime, &linkedFileCount, &chatCount, &childCount, &descendantCount, &isParallel)
+			proj := res[resIdx[i.String()]]
 			proj.Description = description
 			proj.TotalRemainingTime = totalRemainingTime
 			proj.TotalLoggedTime = totalLoggedTime
@@ -827,15 +831,15 @@ func dbGetProjects(ctx *Ctx, shard int, specificSqlFilterTxt string, accountId I
 }
 
 type member struct {
-	Id                 Id          `json:"id"`
-	TotalRemainingTime uint64      `json:"totalRemainingTime"`
-	TotalLoggedTime    uint64      `json:"totalLoggedTime"`
-	IsActive           bool        `json:"isActive"`
-	Role               ProjectRole `json:"role"`
+	Id                 id.Id            `json:"id"`
+	TotalRemainingTime uint64           `json:"totalRemainingTime"`
+	TotalLoggedTime    uint64           `json:"totalLoggedTime"`
+	IsActive           bool             `json:"isActive"`
+	Role               cnst.ProjectRole `json:"role"`
 }
 
 type project struct {
-	Id                   Id         `json:"id"`
+	Id                   id.Id      `json:"id"`
 	IsArchived           bool       `json:"isArchived"`
 	Name                 string     `json:"name"`
 	Description          *string    `json:"description"`
@@ -853,4 +857,9 @@ type project struct {
 	DescendantCount      uint64     `json:"descendantCount"`
 	IsParallel           bool       `json:"isParallel,omitempty"`
 	IsPublic             bool       `json:"isPublic"`
+}
+
+type AddProjectMember struct {
+	Id   id.Id            `json:"id"`
+	Role cnst.ProjectRole `json:"role"`
 }

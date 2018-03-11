@@ -1,7 +1,13 @@
 package config
 
 import (
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/avatar"
+	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/mail"
+	"bitbucket.org/0xor1/task/server/util/private"
+	t "bitbucket.org/0xor1/task/server/util/time"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
@@ -21,8 +27,8 @@ import (
 )
 
 // pass in empty strings for no config file
-func Config(configFile, configPath string, createRegionalV1PrivateClient func(regions map[string]string) RegionalV1PrivateClient, endpointSets ...[]*Endpoint) *StaticResources {
-	sr := &StaticResources{}
+func Config(configFile, configPath string, createRegionalV1PrivateClient func(regions map[string]string) private.V1Client, endpointSets ...[]*core.Endpoint) *core.StaticResources {
+	sr := &core.StaticResources{}
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "127.0.0.1:8787"
 	viper.SetDefault("serverAddress", "127.0.0.1:8787")
@@ -104,7 +110,7 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 	if configFile != "" && configPath != "" {
 		viper.SetConfigName(configFile)
 		viper.AddConfigPath(configPath)
-		PanicIf(viper.ReadInConfig())
+		err.PanicIf(viper.ReadInConfig())
 	}
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
@@ -113,15 +119,15 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 	encrKey32s := viper.GetStringSlice("sessionEncrKey32s")
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
 	for i := range authKey64s {
-		authBytes, err := base64.RawURLEncoding.DecodeString(authKey64s[i])
-		PanicIf(err)
+		authBytes, e := base64.RawURLEncoding.DecodeString(authKey64s[i])
+		err.PanicIf(e)
 		if len(authBytes) != 64 {
-			FmtPanic("sessionAuthBytes length is not 64")
+			err.FmtPanic("sessionAuthBytes length is not 64")
 		}
-		encrBytes, err := base64.RawURLEncoding.DecodeString(encrKey32s[i])
-		PanicIf(err)
+		encrBytes, e := base64.RawURLEncoding.DecodeString(encrKey32s[i])
+		err.PanicIf(e)
 		if len(encrBytes) != 32 {
-			FmtPanic("sessionEncrBytes length is not 32")
+			err.FmtPanic("sessionEncrBytes length is not 32")
 		}
 		sessionAuthEncrKeyPairs = append(sessionAuthEncrKeyPairs, authBytes, encrBytes)
 	}
@@ -130,14 +136,14 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 	sessionStore.Options.HttpOnly = true
 	sessionStore.Options.Secure = true
 	sessionStore.Options.Domain = viper.GetString("sessionDomain")
-	gob.Register(NewId()) //register Id type for sessionCookie
+	gob.Register(id.New()) //register Id type for sessionCookie
 
-	routes := map[string]*Endpoint{}
+	routes := map[string]*core.Endpoint{}
 
 	var logError func(error)
-	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*QueryInfo)
-	var avatarClient AvatarClient
-	var mailClient MailClient
+	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*core.QueryInfo)
+	var avatarClient avatar.Client
+	var mailClient mail.Client
 
 	if viper.GetString("env") == "lcl" {
 		//setup local environment interfaces
@@ -145,20 +151,20 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 			fmt.Println(err)
 			fmt.Println(string(debug.Stack()))
 		}
-		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*QueryInfo) {
-			fmt.Println(status, fmt.Sprintf("%dms", NowUnixMillis()-reqStartUnixMillis), method, path)
+		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*core.QueryInfo) {
+			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
 			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
 			//queryInfosBytes, _ := json.Marshal(queryInfos)
 			//fmt.Println(string(queryInfosBytes))
 		}
-		avatarClient = NewLocalAvatarStore(viper.GetString("lclAvatarDir"), uint(viper.GetInt("maxAvatarDim")))
-		mailClient = NewLocalMailClient()
+		avatarClient = avatar.NewLocalClient(viper.GetString("lclAvatarDir"), uint(viper.GetInt("maxAvatarDim")))
+		mailClient = mail.NewLocalClient()
 	} else {
 		//setup deployed environment interfaces
 		//TODO setup aws s3 avatarStore storage
 		//TODO setup sparkpost/mailgun/somthing mailClient client
 		//TODO setup datadog stats and error logging
-		NotImplementedErr.Panic()
+		panic(err.NotImplemented)
 	}
 
 	for _, endpointSet := range endpointSets {
@@ -166,7 +172,7 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 			ep.ValidateEndpoint()
 			lowerPath := strings.ToLower(ep.Path)
 			if _, exists := routes[lowerPath]; exists {
-				FmtPanic("duplicate endpoint path %q", lowerPath)
+				err.FmtPanic("duplicate endpoint path %q", lowerPath)
 			}
 			routes[lowerPath] = ep
 			ep.StaticResources = sr
@@ -176,8 +182,8 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 	for _, ep := range routes {
 		routeDocs = append(routeDocs, ep.GetEndpointDocumentation())
 	}
-	apiDocs, err := json.MarshalIndent(routeDocs, "", "    ")
-	PanicIf(err)
+	apiDocs, e := json.MarshalIndent(routeDocs, "", "    ")
+	err.PanicIf(e)
 
 	nameRegexMatchers := make([]*regexp.Regexp, 0, len(viper.GetStringSlice("nameRegexMatchers")))
 	for _, str := range viper.GetStringSlice("nameRegexMatchers") {
@@ -202,8 +208,8 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 	treeShards := viper.GetStringMapStringSlice("treeShards")
 	if treeShards != nil {
 		for k, v := range treeShards {
-			shardId, err := strconv.ParseInt(k, 10, 0)
-			PanicIf(err)
+			shardId, e := strconv.ParseInt(k, 10, 0)
+			err.PanicIf(e)
 			treeShardDbs[int(shardId)] = isql.NewReplicaSet("mysql", v[0], v[1:])
 		}
 	}
@@ -259,13 +265,13 @@ func createRedisPool(address string, log func(error)) iredis.Pool {
 		MaxIdle:     300,
 		IdleTimeout: time.Minute,
 		Dial: func() (redis.Conn, error) {
-			conn, err := redis.Dial("tcp", address, redis.DialDatabase(0), redis.DialConnectTimeout(1*time.Second), redis.DialReadTimeout(2*time.Second), redis.DialWriteTimeout(2*time.Second))
+			conn, e := redis.Dial("tcp", address, redis.DialDatabase(0), redis.DialConnectTimeout(1*time.Second), redis.DialReadTimeout(2*time.Second), redis.DialWriteTimeout(2*time.Second))
 			// Log any Redis connection error on stdout
-			if err != nil {
-				log(err)
+			if e != nil {
+				log(e)
 			}
 
-			return conn, err
+			return conn, e
 		},
 		TestOnBorrow: func(c redis.Conn, ti time.Time) error {
 			if time.Since(ti) < time.Minute {

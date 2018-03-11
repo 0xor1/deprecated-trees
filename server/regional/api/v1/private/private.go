@@ -1,53 +1,59 @@
 package private
 
 import (
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/private"
+	"bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/task/server/util/validate"
 	"bytes"
 	"math/rand"
 	"strings"
 )
 
 var (
-	zeroOwnerCountErr = &AppError{Code: "r_v1_pr_zoc", Message: "zero owner count", Public: true}
+	zeroOwnerCountErr = &err.Err{Code: "r_v1_pr_zoc", Message: "zero owner count"}
 )
 
 type createAccountArgs struct {
-	AccountId     Id      `json:"accountId"`
-	MyId          Id      `json:"myId"`
+	AccountId     id.Id   `json:"accountId"`
+	MyId          id.Id   `json:"myId"`
 	MyName        string  `json:"myName"`
 	MyDisplayName *string `json:"myDisplayName"`
 }
 
-var createAccount = &Endpoint{
-	Method:    POST,
+var createAccount = &core.Endpoint{
+	Method:    cnst.POST,
 	Path:      "/api/v1/private/createAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &createAccountArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*createAccountArgs)
 		return dbCreateAccount(ctx, args.AccountId, args.MyId, args.MyName, args.MyDisplayName)
 	},
 }
 
 type deleteAccountArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	MyId      Id  `json:"myId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	MyId      id.Id `json:"myId"`
 }
 
-var deleteAccount = &Endpoint{
-	Method:    POST,
+var deleteAccount = &core.Endpoint{
+	Method:    cnst.POST,
 	Path:      "/api/v1/private/deleteAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteAccountArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		if !args.MyId.Equal(args.AccountId) {
-			ValidateMemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId))
+			validate.MemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId))
 		}
 		dbDeleteAccount(ctx, args.Shard, args.AccountId)
 		//TODO delete s3 data, uploaded files etc
@@ -56,48 +62,48 @@ var deleteAccount = &Endpoint{
 }
 
 type addMembersArgs struct {
-	Shard     int                 `json:"shard"`
-	AccountId Id                  `json:"accountId"`
-	MyId      Id                  `json:"myId"`
-	Members   []*AddMemberPrivate `json:"members"`
+	Shard     int                  `json:"shard"`
+	AccountId id.Id                `json:"accountId"`
+	MyId      id.Id                `json:"myId"`
+	Members   []*private.AddMember `json:"members"`
 }
 
-var addMembers = &Endpoint{
-	Method:    POST,
+var addMembers = &core.Endpoint{
+	Method:    cnst.POST,
 	Path:      "/api/v1/private/addMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
-		ValidateEntityCount(len(args.Members), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(args.MyId) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
 		accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
-		ValidateMemberHasAccountAdminAccess(accountRole)
+		validate.MemberHasAccountAdminAccess(accountRole)
 
-		allIds := make([]Id, 0, len(args.Members))
-		newMembersMap := map[string]*AddMemberPrivate{}
+		allIds := make([]id.Id, 0, len(args.Members))
+		newMembersMap := map[string]*private.AddMember{}
 		for _, mem := range args.Members { //loop over all the new entries and check permissions and build up useful id map and allIds slice
 			mem.Role.Validate()
-			if mem.Role == AccountOwner {
-				ValidateMemberHasAccountOwnerAccess(accountRole)
+			if mem.Role == cnst.AccountOwner {
+				validate.MemberHasAccountOwnerAccess(accountRole)
 			}
 			newMembersMap[mem.Id.String()] = mem
 			allIds = append(allIds, mem.Id)
 		}
 
 		inactiveMemberIds := dbGetAllInactiveMemberIdsFromInputSet(ctx, args.Shard, args.AccountId, allIds)
-		inactiveMembers := make([]*AddMemberPrivate, 0, len(inactiveMemberIds))
+		inactiveMembers := make([]*private.AddMember, 0, len(inactiveMemberIds))
 		for _, inactiveMemberId := range inactiveMemberIds {
 			idStr := inactiveMemberId.String()
 			inactiveMembers = append(inactiveMembers, newMembersMap[idStr])
 			delete(newMembersMap, idStr)
 		}
 
-		newMembers := make([]*AddMemberPrivate, 0, len(newMembersMap))
+		newMembers := make([]*private.AddMember, 0, len(newMembersMap))
 		for _, newMem := range newMembersMap {
 			newMembers = append(newMembers, newMem)
 		}
@@ -106,7 +112,7 @@ var addMembers = &Endpoint{
 			dbAddMembers(ctx, args.Shard, args.AccountId, newMembers)
 		}
 		if len(inactiveMembers) > 0 {
-			dbUpdateMembersAndSetActive(ctx, args.Shard, args.AccountId, inactiveMembers) //has to be AddMemberPrivate in case the member changed their name whilst they were inactive on the account
+			dbUpdateMembersAndSetActive(ctx, args.Shard, args.AccountId, inactiveMembers) //has to be private.AddMember in case the member changed their name whilst they were inactive on the account
 		}
 		dbLogAccountBatchAddOrRemoveMembersActivity(ctx, args.Shard, args.AccountId, args.MyId, allIds, "added")
 		return nil
@@ -114,47 +120,47 @@ var addMembers = &Endpoint{
 }
 
 type removeMembersArgs struct {
-	Shard     int  `json:"shard"`
-	AccountId Id   `json:"accountId"`
-	MyId      Id   `json:"myId"`
-	Members   []Id `json:"members"`
+	Shard     int     `json:"shard"`
+	AccountId id.Id   `json:"accountId"`
+	MyId      id.Id   `json:"myId"`
+	Members   []id.Id `json:"members"`
 }
 
-var removeMembers = &Endpoint{
-	Method:    POST,
+var removeMembers = &core.Endpoint{
+	Method:    cnst.POST,
 	Path:      "/api/v1/private/removeMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
-		ValidateEntityCount(len(args.Members), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(args.MyId) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
 
 		accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
 		if accountRole == nil {
-			InsufficientPermissionErr.Panic()
+			panic(err.InsufficientPermission)
 		}
 
 		switch *accountRole {
-		case AccountOwner:
+		case cnst.AccountOwner:
 			totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.AccountId)
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, args.Members)
 			if totalOwnerCount == ownerCountInRemoveSet {
-				zeroOwnerCountErr.Panic()
+				panic(zeroOwnerCountErr)
 			}
 
-		case AccountAdmin:
+		case cnst.AccountAdmin:
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, args.Members)
 			if ownerCountInRemoveSet > 0 {
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 		default:
 			if len(args.Members) != 1 || !args.Members[0].Equal(args.MyId) { //any member can remove themselves
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 		}
 
@@ -165,44 +171,44 @@ var removeMembers = &Endpoint{
 }
 
 type memberIsOnlyAccountOwnerArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	MyId      Id  `json:"myId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	MyId      id.Id `json:"myId"`
 }
 
-var memberIsOnlyAccountOwner = &Endpoint{
-	Method:    GET,
+var memberIsOnlyAccountOwner = &core.Endpoint{
+	Method:    cnst.GET,
 	Path:      "/api/v1/private/memberIsOnlyAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &memberIsOnlyAccountOwnerArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*memberIsOnlyAccountOwnerArgs)
 		if args.AccountId.Equal(args.MyId) {
 			return true
 		}
 		totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.AccountId)
-		ownerCount := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, []Id{args.MyId})
+		ownerCount := dbGetOwnerCountInSet(ctx, args.Shard, args.AccountId, []id.Id{args.MyId})
 		return totalOwnerCount == 1 && ownerCount == 1
 	},
 }
 
 type setMemberNameArgs struct {
 	Shard     int    `json:"shard"`
-	AccountId Id     `json:"accountId"`
-	MyId      Id     `json:"myId"`
+	AccountId id.Id  `json:"accountId"`
+	MyId      id.Id  `json:"myId"`
 	NewName   string `json:"newName"`
 }
 
-var setMemberName = &Endpoint{
-	Method:    POST,
+var setMemberName = &core.Endpoint{
+	Method:    cnst.POST,
 	Path:      "/api/v1/private/setMemberName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberNameArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberNameArgs)
 		dbSetMemberName(ctx, args.Shard, args.AccountId, args.MyId, args.NewName)
 		return nil
@@ -211,19 +217,19 @@ var setMemberName = &Endpoint{
 
 type setMemberDisplayNameArgs struct {
 	Shard          int     `json:"shard"`
-	AccountId      Id      `json:"accountId"`
-	MyId           Id      `json:"myId"`
+	AccountId      id.Id   `json:"accountId"`
+	MyId           id.Id   `json:"myId"`
 	NewDisplayName *string `json:"newDisplayName"`
 }
 
-var setMemberDisplayName = &Endpoint{
-	Method:    POST,
+var setMemberDisplayName = &core.Endpoint{
+	Method:    cnst.POST,
 	Path:      "/api/v1/private/setMemberDisplayName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberDisplayNameArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberDisplayNameArgs)
 		dbSetMemberDisplayName(ctx, args.Shard, args.AccountId, args.MyId, args.NewDisplayName)
 		return nil
@@ -231,23 +237,23 @@ var setMemberDisplayName = &Endpoint{
 }
 
 type memberIsAccountOwnerArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	MyId      Id  `json:"myId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	MyId      id.Id `json:"myId"`
 }
 
-var memberIsAccountOwner = &Endpoint{
-	Method:    GET,
+var memberIsAccountOwner = &core.Endpoint{
+	Method:    cnst.GET,
 	Path:      "/api/v1/private/memberIsAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &memberIsAccountOwnerArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*memberIsAccountOwnerArgs)
 		if !args.MyId.Equal(args.AccountId) {
 			accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
-			if accountRole != nil && *accountRole == AccountOwner {
+			if accountRole != nil && *accountRole == cnst.AccountOwner {
 				return true
 			} else {
 				return false
@@ -257,7 +263,7 @@ var memberIsAccountOwner = &Endpoint{
 	},
 }
 
-var Endpoints = []*Endpoint{
+var Endpoints = []*core.Endpoint{
 	createAccount,
 	deleteAccount,
 	addMembers,
@@ -268,19 +274,19 @@ var Endpoints = []*Endpoint{
 	memberIsAccountOwner,
 }
 
-func dbCreateAccount(ctx *Ctx, id Id, myId Id, myName string, myDisplayName *string) int {
+func dbCreateAccount(ctx *core.Ctx, id id.Id, myId id.Id, myName string, myDisplayName *string) int {
 	shard := rand.Intn(ctx.TreeShardCount())
-	_, err := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, id, myId, myName, myDisplayName)
-	PanicIf(err)
+	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, id, myId, myName, myDisplayName)
+	err.PanicIf(e)
 	return shard
 }
 
-func dbDeleteAccount(ctx *Ctx, shard int, account Id) {
-	_, err := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
-	PanicIf(err)
+func dbDeleteAccount(ctx *core.Ctx, shard int, account id.Id) {
+	_, e := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
+	err.PanicIf(e)
 }
 
-func dbGetAllInactiveMemberIdsFromInputSet(ctx *Ctx, shard int, accountId Id, members []Id) []Id {
+func dbGetAllInactiveMemberIdsFromInputSet(ctx *core.Ctx, shard int, accountId id.Id, members []id.Id) []id.Id {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, accountId, members[0])
 	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (?`)
@@ -289,30 +295,30 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx *Ctx, shard int, accountId Id, me
 		queryArgs = append(queryArgs, mem)
 	}
 	query.WriteString(`)`)
-	res := make([]Id, 0, len(members))
-	rows, err := ctx.TreeQuery(shard, query.String(), queryArgs...)
+	res := make([]id.Id, 0, len(members))
+	rows, e := ctx.TreeQuery(shard, query.String(), queryArgs...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	for rows.Next() {
-		id := make([]byte, 0, 16)
-		rows.Scan(&id)
-		res = append(res, Id(id))
+		i := make([]byte, 0, 16)
+		rows.Scan(&i)
+		res = append(res, id.Id(i))
 	}
 	return res
 }
 
-func dbGetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
+func dbGetAccountRole(ctx *core.Ctx, shard int, accountId, memberId id.Id) *cnst.AccountRole {
 	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
-	res := AccountRole(3)
-	if IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
+	res := cnst.AccountRole(3)
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
 		return nil
 	}
 	return &res
 }
 
-func dbAddMembers(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate) {
+func dbAddMembers(ctx *core.Ctx, shard int, accountId id.Id, members []*private.AddMember) {
 	queryArgs := make([]interface{}, 0, 3*len(members))
 	queryArgs = append(queryArgs, accountId, members[0].Id, members[0].Name, members[0].DisplayName, members[0].Role)
 	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, displayName, role) VALUES (?,?,?,?,?)`)
@@ -320,24 +326,24 @@ func dbAddMembers(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate
 		query.WriteString(`,(?,?,?,?,?)`)
 		queryArgs = append(queryArgs, accountId, mem.Id, mem.Name, mem.DisplayName, mem.Role)
 	}
-	_, err := ctx.TreeExec(shard, query.String(), queryArgs...)
-	PanicIf(err)
+	_, e := ctx.TreeExec(shard, query.String(), queryArgs...)
+	err.PanicIf(e)
 }
 
-func dbUpdateMembersAndSetActive(ctx *Ctx, shard int, accountId Id, members []*AddMemberPrivate) {
+func dbUpdateMembersAndSetActive(ctx *core.Ctx, shard int, accountId id.Id, members []*private.AddMember) {
 	for _, mem := range members {
-		_, err := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, accountId, mem.Id, mem.Name, mem.DisplayName, mem.Role)
-		PanicIf(err)
+		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, accountId, mem.Id, mem.Name, mem.DisplayName, mem.Role)
+		err.PanicIf(e)
 	}
 }
 
-func dbGetTotalOwnerCount(ctx *Ctx, shard int, accountId Id) int {
+func dbGetTotalOwnerCount(ctx *core.Ctx, shard int, accountId id.Id) int {
 	count := 0
-	IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, accountId).Scan(&count))
+	err.IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, accountId).Scan(&count))
 	return count
 }
 
-func dbGetOwnerCountInSet(ctx *Ctx, shard int, accountId Id, members []Id) int {
+func dbGetOwnerCountInSet(ctx *core.Ctx, shard int, accountId id.Id, members []id.Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, accountId, members[0])
 	query := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (?`)
@@ -347,42 +353,42 @@ func dbGetOwnerCountInSet(ctx *Ctx, shard int, accountId Id, members []Id) int {
 	}
 	query.WriteString(`)`)
 	count := 0
-	IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, query.String(), queryArgs...).Scan(&count))
+	err.IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, query.String(), queryArgs...).Scan(&count))
 	return count
 }
 
-func dbSetMembersInactive(ctx *Ctx, shard int, accountId Id, members []Id) {
+func dbSetMembersInactive(ctx *core.Ctx, shard int, accountId id.Id, members []id.Id) {
 	accountIdBytes := accountId
 	for _, mem := range members {
-		_, err := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, accountIdBytes, mem)
-		PanicIf(err)
+		_, e := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, accountIdBytes, mem)
+		err.PanicIf(e)
 	}
 }
 
-func dbSetMemberName(ctx *Ctx, shard int, accountId Id, member Id, newName string) {
-	_, err := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, accountId, member, newName)
-	PanicIf(err)
+func dbSetMemberName(ctx *core.Ctx, shard int, accountId id.Id, member id.Id, newName string) {
+	_, e := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, accountId, member, newName)
+	err.PanicIf(e)
 }
 
-func dbSetMemberDisplayName(ctx *Ctx, shard int, accountId Id, member Id, newDisplayName *string) {
-	_, err := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, accountId, member, newDisplayName)
-	PanicIf(err)
+func dbSetMemberDisplayName(ctx *core.Ctx, shard int, accountId, member id.Id, newDisplayName *string) {
+	_, e := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, accountId, member, newDisplayName)
+	err.PanicIf(e)
 }
 
-func dbLogAccountBatchAddOrRemoveMembersActivity(ctx *Ctx, shard int, accountId, member Id, members []Id, action string) {
+func dbLogAccountBatchAddOrRemoveMembersActivity(ctx *core.Ctx, shard int, accountId, member id.Id, members []id.Id, action string) {
 	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
-	now := Now()
+	now := time.Now()
 	args = append(args, accountId, now, member, members[0], "member", action, nil, nil)
 	for _, memId := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
 		args = append(args, accountId, now, member, memId, "member", action, nil, nil)
 	}
-	_, err := ctx.TreeExec(shard, query.String(), args...)
-	PanicIf(err)
+	_, e := ctx.TreeExec(shard, query.String(), args...)
+	err.PanicIf(e)
 }
 
-func NewClient(regions map[string]string) RegionalV1PrivateClient {
+func NewClient(regions map[string]string) private.V1Client {
 	lowerRegionsMap := map[string]string{}
 	for k, v := range regions {
 		lowerRegionsMap[strings.ToLower(k)] = v
@@ -399,7 +405,7 @@ type client struct {
 func (c *client) getHost(region string) string {
 	host, exists := c.regions[strings.ToLower(region)]
 	if !exists {
-		NoSuchRegionErr.Panic()
+		panic(err.NoSuchRegion)
 	}
 	return host
 }
@@ -417,40 +423,40 @@ func (c *client) IsValidRegion(region string) bool {
 	return exists
 }
 
-func (c *client) CreateAccount(region string, account, myId Id, myName string, myDisplayName *string) (int, error) {
+func (c *client) CreateAccount(region string, account, myId id.Id, myName string, myDisplayName *string) (int, error) {
 	respVal := 0
-	val, err := createAccount.DoRequest(nil, c.getHost(region), &createAccountArgs{
+	val, e := createAccount.DoRequest(nil, c.getHost(region), &createAccountArgs{
 		AccountId:     account,
 		MyId:          myId,
 		MyName:        myName,
 		MyDisplayName: myDisplayName,
 	}, nil, &respVal)
 	if val != nil {
-		return *val.(*int), err
+		return *val.(*int), e
 	}
-	return 0, err
+	return 0, e
 }
 
-func (c *client) DeleteAccount(region string, shard int, account, myId Id) error {
-	_, err := deleteAccount.DoRequest(nil, c.getHost(region), &deleteAccountArgs{
+func (c *client) DeleteAccount(region string, shard int, account, myId id.Id) error {
+	_, e := deleteAccount.DoRequest(nil, c.getHost(region), &deleteAccountArgs{
 		Shard:     shard,
 		AccountId: account,
 		MyId:      myId,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) AddMembers(region string, shard int, account, myId Id, members []*AddMemberPrivate) error {
-	_, err := addMembers.DoRequest(nil, c.getHost(region), &addMembersArgs{
+func (c *client) AddMembers(region string, shard int, account, myId id.Id, members []*private.AddMember) error {
+	_, e := addMembers.DoRequest(nil, c.getHost(region), &addMembersArgs{
 		Shard:     shard,
 		AccountId: account,
 		MyId:      myId,
 		Members:   members,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) RemoveMembers(region string, shard int, account, myId Id, members []Id) error {
+func (c *client) RemoveMembers(region string, shard int, account, myId id.Id, members []id.Id) error {
 	_, err := removeMembers.DoRequest(nil, c.getHost(region), &removeMembersArgs{
 		Shard:     shard,
 		AccountId: account,
@@ -460,20 +466,20 @@ func (c *client) RemoveMembers(region string, shard int, account, myId Id, membe
 	return err
 }
 
-func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, myId Id) (bool, error) {
+func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, myId id.Id) (bool, error) {
 	respVal := false
-	val, err := memberIsOnlyAccountOwner.DoRequest(nil, c.getHost(region), &memberIsOnlyAccountOwnerArgs{
+	val, e := memberIsOnlyAccountOwner.DoRequest(nil, c.getHost(region), &memberIsOnlyAccountOwnerArgs{
 		Shard:     shard,
 		AccountId: account,
 		MyId:      myId,
 	}, nil, &respVal)
 	if val != nil {
-		return *val.(*bool), err
+		return *val.(*bool), e
 	}
-	return false, err
+	return false, e
 }
 
-func (c *client) SetMemberName(region string, shard int, account, myId Id, newName string) error {
+func (c *client) SetMemberName(region string, shard int, account, myId id.Id, newName string) error {
 	_, err := setMemberName.DoRequest(nil, c.getHost(region), &setMemberNameArgs{
 		Shard:     shard,
 		AccountId: account,
@@ -483,25 +489,25 @@ func (c *client) SetMemberName(region string, shard int, account, myId Id, newNa
 	return err
 }
 
-func (c *client) SetMemberDisplayName(region string, shard int, account, myId Id, newDisplayName *string) error {
-	_, err := setMemberDisplayName.DoRequest(nil, c.getHost(region), &setMemberDisplayNameArgs{
+func (c *client) SetMemberDisplayName(region string, shard int, account, myId id.Id, newDisplayName *string) error {
+	_, e := setMemberDisplayName.DoRequest(nil, c.getHost(region), &setMemberDisplayNameArgs{
 		Shard:          shard,
 		AccountId:      account,
 		MyId:           myId,
 		NewDisplayName: newDisplayName,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) MemberIsAccountOwner(region string, shard int, account, myId Id) (bool, error) {
+func (c *client) MemberIsAccountOwner(region string, shard int, account, myId id.Id) (bool, error) {
 	respVal := false
-	val, err := memberIsAccountOwner.DoRequest(nil, c.getHost(region), &memberIsAccountOwnerArgs{
+	val, e := memberIsAccountOwner.DoRequest(nil, c.getHost(region), &memberIsAccountOwnerArgs{
 		Shard:     shard,
 		AccountId: account,
 		MyId:      myId,
 	}, nil, &respVal)
 	if val != nil {
-		return *val.(*bool), err
+		return *val.(*bool), e
 	}
-	return false, err
+	return false, e
 }

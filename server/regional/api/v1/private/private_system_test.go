@@ -1,8 +1,10 @@
 package private
 
 import (
-	"bitbucket.org/0xor1/task/server/config"
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/config"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/private"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -17,18 +19,18 @@ func Test_system(t *testing.T) {
 	})
 	client := staticResources.RegionalV1PrivateClient
 
-	aliId := NewId()
-	orgId := NewId()
+	aliId := id.New()
+	orgId := id.New()
 	client.CreateAccount(region, orgId, aliId, "ali", nil)
-	bob := AddMemberPrivate{}
-	bob.Id = NewId()
+	bob := private.AddMember{}
+	bob.Id = id.New()
 	bob.Name = "bob"
-	bob.Role = AccountAdmin
-	cat := AddMemberPrivate{}
-	cat.Id = NewId()
+	bob.Role = cnst.AccountAdmin
+	cat := private.AddMember{}
+	cat.Id = id.New()
 	cat.Name = "cat"
-	cat.Role = AccountMemberOfOnlySpecificProjects
-	client.AddMembers(region, 0, orgId, aliId, []*AddMemberPrivate{&bob, &cat})
+	cat.Role = cnst.AccountMemberOfOnlySpecificProjects
+	client.AddMembers(region, 0, orgId, aliId, []*private.AddMember{&bob, &cat})
 	val, err := client.MemberIsOnlyAccountOwner(region, 0, orgId, aliId)
 	assert.Nil(t, err)
 	assert.True(t, val)
@@ -36,7 +38,7 @@ func Test_system(t *testing.T) {
 	val, err = client.MemberIsAccountOwner(region, 0, orgId, aliId)
 	assert.Nil(t, err)
 	assert.True(t, val)
-	client.RemoveMembers(region, 0, orgId, aliId, []Id{bob.Id})
+	client.RemoveMembers(region, 0, orgId, aliId, []id.Id{bob.Id})
 	client.DeleteAccount(region, 0, orgId, aliId)
 	client.DeleteAccount(region, 0, aliId, aliId)
 	client.DeleteAccount(region, 0, bob.Id, bob.Id)

@@ -1,7 +1,15 @@
 package centralaccount
 
 import (
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/clientsession"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/crypt"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/private"
+	t "bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/task/server/util/validate"
 	"bytes"
 	"fmt"
 	"github.com/nfnt/resize"
@@ -20,57 +28,57 @@ import (
 
 var (
 	// errors
-	noSuchAccountErr                      = &AppError{Code: "c_v1_a_nsa", Message: "no such account", Public: true}
-	invalidActivationAttemptErr           = &AppError{Code: "c_v1_a_iaa", Message: "invalid activation attempt", Public: true}
-	invalidResetPwdAttemptErr             = &AppError{Code: "c_v1_a_irpa", Message: "invalid reset password attempt", Public: true}
-	invalidNewEmailConfirmationAttemptErr = &AppError{Code: "c_v1_a_ineca", Message: "invalid new email confirmation attempt", Public: true}
-	invalidNameOrPwdErr                   = &AppError{Code: "c_v1_a_inop", Message: "invalid name or password", Public: true}
-	incorrectPwdErr                       = &AppError{Code: "c_v1_a_ip", Message: "password incorrect", Public: true}
-	accountNotActivatedErr                = &AppError{Code: "c_v1_a_ana", Message: "account not activated", Public: true}
-	emailAlreadyInUseErr                  = &AppError{Code: "c_v1_a_eaiu", Message: "email already in use", Public: true}
-	nameAlreadyInUseErr                   = &AppError{Code: "c_v1_a_naiu", Message: "name already in use", Public: true}
-	emailConfirmationCodeErr              = &AppError{Code: "c_v1_a_ecc", Message: "email confirmation code is of zero length", Public: false}
-	noNewEmailRegisteredErr               = &AppError{Code: "c_v1_a_nner", Message: "no new email registered", Public: true}
-	onlyOwnerMemberErr                    = &AppError{Code: "c_v1_a_oom", Message: "can't delete member who is the only owner of an account", Public: true}
-	invalidAvatarShapeErr                 = &AppError{Code: "c_v1_a_ias", Message: "avatar images must be square", Public: true}
+	noSuchAccountErr                      = &err.Err{Code: "c_v1_a_nsa", Message: "no such account"}
+	invalidActivationAttemptErr           = &err.Err{Code: "c_v1_a_iaa", Message: "invalid activation attempt"}
+	invalidResetPwdAttemptErr             = &err.Err{Code: "c_v1_a_irpa", Message: "invalid reset password attempt"}
+	invalidNewEmailConfirmationAttemptErr = &err.Err{Code: "c_v1_a_ineca", Message: "invalid new email confirmation attempt"}
+	invalidNameOrPwdErr                   = &err.Err{Code: "c_v1_a_inop", Message: "invalid name or password"}
+	incorrectPwdErr                       = &err.Err{Code: "c_v1_a_ip", Message: "password incorrect"}
+	accountNotActivatedErr                = &err.Err{Code: "c_v1_a_ana", Message: "account not activated"}
+	emailAlreadyInUseErr                  = &err.Err{Code: "c_v1_a_eaiu", Message: "email already in use"}
+	nameAlreadyInUseErr                   = &err.Err{Code: "c_v1_a_naiu", Message: "name already in use"}
+	emailConfirmationCodeErr              = &err.Err{Code: "c_v1_a_ecc", Message: "email confirmation code is of zero length"}
+	noNewEmailRegisteredErr               = &err.Err{Code: "c_v1_a_nner", Message: "no new email registered"}
+	onlyOwnerMemberErr                    = &err.Err{Code: "c_v1_a_oom", Message: "can't delete member who is the only owner of an account"}
+	invalidAvatarShapeErr                 = &err.Err{Code: "c_v1_a_ias", Message: "avatar images must be square"}
 )
 
 //endpoints
 
-var getRegions = &Endpoint{
-	Method: GET,
+var getRegions = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getRegions",
-	ValueDlmKeys: func(ctx *Ctx, _ interface{}) []string {
+	ValueDlmKeys: func(ctx *core.Ctx, _ interface{}) []string {
 		return []string{ctx.DlmKeyForSystem()}
 	},
-	CtxHandler: func(ctx *Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
 		return ctx.RegionalV1PrivateClient().GetRegions()
 	},
 }
 
 type registerArgs struct {
-	Name        string  `json:"name"`
-	Email       string  `json:"email"`
-	Pwd         string  `json:"pwd"`
-	Region      string  `json:"region"`
-	Language    string  `json:"language"`
-	DisplayName *string `json:"displayName"`
-	Theme       Theme   `json:"theme"`
+	Name        string     `json:"name"`
+	Email       string     `json:"email"`
+	Pwd         string     `json:"pwd"`
+	Region      string     `json:"region"`
+	Language    string     `json:"language"`
+	DisplayName *string    `json:"displayName"`
+	Theme       cnst.Theme `json:"theme"`
 }
 
-var register = &Endpoint{
-	Method: POST,
+var register = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/register",
 	GetArgsStruct: func() interface{} {
 		return &registerArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*registerArgs)
 		args.Name = strings.Trim(args.Name, " ")
-		ValidateStringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
+		validate.StringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
 		args.Email = strings.Trim(args.Email, " ")
-		ValidateEmail(args.Email)
-		ValidateStringArg("pwd", args.Pwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
+		validate.Email(args.Email)
+		validate.StringArg("pwd", args.Pwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 		args.Language = strings.Trim(args.Language, " ") // may need more validation than this at some point to check it is a language we support and not a junk value, but it isnt critical right now
 		args.Theme.Validate()
 		if args.DisplayName != nil {
@@ -81,23 +89,23 @@ var register = &Endpoint{
 		}
 
 		if !ctx.RegionalV1PrivateClient().IsValidRegion(args.Region) {
-			NoSuchRegionErr.Panic()
+			panic(err.NoSuchRegion)
 		}
 
 		if exists := dbAccountWithCiNameExists(ctx, args.Name); exists {
-			nameAlreadyInUseErr.Panic()
+			panic(nameAlreadyInUseErr)
 		}
 
 		if acc := dbGetPersonalAccountByEmail(ctx, args.Email); acc != nil {
 			emailSendMultipleAccountPolicyNotice(ctx, acc.Email)
 		}
 
-		activationCode := CryptUrlSafeString(ctx.CryptCodeLen())
+		activationCode := crypt.UrlSafeString(ctx.CryptCodeLen())
 		acc := &fullPersonalAccountInfo{}
-		acc.Id = NewId()
+		acc.Id = id.New()
 		acc.Name = args.Name
 		acc.DisplayName = args.DisplayName
-		acc.CreatedOn = Now()
+		acc.CreatedOn = t.Now()
 		acc.Region = args.Region
 
 		defer func() {
@@ -107,9 +115,9 @@ var register = &Endpoint{
 				panic(r)
 			}
 		}()
-		var err error
-		acc.Shard, err = ctx.RegionalV1PrivateClient().CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, acc.DisplayName)
-		PanicIf(err)
+		var e error
+		acc.Shard, e = ctx.RegionalV1PrivateClient().CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, acc.DisplayName)
+		err.PanicIf(e)
 		acc.IsPersonal = true
 		acc.Email = args.Email
 		acc.Language = args.Language
@@ -117,8 +125,8 @@ var register = &Endpoint{
 		acc.activationCode = &activationCode
 
 		pwdInfo := &pwdInfo{}
-		pwdInfo.salt = CryptBytes(ctx.SaltLen())
-		pwdInfo.pwd = ScryptKey([]byte(args.Pwd), pwdInfo.salt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
+		pwdInfo.salt = crypt.Bytes(ctx.SaltLen())
+		pwdInfo.pwd = crypt.ScryptKey([]byte(args.Pwd), pwdInfo.salt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
 		pwdInfo.n = ctx.ScryptN()
 		pwdInfo.r = ctx.ScryptR()
 		pwdInfo.p = ctx.ScryptP()
@@ -135,13 +143,13 @@ type resendActivationEmailArgs struct {
 	Email string `json:"email"`
 }
 
-var resendActivationEmail = &Endpoint{
-	Method: POST,
+var resendActivationEmail = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/resendActivationEmail",
 	GetArgsStruct: func() interface{} {
 		return &resendActivationEmailArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*resendActivationEmailArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
@@ -158,22 +166,22 @@ type activateArgs struct {
 	ActivationCode string `json:"activationCode"`
 }
 
-var activate = &Endpoint{
-	Method: POST,
+var activate = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/activate",
 	GetArgsStruct: func() interface{} {
 		return &activateArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*activateArgs)
 		args.ActivationCode = strings.Trim(args.ActivationCode, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
 		if acc == nil || acc.activationCode == nil || args.ActivationCode != *acc.activationCode {
-			invalidActivationAttemptErr.Panic()
+			panic(invalidActivationAttemptErr)
 		}
 
 		acc.activationCode = nil
-		activationTime := Now()
+		activationTime := t.Now()
 		acc.activatedOn = &activationTime
 		dbUpdatePersonalAccount(ctx, acc)
 		return nil
@@ -185,30 +193,30 @@ type authenticateArgs struct {
 	PwdTry string `json:"pwdTry"`
 }
 
-var authenticate = &Endpoint{
-	Method:           POST,
+var authenticate = &core.Endpoint{
+	Method:           cnst.POST,
 	Path:             "/api/v1/centralAccount/authenticate",
 	IsAuthentication: true,
 	GetArgsStruct: func() interface{} {
 		return &authenticateArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*authenticateArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
 		if acc == nil {
-			invalidNameOrPwdErr.Panic()
+			panic(invalidNameOrPwdErr)
 		}
 
 		pwdInfo := dbGetPwdInfo(ctx, acc.Id)
-		scryptPwdTry := ScryptKey([]byte(args.PwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+		scryptPwdTry := crypt.ScryptKey([]byte(args.PwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 		if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-			invalidNameOrPwdErr.Panic()
+			panic(invalidNameOrPwdErr)
 		}
 
 		//must do this after checking the acc has the correct pwd otherwise it allows anyone to fish for valid emails on the system
 		if !acc.isActivated() {
-			accountNotActivatedErr.Panic()
+			panic(accountNotActivatedErr)
 		}
 
 		//if there was an outstanding password reset on this acc, remove it, they have since remembered their password
@@ -218,12 +226,12 @@ var authenticate = &Endpoint{
 		}
 		// check that the password is encrypted with the latest scrypt settings, if not, encrypt again using the latest settings
 		if pwdInfo.n != ctx.ScryptN() || pwdInfo.r != ctx.ScryptR() || pwdInfo.p != ctx.ScryptP() || pwdInfo.keyLen != ctx.ScryptKeyLen() || len(pwdInfo.salt) != ctx.SaltLen() {
-			pwdInfo.salt = CryptBytes(ctx.SaltLen())
+			pwdInfo.salt = crypt.Bytes(ctx.SaltLen())
 			pwdInfo.n = ctx.ScryptN()
 			pwdInfo.r = ctx.ScryptR()
 			pwdInfo.p = ctx.ScryptP()
 			pwdInfo.keyLen = ctx.ScryptKeyLen()
-			pwdInfo.pwd = ScryptKey([]byte(args.PwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+			pwdInfo.pwd = crypt.ScryptKey([]byte(args.PwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 			dbUpdatePwdInfo(ctx, acc.Id, pwdInfo)
 		}
 
@@ -237,21 +245,21 @@ type confirmNewEmailArgs struct {
 	ConfirmationCode string `json:"confirmationCode"`
 }
 
-var confirmNewEmail = &Endpoint{
-	Method: POST,
+var confirmNewEmail = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/confirmNewEmail",
 	GetArgsStruct: func() interface{} {
 		return &confirmNewEmailArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*confirmNewEmailArgs)
 		acc := dbGetPersonalAccountByEmail(ctx, args.CurrentEmail)
 		if acc == nil || acc.NewEmail == nil || args.NewEmail != *acc.NewEmail || acc.newEmailConfirmationCode == nil || args.ConfirmationCode != *acc.newEmailConfirmationCode {
-			invalidNewEmailConfirmationAttemptErr.Panic()
+			panic(invalidNewEmailConfirmationAttemptErr)
 		}
 
 		if acc := dbGetPersonalAccountByEmail(ctx, args.NewEmail); acc != nil {
-			emailAlreadyInUseErr.Panic()
+			panic(emailAlreadyInUseErr)
 		}
 
 		acc.Email = args.NewEmail
@@ -266,13 +274,13 @@ type resetPwdArgs struct {
 	Email string `json:"email"`
 }
 
-var resetPwd = &Endpoint{
-	Method: POST,
+var resetPwd = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/resetPwd",
 	GetArgsStruct: func() interface{} {
 		return &resetPwdArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*resetPwdArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
@@ -280,7 +288,7 @@ var resetPwd = &Endpoint{
 			return nil
 		}
 
-		resetPwdCode := CryptUrlSafeString(ctx.CryptCodeLen())
+		resetPwdCode := crypt.UrlSafeString(ctx.CryptCodeLen())
 
 		acc.resetPwdCode = &resetPwdCode
 		dbUpdatePersonalAccount(ctx, acc)
@@ -296,23 +304,23 @@ type setNewPwdFromPwdResetArgs struct {
 	NewPwd       string `json:"newPwd"`
 }
 
-var setNewPwdFromPwdReset = &Endpoint{
-	Method: POST,
+var setNewPwdFromPwdReset = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/setNewPwdFromPwdReset",
 	GetArgsStruct: func() interface{} {
 		return &setNewPwdFromPwdResetArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setNewPwdFromPwdResetArgs)
-		ValidateStringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
+		validate.StringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
 		if acc == nil || acc.resetPwdCode == nil || args.ResetPwdCode != *acc.resetPwdCode {
-			invalidResetPwdAttemptErr.Panic()
+			panic(invalidResetPwdAttemptErr)
 		}
 
-		scryptSalt := CryptBytes(ctx.SaltLen())
-		scryptPwd := ScryptKey([]byte(args.NewPwd), scryptSalt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
+		scryptSalt := crypt.Bytes(ctx.SaltLen())
+		scryptPwd := crypt.ScryptKey([]byte(args.NewPwd), scryptSalt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
 
 		acc.activationCode = nil
 		acc.resetPwdCode = nil
@@ -334,33 +342,33 @@ type getAccountArgs struct {
 	Name string `json:"name"`
 }
 
-var getAccount = &Endpoint{
-	Method: GET,
+var getAccount = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getAccount",
 	ExampleResponseStructure: &account{},
 	GetArgsStruct: func() interface{} {
 		return &getAccountArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getAccountArgs)
 		return dbGetAccountByCiName(ctx, strings.Trim(args.Name, " "))
 	},
 }
 
 type getAccountsArgs struct {
-	Accounts []Id `json:"accounts"`
+	Accounts []id.Id `json:"accounts"`
 }
 
-var getAccounts = &Endpoint{
-	Method: GET,
+var getAccounts = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &getAccountsArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getAccountsArgs)
-		ValidateEntityCount(len(args.Accounts), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.Accounts), ctx.MaxProcessEntityCount())
 
 		return dbGetAccounts(ctx, args.Accounts)
 	},
@@ -370,18 +378,18 @@ type searchAccountsArgs struct {
 	NameOrDisplayNameStartsWith string `json:"nameOrDisplayNameStartsWith"`
 }
 
-var searchAccounts = &Endpoint{
-	Method: GET,
+var searchAccounts = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/searchAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchAccountsArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*searchAccountsArgs)
 		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
 		if utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%") {
-			InvalidArgumentsErr.Panic()
+			panic(err.InvalidArguments)
 		}
 		return dbSearchAccounts(ctx, args.NameOrDisplayNameStartsWith)
 	},
@@ -391,32 +399,32 @@ type searchPersonalAccountsArgs struct {
 	NameOrDisplayNameOrEmailStartsWith string `json:"nameOrDisplayNameOrEmailStartsWith"`
 }
 
-var searchPersonalAccounts = &Endpoint{
-	Method: GET,
+var searchPersonalAccounts = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/searchPersonalAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchPersonalAccountsArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*searchPersonalAccountsArgs)
 		args.NameOrDisplayNameOrEmailStartsWith = strings.Trim(args.NameOrDisplayNameOrEmailStartsWith, " ")
 		if utf8.RuneCountInString(args.NameOrDisplayNameOrEmailStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameOrEmailStartsWith, "%") {
-			InvalidArgumentsErr.Panic()
+			panic(err.InvalidArguments)
 		}
 		return dbSearchPersonalAccounts(ctx, args.NameOrDisplayNameOrEmailStartsWith)
 	},
 }
 
-var getMe = &Endpoint{
-	Method: GET,
+var getMe = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getMe",
 	ExampleResponseStructure: &me{},
 	RequiresSession:          true,
-	CtxHandler: func(ctx *Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.MyId())
 		if acc == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 		return &acc.me
 	},
@@ -427,30 +435,30 @@ type setMyPwdArgs struct {
 	OldPwd string `json:"oldPwd"`
 }
 
-var setMyPwd = &Endpoint{
-	Method:          POST,
+var setMyPwd = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setMyPwd",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMyPwdArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMyPwdArgs)
-		ValidateStringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
+		validate.StringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 
 		pwdInfo := dbGetPwdInfo(ctx, ctx.MyId())
 		if pwdInfo == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
-		scryptPwdTry := ScryptKey([]byte(args.OldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+		scryptPwdTry := crypt.ScryptKey([]byte(args.OldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 
 		if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-			incorrectPwdErr.Panic()
+			panic(incorrectPwdErr)
 		}
 
-		pwdInfo.salt = CryptBytes(ctx.SaltLen())
-		pwdInfo.pwd = ScryptKey([]byte(args.NewPwd), pwdInfo.salt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
+		pwdInfo.salt = crypt.Bytes(ctx.SaltLen())
+		pwdInfo.pwd = crypt.ScryptKey([]byte(args.NewPwd), pwdInfo.salt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
 		pwdInfo.n = ctx.ScryptN()
 		pwdInfo.r = ctx.ScryptR()
 		pwdInfo.p = ctx.ScryptP()
@@ -464,17 +472,17 @@ type setMyEmailArgs struct {
 	NewEmail string `json:"newEmail"`
 }
 
-var setMyEmail = &Endpoint{
-	Method:          POST,
+var setMyEmail = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setMyEmail",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMyEmailArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMyEmailArgs)
 		args.NewEmail = strings.Trim(args.NewEmail, " ")
-		ValidateEmail(args.NewEmail)
+		validate.Email(args.NewEmail)
 
 		if acc := dbGetPersonalAccountByEmail(ctx, args.NewEmail); acc != nil {
 			emailSendMultipleAccountPolicyNotice(ctx, acc.Email)
@@ -482,10 +490,10 @@ var setMyEmail = &Endpoint{
 
 		acc := dbGetPersonalAccountById(ctx, ctx.MyId())
 		if acc == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
-		confirmationCode := CryptUrlSafeString(ctx.CryptCodeLen())
+		confirmationCode := crypt.UrlSafeString(ctx.CryptCodeLen())
 
 		acc.NewEmail = &args.NewEmail
 		acc.newEmailConfirmationCode = &confirmationCode
@@ -495,23 +503,23 @@ var setMyEmail = &Endpoint{
 	},
 }
 
-var resendMyNewEmailConfirmationEmail = &Endpoint{
-	Method:          POST,
+var resendMyNewEmailConfirmationEmail = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/resendMyNewEmailConfirmationEmail",
 	RequiresSession: true,
-	CtxHandler: func(ctx *Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.MyId())
 		if acc == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		// check the acc has actually registered a new email
 		if acc.NewEmail == nil {
-			noNewEmailRegisteredErr.Panic()
+			panic(noNewEmailRegisteredErr)
 		}
 		// just in case something has gone crazy wrong
 		if acc.newEmailConfirmationCode == nil {
-			emailConfirmationCodeErr.Panic()
+			panic(emailConfirmationCodeErr)
 		}
 
 		emailSendNewEmailConfirmationLink(ctx, acc.Email, *acc.NewEmail, *acc.newEmailConfirmationCode)
@@ -520,40 +528,40 @@ var resendMyNewEmailConfirmationEmail = &Endpoint{
 }
 
 type setAccountNameArgs struct {
-	AccountId Id     `json:"accountId"`
+	AccountId id.Id  `json:"accountId"`
 	NewName   string `json:"newName"`
 }
 
-var setAccountName = &Endpoint{
-	Method:          POST,
+var setAccountName = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setAccountName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setAccountNameArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountNameArgs)
 		args.NewName = strings.Trim(args.NewName, " ")
-		ValidateStringArg("name", args.NewName, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
+		validate.StringArg("name", args.NewName, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
 
 		if exists := dbAccountWithCiNameExists(ctx, args.NewName); exists {
-			nameAlreadyInUseErr.Panic()
+			panic(nameAlreadyInUseErr)
 		}
 
 		acc := dbGetAccount(ctx, args.AccountId)
 		if acc == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		if !ctx.MyId().Equal(args.AccountId) {
 			if acc.IsPersonal { // can't rename someone else's personal account
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 
-			isAccountOwner, err := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.AccountId, ctx.MyId())
-			PanicIf(err)
+			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.AccountId, ctx.MyId())
+			err.PanicIf(e)
 			if !isAccountOwner {
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 		}
 
@@ -562,7 +570,7 @@ var setAccountName = &Endpoint{
 
 		if ctx.MyId().Equal(args.AccountId) { // if i did rename my personal account, i need to update all the stored names in all the accounts Im a member of
 			ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.MyId(), args.NewName) //first rename myself in my personal org
-			var after *Id
+			var after *id.Id
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.MyId(), after, 100)
 				for _, acc := range accs {
@@ -580,18 +588,18 @@ var setAccountName = &Endpoint{
 }
 
 type setAccountDisplayNameArgs struct {
-	AccountId      Id      `json:"accountId"`
+	AccountId      id.Id   `json:"accountId"`
 	NewDisplayName *string `json:"newDisplayName"`
 }
 
-var setAccountDisplayName = &Endpoint{
-	Method:          POST,
+var setAccountDisplayName = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setAccountDisplayName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setAccountDisplayNameArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountDisplayNameArgs)
 		if args.NewDisplayName != nil {
 			*args.NewDisplayName = strings.Trim(*args.NewDisplayName, " ")
@@ -602,18 +610,18 @@ var setAccountDisplayName = &Endpoint{
 
 		acc := dbGetAccount(ctx, args.AccountId)
 		if acc == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		if !ctx.MyId().Equal(args.AccountId) {
 			if acc.IsPersonal { // can't rename someone else's personal account
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 
-			isAccountOwner, err := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.AccountId, ctx.MyId())
-			PanicIf(err)
+			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.AccountId, ctx.MyId())
+			err.PanicIf(e)
 			if !isAccountOwner {
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 		}
 
@@ -626,7 +634,7 @@ var setAccountDisplayName = &Endpoint{
 
 		if ctx.MyId().Equal(args.AccountId) { // if i did set my personal account displayName, i need to update all the stored displayNames in all the accounts Im a member of
 			ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.MyId(), args.NewDisplayName) //first set my display name in my personal org
-			var after *Id
+			var after *id.Id
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.MyId(), after, 100)
 				for _, acc := range accs {
@@ -644,12 +652,12 @@ var setAccountDisplayName = &Endpoint{
 }
 
 type setAccountAvatarArgs struct {
-	AccountId       Id
+	AccountId       id.Id
 	AvatarImageData io.ReadCloser
 }
 
-var setAccountAvatar = &Endpoint{
-	Method:          POST,
+var setAccountAvatar = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setAccountAvatar",
 	RequiresSession: true,
 	FormStruct: map[string]string{
@@ -663,11 +671,11 @@ var setAccountAvatar = &Endpoint{
 			f = nil
 		}
 		return &setAccountAvatarArgs{
-			AccountId:       ParseId(r.FormValue("account")),
+			AccountId:       id.Parse(r.FormValue("account")),
 			AvatarImageData: f,
 		}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountAvatarArgs)
 		if args.AvatarImageData != nil {
 			defer args.AvatarImageData.Close()
@@ -675,33 +683,33 @@ var setAccountAvatar = &Endpoint{
 
 		account := dbGetAccount(ctx, args.AccountId)
 		if account == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		if !ctx.MyId().Equal(args.AccountId) {
 			if account.IsPersonal { // can't set avatar on someone else's personal account
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 
-			isAccountOwner, err := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(account.Region, account.Shard, args.AccountId, ctx.MyId())
-			PanicIf(err)
+			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(account.Region, account.Shard, args.AccountId, ctx.MyId())
+			err.PanicIf(e)
 			if !isAccountOwner {
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 		}
 
 		if args.AvatarImageData != nil {
-			avatarImage, _, err := image.Decode(args.AvatarImageData)
-			PanicIf(err)
+			avatarImage, _, e := image.Decode(args.AvatarImageData)
+			err.PanicIf(e)
 			bounds := avatarImage.Bounds()
 			if bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y { //if it  isn't square, then error
-				invalidAvatarShapeErr.Panic()
+				panic(invalidAvatarShapeErr)
 			}
 			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() { // if it is larger than allowed then resize
 				avatarImage = resize.Resize(ctx.AvatarClient().MaxAvatarDim(), ctx.AvatarClient().MaxAvatarDim(), avatarImage, resize.NearestNeighbor)
 			}
 			buff := &bytes.Buffer{}
-			PanicIf(png.Encode(buff, avatarImage))
+			err.PanicIf(png.Encode(buff, avatarImage))
 			data := buff.Bytes()
 			reader := bytes.NewReader(data)
 			ctx.AvatarClient().Save(ctx.MyId().String(), "image/png", reader)
@@ -723,19 +731,19 @@ var setAccountAvatar = &Endpoint{
 }
 
 type migrateAccountArgs struct {
-	AccountId Id     `json:"accountId"`
+	AccountId id.Id  `json:"accountId"`
 	NewRegion string `json:"newRegion"`
 }
 
-var migrateAccount = &Endpoint{
-	Method:          POST,
+var migrateAccount = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/migrateAccount",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &migrateAccountArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, _ interface{}) interface{} {
-		NotImplementedErr.Panic()
+	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
+		panic(err.NotImplemented)
 		return nil
 	},
 }
@@ -746,32 +754,32 @@ type createAccountArgs struct {
 	DisplayName *string `json:"displayName"`
 }
 
-var createAccount = &Endpoint{
-	Method:                   POST,
+var createAccount = &core.Endpoint{
+	Method:                   cnst.POST,
 	Path:                     "/api/v1/centralAccount/createAccount",
 	RequiresSession:          true,
 	ExampleResponseStructure: &account{},
 	GetArgsStruct: func() interface{} {
 		return &createAccountArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*createAccountArgs)
 		args.Name = strings.Trim(args.Name, " ")
-		ValidateStringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
+		validate.StringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
 
 		if !ctx.RegionalV1PrivateClient().IsValidRegion(args.Region) {
-			NoSuchRegionErr.Panic()
+			panic(err.NoSuchRegion)
 		}
 
 		if exists := dbAccountWithCiNameExists(ctx, args.Name); exists {
-			nameAlreadyInUseErr.Panic()
+			panic(nameAlreadyInUseErr)
 		}
 
 		account := &account{}
-		account.Id = NewId()
+		account.Id = id.New()
 		account.Name = args.Name
 		account.DisplayName = args.DisplayName
-		account.CreatedOn = Now()
+		account.CreatedOn = t.Now()
 		account.Region = args.Region
 		account.Shard = -1
 		account.IsPersonal = false
@@ -779,7 +787,7 @@ var createAccount = &Endpoint{
 
 		owner := dbGetPersonalAccountById(ctx, ctx.MyId())
 		if owner == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		defer func() {
@@ -789,8 +797,8 @@ var createAccount = &Endpoint{
 				panic(r)
 			}
 		}()
-		shard, err := ctx.RegionalV1PrivateClient().CreateAccount(args.Region, account.Id, ctx.MyId(), owner.Name, owner.DisplayName)
-		PanicIf(err)
+		shard, e := ctx.RegionalV1PrivateClient().CreateAccount(args.Region, account.Id, ctx.MyId(), owner.Name, owner.DisplayName)
+		err.PanicIf(e)
 
 		account.Shard = shard
 		dbUpdateAccount(ctx, account)
@@ -799,8 +807,8 @@ var createAccount = &Endpoint{
 }
 
 type getMyAccountsArgs struct {
-	After *Id `json:"after"`
-	Limit int `json:"limit"`
+	After *id.Id `json:"after"`
+	Limit int    `json:"limit"`
 }
 
 type getMyAccountsResp struct {
@@ -808,49 +816,49 @@ type getMyAccountsResp struct {
 	More     bool       `json:"more"`
 }
 
-var getMyAccounts = &Endpoint{
-	Method: GET,
+var getMyAccounts = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getMyAccounts",
 	ExampleResponseStructure: &getMyAccountsResp{},
 	RequiresSession:          true,
 	GetArgsStruct: func() interface{} {
 		return &getMyAccountsArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMyAccountsArgs)
 		res := &getMyAccountsResp{}
-		res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.MyId(), args.After, ValidateLimit(args.Limit, ctx.MaxProcessEntityCount()))
+		res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.MyId(), args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 		return res
 	},
 }
 
 type deleteAccountArgs struct {
-	AccountId Id `json:"accountId"`
+	AccountId id.Id `json:"accountId"`
 }
 
-var deleteAccount = &Endpoint{
-	Method:          POST,
+var deleteAccount = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/deleteAccount",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteAccountArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		acc := dbGetAccount(ctx, args.AccountId)
 		if acc == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		if !ctx.MyId().Equal(args.AccountId) {
 			if acc.IsPersonal { // can't delete someone else's personal account
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 			//otherwise attempting to delete a group account
-			isAccountOwner, err := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.AccountId, ctx.MyId())
-			PanicIf(err)
+			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.AccountId, ctx.MyId())
+			err.PanicIf(e)
 			if !isAccountOwner {
-				InsufficientPermissionErr.Panic()
+				panic(err.InsufficientPermission)
 			}
 		}
 
@@ -858,18 +866,18 @@ var deleteAccount = &Endpoint{
 		dbDeleteAccountAndAllAssociatedMemberships(ctx, args.AccountId)
 
 		if ctx.MyId().Equal(args.AccountId) {
-			var after *Id
+			var after *id.Id
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.MyId(), after, 100)
 				for _, acc := range accs {
-					isAccountOwner, err := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.MyId())
-					PanicIf(err)
+					isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.MyId())
+					err.PanicIf(e)
 					if isAccountOwner {
-						onlyOwnerMemberErr.Panic()
+						panic(onlyOwnerMemberErr)
 					}
 				}
 				for _, acc := range accs {
-					ctx.RegionalV1PrivateClient().RemoveMembers(acc.Region, acc.Shard, acc.Id, ctx.MyId(), []Id{ctx.MyId()})
+					ctx.RegionalV1PrivateClient().RemoveMembers(acc.Region, acc.Shard, acc.Id, ctx.MyId(), []id.Id{ctx.MyId()})
 				}
 				if more {
 					after = &accs[len(accs)-1].Id
@@ -883,31 +891,31 @@ var deleteAccount = &Endpoint{
 }
 
 type addMembersArgs struct {
-	AccountId  Id                 `json:"accountId"`
-	NewMembers []*AddMemberPublic `json:"newMembers"`
+	AccountId  id.Id        `json:"accountId"`
+	NewMembers []*AddMember `json:"newMembers"`
 }
 
-var addMembers = &Endpoint{
-	Method:          POST,
+var addMembers = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/addMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		if args.AccountId.Equal(ctx.MyId()) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
-		ValidateEntityCount(len(args.NewMembers), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.NewMembers), ctx.MaxProcessEntityCount())
 
 		account := dbGetAccount(ctx, args.AccountId)
 		if account == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
-		ids := make([]Id, 0, len(args.NewMembers))
-		addMembersMap := map[string]*AddMemberPublic{}
+		ids := make([]id.Id, 0, len(args.NewMembers))
+		addMembersMap := map[string]*AddMember{}
 		for _, member := range args.NewMembers {
 			ids = append(ids, member.Id)
 			addMembersMap[member.Id.String()] = member
@@ -915,11 +923,11 @@ var addMembers = &Endpoint{
 
 		accs := dbGetPersonalAccounts(ctx, ids)
 
-		members := make([]*AddMemberPrivate, 0, len(accs))
+		members := make([]*private.AddMember, 0, len(accs))
 		for _, acc := range accs {
 			role := addMembersMap[acc.Id.String()].Role
 			role.Validate()
-			ami := &AddMemberPrivate{}
+			ami := &private.AddMember{}
 			ami.Id = acc.Id
 			ami.Role = role
 			ami.Name = acc.Name
@@ -934,27 +942,27 @@ var addMembers = &Endpoint{
 }
 
 type removeMembersArgs struct {
-	AccountId       Id   `json:"accountId"`
-	ExistingMembers []Id `json:"existingMembers"`
+	AccountId       id.Id   `json:"accountId"`
+	ExistingMembers []id.Id `json:"existingMembers"`
 }
 
-var removeMembers = &Endpoint{
-	Method:          POST,
+var removeMembers = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/removeMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		if args.AccountId.Equal(ctx.MyId()) {
-			InvalidOperationErr.Panic()
+			panic(err.InvalidOperation)
 		}
-		ValidateEntityCount(len(args.ExistingMembers), ctx.MaxProcessEntityCount())
+		validate.EntityCount(len(args.ExistingMembers), ctx.MaxProcessEntityCount())
 
 		account := dbGetAccount(ctx, args.AccountId)
 		if account == nil {
-			noSuchAccountErr.Panic()
+			panic(noSuchAccountErr)
 		}
 
 		ctx.RegionalV1PrivateClient().RemoveMembers(account.Region, account.Shard, args.AccountId, ctx.MyId(), args.ExistingMembers)
@@ -963,7 +971,7 @@ var removeMembers = &Endpoint{
 	},
 }
 
-var Endpoints = []*Endpoint{
+var Endpoints = []*core.Endpoint{
 	getRegions,
 	register,
 	resendActivationEmail,
@@ -995,32 +1003,32 @@ var Endpoints = []*Endpoint{
 type Client interface {
 	//accessible outside of active session
 	GetRegions() ([]string, error)
-	Register(name, email, pwd, region, language string, displayName *string, theme Theme) error
+	Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) error
-	Authenticate(css *ClientSessionStore, email, pwd string) (Id, error)
+	Authenticate(css *clientsession.Store, email, pwd string) (id.Id, error)
 	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
 	GetAccount(name string) (*account, error)
-	GetAccounts(ids []Id) ([]*account, error)
+	GetAccounts(ids []id.Id) ([]*account, error)
 	SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
 	SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) ([]*account, error)
 	//requires active session to access
-	GetMe(css *ClientSessionStore) (*me, error)
-	SetMyPwd(css *ClientSessionStore, oldPwd, newPwd string) error
-	SetMyEmail(css *ClientSessionStore, newEmail string) error
-	ResendMyNewEmailConfirmationEmail(css *ClientSessionStore) error
-	SetAccountName(css *ClientSessionStore, accountId Id, newName string) error
-	SetAccountDisplayName(css *ClientSessionStore, accountId Id, newDisplayName *string) error
-	SetAccountAvatar(css *ClientSessionStore, accountId Id, avatarImage io.ReadCloser) error
-	MigrateAccount(css *ClientSessionStore, accountId Id, newRegion string) error
-	CreateAccount(css *ClientSessionStore, name, region string, displayName *string) (*account, error)
-	GetMyAccounts(css *ClientSessionStore, after *Id, limit int) (*getMyAccountsResp, error)
-	DeleteAccount(css *ClientSessionStore, accountId Id) error
+	GetMe(css *clientsession.Store) (*me, error)
+	SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error
+	SetMyEmail(css *clientsession.Store, newEmail string) error
+	ResendMyNewEmailConfirmationEmail(css *clientsession.Store) error
+	SetAccountName(css *clientsession.Store, accountId id.Id, newName string) error
+	SetAccountDisplayName(css *clientsession.Store, accountId id.Id, newDisplayName *string) error
+	SetAccountAvatar(css *clientsession.Store, accountId id.Id, avatarImage io.ReadCloser) error
+	MigrateAccount(css *clientsession.Store, accountId id.Id, newRegion string) error
+	CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*account, error)
+	GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*getMyAccountsResp, error)
+	DeleteAccount(css *clientsession.Store, accountId id.Id) error
 	//member centric - must be an owner or admin
-	AddMembers(css *ClientSessionStore, accountId Id, newMembers []*AddMemberPublic) error
-	RemoveMembers(css *ClientSessionStore, accountId Id, existingMembers []Id) error
+	AddMembers(css *clientsession.Store, accountId id.Id, newMembers []*AddMember) error
+	RemoveMembers(css *clientsession.Store, accountId id.Id, existingMembers []id.Id) error
 }
 
 func NewClient(host string) Client {
@@ -1034,15 +1042,15 @@ type client struct {
 }
 
 func (c *client) GetRegions() ([]string, error) {
-	val, err := getRegions.DoRequest(nil, c.host, nil, nil, &[]string{})
+	val, e := getRegions.DoRequest(nil, c.host, nil, nil, &[]string{})
 	if val != nil {
-		return *(val.(*[]string)), err
+		return *(val.(*[]string)), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) Register(name, email, pwd, region, language string, displayName *string, theme Theme) error {
-	_, err := register.DoRequest(nil, c.host, &registerArgs{
+func (c *client) Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error {
+	_, e := register.DoRequest(nil, c.host, &registerArgs{
 		Name:        name,
 		Email:       email,
 		Pwd:         pwd,
@@ -1051,397 +1059,395 @@ func (c *client) Register(name, email, pwd, region, language string, displayName
 		DisplayName: displayName,
 		Theme:       theme,
 	}, nil, nil)
-	return err
+	return e
 }
 
 func (c *client) ResendActivationEmail(email string) error {
-	_, err := resendActivationEmail.DoRequest(nil, c.host, &resendActivationEmailArgs{
+	_, e := resendActivationEmail.DoRequest(nil, c.host, &resendActivationEmailArgs{
 		Email: email,
 	}, nil, nil)
-	return err
+	return e
 }
 
 func (c *client) Activate(email, activationCode string) error {
-	_, err := activate.DoRequest(nil, c.host, &activateArgs{
+	_, e := activate.DoRequest(nil, c.host, &activateArgs{
 		Email:          email,
 		ActivationCode: activationCode,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) Authenticate(css *ClientSessionStore, email, pwdTry string) (Id, error) {
-	val, err := authenticate.DoRequest(css, c.host, &authenticateArgs{
+func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (id.Id, error) {
+	val, e := authenticate.DoRequest(css, c.host, &authenticateArgs{
 		Email:  email,
 		PwdTry: pwdTry,
-	}, nil, &Id{})
+	}, nil, &id.Id{})
 	if val != nil {
-		return *val.(*Id), err
+		return *val.(*id.Id), e
 	}
-	return nil, err
+	return nil, e
 }
 
 func (c *client) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error {
-	_, err := confirmNewEmail.DoRequest(nil, c.host, &confirmNewEmailArgs{
+	_, e := confirmNewEmail.DoRequest(nil, c.host, &confirmNewEmailArgs{
 		CurrentEmail:     currentEmail,
 		NewEmail:         newEmail,
 		ConfirmationCode: confirmationCode,
 	}, nil, nil)
-	return err
+	return e
 }
 
 func (c *client) ResetPwd(email string) error {
-	_, err := resetPwd.DoRequest(nil, c.host, &resetPwdArgs{
+	_, e := resetPwd.DoRequest(nil, c.host, &resetPwdArgs{
 		Email: email,
 	}, nil, nil)
-	return err
+	return e
 }
 
 func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error {
-	_, err := setNewPwdFromPwdReset.DoRequest(nil, c.host, &setNewPwdFromPwdResetArgs{
+	_, e := setNewPwdFromPwdReset.DoRequest(nil, c.host, &setNewPwdFromPwdResetArgs{
 		NewPwd:       newPwd,
 		Email:        email,
 		ResetPwdCode: resetPwdCode,
 	}, nil, nil)
-	return err
+	return e
 }
 
 func (c *client) GetAccount(name string) (*account, error) {
-	val, err := getAccount.DoRequest(nil, c.host, &getAccountArgs{
+	val, e := getAccount.DoRequest(nil, c.host, &getAccountArgs{
 		Name: name,
 	}, nil, &account{})
 	if val != nil {
-		return val.(*account), err
+		return val.(*account), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetAccounts(ids []Id) ([]*account, error) {
-	val, err := getAccounts.DoRequest(nil, c.host, &getAccountsArgs{
+func (c *client) GetAccounts(ids []id.Id) ([]*account, error) {
+	val, e := getAccounts.DoRequest(nil, c.host, &getAccountsArgs{
 		Accounts: ids,
 	}, nil, &[]*account{})
 	if val != nil {
-		return *val.(*[]*account), err
+		return *val.(*[]*account), e
 	}
-	return nil, err
+	return nil, e
 }
 
 func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) {
-	val, err := searchAccounts.DoRequest(nil, c.host, &searchAccountsArgs{
+	val, e := searchAccounts.DoRequest(nil, c.host, &searchAccountsArgs{
 		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
 	}, nil, &[]*account{})
 	if val != nil {
-		return *val.(*[]*account), err
+		return *val.(*[]*account), e
 	}
-	return nil, err
+	return nil, e
 }
 
 func (c *client) SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) ([]*account, error) {
-	val, err := searchPersonalAccounts.DoRequest(nil, c.host, &searchPersonalAccountsArgs{
+	val, e := searchPersonalAccounts.DoRequest(nil, c.host, &searchPersonalAccountsArgs{
 		NameOrDisplayNameOrEmailStartsWith: nameOrDisplayNameOrEmailStartsWith,
 	}, nil, &[]*account{})
 	if val != nil {
-		return *val.(*[]*account), err
+		return *val.(*[]*account), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetMe(css *ClientSessionStore) (*me, error) {
-	val, err := getMe.DoRequest(css, c.host, nil, nil, &me{})
+func (c *client) GetMe(css *clientsession.Store) (*me, error) {
+	val, e := getMe.DoRequest(css, c.host, nil, nil, &me{})
 	if val != nil {
-		return val.(*me), err
+		return val.(*me), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) SetMyPwd(css *ClientSessionStore, oldPwd, newPwd string) error {
-	_, err := setMyPwd.DoRequest(css, c.host, &setMyPwdArgs{
+func (c *client) SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error {
+	_, e := setMyPwd.DoRequest(css, c.host, &setMyPwdArgs{
 		OldPwd: oldPwd,
 		NewPwd: newPwd,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetMyEmail(css *ClientSessionStore, newEmail string) error {
-	_, err := setMyEmail.DoRequest(css, c.host, &setMyEmailArgs{
+func (c *client) SetMyEmail(css *clientsession.Store, newEmail string) error {
+	_, e := setMyEmail.DoRequest(css, c.host, &setMyEmailArgs{
 		NewEmail: newEmail,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) ResendMyNewEmailConfirmationEmail(css *ClientSessionStore) error {
-	_, err := resendMyNewEmailConfirmationEmail.DoRequest(css, c.host, nil, nil, nil)
-	return err
+func (c *client) ResendMyNewEmailConfirmationEmail(css *clientsession.Store) error {
+	_, e := resendMyNewEmailConfirmationEmail.DoRequest(css, c.host, nil, nil, nil)
+	return e
 }
 
-func (c *client) SetAccountName(css *ClientSessionStore, accountId Id, newName string) error {
-	_, err := setAccountName.DoRequest(css, c.host, &setAccountNameArgs{
+func (c *client) SetAccountName(css *clientsession.Store, accountId id.Id, newName string) error {
+	_, e := setAccountName.DoRequest(css, c.host, &setAccountNameArgs{
 		AccountId: accountId,
 		NewName:   newName,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetAccountDisplayName(css *ClientSessionStore, accountId Id, newDisplayName *string) error {
-	_, err := setAccountDisplayName.DoRequest(css, c.host, &setAccountDisplayNameArgs{
+func (c *client) SetAccountDisplayName(css *clientsession.Store, accountId id.Id, newDisplayName *string) error {
+	_, e := setAccountDisplayName.DoRequest(css, c.host, &setAccountDisplayNameArgs{
 		AccountId:      accountId,
 		NewDisplayName: newDisplayName,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetAccountAvatar(css *ClientSessionStore, accountId Id, avatarImageData io.ReadCloser) error {
+func (c *client) SetAccountAvatar(css *clientsession.Store, accountId id.Id, avatarImageData io.ReadCloser) error {
 	defer avatarImageData.Close()
-	_, err := setAccountAvatar.DoRequest(css, c.host, &setAccountAvatarArgs{
+	_, e := setAccountAvatar.DoRequest(css, c.host, &setAccountAvatarArgs{
 		AccountId:       accountId,
 		AvatarImageData: avatarImageData,
 	}, func() (io.ReadCloser, string) {
 		body := bytes.NewBuffer([]byte{})
 		writer := multipart.NewWriter(body)
-		part, err := writer.CreateFormFile("avatar", "avatar")
-		PanicIf(err)
-		_, err = io.Copy(part, avatarImageData)
-		PanicIf(err)
-		PanicIf(writer.WriteField("account", accountId.String()))
-		PanicIf(writer.Close())
+		part, e := writer.CreateFormFile("avatar", "avatar")
+		err.PanicIf(e)
+		_, e = io.Copy(part, avatarImageData)
+		err.PanicIf(e)
+		err.PanicIf(writer.WriteField("account", accountId.String()))
+		err.PanicIf(writer.Close())
 		return ioutil.NopCloser(body), writer.FormDataContentType()
 	}, nil)
-	return err
+	return e
 }
 
-func (c *client) MigrateAccount(css *ClientSessionStore, accountId Id, newRegion string) error {
-	_, err := migrateAccount.DoRequest(css, c.host, &migrateAccountArgs{
+func (c *client) MigrateAccount(css *clientsession.Store, accountId id.Id, newRegion string) error {
+	_, e := migrateAccount.DoRequest(css, c.host, &migrateAccountArgs{
 		AccountId: accountId,
 		NewRegion: newRegion,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) CreateAccount(css *ClientSessionStore, name, region string, displayName *string) (*account, error) {
-	val, err := createAccount.DoRequest(css, c.host, &createAccountArgs{
+func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*account, error) {
+	val, e := createAccount.DoRequest(css, c.host, &createAccountArgs{
 		Name:        name,
 		Region:      region,
 		DisplayName: displayName,
 	}, nil, &account{})
 	if val != nil {
-		return val.(*account), err
+		return val.(*account), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetMyAccounts(css *ClientSessionStore, after *Id, limit int) (*getMyAccountsResp, error) {
-	val, err := getMyAccounts.DoRequest(css, c.host, &getMyAccountsArgs{
+func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*getMyAccountsResp, error) {
+	val, e := getMyAccounts.DoRequest(css, c.host, &getMyAccountsArgs{
 		After: after,
 		Limit: limit,
 	}, nil, &getMyAccountsResp{})
 	if val != nil {
-		return val.(*getMyAccountsResp), err
+		return val.(*getMyAccountsResp), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) DeleteAccount(css *ClientSessionStore, accountId Id) error {
-	_, err := deleteAccount.DoRequest(css, c.host, &deleteAccountArgs{
+func (c *client) DeleteAccount(css *clientsession.Store, accountId id.Id) error {
+	_, e := deleteAccount.DoRequest(css, c.host, &deleteAccountArgs{
 		AccountId: accountId,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) AddMembers(css *ClientSessionStore, accountId Id, newMembers []*AddMemberPublic) error {
-	_, err := addMembers.DoRequest(css, c.host, &addMembersArgs{
+func (c *client) AddMembers(css *clientsession.Store, accountId id.Id, newMembers []*AddMember) error {
+	_, e := addMembers.DoRequest(css, c.host, &addMembersArgs{
 		AccountId:  accountId,
 		NewMembers: newMembers,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) RemoveMembers(css *ClientSessionStore, accountId Id, existingMembers []Id) error {
-	_, err := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
+func (c *client) RemoveMembers(css *clientsession.Store, accountId id.Id, existingMembers []id.Id) error {
+	_, e := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
 		AccountId:       accountId,
 		ExistingMembers: existingMembers,
 	}, nil, nil)
-	return err
+	return e
 }
 
 //internal helpers
 
 //db helpers
-func dbAccountWithCiNameExists(ctx *Ctx, name string) bool {
+func dbAccountWithCiNameExists(ctx *core.Ctx, name string) bool {
 	row := ctx.AccountQueryRow(`SELECT COUNT(*) FROM accounts WHERE name = ?`, name)
 	count := 0
-	PanicIf(row.Scan(&count))
+	err.PanicIf(row.Scan(&count))
 	return count != 0
 }
 
-func dbGetAccountByCiName(ctx *Ctx, name string) *account {
+func dbGetAccountByCiName(ctx *core.Ctx, name string) *account {
 	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name = ?`, name)
 	acc := account{}
-	if IsSqlErrNoRowsElsePanicIf(row.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal)) {
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal)) {
 		return nil
 	}
 	return &acc
 }
 
-func dbCreatePersonalAccount(ctx *Ctx, account *fullPersonalAccountInfo, pwdInfo *pwdInfo) {
-	id := account.Id
-	_, err := ctx.AccountExec(`CALL createPersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.Email, account.Language, account.Theme, account.NewEmail, account.activationCode, account.activatedOn, account.newEmailConfirmationCode, account.resetPwdCode)
-	PanicIf(err)
-	_, err = ctx.PwdExec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?)`, id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
-	PanicIf(err)
+func dbCreatePersonalAccount(ctx *core.Ctx, account *fullPersonalAccountInfo, pwdInfo *pwdInfo) {
+	_, e := ctx.AccountExec(`CALL createPersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.Email, account.Language, account.Theme, account.NewEmail, account.activationCode, account.activatedOn, account.newEmailConfirmationCode, account.resetPwdCode)
+	err.PanicIf(e)
+	_, e = ctx.PwdExec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?)`, account.Id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
+	err.PanicIf(e)
 }
 
-func dbGetPersonalAccountByEmail(ctx *Ctx, email string) *fullPersonalAccountInfo {
+func dbGetPersonalAccountByEmail(ctx *core.Ctx, email string) *fullPersonalAccountInfo {
 	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode FROM personalAccounts WHERE email = ?`, email)
 	account := fullPersonalAccountInfo{}
 	account.IsPersonal = true
-	if IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
 		return nil
 	}
 	return &account
 }
 
-func dbGetPersonalAccountById(ctx *Ctx, id Id) *fullPersonalAccountInfo {
+func dbGetPersonalAccountById(ctx *core.Ctx, id id.Id) *fullPersonalAccountInfo {
 	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode FROM personalAccounts WHERE id = ?`, id)
 	account := fullPersonalAccountInfo{}
 	account.IsPersonal = true
-	if IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
 		return nil
 	}
 	return &account
 }
 
-func dbGetPwdInfo(ctx *Ctx, id Id) *pwdInfo {
+func dbGetPwdInfo(ctx *core.Ctx, id id.Id) *pwdInfo {
 	row := ctx.PwdQueryRow(`SELECT salt, pwd, n, r, p, keyLen FROM pwds WHERE id = ?`, id)
 	pwd := pwdInfo{}
-	if IsSqlErrNoRowsElsePanicIf(row.Scan(&pwd.salt, &pwd.pwd, &pwd.n, &pwd.r, &pwd.p, &pwd.keyLen)) {
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&pwd.salt, &pwd.pwd, &pwd.n, &pwd.r, &pwd.p, &pwd.keyLen)) {
 		return nil
 	}
 	return &pwd
 }
 
-func dbUpdatePersonalAccount(ctx *Ctx, personalAccountInfo *fullPersonalAccountInfo) {
-	_, err := ctx.AccountExec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, personalAccountInfo.Id, personalAccountInfo.Name, personalAccountInfo.DisplayName, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activatedOn, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode)
-	PanicIf(err)
+func dbUpdatePersonalAccount(ctx *core.Ctx, personalAccountInfo *fullPersonalAccountInfo) {
+	_, e := ctx.AccountExec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, personalAccountInfo.Id, personalAccountInfo.Name, personalAccountInfo.DisplayName, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activatedOn, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode)
+	err.PanicIf(e)
 }
 
-func dbUpdateAccount(ctx *Ctx, account *account) {
-	_, err := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
-	PanicIf(err)
+func dbUpdateAccount(ctx *core.Ctx, account *account) {
+	_, e := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
+	err.PanicIf(e)
 }
 
-func dbUpdatePwdInfo(ctx *Ctx, id Id, pwdInfo *pwdInfo) {
-	_, err := ctx.PwdExec(`UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?`, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, id)
-	PanicIf(err)
+func dbUpdatePwdInfo(ctx *core.Ctx, id id.Id, pwdInfo *pwdInfo) {
+	_, e := ctx.PwdExec(`UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?`, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, id)
+	err.PanicIf(e)
 }
 
-func dbDeleteAccountAndAllAssociatedMemberships(ctx *Ctx, id Id) {
-	castId := id
-	_, err := ctx.AccountExec(`CALL deleteAccountAndAllAssociatedMemberships(?)`, castId)
-	PanicIf(err)
-	_, err = ctx.PwdExec(`DELETE FROM pwds WHERE id = ?`, castId)
-	PanicIf(err)
+func dbDeleteAccountAndAllAssociatedMemberships(ctx *core.Ctx, id id.Id) {
+	_, e := ctx.AccountExec(`CALL deleteAccountAndAllAssociatedMemberships(?)`, id)
+	err.PanicIf(e)
+	_, e = ctx.PwdExec(`DELETE FROM pwds WHERE id = ?`, id)
+	err.PanicIf(e)
 }
 
-func dbGetAccount(ctx *Ctx, id Id) *account {
+func dbGetAccount(ctx *core.Ctx, id id.Id) *account {
 	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id = ?`, id)
 	a := account{}
-	if IsSqlErrNoRowsElsePanicIf(row.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal)) {
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal)) {
 		return nil
 	}
 	return &a
 }
 
-func dbGetAccounts(ctx *Ctx, ids []Id) []*account {
-	castedIds := make([]interface{}, 0, len(ids))
-	castedIds = append(castedIds, ids[0])
+func dbGetAccounts(ctx *core.Ctx, ids []id.Id) []*account {
+	args := make([]interface{}, 0, len(ids))
+	args = append(args, ids[0])
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (?`)
-	for _, id := range ids[1:] {
+	for _, i := range ids[1:] {
 		query.WriteString(`,?`)
-		castedIds = append(castedIds, id)
+		args = append(args, i)
 	}
 	query.WriteString(`)`)
-	rows, err := ctx.AccountQuery(query.String(), castedIds...)
+	rows, e := ctx.AccountQuery(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*account, 0, len(ids))
 	for rows.Next() {
 		a := account{}
-		PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
+		err.PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	return res
 }
 
-func dbSearchAccounts(ctx *Ctx, nameOrDisplayNameStartsWith string) []*account {
+func dbSearchAccounts(ctx *core.Ctx, nameOrDisplayNameStartsWith string) []*account {
 	searchTerm := nameOrDisplayNameStartsWith + "%"
 	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	//TODO need to profile these queries to check for best performance
-	rows, err := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
+	rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 
 	res := make([]*account, 0, 100)
 	for rows.Next() {
 		acc := account{}
-		PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
+		err.PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
 		res = append(res, &acc)
 	}
 	return res
 }
 
-func dbSearchPersonalAccounts(ctx *Ctx, nameOrDisplayNameOrEmailStartsWith string) []*account {
+func dbSearchPersonalAccounts(ctx *core.Ctx, nameOrDisplayNameOrEmailStartsWith string) []*account {
 	searchTerm := nameOrDisplayNameOrEmailStartsWith + "%"
 	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	//TODO need to profile these queries to check for best performance
-	rows, err := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? OR displayName LIKE ? OR email LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, searchTerm, 0, 100)
+	rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? OR displayName LIKE ? OR email LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, searchTerm, 0, 100)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 
 	res := make([]*account, 0, 100)
 	for rows.Next() {
 		acc := account{}
 		acc.IsPersonal = true
-		PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
+		err.PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
 	}
 	return res
 }
 
-func dbGetPersonalAccounts(ctx *Ctx, ids []Id) []*account {
-	castedIds := make([]interface{}, 0, len(ids))
-	castedIds = append(castedIds, ids[0])
+func dbGetPersonalAccounts(ctx *core.Ctx, ids []id.Id) []*account {
+	args := make([]interface{}, 0, len(ids))
+	args = append(args, ids[0])
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE activatedOn IS NOT NULL AND id IN (?`)
-	for _, id := range ids[1:] {
+	for _, i := range ids[1:] {
 		query.WriteString(`,?`)
-		castedIds = append(castedIds, id)
+		args = append(args, i)
 	}
 	query.WriteString(`)`)
-	rows, err := ctx.AccountQuery(query.String(), castedIds...)
+	rows, e := ctx.AccountQuery(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*account, 0, len(ids))
 	for rows.Next() {
 		acc := account{}
 		acc.IsPersonal = true
-		PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
+		err.PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
 	}
 	return res
 }
 
-func dbCreateGroupAccountAndMembership(ctx *Ctx, account *account, memberId Id) {
-	_, err := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, memberId)
-	PanicIf(err)
+func dbCreateGroupAccountAndMembership(ctx *core.Ctx, account *account, memberId id.Id) {
+	_, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, memberId)
+	err.PanicIf(e)
 }
 
-func dbGetGroupAccounts(ctx *Ctx, memberId Id, after *Id, limit int) ([]*account, bool) {
+func dbGetGroupAccounts(ctx *core.Ctx, memberId id.Id, after *id.Id, limit int) ([]*account, bool) {
 	args := make([]interface{}, 0, 3)
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
 	args = append(args, memberId)
@@ -1451,15 +1457,15 @@ func dbGetGroupAccounts(ctx *Ctx, memberId Id, after *Id, limit int) ([]*account
 	}
 	query.WriteString(` ORDER BY name ASC LIMIT ?`)
 	args = append(args, limit+1)
-	rows, err := ctx.AccountQuery(query.String(), args...)
+	rows, e := ctx.AccountQuery(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*account, 0, limit+1)
 	for rows.Next() {
 		a := account{}
-		PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
+		err.PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	if len(res) == limit+1 {
@@ -1468,7 +1474,7 @@ func dbGetGroupAccounts(ctx *Ctx, memberId Id, after *Id, limit int) ([]*account
 	return res, false
 }
 
-func dbCreateMemberships(ctx *Ctx, accountId Id, members []Id) {
+func dbCreateMemberships(ctx *core.Ctx, accountId id.Id, members []id.Id) {
 	args := make([]interface{}, 0, len(members)*2)
 	args = append(args, accountId, members[0])
 	query := bytes.NewBufferString(`INSERT INTO memberships (account, member) VALUES (?,?)`)
@@ -1476,45 +1482,45 @@ func dbCreateMemberships(ctx *Ctx, accountId Id, members []Id) {
 		query.WriteString(`,(?,?)`)
 		args = append(args, accountId, member)
 	}
-	_, err := ctx.AccountExec(query.String(), args...)
-	PanicIf(err)
+	_, e := ctx.AccountExec(query.String(), args...)
+	err.PanicIf(e)
 }
 
-func dbDeleteMemberships(ctx *Ctx, accountId Id, members []Id) {
-	castedIds := make([]interface{}, 0, len(members)+1)
-	castedIds = append(castedIds, accountId, members[0])
+func dbDeleteMemberships(ctx *core.Ctx, accountId id.Id, members []id.Id) {
+	args := make([]interface{}, 0, len(members)+1)
+	args = append(args, accountId, members[0])
 	query := bytes.NewBufferString(`DELETE FROM memberships WHERE account=? AND member IN (?`)
 	for _, member := range members[1:] {
 		query.WriteString(`,?`)
-		castedIds = append(castedIds, member)
+		args = append(args, member)
 	}
 	query.WriteString(`)`)
-	_, err := ctx.AccountExec(query.String(), castedIds...)
-	PanicIf(err)
+	_, e := ctx.AccountExec(query.String(), args...)
+	err.PanicIf(e)
 }
 
 //email helpers
 
-func emailSendMultipleAccountPolicyNotice(ctx *Ctx, address string) {
+func emailSendMultipleAccountPolicyNotice(ctx *core.Ctx, address string) {
 	ctx.MailClient().Send([]string{address}, "sendMultipleAccountPolicyNotice")
 }
 
-func emailSendActivationLink(ctx *Ctx, address, activationCode string) {
+func emailSendActivationLink(ctx *core.Ctx, address, activationCode string) {
 	ctx.MailClient().Send([]string{address}, fmt.Sprintf("sendActivationLink: activationCode: %s", activationCode))
 }
 
-func emailSendPwdResetLink(ctx *Ctx, address, resetCode string) {
+func emailSendPwdResetLink(ctx *core.Ctx, address, resetCode string) {
 	ctx.MailClient().Send([]string{address}, fmt.Sprintf("sendPwdResetLink: resetCode: %s", resetCode))
 }
 
-func emailSendNewEmailConfirmationLink(ctx *Ctx, currentAddress, newAddress, confirmationCode string) {
+func emailSendNewEmailConfirmationLink(ctx *core.Ctx, currentAddress, newAddress, confirmationCode string) {
 	ctx.MailClient().Send([]string{newAddress}, fmt.Sprintf("sendNewEmailConfirmationLink: currentAddress: %s newAddress: %s confirmationCode: %s", currentAddress, newAddress, confirmationCode))
 }
 
 //structs
 
 type account struct {
-	Id          Id        `json:"id"`
+	Id          id.Id     `json:"id"`
 	Name        string    `json:"name"`
 	DisplayName *string   `json:"displayName"`
 	CreatedOn   time.Time `json:"createdOn"`
@@ -1531,10 +1537,10 @@ func (a *account) isMigrating() bool {
 
 type me struct {
 	account
-	Email    string  `json:"email"`
-	Language string  `json:"language"`
-	Theme    Theme   `json:"theme"`
-	NewEmail *string `json:"newEmail,omitempty"`
+	Email    string     `json:"email"`
+	Language string     `json:"language"`
+	Theme    cnst.Theme `json:"theme"`
+	NewEmail *string    `json:"newEmail,omitempty"`
 }
 
 type fullPersonalAccountInfo struct {
@@ -1560,4 +1566,9 @@ type pwdInfo struct {
 
 func pwdsMatch(a, b []byte) bool {
 	return bytes.Compare(a, b) == 0
+}
+
+type AddMember struct {
+	Id   id.Id            `json:"id"`
+	Role cnst.AccountRole `json:"role"`
 }

@@ -1,6 +1,11 @@
-package util
+package core
 
 import (
+	"bitbucket.org/0xor1/task/server/util/clientsession"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/crypt"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/time"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -9,6 +14,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+)
+
+var (
+	queryString        = "Query_String"
+	body               = "Body"
+	form               = "Form"
+	invalidEndpointErr = &err.Err{Code: "", Message: ""}
 )
 
 type Endpoint struct {
@@ -29,24 +41,18 @@ type Endpoint struct {
 	StaticResources          *StaticResources
 }
 
-func (e *Endpoint) ValidateEndpoint() {
-	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || (e.ProcessForm != nil && len(e.FormStruct) == 0) || e.CtxHandler == nil {
-		invalidEndpointErr.Panic()
+func (ep *Endpoint) ValidateEndpoint() {
+	if (ep.Method != cnst.GET && ep.Method != cnst.POST) || (ep.ProcessForm != nil && ep.Method != cnst.POST) || (ep.ProcessForm != nil && len(ep.FormStruct) == 0) || ep.CtxHandler == nil {
+		panic(invalidEndpointErr)
 	}
 }
 
-var (
-	queryString = "Query_String"
-	body        = "Body"
-	form        = "Form"
-)
-
-func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
+func (ep *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	var argsLocation *string
-	if e.GetArgsStruct != nil {
+	if ep.GetArgsStruct != nil {
 		argsLocation = &queryString
-		if e.Method == POST {
-			if e.ProcessForm != nil {
+		if ep.Method == cnst.POST {
+			if ep.ProcessForm != nil {
 				argsLocation = &form
 			} else {
 				argsLocation = &body
@@ -54,70 +60,70 @@ func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 		}
 	}
 	var note *string
-	if e.Note != "" {
-		note = &e.Note
+	if ep.Note != "" {
+		note = &ep.Note
 	}
 	var argsStruct interface{}
-	if e.GetArgsStruct != nil {
-		argsStruct = e.GetArgsStruct()
-	} else if e.ProcessForm != nil {
-		argsStruct = e.FormStruct
+	if ep.GetArgsStruct != nil {
+		argsStruct = ep.GetArgsStruct()
+	} else if ep.ProcessForm != nil {
+		argsStruct = ep.FormStruct
 	}
 	var isAuth *bool
-	if e.IsAuthentication {
-		isAuth = &e.IsAuthentication
+	if ep.IsAuthentication {
+		isAuth = &ep.IsAuthentication
 	}
 	return &endpointDocumentation{
 		Note:                     note,
-		Method:                   e.Method,
-		Path:                     e.Path,
-		RequiresSession:          e.RequiresSession,
+		Method:                   ep.Method,
+		Path:                     ep.Path,
+		RequiresSession:          ep.RequiresSession,
 		ArgsLocation:             argsLocation,
 		ArgsStructure:            argsStruct,
-		ExampleResponseStructure: e.ExampleResponseStructure,
+		ExampleResponseStructure: ep.ExampleResponseStructure,
 		IsAuthentication:         isAuth,
 	}
 }
 
-func (e *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
-	reqUrl, err := url.Parse(host + e.Path)
-	if err != nil {
-		return nil, err
+func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
+	reqUrl, e := url.Parse(host + ep.Path)
+	if e != nil {
+		return nil, e
 	}
 	urlVals := url.Values{}
 	var body io.ReadCloser
 	var contentType string
 	if buildForm != nil {
-		if e.Method != POST {
+		if ep.Method != cnst.POST {
 			return nil, invalidEndpointErr
 		}
+		if ep.IsPrivate {
+			return nil, err.InvalidOperation //private endpoints dont support sending form data
+		}
 		body, contentType = buildForm()
-		if e.IsPrivate {
-			InvalidOperationErr.Panic() //private endpoints dont support sending form data
-		}
 	} else if args != nil {
-		argsBytes, err := json.Marshal(args)
-		if err != nil {
-			return nil, err
+		argsBytes, e := json.Marshal(args)
+		if e != nil {
+			return nil, e
 		}
-		if e.IsPrivate {
-			ts := fmt.Sprintf("%d", NowUnixMillis())
-			key := ScryptKey(append(argsBytes, []byte(ts)...), e.StaticResources.RegionalV1PrivateClientSecret, e.StaticResources.ScryptN, e.StaticResources.ScryptR, e.StaticResources.ScryptP, e.StaticResources.ScryptKeyLen)
+		if ep.IsPrivate {
+			ts := fmt.Sprintf("%d", time.NowUnixMillis())
+			key := crypt.ScryptKey(append(argsBytes, []byte(ts)...), ep.StaticResources.RegionalV1PrivateClientSecret, ep.StaticResources.ScryptN, ep.StaticResources.ScryptR, ep.StaticResources.ScryptP, ep.StaticResources.ScryptKeyLen)
 			urlVals.Set("_", base64.RawURLEncoding.EncodeToString(key))
 			urlVals.Set("ts", ts)
 		}
-		if e.Method == GET {
+		if ep.Method == cnst.GET {
 			urlVals.Set("args", string(argsBytes))
-		} else if e.Method == POST {
+		} else if ep.Method == cnst.POST {
 			body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
 		} else {
 			return nil, invalidEndpointErr
 		}
 	}
 	reqUrl.RawQuery = urlVals.Encode()
-	req, err := http.NewRequest(e.Method, reqUrl.String(), body)
-	if err != nil {
-		return nil, err
+	req, e := http.NewRequest(ep.Method, reqUrl.String(), body)
+	if e != nil {
+		return nil, e
 	}
 	req.Header.Add("X-Client", "go-client")
 	if contentType != "" {
@@ -126,10 +132,10 @@ func (e *Endpoint) createRequest(host string, args interface{}, buildForm func()
 	return req, nil
 }
 
-func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
-	req, err := e.createRequest(host, args, buildForm)
-	if err != nil {
-		return nil, err
+func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
+	req, e := ep.createRequest(host, args, buildForm)
+	if e != nil {
+		return nil, e
 	}
 	if css != nil {
 		for name, value := range css.Cookies {
@@ -139,7 +145,7 @@ func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interfac
 			})
 		}
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, e := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
@@ -148,14 +154,14 @@ func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interfac
 			css.Cookies[cookie.Name] = cookie.Value
 		}
 	}
-	if err != nil {
-		return nil, err
+	if e != nil {
+		return nil, e
 	}
 	if respVal != nil {
 
-		err = json.NewDecoder(resp.Body).Decode(respVal)
-		if err != nil {
-			return nil, err
+		e = json.NewDecoder(resp.Body).Decode(respVal)
+		if e != nil {
+			return nil, e
 		}
 	}
 	return respVal, nil
@@ -170,14 +176,4 @@ type endpointDocumentation struct {
 	ArgsStructure            interface{} `json:"argsStructure,omitempty"`
 	ExampleResponseStructure interface{} `json:"exampleResponseStructure,omitempty"`
 	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
-}
-
-func NewClientSessionStore() *ClientSessionStore {
-	return &ClientSessionStore{
-		Cookies: map[string]string{},
-	}
-}
-
-type ClientSessionStore struct {
-	Cookies map[string]string
 }

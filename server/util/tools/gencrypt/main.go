@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/crypt"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -21,11 +21,11 @@ func main() {
 	l := int(lTmp)
 	if t == "s" {
 		for i := 0; i < n; i++ {
-			fmt.Println(util.CryptUrlSafeString(l))
+			fmt.Println(crypt.UrlSafeString(l))
 		}
 	} else {
 		for i := 0; i < n; i++ {
-			fmt.Println(fmt.Sprintf("%s", base64.RawURLEncoding.EncodeToString(util.CryptBytes(l))))
+			fmt.Println(fmt.Sprintf("%s", base64.RawURLEncoding.EncodeToString(crypt.Bytes(l))))
 		}
 	}
 }

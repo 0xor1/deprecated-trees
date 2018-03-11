@@ -1,6 +1,7 @@
-package util
+package crypt
 
 import (
+	"bitbucket.org/0xor1/task/server/util/err"
 	"crypto/rand"
 	"golang.org/x/crypto/scrypt"
 	"io"
@@ -9,26 +10,26 @@ import (
 
 var urlSafeRunes = []rune("0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-func CryptBytes(length int) []byte {
+func Bytes(length int) []byte {
 	k := make([]byte, length)
-	_, err := io.ReadFull(rand.Reader, k)
-	PanicIf(err)
+	_, e := io.ReadFull(rand.Reader, k)
+	err.PanicIf(e)
 	return k
 }
 
-func CryptUrlSafeString(length int) string {
+func UrlSafeString(length int) string {
 	buf := make([]rune, length)
 	urlSafeRunesLength := big.NewInt(int64(len(urlSafeRunes)))
 	for i := range buf {
-		randomIdx, err := rand.Int(rand.Reader, urlSafeRunesLength)
-		PanicIf(err)
+		randomIdx, e := rand.Int(rand.Reader, urlSafeRunesLength)
+		err.PanicIf(e)
 		buf[i] = urlSafeRunes[int(randomIdx.Int64())]
 	}
 	return string(buf)
 }
 
 func ScryptKey(password, salt []byte, N, r, p, keyLen int) []byte {
-	key, err := scrypt.Key(password, salt, N, r, p, keyLen)
-	PanicIf(err)
+	key, e := scrypt.Key(password, salt, N, r, p, keyLen)
+	err.PanicIf(e)
 	return key
 }

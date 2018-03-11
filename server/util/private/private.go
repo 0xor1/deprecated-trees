@@ -1,0 +1,26 @@
+package private
+
+import (
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/id"
+)
+
+type V1Client interface {
+	GetRegions() []string
+	IsValidRegion(region string) bool
+	CreateAccount(region string, account, myId id.Id, myName string, myDisplayName *string) (int, error)
+	DeleteAccount(region string, shard int, account, myId id.Id) error
+	AddMembers(region string, shard int, account, myId id.Id, members []*AddMember) error
+	RemoveMembers(region string, shard int, account, myId id.Id, members []id.Id) error
+	MemberIsOnlyAccountOwner(region string, shard int, account, myId id.Id) (bool, error)
+	SetMemberName(region string, shard int, account, myId id.Id, newName string) error
+	SetMemberDisplayName(region string, shard int, account, myId id.Id, newDisplayName *string) error
+	MemberIsAccountOwner(region string, shard int, account, myId id.Id) (bool, error)
+}
+
+type AddMember struct {
+	Id          id.Id            `json:"id"`
+	Name        string           `json:"name"`
+	DisplayName *string          `json:"displayName"`
+	Role        cnst.AccountRole `json:"role"`
+}

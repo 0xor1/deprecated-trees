@@ -1,7 +1,14 @@
 package task
 
 import (
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/clientsession"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/db"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	t "bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/task/server/util/validate"
 	"bytes"
 	"encoding/hex"
 	"time"
@@ -9,29 +16,29 @@ import (
 
 type createTaskArgs struct {
 	Shard              int     `json:"shard"`
-	AccountId          Id      `json:"accountId"`
-	ProjectId          Id      `json:"projectId"`
-	ParentId           Id      `json:"parentId"`
-	PreviousSibling    *Id     `json:"previousSibling,omitempty"`
+	AccountId          id.Id   `json:"accountId"`
+	ProjectId          id.Id   `json:"projectId"`
+	ParentId           id.Id   `json:"parentId"`
+	PreviousSibling    *id.Id  `json:"previousSibling,omitempty"`
 	Name               string  `json:"name"`
 	Description        *string `json:"description,omitempty"`
 	IsAbstract         bool    `json:"isAbstract"`
 	IsParallel         *bool   `json:"isParallel,omitempty"`
-	MemberId           *Id     `json:"memberId,omitempty"`
+	MemberId           *id.Id  `json:"memberId,omitempty"`
 	TotalRemainingTime *uint64 `json:"totalRemainingTime,omitempty"`
 }
 
-var createTask = &Endpoint{
-	Method: POST,
+var createTask = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/createTask",
 	GetArgsStruct: func() interface{} {
 		return &createTaskArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*createTaskArgs)
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 		if (args.IsAbstract && (args.IsParallel == nil || args.MemberId != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)) {
-			InvalidArgumentsErr.Panic()
+			panic(err.InvalidArguments)
 		}
 		zeroVal := uint64(0)
 		zeroPtr := &zeroVal
@@ -41,14 +48,14 @@ var createTask = &Endpoint{
 			args.TotalRemainingTime = zeroPtr
 		}
 		if args.MemberId != nil { //if a member is being assigned to the task then we need to check they have project write access
-			ValidateMemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, args.Shard, args.AccountId, args.ProjectId, *args.MemberId))
+			validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.AccountId, args.ProjectId, *args.MemberId))
 		}
 		newTask := &task{
-			Id:                   NewId(),
+			Id:                   id.New(),
 			IsAbstract:           args.IsAbstract,
 			Name:                 args.Name,
 			Description:          args.Description,
-			CreatedOn:            Now(),
+			CreatedOn:            t.Now(),
 			TotalRemainingTime:   *args.TotalRemainingTime,
 			MinimumRemainingTime: zeroPtr,
 			ChildCount:           zeroPtr,
@@ -63,24 +70,24 @@ var createTask = &Endpoint{
 
 type setNameArgs struct {
 	Shard     int    `json:"shard"`
-	AccountId Id     `json:"accountId"`
-	ProjectId Id     `json:"projectId"`
-	TaskId    Id     `json:"taskId"`
+	AccountId id.Id  `json:"accountId"`
+	ProjectId id.Id  `json:"projectId"`
+	TaskId    id.Id  `json:"taskId"`
 	Name      string `json:"name"`
 }
 
-var setName = &Endpoint{
-	Method: POST,
+var setName = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setName",
 	GetArgsStruct: func() interface{} {
 		return &setNameArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setNameArgs)
 		if args.ProjectId.Equal(args.TaskId) {
-			ValidateMemberHasAccountAdminAccess(GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+			validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
 		} else {
-			ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 		}
 
 		dbSetName(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.Name)
@@ -90,21 +97,21 @@ var setName = &Endpoint{
 
 type setDescriptionArgs struct {
 	Shard       int     `json:"shard"`
-	AccountId   Id      `json:"accountId"`
-	ProjectId   Id      `json:"projectId"`
-	TaskId      Id      `json:"taskId"`
+	AccountId   id.Id   `json:"accountId"`
+	ProjectId   id.Id   `json:"projectId"`
+	TaskId      id.Id   `json:"taskId"`
 	Description *string `json:"description,omitempty"`
 }
 
-var setDescription = &Endpoint{
-	Method: POST,
+var setDescription = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setDescription",
 	GetArgsStruct: func() interface{} {
 		return &setDescriptionArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setDescriptionArgs)
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
 		dbSetDescription(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.Description)
 		return nil
@@ -112,22 +119,22 @@ var setDescription = &Endpoint{
 }
 
 type setIsParallelArgs struct {
-	Shard      int  `json:"shard"`
-	AccountId  Id   `json:"accountId"`
-	ProjectId  Id   `json:"projectId"`
-	TaskId     Id   `json:"taskId"`
-	IsParallel bool `json:"isParallel"`
+	Shard      int   `json:"shard"`
+	AccountId  id.Id `json:"accountId"`
+	ProjectId  id.Id `json:"projectId"`
+	TaskId     id.Id `json:"taskId"`
+	IsParallel bool  `json:"isParallel"`
 }
 
-var setIsParallel = &Endpoint{
-	Method: POST,
+var setIsParallel = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsParallel",
 	GetArgsStruct: func() interface{} {
 		return &setIsParallelArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setIsParallelArgs)
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
 		dbSetIsParallel(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.IsParallel)
 		return nil
@@ -135,24 +142,24 @@ var setIsParallel = &Endpoint{
 }
 
 type setMemberArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	ProjectId Id  `json:"projectId"`
-	TaskId    Id  `json:"taskId"`
-	MemberId  *Id `json:"memberId,omitempty"`
+	Shard     int    `json:"shard"`
+	AccountId id.Id  `json:"accountId"`
+	ProjectId id.Id  `json:"projectId"`
+	TaskId    id.Id  `json:"taskId"`
+	MemberId  *id.Id `json:"memberId,omitempty"`
 }
 
-var setMember = &Endpoint{
-	Method: POST,
+var setMember = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setMember",
 	GetArgsStruct: func() interface{} {
 		return &setMemberArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberArgs)
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 		if args.MemberId != nil {
-			ValidateMemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, args.Shard, args.AccountId, args.ProjectId, *args.MemberId))
+			validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.AccountId, args.ProjectId, *args.MemberId))
 		}
 		dbSetMember(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.MemberId)
 		return nil
@@ -161,19 +168,19 @@ var setMember = &Endpoint{
 
 type setRemainingTimeArgs struct {
 	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	TaskId        Id     `json:"taskId"`
+	AccountId     id.Id  `json:"accountId"`
+	ProjectId     id.Id  `json:"projectId"`
+	TaskId        id.Id  `json:"taskId"`
 	RemainingTime uint64 `json:"remainingTime"`
 }
 
-var setRemainingTime = &Endpoint{
-	Method: POST,
+var setRemainingTime = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setRemainingTime",
 	GetArgsStruct: func() interface{} {
 		return &setRemainingTimeArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setRemainingTimeArgs)
 		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, &args.RemainingTime, nil, nil)
 	},
@@ -181,20 +188,20 @@ var setRemainingTime = &Endpoint{
 
 type logTimeArgs struct {
 	Shard     int     `json:"shard"`
-	AccountId Id      `json:"accountId"`
-	ProjectId Id      `json:"projectId"`
-	TaskId    Id      `json:"taskId"`
+	AccountId id.Id   `json:"accountId"`
+	ProjectId id.Id   `json:"projectId"`
+	TaskId    id.Id   `json:"taskId"`
 	Duration  uint64  `json:"duration"`
 	Note      *string `json:"note,omitempty"`
 }
 
-var logTime = &Endpoint{
-	Method: POST,
+var logTime = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/logTime",
 	GetArgsStruct: func() interface{} {
 		return &logTimeArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*logTimeArgs)
 		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, nil, &args.Duration, args.Note)
 	},
@@ -202,36 +209,36 @@ var logTime = &Endpoint{
 
 type setRemainingTimeAndLogTimeArgs struct {
 	Shard         int     `json:"shard"`
-	AccountId     Id      `json:"accountId"`
-	ProjectId     Id      `json:"projectId"`
-	TaskId        Id      `json:"taskId"`
+	AccountId     id.Id   `json:"accountId"`
+	ProjectId     id.Id   `json:"projectId"`
+	TaskId        id.Id   `json:"taskId"`
 	RemainingTime uint64  `json:"remainingTime"`
 	Duration      uint64  `json:"duration"`
 	Note          *string `json:"note,omitempty"`
 }
 
-var setRemainingTimeAndLogTime = &Endpoint{
-	Method: POST,
+var setRemainingTimeAndLogTime = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/setRemainingTimeAndLogTime",
 	GetArgsStruct: func() interface{} {
 		return &setRemainingTimeAndLogTimeArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setRemainingTimeAndLogTimeArgs)
 		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, &args.RemainingTime, &args.Duration, args.Note)
 	},
 }
 
-func setRemainingTimeAndOrLogTime(ctx *Ctx, shard int, accountId, projectId, taskId Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
+func setRemainingTimeAndOrLogTime(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
 	if duration != nil {
-		ValidateMemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, accountId, projectId, ctx.MyId()))
+		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, accountId, projectId, ctx.MyId()))
 	} else if remainingTime != nil {
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, shard, accountId, projectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, shard, accountId, projectId, ctx.MyId()))
 	} else {
-		InvalidArgumentsErr.Panic()
+		panic(err.InvalidArguments)
 	}
 
-	loggedOn := Now()
+	loggedOn := t.Now()
 	dbSetRemainingTimeAndOrLogTime(ctx, shard, accountId, projectId, taskId, remainingTime, &loggedOn, duration, note)
 	if duration != nil {
 		return &timeLog{
@@ -247,23 +254,23 @@ func setRemainingTimeAndOrLogTime(ctx *Ctx, shard int, accountId, projectId, tas
 }
 
 type moveTaskArgs struct {
-	Shard              int `json:"shard"`
-	AccountId          Id  `json:"accountId"`
-	ProjectId          Id  `json:"projectId"`
-	TaskId             Id  `json:"taskId"`
-	NewParentId        Id  `json:"newParentId"`
-	NewPreviousSibling *Id `json:"newPreviousSibling"`
+	Shard              int    `json:"shard"`
+	AccountId          id.Id  `json:"accountId"`
+	ProjectId          id.Id  `json:"projectId"`
+	TaskId             id.Id  `json:"taskId"`
+	NewParentId        id.Id  `json:"newParentId"`
+	NewPreviousSibling *id.Id `json:"newPreviousSibling"`
 }
 
-var moveTask = &Endpoint{
-	Method: POST,
+var moveTask = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/moveTask",
 	GetArgsStruct: func() interface{} {
 		return &moveTaskArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*moveTaskArgs)
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
 		dbMoveTask(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId, args.NewParentId, args.NewPreviousSibling)
 		return nil
@@ -271,21 +278,21 @@ var moveTask = &Endpoint{
 }
 
 type deleteTaskArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
-	ProjectId Id  `json:"projectId"`
-	TaskId    Id  `json:"taskId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
+	ProjectId id.Id `json:"projectId"`
+	TaskId    id.Id `json:"taskId"`
 }
 
-var deleteTask = &Endpoint{
-	Method: POST,
+var deleteTask = &core.Endpoint{
+	Method: cnst.POST,
 	Path:   "/api/v1/project/deleteTask",
 	GetArgsStruct: func() interface{} {
 		return &deleteTaskArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*deleteTaskArgs)
-		ValidateMemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
 
 		dbDeleteTask(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskId)
 		return nil
@@ -293,50 +300,50 @@ var deleteTask = &Endpoint{
 }
 
 type getTasksArgs struct {
-	Shard     int  `json:"shard"`
-	AccountId Id   `json:"accountId"`
-	ProjectId Id   `json:"projectId"`
-	TaskIds   []Id `json:"taskId"`
+	Shard     int     `json:"shard"`
+	AccountId id.Id   `json:"accountId"`
+	ProjectId id.Id   `json:"projectId"`
+	TaskIds   []id.Id `json:"taskId"`
 }
 
-var getTasks = &Endpoint{
-	Method: GET,
+var getTasks = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getTasks",
 	GetArgsStruct: func() interface{} {
 		return &getTasksArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getTasksArgs)
-		ValidateMemberHasProjectReadAccess(GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
-		ValidateEntityCount(len(args.TaskIds), ctx.MaxProcessEntityCount())
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.EntityCount(len(args.TaskIds), ctx.MaxProcessEntityCount())
 		return dbGetTasks(ctx, args.Shard, args.AccountId, args.ProjectId, args.TaskIds)
 	},
 }
 
 type getChildTasksArgs struct {
-	Shard       int `json:"shard"`
-	AccountId   Id  `json:"accountId"`
-	ProjectId   Id  `json:"projectId"`
-	ParentId    Id  `json:"parentId"`
-	FromSibling *Id `json:"fromSibling,omitempty"`
-	Limit       int `json:"limit"`
+	Shard       int    `json:"shard"`
+	AccountId   id.Id  `json:"accountId"`
+	ProjectId   id.Id  `json:"projectId"`
+	ParentId    id.Id  `json:"parentId"`
+	FromSibling *id.Id `json:"fromSibling,omitempty"`
+	Limit       int    `json:"limit"`
 }
 
-var getChildTasks = &Endpoint{
-	Method: GET,
+var getChildTasks = &core.Endpoint{
+	Method: cnst.GET,
 	Path:   "/api/v1/project/getChildTasks",
 	GetArgsStruct: func() interface{} {
 		return &getChildTasksArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getChildTasksArgs)
-		ValidateMemberHasProjectReadAccess(GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
-		ValidateLimit(args.Limit, ctx.MaxProcessEntityCount())
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.MyId()))
+		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		return dbGetChildTasks(ctx, args.Shard, args.AccountId, args.ProjectId, args.ParentId, args.FromSibling, args.Limit)
 	},
 }
 
-var Endpoints = []*Endpoint{
+var Endpoints = []*core.Endpoint{
 	createTask,
 	setName,
 	setDescription,
@@ -352,18 +359,18 @@ var Endpoints = []*Endpoint{
 }
 
 type Client interface {
-	CreateTask(css *ClientSessionStore, shard int, accountId, projectId, parentId Id, previousSibling *Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *Id, remainingTime *uint64) (*task, error)
-	SetName(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, name string) error
-	SetDescription(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, description *string) error
-	SetIsParallel(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, isParallel bool) error                                                              //only applys to abstract tasks
-	SetMember(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, memberId *Id) error                                                                     //only applys to task tasks
-	SetRemainingTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, remainingTime uint64) error                                                      //only applys to task tasks
-	LogTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, duration uint64, note *string) (*timeLog, error)                                          //only applys to task tasks
-	SetRemainingTimeAndLogTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) //only applys to task tasks
-	MoveTask(css *ClientSessionStore, shard int, accountId, projectId, taskId, parentId Id, nextSibling *Id) error
-	DeleteTask(css *ClientSessionStore, shard int, accountId, projectId, taskId Id) error
-	GetTasks(css *ClientSessionStore, shard int, accountId, projectId Id, taskIds []Id) ([]*task, error)
-	GetChildTasks(css *ClientSessionStore, shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) ([]*task, error)
+	CreateTask(css *clientsession.Store, shard int, accountId, projectId, parentId id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *id.Id, remainingTime *uint64) (*task, error)
+	SetName(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, name string) error
+	SetDescription(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, description *string) error
+	SetIsParallel(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, isParallel bool) error                                                              //only applys to abstract tasks
+	SetMember(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, memberId *id.Id) error                                                                  //only applys to task tasks
+	SetRemainingTime(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, remainingTime uint64) error                                                      //only applys to task tasks
+	LogTime(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, duration uint64, note *string) (*timeLog, error)                                          //only applys to task tasks
+	SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) //only applys to task tasks
+	MoveTask(css *clientsession.Store, shard int, accountId, projectId, taskId, parentId id.Id, nextSibling *id.Id) error
+	DeleteTask(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id) error
+	GetTasks(css *clientsession.Store, shard int, accountId, projectId id.Id, taskIds []id.Id) ([]*task, error)
+	GetChildTasks(css *clientsession.Store, shard int, accountId, projectId, parentId id.Id, fromSibling *id.Id, limit int) ([]*task, error)
 }
 
 func NewClient(host string) Client {
@@ -376,8 +383,8 @@ type client struct {
 	host string
 }
 
-func (c *client) CreateTask(css *ClientSessionStore, shard int, accountId, projectId, parentId Id, previousSibling *Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) (*task, error) {
-	val, err := createTask.DoRequest(css, c.host, &createTaskArgs{
+func (c *client) CreateTask(css *clientsession.Store, shard int, accountId, projectId, parentId id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *id.Id, totalRemainingTime *uint64) (*task, error) {
+	val, e := createTask.DoRequest(css, c.host, &createTaskArgs{
 		Shard:              shard,
 		AccountId:          accountId,
 		ProjectId:          projectId,
@@ -391,68 +398,68 @@ func (c *client) CreateTask(css *ClientSessionStore, shard int, accountId, proje
 		TotalRemainingTime: totalRemainingTime,
 	}, nil, &task{})
 	if val != nil {
-		return val.(*task), err
+		return val.(*task), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) SetName(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, name string) error {
-	_, err := setName.DoRequest(css, c.host, &setNameArgs{
+func (c *client) SetName(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, name string) error {
+	_, e := setName.DoRequest(css, c.host, &setNameArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		TaskId:    taskId,
 		Name:      name,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetDescription(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, description *string) error {
-	_, err := setDescription.DoRequest(css, c.host, &setDescriptionArgs{
+func (c *client) SetDescription(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, description *string) error {
+	_, e := setDescription.DoRequest(css, c.host, &setDescriptionArgs{
 		Shard:       shard,
 		AccountId:   accountId,
 		ProjectId:   projectId,
 		TaskId:      taskId,
 		Description: description,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetIsParallel(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, isParallel bool) error {
-	_, err := setIsParallel.DoRequest(css, c.host, &setIsParallelArgs{
+func (c *client) SetIsParallel(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, isParallel bool) error {
+	_, e := setIsParallel.DoRequest(css, c.host, &setIsParallelArgs{
 		Shard:      shard,
 		AccountId:  accountId,
 		ProjectId:  projectId,
 		TaskId:     taskId,
 		IsParallel: isParallel,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetMember(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, memberId *Id) error {
-	_, err := setMember.DoRequest(css, c.host, &setMemberArgs{
+func (c *client) SetMember(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, memberId *id.Id) error {
+	_, e := setMember.DoRequest(css, c.host, &setMemberArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		TaskId:    taskId,
 		MemberId:  memberId,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) SetRemainingTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, remainingTime uint64) error {
-	_, err := setRemainingTime.DoRequest(css, c.host, &setRemainingTimeArgs{
+func (c *client) SetRemainingTime(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, remainingTime uint64) error {
+	_, e := setRemainingTime.DoRequest(css, c.host, &setRemainingTimeArgs{
 		Shard:         shard,
 		AccountId:     accountId,
 		ProjectId:     projectId,
 		TaskId:        taskId,
 		RemainingTime: remainingTime,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) LogTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, duration uint64, note *string) (*timeLog, error) {
-	val, err := logTime.DoRequest(css, c.host, &logTimeArgs{
+func (c *client) LogTime(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, duration uint64, note *string) (*timeLog, error) {
+	val, e := logTime.DoRequest(css, c.host, &logTimeArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
@@ -461,13 +468,13 @@ func (c *client) LogTime(css *ClientSessionStore, shard int, accountId, projectI
 		Note:      note,
 	}, nil, &timeLog{})
 	if val != nil {
-		return val.(*timeLog), err
+		return val.(*timeLog), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) SetRemainingTimeAndLogTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) {
-	val, err := setRemainingTimeAndLogTime.DoRequest(css, c.host, &setRemainingTimeAndLogTimeArgs{
+func (c *client) SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) {
+	val, e := setRemainingTimeAndLogTime.DoRequest(css, c.host, &setRemainingTimeAndLogTimeArgs{
 		Shard:         shard,
 		AccountId:     accountId,
 		ProjectId:     projectId,
@@ -477,13 +484,13 @@ func (c *client) SetRemainingTimeAndLogTime(css *ClientSessionStore, shard int, 
 		Note:          note,
 	}, nil, &timeLog{})
 	if val != nil {
-		return val.(*timeLog), err
+		return val.(*timeLog), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) MoveTask(css *ClientSessionStore, shard int, accountId, projectId, taskId, newParentId Id, newPreviousSibling *Id) error {
-	_, err := moveTask.DoRequest(css, c.host, &moveTaskArgs{
+func (c *client) MoveTask(css *clientsession.Store, shard int, accountId, projectId, taskId, newParentId id.Id, newPreviousSibling *id.Id) error {
+	_, e := moveTask.DoRequest(css, c.host, &moveTaskArgs{
 		Shard:              shard,
 		AccountId:          accountId,
 		ProjectId:          projectId,
@@ -491,34 +498,34 @@ func (c *client) MoveTask(css *ClientSessionStore, shard int, accountId, project
 		NewParentId:        newParentId,
 		NewPreviousSibling: newPreviousSibling,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) DeleteTask(css *ClientSessionStore, shard int, accountId, projectId, taskId Id) error {
-	_, err := deleteTask.DoRequest(css, c.host, &deleteTaskArgs{
+func (c *client) DeleteTask(css *clientsession.Store, shard int, accountId, projectId, taskId id.Id) error {
+	_, e := deleteTask.DoRequest(css, c.host, &deleteTaskArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		TaskId:    taskId,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) GetTasks(css *ClientSessionStore, shard int, accountId, projectId Id, taskIds []Id) ([]*task, error) {
-	val, err := getTasks.DoRequest(css, c.host, &getTasksArgs{
+func (c *client) GetTasks(css *clientsession.Store, shard int, accountId, projectId id.Id, taskIds []id.Id) ([]*task, error) {
+	val, e := getTasks.DoRequest(css, c.host, &getTasksArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 		TaskIds:   taskIds,
 	}, nil, &[]*task{})
 	if val != nil {
-		return *val.(*[]*task), err
+		return *val.(*[]*task), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func (c *client) GetChildTasks(css *ClientSessionStore, shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) ([]*task, error) {
-	val, err := getChildTasks.DoRequest(css, c.host, &getChildTasksArgs{
+func (c *client) GetChildTasks(css *clientsession.Store, shard int, accountId, projectId, parentId id.Id, fromSibling *id.Id, limit int) ([]*task, error) {
+	val, e := getChildTasks.DoRequest(css, c.host, &getChildTasksArgs{
 		Shard:       shard,
 		AccountId:   accountId,
 		ProjectId:   projectId,
@@ -527,12 +534,12 @@ func (c *client) GetChildTasks(css *ClientSessionStore, shard int, accountId, pr
 		Limit:       limit,
 	}, nil, &[]*task{})
 	if val != nil {
-		return *val.(*[]*task), err
+		return *val.(*[]*task), e
 	}
-	return nil, err
+	return nil, e
 }
 
-func dbCreateTask(ctx *Ctx, shard int, accountId, projectId, parentId Id, nextSibling *Id, newTask *task) {
+func dbCreateTask(ctx *core.Ctx, shard int, accountId, projectId, parentId id.Id, nextSibling *id.Id, newTask *task) {
 	args := make([]interface{}, 0, 18)
 	args = append(args, accountId, projectId, parentId, ctx.MyId())
 	if nextSibling != nil {
@@ -552,98 +559,98 @@ func dbCreateTask(ctx *Ctx, shard int, accountId, projectId, parentId Id, nextSi
 	} else {
 		args = append(args, nil)
 	}
-	TreeChangeHelper(ctx, shard, `CALL createTask(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
+	db.TreeChangeHelper(ctx, shard, `CALL createTask(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)
 }
 
-func dbSetName(ctx *Ctx, shard int, accountId, projectId, taskId Id, name string) {
-	_, err := ctx.TreeExec(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), name)
-	PanicIf(err)
+func dbSetName(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, name string) {
+	_, e := ctx.TreeExec(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), name)
+	err.PanicIf(e)
 }
 
-func dbSetDescription(ctx *Ctx, shard int, accountId, projectId, taskId Id, description *string) {
-	_, err := ctx.TreeExec(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), description)
-	PanicIf(err)
+func dbSetDescription(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, description *string) {
+	_, e := ctx.TreeExec(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), description)
+	err.PanicIf(e)
 }
 
-func dbSetIsParallel(ctx *Ctx, shard int, accountId, projectId, taskId Id, isParallel bool) {
-	TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), isParallel)
+func dbSetIsParallel(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, isParallel bool) {
+	db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), isParallel)
 }
 
-func dbSetMember(ctx *Ctx, shard int, accountId, projectId, taskId Id, memberId *Id) {
+func dbSetMember(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, memberId *id.Id) {
 	var memArg []byte
 	if memberId != nil {
 		memArg = *memberId
 	}
-	MakeChangeHelper(ctx, shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), memArg)
+	db.MakeChangeHelper(ctx, shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), memArg)
 }
 
-func dbSetRemainingTimeAndOrLogTime(ctx *Ctx, shard int, accountId, projectId, taskId Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), remainingTime, loggedOn, duration, note)
+func dbSetRemainingTimeAndOrLogTime(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
+	db.TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId(), remainingTime, loggedOn, duration, note)
 }
 
-func dbMoveTask(ctx *Ctx, shard int, accountId, projectId, taskId, newParentId Id, newPreviousSibling *Id) {
+func dbMoveTask(ctx *core.Ctx, shard int, accountId, projectId, taskId, newParentId id.Id, newPreviousSibling *id.Id) {
 	var prevSib []byte
 	if newPreviousSibling != nil {
 		prevSib = *newPreviousSibling
 	}
-	TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, newParentId, ctx.MyId(), prevSib)
+	db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, accountId, projectId, taskId, newParentId, ctx.MyId(), prevSib)
 }
 
-func dbDeleteTask(ctx *Ctx, shard int, accountId, projectId, taskId Id) {
-	TreeChangeHelper(ctx, shard, `CALL deleteTask(?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId())
+func dbDeleteTask(ctx *core.Ctx, shard int, accountId, projectId, taskId id.Id) {
+	db.TreeChangeHelper(ctx, shard, `CALL deleteTask(?, ?, ?, ?)`, accountId, projectId, taskId, ctx.MyId())
 }
 
-func dbGetTasks(ctx *Ctx, shard int, accountId, projectId Id, taskIds []Id) []*task {
+func dbGetTasks(ctx *core.Ctx, shard int, accountId, projectId id.Id, taskIds []id.Id) []*task {
 	idsStr := bytes.NewBufferString(``)
-	for _, id := range taskIds {
-		idsStr.WriteString(hex.EncodeToString(id))
+	for _, i := range taskIds {
+		idsStr.WriteString(hex.EncodeToString(i))
 	}
-	rows, err := ctx.TreeQuery(shard, `CALL getTasks(?, ?, ?)`, accountId, projectId, idsStr.String())
+	rows, e := ctx.TreeQuery(shard, `CALL getTasks(?, ?, ?)`, accountId, projectId, idsStr.String())
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*task, 0, len(taskIds))
 	for rows.Next() {
-		t := task{}
-		PanicIf(rows.Scan(&t.Id, &t.IsAbstract, &t.Name, &t.Description, &t.CreatedOn, &t.TotalRemainingTime, &t.TotalLoggedTime, &t.MinimumRemainingTime, &t.LinkedFileCount, &t.ChatCount, &t.ChildCount, &t.DescendantCount, &t.IsParallel, &t.Member))
-		nilOutPropertiesThatAreNotNilInTheDb(&t)
-		res = append(res, &t)
+		ta := task{}
+		err.PanicIf(rows.Scan(&ta.Id, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
+		nilOutPropertiesThatAreNotNilInTheDb(&ta)
+		res = append(res, &ta)
 	}
 	return res
 }
 
-func dbGetChildTasks(ctx *Ctx, shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) []*task {
+func dbGetChildTasks(ctx *core.Ctx, shard int, accountId, projectId, parentId id.Id, fromSibling *id.Id, limit int) []*task {
 	var fromSib []byte
 	if fromSibling != nil {
 		fromSib = *fromSibling
 	}
-	rows, err := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, accountId, projectId, parentId, fromSib, limit)
+	rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, accountId, projectId, parentId, fromSib, limit)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*task, 0, limit)
 	for rows.Next() {
-		t := task{}
-		PanicIf(rows.Scan(&t.Id, &t.IsAbstract, &t.Name, &t.Description, &t.CreatedOn, &t.TotalRemainingTime, &t.TotalLoggedTime, &t.MinimumRemainingTime, &t.LinkedFileCount, &t.ChatCount, &t.ChildCount, &t.DescendantCount, &t.IsParallel, &t.Member))
-		nilOutPropertiesThatAreNotNilInTheDb(&t)
-		res = append(res, &t)
+		ta := task{}
+		err.PanicIf(rows.Scan(&ta.Id, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
+		nilOutPropertiesThatAreNotNilInTheDb(&ta)
+		res = append(res, &ta)
 	}
 	return res
 }
 
-func nilOutPropertiesThatAreNotNilInTheDb(t *task) {
-	if !t.IsAbstract {
-		t.MinimumRemainingTime = nil
-		t.ChildCount = nil
-		t.DescendantCount = nil
-		t.IsParallel = nil
+func nilOutPropertiesThatAreNotNilInTheDb(ta *task) {
+	if !ta.IsAbstract {
+		ta.MinimumRemainingTime = nil
+		ta.ChildCount = nil
+		ta.DescendantCount = nil
+		ta.IsParallel = nil
 	}
 }
 
 type task struct {
-	Id                   Id        `json:"id"`
+	Id                   id.Id     `json:"id"`
 	IsAbstract           bool      `json:"isAbstract"`
 	Name                 string    `json:"name"`
 	Description          *string   `json:"description"`
@@ -656,13 +663,13 @@ type task struct {
 	ChildCount           *uint64   `json:"childCount,omitempty"`      //only abstract tasks
 	DescendantCount      *uint64   `json:"descendantCount,omitempty"` //only abstract tasks
 	IsParallel           *bool     `json:"isParallel,omitempty"`      //only abstract tasks
-	Member               *Id       `json:"member,omitempty"`          //only task tasks
+	Member               *id.Id    `json:"member,omitempty"`          //only task tasks
 }
 
 type timeLog struct {
-	Project  Id        `json:"project"`
-	Task     Id        `json:"task"`
-	Member   Id        `json:"member"`
+	Project  id.Id     `json:"project"`
+	Task     id.Id     `json:"task"`
+	Member   id.Id     `json:"member"`
 	LoggedOn time.Time `json:"loggedOn"`
 	TaskName string    `json:"taskName"`
 	Duration uint64    `json:"duration"`

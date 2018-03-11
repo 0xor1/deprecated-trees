@@ -1,7 +1,14 @@
 package account
 
 import (
-	. "bitbucket.org/0xor1/task/server/util"
+	"bitbucket.org/0xor1/task/server/util/activity"
+	"bitbucket.org/0xor1/task/server/util/clientsession"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/db"
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/validate"
 	"bytes"
 	"fmt"
 	"strings"
@@ -9,79 +16,79 @@ import (
 )
 
 type setPublicProjectsEnabledArgs struct {
-	Shard                 int  `json:"shard"`
-	AccountId             Id   `json:"accountId"`
-	PublicProjectsEnabled bool `json:"publicProjectsEnabled"`
+	Shard                 int   `json:"shard"`
+	AccountId             id.Id `json:"accountId"`
+	PublicProjectsEnabled bool  `json:"publicProjectsEnabled"`
 }
 
-var setPublicProjectsEnabled = &Endpoint{
-	Method:          POST,
+var setPublicProjectsEnabled = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/account/setPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setPublicProjectsEnabledArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setPublicProjectsEnabledArgs)
-		ValidateMemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		dbSetPublicProjectsEnabled(ctx, args.Shard, args.AccountId, ctx.MyId(), args.PublicProjectsEnabled)
+		validate.MemberHasAccountOwnerAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		dbSetPublicProjectsEnabled(ctx, args.Shard, args.AccountId, args.PublicProjectsEnabled)
 		return nil
 	},
 }
 
 type getPublicProjectsEnabledArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
 }
 
-var getPublicProjectsEnabled = &Endpoint{
-	Method:          GET,
+var getPublicProjectsEnabled = &core.Endpoint{
+	Method:          cnst.GET,
 	Path:            "/api/v1/account/getPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getPublicProjectsEnabledArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getPublicProjectsEnabledArgs)
-		ValidateMemberHasAccountAdminAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
 		return dbGetPublicProjectsEnabled(ctx, args.Shard, args.AccountId)
 	},
 }
 
 type setMemberRoleArgs struct {
-	Shard     int         `json:"shard"`
-	AccountId Id          `json:"accountId"`
-	MemberId  Id          `json:"memberId"`
-	Role      AccountRole `json:"role"`
+	Shard     int              `json:"shard"`
+	AccountId id.Id            `json:"accountId"`
+	MemberId  id.Id            `json:"memberId"`
+	Role      cnst.AccountRole `json:"role"`
 }
 
-var setMemberRole = &Endpoint{
-	Method:          POST,
+var setMemberRole = &core.Endpoint{
+	Method:          cnst.POST,
 	Path:            "/api/v1/account/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
-		accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId())
-		ValidateMemberHasAccountAdminAccess(accountRole)
+		accountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId())
+		validate.MemberHasAccountAdminAccess(accountRole)
 		args.Role.Validate()
-		if args.Role == AccountOwner && *accountRole != AccountOwner {
-			InsufficientPermissionErr.Panic()
+		if args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner {
+			panic(err.InsufficientPermission)
 		}
-		dbSetMemberRole(ctx, args.Shard, args.AccountId, ctx.MyId(), args.MemberId, args.Role)
+		dbSetMemberRole(ctx, args.Shard, args.AccountId, args.MemberId, args.Role)
 		return nil
 	},
 }
 
 type getMembersArgs struct {
-	Shard        int          `json:"shard"`
-	AccountId    Id           `json:"accountId"`
-	Role         *AccountRole `json:"role,omitempty"`
-	NameContains *string      `json:"nameContains,omitempty"`
-	After        *Id          `json:"after,omitempty"`
-	Limit        int          `json:"limit"`
+	Shard        int               `json:"shard"`
+	AccountId    id.Id             `json:"accountId"`
+	Role         *cnst.AccountRole `json:"role,omitempty"`
+	NameContains *string           `json:"nameContains,omitempty"`
+	After        *id.Id            `json:"after,omitempty"`
+	Limit        int               `json:"limit"`
 }
 
 type getMembersResp struct {
@@ -89,66 +96,66 @@ type getMembersResp struct {
 	More    bool      `json:"more"`
 }
 
-var getMembers = &Endpoint{
-	Method:          GET,
+var getMembers = &core.Endpoint{
+	Method:          cnst.GET,
 	Path:            "/api/v1/account/getMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
-		ValidateMemberHasAccountAdminAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		return dbGetMembers(ctx, args.Shard, args.AccountId, args.Role, args.NameContains, args.After, ValidateLimit(args.Limit, ctx.MaxProcessEntityCount()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		return dbGetMembers(ctx, args.Shard, args.AccountId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 
 type getActivitiesArgs struct {
 	Shard          int        `json:"shard"`
-	AccountId      Id         `json:"accountId"`
-	Item           *Id        `json:"item,omitempty"`
-	Member         *Id        `json:"member,omitempty"`
+	AccountId      id.Id      `json:"accountId"`
+	Item           *id.Id     `json:"item,omitempty"`
+	Member         *id.Id     `json:"member,omitempty"`
 	OccurredAfter  *time.Time `json:"occurredAfter,omitempty"`
 	OccurredBefore *time.Time `json:"occurredBefore,omitempty"`
 	Limit          int        `json:"limit"`
 }
 
-var getActivities = &Endpoint{
-	Method:          GET,
+var getActivities = &core.Endpoint{
+	Method:          cnst.GET,
 	Path:            "/api/v1/account/getActivities",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
-			InvalidArgumentsErr.Panic()
+			panic(err.InvalidArguments)
 		}
-		ValidateMemberHasAccountAdminAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
-		return dbGetActivities(ctx, args.Shard, args.AccountId, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, ValidateLimit(args.Limit, ctx.MaxProcessEntityCount()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.MyId()))
+		return dbGetActivities(ctx, args.Shard, args.AccountId, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 
 type getMeArgs struct {
-	Shard     int `json:"shard"`
-	AccountId Id  `json:"accountId"`
+	Shard     int   `json:"shard"`
+	AccountId id.Id `json:"accountId"`
 }
 
-var getMe = &Endpoint{
-	Method:          GET,
+var getMe = &core.Endpoint{
+	Method:          cnst.GET,
 	Path:            "/api/v1/account/getMe",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
-	CtxHandler: func(ctx *Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
 		args := a.(*getMeArgs)
 		return dbGetMember(ctx, args.Shard, args.AccountId, ctx.MyId())
 	},
 }
 
-var Endpoints = []*Endpoint{
+var Endpoints = []*core.Endpoint{
 	setPublicProjectsEnabled,
 	getPublicProjectsEnabled,
 	setMemberRole,
@@ -159,17 +166,17 @@ var Endpoints = []*Endpoint{
 
 type Client interface {
 	//must be account owner
-	SetPublicProjectsEnabled(css *ClientSessionStore, shard int, accountId Id, publicProjectsEnabled bool) error
+	SetPublicProjectsEnabled(css *clientsession.Store, shard int, accountId id.Id, publicProjectsEnabled bool) error
 	//must be account owner/admin
-	GetPublicProjectsEnabled(css *ClientSessionStore, shard int, accountId Id) (bool, error)
+	GetPublicProjectsEnabled(css *clientsession.Store, shard int, accountId id.Id) (bool, error)
 	//must be account owner/admin
-	SetMemberRole(css *ClientSessionStore, shard int, accountId, memberId Id, role AccountRole) error
+	SetMemberRole(css *clientsession.Store, shard int, accountId, memberId id.Id, role cnst.AccountRole) error
 	//pointers are optional filters
-	GetMembers(css *ClientSessionStore, shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) (*getMembersResp, error)
+	GetMembers(css *clientsession.Store, shard int, accountId id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error)
 	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(css *ClientSessionStore, shard int, accountId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*Activity, error)
+	GetActivities(css *clientsession.Store, shard int, accountId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
 	//for anyone
-	GetMe(css *ClientSessionStore, shard int, accountId Id) (*member, error)
+	GetMe(css *clientsession.Store, shard int, accountId id.Id) (*member, error)
 }
 
 func NewClient(host string) Client {
@@ -182,36 +189,36 @@ type client struct {
 	host string
 }
 
-func (c *client) SetPublicProjectsEnabled(css *ClientSessionStore, shard int, accountId Id, publicProjectsEnabled bool) error {
-	_, err := setPublicProjectsEnabled.DoRequest(css, c.host, &setPublicProjectsEnabledArgs{
+func (c *client) SetPublicProjectsEnabled(css *clientsession.Store, shard int, accountId id.Id, publicProjectsEnabled bool) error {
+	_, e := setPublicProjectsEnabled.DoRequest(css, c.host, &setPublicProjectsEnabledArgs{
 		Shard:                 shard,
 		AccountId:             accountId,
 		PublicProjectsEnabled: publicProjectsEnabled,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) GetPublicProjectsEnabled(css *ClientSessionStore, shard int, accountId Id) (bool, error) {
+func (c *client) GetPublicProjectsEnabled(css *clientsession.Store, shard int, accountId id.Id) (bool, error) {
 	respVal := true
-	val, err := getPublicProjectsEnabled.DoRequest(css, c.host, &getPublicProjectsEnabledArgs{
+	val, e := getPublicProjectsEnabled.DoRequest(css, c.host, &getPublicProjectsEnabledArgs{
 		Shard:     shard,
 		AccountId: accountId,
 	}, nil, &respVal)
-	return *val.(*bool), err
+	return *val.(*bool), e
 }
 
-func (c *client) SetMemberRole(css *ClientSessionStore, shard int, accountId, memberId Id, role AccountRole) error {
-	_, err := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
+func (c *client) SetMemberRole(css *clientsession.Store, shard int, accountId, memberId id.Id, role cnst.AccountRole) error {
+	_, e := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
 		Shard:     shard,
 		AccountId: accountId,
 		MemberId:  memberId,
 		Role:      role,
 	}, nil, nil)
-	return err
+	return e
 }
 
-func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) (*getMembersResp, error) {
-	val, err := getMembers.DoRequest(css, c.host, &getMembersArgs{
+func (c *client) GetMembers(css *clientsession.Store, shard int, accountId id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
+	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
 		Shard:        shard,
 		AccountId:    accountId,
 		Role:         role,
@@ -219,11 +226,11 @@ func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId Id, ro
 		After:        after,
 		Limit:        limit,
 	}, nil, &getMembersResp{})
-	return val.(*getMembersResp), err
+	return val.(*getMembersResp), e
 }
 
-func (c *client) GetActivities(css *ClientSessionStore, shard int, accountId Id, itemId *Id, memberId *Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*Activity, error) {
-	val, err := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
+func (c *client) GetActivities(css *clientsession.Store, shard int, accountId id.Id, itemId *id.Id, memberId *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error) {
+	val, e := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
 		Shard:          shard,
 		AccountId:      accountId,
 		Item:           itemId,
@@ -231,39 +238,35 @@ func (c *client) GetActivities(css *ClientSessionStore, shard int, accountId Id,
 		OccurredAfter:  occurredAfter,
 		OccurredBefore: occurredBefore,
 		Limit:          limit,
-	}, nil, &[]*Activity{})
-	return *val.(*[]*Activity), err
+	}, nil, &[]*activity.Activity{})
+	return *val.(*[]*activity.Activity), e
 }
 
-func (c *client) GetMe(css *ClientSessionStore, shard int, accountId Id) (*member, error) {
-	val, err := getMe.DoRequest(css, c.host, &getMeArgs{
+func (c *client) GetMe(css *clientsession.Store, shard int, accountId id.Id) (*member, error) {
+	val, e := getMe.DoRequest(css, c.host, &getMeArgs{
 		Shard:     shard,
 		AccountId: accountId,
 	}, nil, &member{})
-	return val.(*member), err
+	return val.(*member), e
 }
 
-func dbGetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
-	return GetAccountRole(ctx, shard, accountId, memberId)
+func dbSetPublicProjectsEnabled(ctx *core.Ctx, shard int, accountId id.Id, publicProjectsEnabled bool) {
+	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.MyId(), publicProjectsEnabled)
+	err.PanicIf(e)
 }
 
-func dbSetPublicProjectsEnabled(ctx *Ctx, shard int, accountId, myId Id, publicProjectsEnabled bool) {
-	_, err := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.MyId(), publicProjectsEnabled)
-	PanicIf(err)
+func dbGetPublicProjectsEnabled(ctx *core.Ctx, shard int, accountId id.Id) bool {
+	return db.GetPublicProjectsEnabled(ctx, shard, accountId)
 }
 
-func dbGetPublicProjectsEnabled(ctx *Ctx, shard int, accountId Id) bool {
-	return GetPublicProjectsEnabled(ctx, shard, accountId)
+func dbSetMemberRole(ctx *core.Ctx, shard int, accountId, memberId id.Id, role cnst.AccountRole) {
+	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.MyId(), memberId, role)
 }
 
-func dbSetMemberRole(ctx *Ctx, shard int, accountId, myId, memberId Id, role AccountRole) {
-	MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.MyId(), memberId, role)
-}
-
-func dbGetMember(ctx *Ctx, shard int, accountId, memberId Id) *member {
+func dbGetMember(ctx *core.Ctx, shard int, accountId, memberId id.Id) *member {
 	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
 	res := member{}
-	PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
+	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 
@@ -300,7 +303,7 @@ AND (
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
-func dbGetMembers(ctx *Ctx, shard int, accountId Id, role *AccountRole, nameOrDisplayNameContains *string, after *Id, limit int) *getMembersResp {
+func dbGetMembers(ctx *core.Ctx, shard int, accountId id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	query := bytes.NewBufferString(`SELECT a1.id, a1.isActive, a1.role FROM accountMembers a1`)
 	args := make([]interface{}, 0, 7)
 	if after != nil {
@@ -324,15 +327,15 @@ func dbGetMembers(ctx *Ctx, shard int, accountId Id, role *AccountRole, nameOrDi
 	}
 	query.WriteString(` ORDER BY a1.role ASC, a1.name ASC LIMIT ?`)
 	args = append(args, limit+1)
-	rows, err := ctx.TreeQuery(shard, query.String(), args...)
+	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 	res := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
-		PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
+		err.PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
 	if len(res) == limit+1 {
@@ -341,9 +344,9 @@ func dbGetMembers(ctx *Ctx, shard int, accountId Id, role *AccountRole, nameOrDi
 	return &getMembersResp{Members: res, More: false}
 }
 
-func dbGetActivities(ctx *Ctx, shard int, accountId Id, item *Id, member *Id, occurredAfter, occurredBefore *time.Time, limit int) []*Activity {
+func dbGetActivities(ctx *core.Ctx, shard int, accountId id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
-		InvalidArgumentsErr.Panic()
+		panic(err.InvalidArguments)
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
@@ -369,23 +372,23 @@ func dbGetActivities(ctx *Ctx, shard int, accountId Id, item *Id, member *Id, oc
 	}
 	query.WriteString(` LIMIT ?`)
 	args = append(args, limit)
-	rows, err := ctx.TreeQuery(shard, query.String(), args...)
+	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
-	PanicIf(err)
+	err.PanicIf(e)
 
-	res := make([]*Activity, 0, limit)
+	res := make([]*activity.Activity, 0, limit)
 	for rows.Next() {
-		act := Activity{}
-		PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
+		act := activity.Activity{}
+		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	return res
 }
 
 type member struct {
-	Id       Id          `json:"id"`
-	Role     AccountRole `json:"role"`
-	IsActive bool        `json:"isActive"`
+	Id       id.Id            `json:"id"`
+	Role     cnst.AccountRole `json:"role"`
+	IsActive bool             `json:"isActive"`
 }

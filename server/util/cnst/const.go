@@ -1,6 +1,7 @@
-package util
+package cnst
 
 import (
+	"bitbucket.org/0xor1/task/server/util/err"
 	"strconv"
 	"strings"
 )
@@ -33,14 +34,14 @@ const (
 )
 
 var (
-	invalidConstantValueErr = &AppError{Code: "g_icv", Message: "invalid constant value", Public: true}
+	invalidConstantValueErr = &err.Err{Code: "u_c_icv", Message: "invalid constant value"}
 )
 
 type Theme uint8
 
 func (t *Theme) Validate() {
 	if t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme) {
-		invalidConstantValueErr.Panic()
+		panic(invalidConstantValueErr)
 	}
 }
 
@@ -65,7 +66,7 @@ type AccountRole uint8
 
 func (r *AccountRole) Validate() {
 	if r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects) {
-		invalidConstantValueErr.Panic()
+		panic(invalidConstantValueErr)
 	}
 }
 
@@ -90,7 +91,7 @@ type ProjectRole uint8
 
 func (r *ProjectRole) Validate() {
 	if r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader) {
-		invalidConstantValueErr.Panic()
+		panic(invalidConstantValueErr)
 	}
 }
 
@@ -115,7 +116,7 @@ type SortDir string
 
 func (sd *SortDir) Validate() {
 	if sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc) {
-		invalidConstantValueErr.Panic()
+		panic(invalidConstantValueErr)
 	}
 }
 
@@ -142,7 +143,7 @@ type SortBy string
 
 func (sb *SortBy) Validate() {
 	if sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn) {
-		invalidConstantValueErr.Panic()
+		panic(invalidConstantValueErr)
 	}
 }
 
