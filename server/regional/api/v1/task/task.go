@@ -2,23 +2,22 @@ package task
 
 import (
 	. "bitbucket.org/0xor1/task/server/util"
-	"time"
 	"bytes"
 	"encoding/hex"
+	"time"
 )
 
-
 type createTaskArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	ParentId Id `json:"parentId"`
-	PreviousSibling *Id `json:"previousSibling,omitempty"`
-	Name string `json:"name"`
-	Description *string `json:"description,omitempty"`
-	IsAbstract bool `json:"isAbstract"`
-	IsParallel *bool `json:"isParallel,omitempty"`
-	MemberId *Id `json:"memberId,omitempty"`
+	Shard              int     `json:"shard"`
+	AccountId          Id      `json:"accountId"`
+	ProjectId          Id      `json:"projectId"`
+	ParentId           Id      `json:"parentId"`
+	PreviousSibling    *Id     `json:"previousSibling,omitempty"`
+	Name               string  `json:"name"`
+	Description        *string `json:"description,omitempty"`
+	IsAbstract         bool    `json:"isAbstract"`
+	IsParallel         *bool   `json:"isParallel,omitempty"`
+	MemberId           *Id     `json:"memberId,omitempty"`
 	TotalRemainingTime *uint64 `json:"totalRemainingTime,omitempty"`
 }
 
@@ -63,11 +62,11 @@ var createTask = &Endpoint{
 }
 
 type setNameArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	TaskId Id `json:"taskId"`
-	Name string `json:"name"`
+	Shard     int    `json:"shard"`
+	AccountId Id     `json:"accountId"`
+	ProjectId Id     `json:"projectId"`
+	TaskId    Id     `json:"taskId"`
+	Name      string `json:"name"`
 }
 
 var setName = &Endpoint{
@@ -90,10 +89,10 @@ var setName = &Endpoint{
 }
 
 type setDescriptionArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	TaskId Id `json:"taskId"`
+	Shard       int     `json:"shard"`
+	AccountId   Id      `json:"accountId"`
+	ProjectId   Id      `json:"projectId"`
+	TaskId      Id      `json:"taskId"`
 	Description *string `json:"description,omitempty"`
 }
 
@@ -113,10 +112,10 @@ var setDescription = &Endpoint{
 }
 
 type setIsParallelArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	TaskId Id `json:"taskId"`
+	Shard      int  `json:"shard"`
+	AccountId  Id   `json:"accountId"`
+	ProjectId  Id   `json:"projectId"`
+	TaskId     Id   `json:"taskId"`
 	IsParallel bool `json:"isParallel"`
 }
 
@@ -136,11 +135,11 @@ var setIsParallel = &Endpoint{
 }
 
 type setMemberArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	TaskId Id `json:"taskId"`
-	MemberId *Id `json:"memberId,omitempty"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	ProjectId Id  `json:"projectId"`
+	TaskId    Id  `json:"taskId"`
+	MemberId  *Id `json:"memberId,omitempty"`
 }
 
 var setMember = &Endpoint{
@@ -181,12 +180,12 @@ var setRemainingTime = &Endpoint{
 }
 
 type logTimeArgs struct {
-	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	TaskId        Id     `json:"taskId"`
-	Duration uint64 `json:"duration"`
-	Note *string `json:"note,omitempty"`
+	Shard     int     `json:"shard"`
+	AccountId Id      `json:"accountId"`
+	ProjectId Id      `json:"projectId"`
+	TaskId    Id      `json:"taskId"`
+	Duration  uint64  `json:"duration"`
+	Note      *string `json:"note,omitempty"`
 }
 
 var logTime = &Endpoint{
@@ -202,13 +201,13 @@ var logTime = &Endpoint{
 }
 
 type setRemainingTimeAndLogTimeArgs struct {
-	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	TaskId        Id     `json:"taskId"`
-	RemainingTime uint64 `json:"remainingTime"`
-	Duration uint64 `json:"duration"`
-	Note *string `json:"note,omitempty"`
+	Shard         int     `json:"shard"`
+	AccountId     Id      `json:"accountId"`
+	ProjectId     Id      `json:"projectId"`
+	TaskId        Id      `json:"taskId"`
+	RemainingTime uint64  `json:"remainingTime"`
+	Duration      uint64  `json:"duration"`
+	Note          *string `json:"note,omitempty"`
 }
 
 var setRemainingTimeAndLogTime = &Endpoint{
@@ -248,12 +247,12 @@ func setRemainingTimeAndOrLogTime(ctx *Ctx, shard int, accountId, projectId, tas
 }
 
 type moveTaskArgs struct {
-	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	TaskId        Id     `json:"taskId"`
-	NewParentId     Id     `json:"newParentId"`
-	NewPreviousSibling *Id     `json:"newPreviousSibling"`
+	Shard              int `json:"shard"`
+	AccountId          Id  `json:"accountId"`
+	ProjectId          Id  `json:"projectId"`
+	TaskId             Id  `json:"taskId"`
+	NewParentId        Id  `json:"newParentId"`
+	NewPreviousSibling *Id `json:"newPreviousSibling"`
 }
 
 var moveTask = &Endpoint{
@@ -272,10 +271,10 @@ var moveTask = &Endpoint{
 }
 
 type deleteTaskArgs struct {
-	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	TaskId        Id     `json:"taskId"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	ProjectId Id  `json:"projectId"`
+	TaskId    Id  `json:"taskId"`
 }
 
 var deleteTask = &Endpoint{
@@ -294,10 +293,10 @@ var deleteTask = &Endpoint{
 }
 
 type getTasksArgs struct {
-	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	TaskIds        []Id     `json:"taskId"`
+	Shard     int  `json:"shard"`
+	AccountId Id   `json:"accountId"`
+	ProjectId Id   `json:"projectId"`
+	TaskIds   []Id `json:"taskId"`
 }
 
 var getTasks = &Endpoint{
@@ -315,12 +314,12 @@ var getTasks = &Endpoint{
 }
 
 type getChildTasksArgs struct {
-	Shard         int    `json:"shard"`
-	AccountId     Id     `json:"accountId"`
-	ProjectId     Id     `json:"projectId"`
-	ParentId      Id     `json:"parentId"`
+	Shard       int `json:"shard"`
+	AccountId   Id  `json:"accountId"`
+	ProjectId   Id  `json:"projectId"`
+	ParentId    Id  `json:"parentId"`
 	FromSibling *Id `json:"fromSibling,omitempty"`
-	Limit int `json:"limit"`
+	Limit       int `json:"limit"`
 }
 
 var getChildTasks = &Endpoint{
@@ -379,16 +378,16 @@ type client struct {
 
 func (c *client) CreateTask(css *ClientSessionStore, shard int, accountId, projectId, parentId Id, previousSibling *Id, name string, description *string, isAbstract bool, isParallel *bool, memberId *Id, totalRemainingTime *uint64) (*task, error) {
 	val, err := createTask.DoRequest(css, c.host, &createTaskArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		ParentId: parentId,
-		PreviousSibling: previousSibling,
-		Name: name,
-		Description: description,
-		IsAbstract: isAbstract,
-		IsParallel: isParallel,
-		MemberId: memberId,
+		Shard:              shard,
+		AccountId:          accountId,
+		ProjectId:          projectId,
+		ParentId:           parentId,
+		PreviousSibling:    previousSibling,
+		Name:               name,
+		Description:        description,
+		IsAbstract:         isAbstract,
+		IsParallel:         isParallel,
+		MemberId:           memberId,
 		TotalRemainingTime: totalRemainingTime,
 	}, nil, &task{})
 	if val != nil {
@@ -399,21 +398,21 @@ func (c *client) CreateTask(css *ClientSessionStore, shard int, accountId, proje
 
 func (c *client) SetName(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, name string) error {
 	_, err := setName.DoRequest(css, c.host, &setNameArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		TaskId: taskId,
-		Name: name,
+		TaskId:    taskId,
+		Name:      name,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) SetDescription(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, description *string) error {
 	_, err := setDescription.DoRequest(css, c.host, &setDescriptionArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		TaskId: taskId,
+		Shard:       shard,
+		AccountId:   accountId,
+		ProjectId:   projectId,
+		TaskId:      taskId,
 		Description: description,
 	}, nil, nil)
 	return err
@@ -421,10 +420,10 @@ func (c *client) SetDescription(css *ClientSessionStore, shard int, accountId, p
 
 func (c *client) SetIsParallel(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, isParallel bool) error {
 	_, err := setIsParallel.DoRequest(css, c.host, &setIsParallelArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		TaskId: taskId,
+		Shard:      shard,
+		AccountId:  accountId,
+		ProjectId:  projectId,
+		TaskId:     taskId,
 		IsParallel: isParallel,
 	}, nil, nil)
 	return err
@@ -432,21 +431,21 @@ func (c *client) SetIsParallel(css *ClientSessionStore, shard int, accountId, pr
 
 func (c *client) SetMember(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, memberId *Id) error {
 	_, err := setMember.DoRequest(css, c.host, &setMemberArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		TaskId: taskId,
-		MemberId: memberId,
+		TaskId:    taskId,
+		MemberId:  memberId,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) SetRemainingTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, remainingTime uint64) error {
 	_, err := setRemainingTime.DoRequest(css, c.host, &setRemainingTimeArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		TaskId: taskId,
+		Shard:         shard,
+		AccountId:     accountId,
+		ProjectId:     projectId,
+		TaskId:        taskId,
 		RemainingTime: remainingTime,
 	}, nil, nil)
 	return err
@@ -454,12 +453,12 @@ func (c *client) SetRemainingTime(css *ClientSessionStore, shard int, accountId,
 
 func (c *client) LogTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, duration uint64, note *string) (*timeLog, error) {
 	val, err := logTime.DoRequest(css, c.host, &logTimeArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		TaskId: taskId,
-		Duration: duration,
-		Note: note,
+		TaskId:    taskId,
+		Duration:  duration,
+		Note:      note,
 	}, nil, &timeLog{})
 	if val != nil {
 		return val.(*timeLog), err
@@ -469,13 +468,13 @@ func (c *client) LogTime(css *ClientSessionStore, shard int, accountId, projectI
 
 func (c *client) SetRemainingTimeAndLogTime(css *ClientSessionStore, shard int, accountId, projectId, taskId Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) {
 	val, err := setRemainingTimeAndLogTime.DoRequest(css, c.host, &setRemainingTimeAndLogTimeArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		TaskId: taskId,
+		Shard:         shard,
+		AccountId:     accountId,
+		ProjectId:     projectId,
+		TaskId:        taskId,
 		RemainingTime: remainingTime,
-		Duration: duration,
-		Note: note,
+		Duration:      duration,
+		Note:          note,
 	}, nil, &timeLog{})
 	if val != nil {
 		return val.(*timeLog), err
@@ -497,20 +496,20 @@ func (c *client) MoveTask(css *ClientSessionStore, shard int, accountId, project
 
 func (c *client) DeleteTask(css *ClientSessionStore, shard int, accountId, projectId, taskId Id) error {
 	_, err := deleteTask.DoRequest(css, c.host, &deleteTaskArgs{
-		Shard:              shard,
-		AccountId:          accountId,
-		ProjectId:          projectId,
-		TaskId:             taskId,
+		Shard:     shard,
+		AccountId: accountId,
+		ProjectId: projectId,
+		TaskId:    taskId,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) GetTasks(css *ClientSessionStore, shard int, accountId, projectId Id, taskIds []Id) ([]*task, error) {
 	val, err := getTasks.DoRequest(css, c.host, &getTasksArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		TaskIds: taskIds,
+		TaskIds:   taskIds,
 	}, nil, &[]*task{})
 	if val != nil {
 		return *val.(*[]*task), err
@@ -520,12 +519,12 @@ func (c *client) GetTasks(css *ClientSessionStore, shard int, accountId, project
 
 func (c *client) GetChildTasks(css *ClientSessionStore, shard int, accountId, projectId, parentId Id, fromSibling *Id, limit int) ([]*task, error) {
 	val, err := getChildTasks.DoRequest(css, c.host, &getChildTasksArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		ParentId: parentId,
+		Shard:       shard,
+		AccountId:   accountId,
+		ProjectId:   projectId,
+		ParentId:    parentId,
 		FromSibling: fromSibling,
-		Limit: limit,
+		Limit:       limit,
 	}, nil, &[]*task{})
 	if val != nil {
 		return *val.(*[]*task), err

@@ -1,12 +1,15 @@
 package util
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/0xor1/iredis"
 	"github.com/0xor1/isql"
 	"github.com/garyburd/redigo/redis"
+	"github.com/gorilla/context"
 	"github.com/gorilla/sessions"
 	"io"
 	"io/ioutil"
@@ -14,12 +17,9 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
-	"encoding/base64"
-	"strconv"
-	"bytes"
-	"github.com/gorilla/context"
 )
 
 // per request info fields
@@ -407,9 +407,9 @@ type valueCacheKey struct {
 }
 
 type QueryInfo struct {
-	Query    string        `json:"query"`
-	Args     interface{}   `json:"args"`
-	Duration int64		   `json:"duration"`
+	Query    string      `json:"query"`
+	Args     interface{} `json:"args"`
+	Duration int64       `json:"duration"`
 }
 
 type MailClient interface {
@@ -512,18 +512,18 @@ type StaticResources struct {
 }
 
 func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	resp := &responseWrapper{code: 0,w: w}
+	resp := &responseWrapper{code: 0, w: w}
 	ctx := &Ctx{
 		requestStartUnixMillis: NowUnixMillis(),
-		resp:                   resp,
-		req:                    req,
-		retrievedDlms:          map[string]int64{},
-		dlmsToUpdate:           map[string]interface{}{},
-		cacheItemsToUpdate:     map[string]interface{}{},
-		cacheKeysToDelete:      map[string]interface{}{},
-		queryInfosMtx:          &sync.RWMutex{},
-		queryInfos:             make([]*QueryInfo, 0, 10),
-		staticResources:        sr,
+		resp:               resp,
+		req:                req,
+		retrievedDlms:      map[string]int64{},
+		dlmsToUpdate:       map[string]interface{}{},
+		cacheItemsToUpdate: map[string]interface{}{},
+		cacheKeysToDelete:  map[string]interface{}{},
+		queryInfosMtx:      &sync.RWMutex{},
+		queryInfos:         make([]*QueryInfo, 0, 10),
+		staticResources:    sr,
 	}
 	//always do case insensitive path routing
 	lowerPath := strings.ToLower(req.URL.Path)
@@ -601,7 +601,7 @@ func (sr *StaticResources) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		ts, err := strconv.ParseInt(reqQueryValues.Get("ts"), 10, 64)
 		PanicIf(err)
 		//if the timestamp the req was sent is over a minute ago, reject the request
-		if NowUnixMillis() - ts > 60000 {
+		if NowUnixMillis()-ts > 60000 {
 			FmtPanic("suspicious private request sent over a minute ago")
 		}
 		key, err := base64.RawURLEncoding.DecodeString(reqQueryValues.Get("_"))
@@ -722,9 +722,9 @@ func (s *localMailClient) Send(sendTo []string, content string) {
 	fmt.Println(sendTo, content)
 }
 
-type responseWrapper struct{
+type responseWrapper struct {
 	code int
-	w http.ResponseWriter
+	w    http.ResponseWriter
 }
 
 func (r *responseWrapper) Header() http.Header {

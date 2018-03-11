@@ -146,7 +146,7 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 			fmt.Println(string(debug.Stack()))
 		}
 		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*QueryInfo) {
-			fmt.Println(status, fmt.Sprintf("%dms", NowUnixMillis() - reqStartUnixMillis), method, path)
+			fmt.Println(status, fmt.Sprintf("%dms", NowUnixMillis()-reqStartUnixMillis), method, path)
 			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
 			//queryInfosBytes, _ := json.Marshal(queryInfos)
 			//fmt.Println(string(queryInfosBytes))

@@ -10,12 +10,12 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
+	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"mime/multipart"
-	"io/ioutil"
 )
 
 var (
@@ -39,7 +39,7 @@ var (
 
 var getRegions = &Endpoint{
 	Method: GET,
-	Path: "/api/v1/centralAccount/getRegions",
+	Path:   "/api/v1/centralAccount/getRegions",
 	ValueDlmKeys: func(ctx *Ctx, _ interface{}) []string {
 		return []string{ctx.DlmKeyForSystem()}
 	},
@@ -335,8 +335,8 @@ type getAccountArgs struct {
 }
 
 var getAccount = &Endpoint{
-	Method:                   GET,
-	Path:                     "/api/v1/centralAccount/getAccount",
+	Method: GET,
+	Path:   "/api/v1/centralAccount/getAccount",
 	ExampleResponseStructure: &account{},
 	GetArgsStruct: func() interface{} {
 		return &getAccountArgs{}
@@ -352,8 +352,8 @@ type getAccountsArgs struct {
 }
 
 var getAccounts = &Endpoint{
-	Method:                   GET,
-	Path:                     "/api/v1/centralAccount/getAccounts",
+	Method: GET,
+	Path:   "/api/v1/centralAccount/getAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &getAccountsArgs{}
@@ -371,8 +371,8 @@ type searchAccountsArgs struct {
 }
 
 var searchAccounts = &Endpoint{
-	Method:                   GET,
-	Path:                     "/api/v1/centralAccount/searchAccounts",
+	Method: GET,
+	Path:   "/api/v1/centralAccount/searchAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchAccountsArgs{}
@@ -392,8 +392,8 @@ type searchPersonalAccountsArgs struct {
 }
 
 var searchPersonalAccounts = &Endpoint{
-	Method:                   GET,
-	Path:                     "/api/v1/centralAccount/searchPersonalAccounts",
+	Method: GET,
+	Path:   "/api/v1/centralAccount/searchPersonalAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchPersonalAccountsArgs{}
@@ -409,8 +409,8 @@ var searchPersonalAccounts = &Endpoint{
 }
 
 var getMe = &Endpoint{
-	Method:                   GET,
-	Path:                     "/api/v1/centralAccount/getMe",
+	Method: GET,
+	Path:   "/api/v1/centralAccount/getMe",
 	ExampleResponseStructure: &me{},
 	RequiresSession:          true,
 	CtxHandler: func(ctx *Ctx, _ interface{}) interface{} {
@@ -809,8 +809,8 @@ type getMyAccountsResp struct {
 }
 
 var getMyAccounts = &Endpoint{
-	Method:                   GET,
-	Path:                     "/api/v1/centralAccount/getMyAccounts",
+	Method: GET,
+	Path:   "/api/v1/centralAccount/getMyAccounts",
 	ExampleResponseStructure: &getMyAccountsResp{},
 	RequiresSession:          true,
 	GetArgsStruct: func() interface{} {
@@ -1025,12 +1025,12 @@ type Client interface {
 
 func NewClient(host string) Client {
 	return &client{
-		host:   host,
+		host: host,
 	}
 }
 
 type client struct {
-	host   string
+	host string
 }
 
 func (c *client) GetRegions() ([]string, error) {

@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	NoSuchRegionErr   = &AppError{Code: "g_nsr", Message: "no such region", Public: true}
+	NoSuchRegionErr           = &AppError{Code: "g_nsr", Message: "no such region", Public: true}
 	NotImplementedErr         = &AppError{Code: "g_ni", Message: "not implemented", Public: true}
 	InvalidArgumentsErr       = &AppError{Code: "g_ia", Message: "invalid arguments", Public: true}
 	InsufficientPermissionErr = &AppError{Code: "g_ip", Message: "insufficient permissions", Public: true}

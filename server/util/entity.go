@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"github.com/oklog/ulid"
-	"time"
-	"sync"
 	"math/rand"
+	"sync"
+	"time"
 )
 
 func Now() time.Time {
@@ -17,9 +17,9 @@ func NowUnixMillis() int64 {
 	return Now().UnixNano() / 1000000
 }
 
-var(
+var (
 	entropyMtx = &sync.Mutex{}
-	entropy = rand.New(rand.NewSource(NowUnixMillis()))
+	entropy    = rand.New(rand.NewSource(NowUnixMillis()))
 )
 
 //returns ulid as a byte slice
@@ -41,7 +41,7 @@ func ParseId(id string) Id {
 type Id []byte
 
 func (id Id) MarshalJSON() ([]byte, error) {
-	return []byte(`"`+id.String()+`"`), nil
+	return []byte(`"` + id.String() + `"`), nil
 }
 
 func (id *Id) UnmarshalJSON(data []byte) error {
@@ -55,10 +55,6 @@ func (id Id) String() string {
 
 func (id Id) Equal(other Id) bool {
 	return bytes.Equal(id, other)
-}
-
-func (id Id) GreaterThanOrEqualTo(other Id) bool {
-	return bytes.Compare(id, other) > -1
 }
 
 func (id Id) Copy() Id {

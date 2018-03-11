@@ -1,11 +1,11 @@
 package private
 
 import (
+	"bitbucket.org/0xor1/task/server/config"
 	. "bitbucket.org/0xor1/task/server/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
-	"bitbucket.org/0xor1/task/server/config"
 	"net/http/httptest"
+	"testing"
 )
 
 func Test_system(t *testing.T) {

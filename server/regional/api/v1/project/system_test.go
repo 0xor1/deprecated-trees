@@ -1,14 +1,14 @@
 package project
 
 import (
+	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
+	"bitbucket.org/0xor1/task/server/config"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	. "bitbucket.org/0xor1/task/server/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"net/http/httptest"
-	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
-	"bitbucket.org/0xor1/task/server/config"
+	"testing"
 )
 
 func Test_system(t *testing.T) {
@@ -45,7 +45,7 @@ func Test_system(t *testing.T) {
 	catCss := NewClientSessionStore()
 	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 
-	org, err := centralClient.CreateAccount(aliCss, "org", region , nil)
+	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
 	bob := AddMemberPublic{}
 	bob.Id = bobId
 	bob.Role = AccountAdmin

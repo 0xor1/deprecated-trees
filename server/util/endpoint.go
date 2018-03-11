@@ -5,10 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"io"
 )
 
 type Endpoint struct {
@@ -30,7 +30,7 @@ type Endpoint struct {
 }
 
 func (e *Endpoint) ValidateEndpoint() {
-	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || (e.ProcessForm != nil && len(e.FormStruct) == 0) || e.CtxHandler == nil  {
+	if (e.Method != GET && e.Method != POST) || (e.ProcessForm != nil && e.Method != POST) || (e.ProcessForm != nil && len(e.FormStruct) == 0) || e.CtxHandler == nil {
 		invalidEndpointErr.Panic()
 	}
 }
@@ -80,7 +80,7 @@ func (e *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 }
 
 func (e *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
-	reqUrl, err := url.Parse(host+e.Path)
+	reqUrl, err := url.Parse(host + e.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (e *Endpoint) DoRequest(css *ClientSessionStore, host string, args interfac
 	if css != nil {
 		for name, value := range css.Cookies {
 			req.AddCookie(&http.Cookie{
-				Name: name,
+				Name:  name,
 				Value: value,
 			})
 		}
@@ -178,6 +178,6 @@ func NewClientSessionStore() *ClientSessionStore {
 	}
 }
 
-type ClientSessionStore struct{
+type ClientSessionStore struct {
 	Cookies map[string]string
 }

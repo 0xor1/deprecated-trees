@@ -1,16 +1,16 @@
 package task
 
 import (
+	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
+	"bitbucket.org/0xor1/task/server/config"
+	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
 	. "bitbucket.org/0xor1/task/server/util"
 	"github.com/stretchr/testify/assert"
+	"net/http/httptest"
 	"testing"
 	"time"
-	"net/http/httptest"
-	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
-	"bitbucket.org/0xor1/task/server/config"
 )
 
 func Test_system(t *testing.T) {
@@ -54,7 +54,7 @@ func Test_system(t *testing.T) {
 	danCss := NewClientSessionStore()
 	danId, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
 
-	org, err := centralClient.CreateAccount(aliCss, "org", region , nil)
+	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
 	bob := AddMemberPublic{}
 	bob.Id = bobId
 	bob.Role = AccountAdmin
@@ -65,7 +65,6 @@ func Test_system(t *testing.T) {
 	dan.Id = danId
 	dan.Role = AccountMemberOfOnlySpecificProjects
 	centralClient.AddMembers(aliCss, org.Id, []*AddMemberPublic{&bob, &cat, &dan})
-
 
 	start := Now()
 	end := start.Add(5 * 24 * time.Hour)

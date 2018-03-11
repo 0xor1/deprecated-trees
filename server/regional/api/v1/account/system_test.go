@@ -1,13 +1,13 @@
 package account
 
 import (
+	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
+	"bitbucket.org/0xor1/task/server/config"
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	. "bitbucket.org/0xor1/task/server/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 	"net/http/httptest"
-	"bitbucket.org/0xor1/task/server/config"
-	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
+	"testing"
 )
 
 func Test_System(t *testing.T) {
@@ -42,7 +42,7 @@ func Test_System(t *testing.T) {
 	catCss := NewClientSessionStore()
 	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 
-	org, err := centralClient.CreateAccount(aliCss, "org", region , nil)
+	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
 	bob := AddMemberPublic{}
 	bob.Id = bobId
 	bob.Role = AccountAdmin
@@ -51,11 +51,11 @@ func Test_System(t *testing.T) {
 	cat.Role = AccountMemberOfOnlySpecificProjects
 	centralClient.AddMembers(aliCss, org.Id, []*AddMemberPublic{&bob, &cat})
 
-	publicProjectsEnabled, err := client.GetPublicProjectsEnabled(aliCss,0, org.Id)
+	publicProjectsEnabled, err := client.GetPublicProjectsEnabled(aliCss, 0, org.Id)
 	assert.Nil(t, err)
 	assert.False(t, publicProjectsEnabled)
 	client.SetPublicProjectsEnabled(aliCss, 0, org.Id, true)
-	publicProjectsEnabled, err = client.GetPublicProjectsEnabled(aliCss,0, org.Id)
+	publicProjectsEnabled, err = client.GetPublicProjectsEnabled(aliCss, 0, org.Id)
 	assert.Nil(t, err)
 	assert.True(t, publicProjectsEnabled)
 	client.SetMemberRole(aliCss, 0, org.Id, bob.Id, AccountMemberOfAllProjects)

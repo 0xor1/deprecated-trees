@@ -455,7 +455,7 @@ func (c *client) RemoveMembers(region string, shard int, account, myId Id, membe
 		Shard:     shard,
 		AccountId: account,
 		MyId:      myId,
-		Members: members,
+		Members:   members,
 	}, nil, nil)
 	return err
 }

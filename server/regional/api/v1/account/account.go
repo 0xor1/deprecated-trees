@@ -9,14 +9,14 @@ import (
 )
 
 type setPublicProjectsEnabledArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
+	Shard                 int  `json:"shard"`
+	AccountId             Id   `json:"accountId"`
 	PublicProjectsEnabled bool `json:"publicProjectsEnabled"`
 }
 
 var setPublicProjectsEnabled = &Endpoint{
-	Method: POST,
-	Path: "/api/v1/account/setPublicProjectsEnabled",
+	Method:          POST,
+	Path:            "/api/v1/account/setPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setPublicProjectsEnabledArgs{}
@@ -30,13 +30,13 @@ var setPublicProjectsEnabled = &Endpoint{
 }
 
 type getPublicProjectsEnabledArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
 }
 
 var getPublicProjectsEnabled = &Endpoint{
-	Method: GET,
-	Path: "/api/v1/account/getPublicProjectsEnabled",
+	Method:          GET,
+	Path:            "/api/v1/account/getPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getPublicProjectsEnabledArgs{}
@@ -49,15 +49,15 @@ var getPublicProjectsEnabled = &Endpoint{
 }
 
 type setMemberRoleArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	MemberId Id `json:"memberId"`
-	Role AccountRole `json:"role"`
+	Shard     int         `json:"shard"`
+	AccountId Id          `json:"accountId"`
+	MemberId  Id          `json:"memberId"`
+	Role      AccountRole `json:"role"`
 }
 
 var setMemberRole = &Endpoint{
-	Method: POST,
-	Path: "/api/v1/account/setMemberRole",
+	Method:          POST,
+	Path:            "/api/v1/account/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
@@ -76,22 +76,22 @@ var setMemberRole = &Endpoint{
 }
 
 type getMembersArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	Role *AccountRole `json:"role,omitempty"`
-	NameContains *string `json:"nameContains,omitempty"`
-	After *Id `json:"after,omitempty"`
-	Limit int `json:"limit"`
+	Shard        int          `json:"shard"`
+	AccountId    Id           `json:"accountId"`
+	Role         *AccountRole `json:"role,omitempty"`
+	NameContains *string      `json:"nameContains,omitempty"`
+	After        *Id          `json:"after,omitempty"`
+	Limit        int          `json:"limit"`
 }
 
 type getMembersResp struct {
 	Members []*member `json:"members"`
-	More     bool       `json:"more"`
+	More    bool      `json:"more"`
 }
 
 var getMembers = &Endpoint{
-	Method: GET,
-	Path: "/api/v1/account/getMembers",
+	Method:          GET,
+	Path:            "/api/v1/account/getMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
@@ -104,18 +104,18 @@ var getMembers = &Endpoint{
 }
 
 type getActivitiesArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	Item *Id `json:"item,omitempty"`
-	Member *Id `json:"member,omitempty"`
-	OccurredAfter *time.Time `json:"occurredAfter,omitempty"`
+	Shard          int        `json:"shard"`
+	AccountId      Id         `json:"accountId"`
+	Item           *Id        `json:"item,omitempty"`
+	Member         *Id        `json:"member,omitempty"`
+	OccurredAfter  *time.Time `json:"occurredAfter,omitempty"`
 	OccurredBefore *time.Time `json:"occurredBefore,omitempty"`
-	Limit int `json:"limit"`
+	Limit          int        `json:"limit"`
 }
 
 var getActivities = &Endpoint{
-	Method: GET,
-	Path: "/api/v1/account/getActivities",
+	Method:          GET,
+	Path:            "/api/v1/account/getActivities",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
@@ -131,13 +131,13 @@ var getActivities = &Endpoint{
 }
 
 type getMeArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
 }
 
 var getMe = &Endpoint{
-	Method: GET,
-	Path: "/api/v1/account/getMe",
+	Method:          GET,
+	Path:            "/api/v1/account/getMe",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
@@ -178,14 +178,14 @@ func NewClient(host string) Client {
 	}
 }
 
-type client struct{
+type client struct {
 	host string
 }
 
 func (c *client) SetPublicProjectsEnabled(css *ClientSessionStore, shard int, accountId Id, publicProjectsEnabled bool) error {
 	_, err := setPublicProjectsEnabled.DoRequest(css, c.host, &setPublicProjectsEnabledArgs{
-		Shard: shard,
-		AccountId: accountId,
+		Shard:                 shard,
+		AccountId:             accountId,
 		PublicProjectsEnabled: publicProjectsEnabled,
 	}, nil, nil)
 	return err
@@ -194,7 +194,7 @@ func (c *client) SetPublicProjectsEnabled(css *ClientSessionStore, shard int, ac
 func (c *client) GetPublicProjectsEnabled(css *ClientSessionStore, shard int, accountId Id) (bool, error) {
 	respVal := true
 	val, err := getPublicProjectsEnabled.DoRequest(css, c.host, &getPublicProjectsEnabledArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 	}, nil, &respVal)
 	return *val.(*bool), err
@@ -202,42 +202,42 @@ func (c *client) GetPublicProjectsEnabled(css *ClientSessionStore, shard int, ac
 
 func (c *client) SetMemberRole(css *ClientSessionStore, shard int, accountId, memberId Id, role AccountRole) error {
 	_, err := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
-		MemberId: memberId,
-		Role: role,
+		MemberId:  memberId,
+		Role:      role,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId Id, role *AccountRole, nameContains *string, after *Id, limit int) (*getMembersResp, error) {
 	val, err := getMembers.DoRequest(css, c.host, &getMembersArgs{
-		Shard: shard,
-		AccountId: accountId,
-		Role: role,
+		Shard:        shard,
+		AccountId:    accountId,
+		Role:         role,
 		NameContains: nameContains,
-		After: after,
-		Limit: limit,
+		After:        after,
+		Limit:        limit,
 	}, nil, &getMembersResp{})
 	return val.(*getMembersResp), err
 }
 
 func (c *client) GetActivities(css *ClientSessionStore, shard int, accountId Id, itemId *Id, memberId *Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*Activity, error) {
 	val, err := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
-		Shard: shard,
-		AccountId: accountId,
-		Item: itemId,
-		Member: memberId,
-		OccurredAfter: occurredAfter,
+		Shard:          shard,
+		AccountId:      accountId,
+		Item:           itemId,
+		Member:         memberId,
+		OccurredAfter:  occurredAfter,
 		OccurredBefore: occurredBefore,
-		Limit: limit,
+		Limit:          limit,
 	}, nil, &[]*Activity{})
 	return *val.(*[]*Activity), err
 }
 
 func (c *client) GetMe(css *ClientSessionStore, shard int, accountId Id) (*member, error) {
 	val, err := getMe.DoRequest(css, c.host, &getMeArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 	}, nil, &member{})
 	return val.(*member), err

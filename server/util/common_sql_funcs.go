@@ -14,7 +14,7 @@ func GetProjectExists(ctx *Ctx, shard int, accountId, projectId Id) bool {
 }
 
 func GetAccountRole(ctx *Ctx, shard int, accountId, memberId Id) *AccountRole {
-	row := ctx.TreeQueryRow(shard ,`SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountId, memberId)
+	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, accountId, memberId)
 	res := AccountRole(3)
 	if IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
 		return nil

@@ -2,10 +2,10 @@ package project
 
 import (
 	. "bitbucket.org/0xor1/task/server/util"
-	"time"
-	"fmt"
 	"bytes"
+	"fmt"
 	"strings"
+	"time"
 )
 
 var (
@@ -13,15 +13,15 @@ var (
 )
 
 type createProjectArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	Name string `json:"name"`
-	Description *string `json:"description"`
-	StartOn *time.Time `json:"startOn"`
-	DueOn *time.Time `json:"dueOn"`
-	IsParallel bool `json:"isParallel"`
-	IsPublic bool `json:"isPublic"`
-	Members []*AddProjectMember `json:"members"`
+	Shard       int                 `json:"shard"`
+	AccountId   Id                  `json:"accountId"`
+	Name        string              `json:"name"`
+	Description *string             `json:"description"`
+	StartOn     *time.Time          `json:"startOn"`
+	DueOn       *time.Time          `json:"dueOn"`
+	IsParallel  bool                `json:"isParallel"`
+	IsPublic    bool                `json:"isPublic"`
+	Members     []*AddProjectMember `json:"members"`
 }
 
 var createProject = &Endpoint{
@@ -56,10 +56,10 @@ var createProject = &Endpoint{
 
 		if len(args.Members) > 0 {
 			addMembers.CtxHandler(ctx, &addMembersArgs{
-				Shard: args.Shard,
+				Shard:     args.Shard,
 				AccountId: args.AccountId,
 				ProjectId: project.Id,
-				Members: args.Members,
+				Members:   args.Members,
 			})
 		}
 
@@ -68,10 +68,10 @@ var createProject = &Endpoint{
 }
 
 type setIsPublicArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	IsPublic bool `json:"isPublic"`
+	Shard     int  `json:"shard"`
+	AccountId Id   `json:"accountId"`
+	ProjectId Id   `json:"projectId"`
+	IsPublic  bool `json:"isPublic"`
 }
 
 var setIsPublic = &Endpoint{
@@ -95,9 +95,9 @@ var setIsPublic = &Endpoint{
 }
 
 type setIsArchivedArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
+	Shard      int  `json:"shard"`
+	AccountId  Id   `json:"accountId"`
+	ProjectId  Id   `json:"projectId"`
 	IsArchived bool `json:"isArchived"`
 }
 
@@ -116,9 +116,9 @@ var setIsArchived = &Endpoint{
 }
 
 type getProjectArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	ProjectId Id  `json:"projectId"`
 }
 
 var getProject = &Endpoint{
@@ -136,25 +136,25 @@ var getProject = &Endpoint{
 }
 
 type getProjectsArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	NameContains *string `json:"nameContains"`
-	CreatedOnAfter *time.Time `json:"createdOnAfter"`
+	Shard           int        `json:"shard"`
+	AccountId       Id         `json:"accountId"`
+	NameContains    *string    `json:"nameContains"`
+	CreatedOnAfter  *time.Time `json:"createdOnAfter"`
 	CreatedOnBefore *time.Time `json:"createdOnBefore"`
-	StartOnAfter *time.Time `json:"startOnAfter"`
-	StartOnBefore *time.Time `json:"startOnBefore"`
-	DueOnAfter *time.Time `json:"dueOnAfter"`
-	DueOnBefore *time.Time `json:"dueOnBefore"`
-	IsArchived bool `json:"isArchived"`
-	SortBy SortBy `json:"sortBy"`
-	SortDir SortDir `json:"sortDir"`
-	After *Id `json:"after"`
-	Limit int `json:"limit"`
+	StartOnAfter    *time.Time `json:"startOnAfter"`
+	StartOnBefore   *time.Time `json:"startOnBefore"`
+	DueOnAfter      *time.Time `json:"dueOnAfter"`
+	DueOnBefore     *time.Time `json:"dueOnBefore"`
+	IsArchived      bool       `json:"isArchived"`
+	SortBy          SortBy     `json:"sortBy"`
+	SortDir         SortDir    `json:"sortDir"`
+	After           *Id        `json:"after"`
+	Limit           int        `json:"limit"`
 }
 
 type getProjectsResp struct {
 	Projects []*project `json:"projects"`
-	More bool `json:"more"`
+	More     bool       `json:"more"`
 }
 
 var getProjects = &Endpoint{
@@ -178,9 +178,9 @@ var getProjects = &Endpoint{
 }
 
 type deleteProjectArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	ProjectId Id  `json:"projectId"`
 }
 
 var deleteProject = &Endpoint{
@@ -199,10 +199,10 @@ var deleteProject = &Endpoint{
 }
 
 type addMembersArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	Members []*AddProjectMember `json:"members"`
+	Shard     int                 `json:"shard"`
+	AccountId Id                  `json:"accountId"`
+	ProjectId Id                  `json:"projectId"`
+	Members   []*AddProjectMember `json:"members"`
 }
 
 var addMembers = &Endpoint{
@@ -237,11 +237,11 @@ var addMembers = &Endpoint{
 }
 
 type setMemberRoleArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	Member Id `json:"member"`
-	Role ProjectRole `json:"role"`
+	Shard     int         `json:"shard"`
+	AccountId Id          `json:"accountId"`
+	ProjectId Id          `json:"projectId"`
+	Member    Id          `json:"member"`
+	Role      ProjectRole `json:"role"`
 }
 
 var setMemberRole = &Endpoint{
@@ -274,10 +274,10 @@ var setMemberRole = &Endpoint{
 }
 
 type removeMembersArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	Members []Id `json:"members"`
+	Shard     int  `json:"shard"`
+	AccountId Id   `json:"accountId"`
+	ProjectId Id   `json:"projectId"`
+	Members   []Id `json:"members"`
 }
 
 var removeMembers = &Endpoint{
@@ -302,18 +302,18 @@ var removeMembers = &Endpoint{
 }
 
 type getMembersArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	Role *ProjectRole `json:"role,omitempty"`
-	NameContains *string `json:"nameContains,omitempty"`
-	After *Id `json:"after,omitempty"`
-	Limit int `json:"limit"`
+	Shard        int          `json:"shard"`
+	AccountId    Id           `json:"accountId"`
+	ProjectId    Id           `json:"projectId"`
+	Role         *ProjectRole `json:"role,omitempty"`
+	NameContains *string      `json:"nameContains,omitempty"`
+	After        *Id          `json:"after,omitempty"`
+	Limit        int          `json:"limit"`
 }
 
 type getMembersResp struct {
 	Members []*member `json:"members"`
-	More bool `json:"more"`
+	More    bool      `json:"more"`
 }
 
 var getMembers = &Endpoint{
@@ -330,9 +330,9 @@ var getMembers = &Endpoint{
 }
 
 type getMeArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
+	Shard     int `json:"shard"`
+	AccountId Id  `json:"accountId"`
+	ProjectId Id  `json:"projectId"`
 }
 
 var getMe = &Endpoint{
@@ -348,14 +348,14 @@ var getMe = &Endpoint{
 }
 
 type getActivitiesArgs struct {
-	Shard int `json:"shard"`
-	AccountId Id `json:"accountId"`
-	ProjectId Id `json:"projectId"`
-	Item *Id `json:"item,omitempty"`
-	Member *Id `json:"member,omitempty"`
-	OccurredAfter *time.Time `json:"occurredAfter,omitempty"`
+	Shard          int        `json:"shard"`
+	AccountId      Id         `json:"accountId"`
+	ProjectId      Id         `json:"projectId"`
+	Item           *Id        `json:"item,omitempty"`
+	Member         *Id        `json:"member,omitempty"`
+	OccurredAfter  *time.Time `json:"occurredAfter,omitempty"`
 	OccurredBefore *time.Time `json:"occurredBefore,omitempty"`
-	Limit int `json:"limit"`
+	Limit          int        `json:"limit"`
 }
 
 var getActivities = &Endpoint{
@@ -428,15 +428,15 @@ type client struct {
 
 func (c *client) CreateProject(css *ClientSessionStore, shard int, accountId Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error) {
 	val, err := createProject.DoRequest(css, c.host, &createProjectArgs{
-		Shard: shard,
-		AccountId: accountId,
-		Name: name,
+		Shard:       shard,
+		AccountId:   accountId,
+		Name:        name,
 		Description: description,
-		StartOn: startOn,
-		DueOn: dueOn,
-		IsParallel: isParallel,
-		IsPublic: isPublic,
-		Members: members,
+		StartOn:     startOn,
+		DueOn:       dueOn,
+		IsParallel:  isParallel,
+		IsPublic:    isPublic,
+		Members:     members,
 	}, nil, &project{})
 	if val != nil {
 		return val.(*project), err
@@ -446,19 +446,19 @@ func (c *client) CreateProject(css *ClientSessionStore, shard int, accountId Id,
 
 func (c *client) SetIsPublic(css *ClientSessionStore, shard int, accountId, projectId Id, isPublic bool) error {
 	_, err := setIsPublic.DoRequest(css, c.host, &setIsPublicArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		IsPublic: isPublic,
+		IsPublic:  isPublic,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) SetIsArchived(css *ClientSessionStore, shard int, accountId, projectId Id, isArchived bool) error {
 	_, err := setIsArchived.DoRequest(css, c.host, &setIsArchivedArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
+		Shard:      shard,
+		AccountId:  accountId,
+		ProjectId:  projectId,
 		IsArchived: isArchived,
 	}, nil, nil)
 	return err
@@ -466,7 +466,7 @@ func (c *client) SetIsArchived(css *ClientSessionStore, shard int, accountId, pr
 
 func (c *client) GetProject(css *ClientSessionStore, shard int, accountId, projectId Id) (*project, error) {
 	val, err := getProject.DoRequest(css, c.host, &getProjectArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 	}, nil, &project{})
@@ -478,20 +478,20 @@ func (c *client) GetProject(css *ClientSessionStore, shard int, accountId, proje
 
 func (c *client) GetProjects(css *ClientSessionStore, shard int, accountId Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy SortBy, sortDir SortDir, after *Id, limit int) (*getProjectsResp, error) {
 	val, err := getProjects.DoRequest(css, c.host, &getProjectsArgs{
-		Shard: shard,
-		AccountId: accountId,
-		NameContains: nameContains,
-		CreatedOnAfter: createdOnAfter,
+		Shard:           shard,
+		AccountId:       accountId,
+		NameContains:    nameContains,
+		CreatedOnAfter:  createdOnAfter,
 		CreatedOnBefore: createdOnBefore,
-		StartOnAfter: startOnAfter,
-		StartOnBefore: startOnBefore,
-		DueOnAfter: dueOnAfter,
-		DueOnBefore: dueOnBefore,
-		IsArchived: isArchived,
-		SortBy: sortBy,
-		SortDir: sortDir,
-		After: after,
-		Limit: limit,
+		StartOnAfter:    startOnAfter,
+		StartOnBefore:   startOnBefore,
+		DueOnAfter:      dueOnAfter,
+		DueOnBefore:     dueOnBefore,
+		IsArchived:      isArchived,
+		SortBy:          sortBy,
+		SortDir:         sortDir,
+		After:           after,
+		Limit:           limit,
 	}, nil, &getProjectsResp{})
 	if val != nil {
 		return val.(*getProjectsResp), err
@@ -501,7 +501,7 @@ func (c *client) GetProjects(css *ClientSessionStore, shard int, accountId Id, n
 
 func (c *client) DeleteProject(css *ClientSessionStore, shard int, accountId, projectId Id) error {
 	_, err := deleteProject.DoRequest(css, c.host, &deleteProjectArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 	}, nil, nil)
@@ -510,44 +510,44 @@ func (c *client) DeleteProject(css *ClientSessionStore, shard int, accountId, pr
 
 func (c *client) AddMembers(css *ClientSessionStore, shard int, accountId, projectId Id, members []*AddProjectMember) error {
 	_, err := addMembers.DoRequest(css, c.host, &addMembersArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		Members: members,
+		Members:   members,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) SetMemberRole(css *ClientSessionStore, shard int, accountId, projectId, member Id, role ProjectRole) error {
 	_, err := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		Member: member,
-		Role: role,
+		Member:    member,
+		Role:      role,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) RemoveMembers(css *ClientSessionStore, shard int, accountId, projectId Id, members []Id) error {
 	_, err := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
-		Members: members,
+		Members:   members,
 	}, nil, nil)
 	return err
 }
 
 func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId, projectId Id, role *ProjectRole, nameContains *string, after *Id, limit int) (*getMembersResp, error) {
 	val, err := getMembers.DoRequest(css, c.host, &getMembersArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		Role: role,
+		Shard:        shard,
+		AccountId:    accountId,
+		ProjectId:    projectId,
+		Role:         role,
 		NameContains: nameContains,
-		After: after,
-		Limit: limit,
+		After:        after,
+		Limit:        limit,
 	}, nil, &getMembersResp{})
 	if val != nil {
 		return val.(*getMembersResp), err
@@ -557,7 +557,7 @@ func (c *client) GetMembers(css *ClientSessionStore, shard int, accountId, proje
 
 func (c *client) GetMe(css *ClientSessionStore, shard int, accountId, projectId Id) (*member, error) {
 	val, err := getMe.DoRequest(css, c.host, &getMeArgs{
-		Shard: shard,
+		Shard:     shard,
 		AccountId: accountId,
 		ProjectId: projectId,
 	}, nil, &member{})
@@ -569,14 +569,14 @@ func (c *client) GetMe(css *ClientSessionStore, shard int, accountId, projectId 
 
 func (c *client) GetActivities(css *ClientSessionStore, shard int, accountId, projectId Id, item, member *Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*Activity, error) {
 	val, err := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
-		Shard: shard,
-		AccountId: accountId,
-		ProjectId: projectId,
-		Item: item,
-		Member: member,
-		OccurredAfter: occurredAfter,
+		Shard:          shard,
+		AccountId:      accountId,
+		ProjectId:      projectId,
+		Item:           item,
+		Member:         member,
+		OccurredAfter:  occurredAfter,
 		OccurredBefore: occurredBefore,
-		Limit: limit,
+		Limit:          limit,
 	}, nil, &[]*Activity{})
 	if val != nil {
 		return *val.(*[]*Activity), err
@@ -596,12 +596,12 @@ func dbGetPublicProjectsEnabled(ctx *Ctx, shard int, accountId Id) bool {
 }
 
 func dbCreateProject(ctx *Ctx, shard int, accountId, myId Id, project *project) {
-	_, err := ctx.TreeExec(shard,  `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, accountId, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
+	_, err := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, accountId, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	PanicIf(err)
 }
 
 func dbSetIsPublic(ctx *Ctx, shard int, accountId, projectId, myId Id, isPublic bool) {
-	_, err := ctx.TreeExec(shard,  `CALL setProjectIsPublic(?, ?, ?, ?)`, accountId, projectId, myId, isPublic)
+	_, err := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, accountId, projectId, myId, isPublic)
 	PanicIf(err)
 }
 
@@ -625,12 +625,12 @@ func dbGetAllProjects(ctx *Ctx, shard int, accountId Id, nameContains *string, c
 }
 
 func dbSetProjectIsArchived(ctx *Ctx, shard int, accountId, projectId, myId Id, isArchived bool) {
-	_, err := ctx.TreeExec(shard,  `CALL setProjectIsArchived(?, ?, ?, ?)`, accountId, projectId, myId, isArchived)
+	_, err := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, accountId, projectId, myId, isArchived)
 	PanicIf(err)
 }
 
 func dbDeleteProject(ctx *Ctx, shard int, accountId, projectId, myId Id) {
-	_, err := ctx.TreeExec(shard,  `CALL deleteProject(?, ?, ?)`, accountId, projectId, myId)
+	_, err := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, accountId, projectId, myId)
 	PanicIf(err)
 }
 
