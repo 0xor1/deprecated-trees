@@ -1,16 +1,16 @@
 package project
 
 import (
-	"fmt"
+	"bitbucket.org/0xor1/task/server/util/activity"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/ctx"
+	"bitbucket.org/0xor1/task/server/util/db"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
-	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bytes"
-	"bitbucket.org/0xor1/task/server/util/ctx"
-	"time"
-	"bitbucket.org/0xor1/task/server/util/activity"
+	"fmt"
 	"strings"
-	"bitbucket.org/0xor1/task/server/util/db"
+	"time"
 )
 
 func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {

@@ -10,7 +10,7 @@ type Client interface {
 	SetName(css *clientsession.Store, shard int, account, project, task id.Id, name string) error
 	SetDescription(css *clientsession.Store, shard int, account, project, task id.Id, description *string) error
 	SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error                                                              //only applys to abstract tasks
-	SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error                                                                  //only applys to task tasks
+	SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error                                                                    //only applys to task tasks
 	SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error                                                      //only applys to task tasks
 	LogTime(css *clientsession.Store, shard int, account, project, task id.Id, duration uint64, note *string) (*timeLog, error)                                          //only applys to task tasks
 	SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) //only applys to task tasks

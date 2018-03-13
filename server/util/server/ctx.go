@@ -36,7 +36,7 @@ type _ctx struct {
 	dlmsToUpdate           map[string]interface{}
 	cacheItemsToUpdate     map[string]interface{}
 	cacheKeysToDelete      map[string]interface{}
-	staticResources        *static.Resources
+	SR                     *static.Resources
 }
 
 func (c *_ctx) TryMe() *id.Id {
@@ -51,47 +51,47 @@ func (c *_ctx) Me() id.Id {
 }
 
 func (c *_ctx) Log(err error) {
-	c.staticResources.LogError(err)
+	c.SR.LogError(err)
 }
 
 func (c *_ctx) AccountExec(query string, args ...interface{}) (sql.Result, error) {
-	return sqlExec(c, c.staticResources.AccountDb, query, args...)
+	return sqlExec(c, c.SR.AccountDb, query, args...)
 }
 
 func (c *_ctx) AccountQuery(query string, args ...interface{}) (isql.Rows, error) {
-	return sqlQuery(c, c.staticResources.AccountDb, query, args...)
+	return sqlQuery(c, c.SR.AccountDb, query, args...)
 }
 
 func (c *_ctx) AccountQueryRow(query string, args ...interface{}) isql.Row {
-	return sqlQueryRow(c, c.staticResources.AccountDb, query, args...)
+	return sqlQueryRow(c, c.SR.AccountDb, query, args...)
 }
 
 func (c *_ctx) PwdExec(query string, args ...interface{}) (sql.Result, error) {
-	return sqlExec(c, c.staticResources.PwdDb, query, args...)
+	return sqlExec(c, c.SR.PwdDb, query, args...)
 }
 
 func (c *_ctx) PwdQuery(query string, args ...interface{}) (isql.Rows, error) {
-	return sqlQuery(c, c.staticResources.PwdDb, query, args...)
+	return sqlQuery(c, c.SR.PwdDb, query, args...)
 }
 
 func (c *_ctx) PwdQueryRow(query string, args ...interface{}) isql.Row {
-	return sqlQueryRow(c, c.staticResources.PwdDb, query, args...)
+	return sqlQueryRow(c, c.SR.PwdDb, query, args...)
 }
 
 func (c *_ctx) TreeShardCount() int {
-	return len(c.staticResources.TreeShards)
+	return len(c.SR.TreeShards)
 }
 
 func (c *_ctx) TreeExec(shard int, query string, args ...interface{}) (sql.Result, error) {
-	return sqlExec(c, c.staticResources.TreeShards[shard], query, args...)
+	return sqlExec(c, c.SR.TreeShards[shard], query, args...)
 }
 
 func (c *_ctx) TreeQuery(shard int, query string, args ...interface{}) (isql.Rows, error) {
-	return sqlQuery(c, c.staticResources.TreeShards[shard], query, args...)
+	return sqlQuery(c, c.SR.TreeShards[shard], query, args...)
 }
 
 func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.Row {
-	return sqlQueryRow(c, c.staticResources.TreeShards[shard], query, args...)
+	return sqlQueryRow(c, c.SR.TreeShards[shard], query, args...)
 }
 
 func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args interface{}) bool {
@@ -106,12 +106,12 @@ func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args
 	if dlm > c.requestStartUnixMillis {
 		return false
 	}
-	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.staticResources.MasterCacheKey, Key: key, Args: args})
+	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, Args: args})
 	if e != nil {
 		c.Log(e)
 		return false
 	}
-	cnn := c.staticResources.DlmAndDataRedisPool.Get()
+	cnn := c.SR.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	start := time.NowUnixMillis()
 	jsonBytes, e = redis.Bytes(cnn.Do("GET", jsonBytes))
@@ -140,7 +140,7 @@ func (c *_ctx) SetCacheValue(val interface{}, key string, dlmKeys []string, args
 		c.Log(e)
 		return
 	}
-	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.staticResources.MasterCacheKey, Key: key, Args: args})
+	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, Args: args})
 	if e != nil {
 		c.Log(e)
 		return
@@ -158,67 +158,67 @@ func (c *_ctx) DeleteDlmKeys(keys []string) {
 }
 
 func (c *_ctx) NameRegexMatchers() []*regexp.Regexp {
-	return c.staticResources.NameRegexMatchers
+	return c.SR.NameRegexMatchers
 }
 
 func (c *_ctx) PwdRegexMatchers() []*regexp.Regexp {
-	return c.staticResources.PwdRegexMatchers
+	return c.SR.PwdRegexMatchers
 }
 
 func (c *_ctx) NameMinRuneCount() int {
-	return c.staticResources.NameMinRuneCount
+	return c.SR.NameMinRuneCount
 }
 
 func (c *_ctx) NameMaxRuneCount() int {
-	return c.staticResources.NameMaxRuneCount
+	return c.SR.NameMaxRuneCount
 }
 
 func (c *_ctx) PwdMinRuneCount() int {
-	return c.staticResources.PwdMinRuneCount
+	return c.SR.PwdMinRuneCount
 }
 
 func (c *_ctx) PwdMaxRuneCount() int {
-	return c.staticResources.PwdMaxRuneCount
+	return c.SR.PwdMaxRuneCount
 }
 
 func (c *_ctx) MaxProcessEntityCount() int {
-	return c.staticResources.MaxProcessEntityCount
+	return c.SR.MaxProcessEntityCount
 }
 
 func (c *_ctx) CryptCodeLen() int {
-	return c.staticResources.CryptCodeLen
+	return c.SR.CryptCodeLen
 }
 
 func (c *_ctx) SaltLen() int {
-	return c.staticResources.SaltLen
+	return c.SR.SaltLen
 }
 
 func (c *_ctx) ScryptN() int {
-	return c.staticResources.ScryptN
+	return c.SR.ScryptN
 }
 
 func (c *_ctx) ScryptR() int {
-	return c.staticResources.ScryptR
+	return c.SR.ScryptR
 }
 
 func (c *_ctx) ScryptP() int {
-	return c.staticResources.ScryptP
+	return c.SR.ScryptP
 }
 
 func (c *_ctx) ScryptKeyLen() int {
-	return c.staticResources.ScryptKeyLen
+	return c.SR.ScryptKeyLen
 }
 
 func (c *_ctx) RegionalV1PrivateClient() private.V1Client {
-	return c.staticResources.RegionalV1PrivateClient
+	return c.SR.RegionalV1PrivateClient
 }
 
 func (c *_ctx) MailClient() mail.Client {
-	return c.staticResources.MailClient
+	return c.SR.MailClient
 }
 
 func (c *_ctx) AvatarClient() avatar.Client {
-	return c.staticResources.AvatarClient
+	return c.SR.AvatarClient
 }
 
 // helpers
@@ -279,7 +279,7 @@ func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
 		}
 	}
 	if len(dlmsToFetch) > 0 {
-		cnn := ctx.staticResources.DlmAndDataRedisPool.Get()
+		cnn := ctx.SR.DlmAndDataRedisPool.Get()
 		defer cnn.Close()
 		start := time.NowUnixMillis()
 		dlms, e := redis.Int64s(cnn.Do("MGET", dlmsToFetch...))
@@ -317,7 +317,7 @@ func doCacheUpdate(ctx *_ctx) {
 	for k := range ctx.cacheKeysToDelete {
 		delArgs = append(delArgs, k)
 	}
-	cnn := ctx.staticResources.DlmAndDataRedisPool.Get()
+	cnn := ctx.SR.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	if len(setArgs) > 0 {
 		start := time.NowUnixMillis()

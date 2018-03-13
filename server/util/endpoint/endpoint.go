@@ -53,16 +53,6 @@ func (ep *Endpoint) ValidateEndpoint() {
 
 func (ep *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	var argsLocation *string
-	if ep.GetArgsStruct != nil {
-		argsLocation = &queryString
-		if ep.Method == cnst.POST {
-			if ep.ProcessForm != nil {
-				argsLocation = &form
-			} else {
-				argsLocation = &body
-			}
-		}
-	}
 	var note *string
 	if ep.Note != "" {
 		note = &ep.Note
@@ -70,8 +60,13 @@ func (ep *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	var argsStruct interface{}
 	if ep.GetArgsStruct != nil {
 		argsStruct = ep.GetArgsStruct()
+		argsLocation = &queryString
+		if ep.Method == cnst.POST {
+			argsLocation = &body
+		}
 	} else if ep.ProcessForm != nil {
 		argsStruct = ep.FormStruct
+		argsLocation = &form
 	}
 	var isAuth *bool
 	if ep.IsAuthentication {

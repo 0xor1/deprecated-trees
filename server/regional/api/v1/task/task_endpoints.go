@@ -305,8 +305,8 @@ type getTasksArgs struct {
 }
 
 var getTasks = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getTasks",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getTasks",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getTasksArgs{}
@@ -329,8 +329,8 @@ type getChildTasksArgs struct {
 }
 
 var getChildTasks = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getChildTasks",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getChildTasks",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getChildTasksArgs{}

@@ -38,8 +38,10 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 		}
 	}
 	routeDocs := make([]interface{}, 0, len(routes))
-	for _, ep := range routes {
-		routeDocs = append(routeDocs, ep.GetEndpointDocumentation())
+	for _, endpointSet := range endpointSets {
+		for _, ep := range endpointSet {
+			routeDocs = append(routeDocs, ep.GetEndpointDocumentation())
+		}
 	}
 	var e error
 	sr.ApiDocs, e = json.MarshalIndent(routeDocs, "", "    ")
@@ -67,7 +69,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		cacheKeysToDelete:  map[string]interface{}{},
 		queryInfosMtx:      &sync.RWMutex{},
 		queryInfos:         make([]*queryinfo.QueryInfo, 0, 10),
-		staticResources:    s.SR,
+		SR:                 s.SR,
 	}
 	//always do case insensitive path routing
 	lowerPath := strings.ToLower(req.URL.Path)

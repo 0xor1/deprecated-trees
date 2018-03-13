@@ -80,7 +80,7 @@ var setMemberRole = &endpoint.Endpoint{
 
 type getMembersArgs struct {
 	Shard        int               `json:"shard"`
-	Account    id.Id             `json:"account"`
+	Account      id.Id             `json:"account"`
 	Role         *cnst.AccountRole `json:"role,omitempty"`
 	NameContains *string           `json:"nameContains,omitempty"`
 	After        *id.Id            `json:"after,omitempty"`

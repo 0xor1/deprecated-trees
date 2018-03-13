@@ -1,11 +1,11 @@
 package account
 
 import (
-	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/id"
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"time"
 	"bitbucket.org/0xor1/task/server/util/activity"
+	"bitbucket.org/0xor1/task/server/util/clientsession"
+	"bitbucket.org/0xor1/task/server/util/cnst"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"time"
 )
 
 type Client interface {
@@ -64,7 +64,7 @@ func (c *client) SetMemberRole(css *clientsession.Store, shard int, account, mem
 func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
 	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
 		Shard:        shard,
-		Account:    account,
+		Account:      account,
 		Role:         role,
 		NameContains: nameContains,
 		After:        after,

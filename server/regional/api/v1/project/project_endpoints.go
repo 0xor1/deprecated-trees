@@ -29,8 +29,8 @@ type createProjectArgs struct {
 }
 
 var createProject = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/createProject",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/createProject",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &createProjectArgs{}
@@ -80,8 +80,8 @@ type setIsPublicArgs struct {
 }
 
 var setIsPublic = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setIsPublic",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setIsPublic",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setIsPublicArgs{}
@@ -108,8 +108,8 @@ type setIsArchivedArgs struct {
 }
 
 var setIsArchived = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setIsArchived",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setIsArchived",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setIsArchivedArgs{}
@@ -129,8 +129,8 @@ type getProjectArgs struct {
 }
 
 var getProject = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getProject",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getProject",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getProjectArgs{}
@@ -166,8 +166,8 @@ type getProjectsResp struct {
 }
 
 var getProjects = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getProjects",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getProjects",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getProjectsArgs{}
@@ -196,8 +196,8 @@ type deleteProjectArgs struct {
 }
 
 var deleteProject = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/deleteProject",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/deleteProject",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteProjectArgs{}
@@ -219,8 +219,8 @@ type addMembersArgs struct {
 }
 
 var addMembers = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/addMembers",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/addMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
@@ -259,8 +259,8 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setMemberRole",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
@@ -296,8 +296,8 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/removeMembers",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/removeMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
@@ -333,8 +333,8 @@ type getMembersResp struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getMembers",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getMembers",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
@@ -353,8 +353,8 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getMe",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getMe",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
@@ -377,8 +377,8 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method: cnst.GET,
-	Path:   "/api/v1/project/getActivities",
+	Method:          cnst.GET,
+	Path:            "/api/v1/project/getActivities",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
