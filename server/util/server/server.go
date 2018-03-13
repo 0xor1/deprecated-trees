@@ -40,7 +40,9 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 	routeDocs := make([]interface{}, 0, len(routes))
 	for _, endpointSet := range endpointSets {
 		for _, ep := range endpointSet {
-			routeDocs = append(routeDocs, ep.GetEndpointDocumentation())
+			if !ep.IsPrivate {
+				routeDocs = append(routeDocs, ep.GetEndpointDocumentation())
+			}
 		}
 	}
 	var e error

@@ -1,6 +1,7 @@
 package project
 
 import (
+	"bitbucket.org/0xor1/task/server/util/activity"
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
@@ -29,9 +30,10 @@ type createProjectArgs struct {
 }
 
 var createProject = &endpoint.Endpoint{
-	Method:          cnst.POST,
-	Path:            "/api/v1/project/createProject",
-	RequiresSession: true,
+	Method:                   cnst.POST,
+	Path:                     "/api/v1/project/createProject",
+	RequiresSession:          true,
+	ExampleResponseStructure: &project{},
 	GetArgsStruct: func() interface{} {
 		return &createProjectArgs{}
 	},
@@ -129,9 +131,10 @@ type getProjectArgs struct {
 }
 
 var getProject = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getProject",
-	RequiresSession: false,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getProject",
+	RequiresSession:          false,
+	ExampleResponseStructure: &project{},
 	GetArgsStruct: func() interface{} {
 		return &getProjectArgs{}
 	},
@@ -166,9 +169,10 @@ type getProjectsResp struct {
 }
 
 var getProjects = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getProjects",
-	RequiresSession: false,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getProjects",
+	RequiresSession:          false,
+	ExampleResponseStructure: &getProjectsResp{Projects: []*project{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getProjectsArgs{}
 	},
@@ -333,9 +337,10 @@ type getMembersResp struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getMembers",
-	RequiresSession: false,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getMembers",
+	RequiresSession:          false,
+	ExampleResponseStructure: &getMembersResp{Members: []*member{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
@@ -353,9 +358,10 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getMe",
-	RequiresSession: true,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getMe",
+	RequiresSession:          true,
+	ExampleResponseStructure: &member{},
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
@@ -377,9 +383,10 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getActivities",
-	RequiresSession: false,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getActivities",
+	RequiresSession:          false,
+	ExampleResponseStructure: []*activity.Activity{{}},
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},

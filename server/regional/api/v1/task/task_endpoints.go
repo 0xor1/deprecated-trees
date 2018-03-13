@@ -27,8 +27,10 @@ type createTaskArgs struct {
 }
 
 var createTask = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/createTask",
+	Method:                   cnst.POST,
+	Path:                     "/api/v1/project/createTask",
+	RequiresSession:          true,
+	ExampleResponseStructure: &task{},
 	GetArgsStruct: func() interface{} {
 		return &createTaskArgs{}
 	},
@@ -75,8 +77,9 @@ type setNameArgs struct {
 }
 
 var setName = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setName",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setName",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setNameArgs{}
 	},
@@ -102,8 +105,9 @@ type setDescriptionArgs struct {
 }
 
 var setDescription = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setDescription",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setDescription",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setDescriptionArgs{}
 	},
@@ -125,8 +129,9 @@ type setIsParallelArgs struct {
 }
 
 var setIsParallel = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setIsParallel",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setIsParallel",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setIsParallelArgs{}
 	},
@@ -148,8 +153,9 @@ type setMemberArgs struct {
 }
 
 var setMember = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setMember",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setMember",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberArgs{}
 	},
@@ -173,8 +179,9 @@ type setRemainingTimeArgs struct {
 }
 
 var setRemainingTime = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setRemainingTime",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/setRemainingTime",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setRemainingTimeArgs{}
 	},
@@ -194,8 +201,10 @@ type logTimeArgs struct {
 }
 
 var logTime = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/logTime",
+	Method:                   cnst.POST,
+	Path:                     "/api/v1/project/logTime",
+	RequiresSession:          true,
+	ExampleResponseStructure: &timeLog{},
 	GetArgsStruct: func() interface{} {
 		return &logTimeArgs{}
 	},
@@ -216,8 +225,10 @@ type setRemainingTimeAndLogTimeArgs struct {
 }
 
 var setRemainingTimeAndLogTime = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/setRemainingTimeAndLogTime",
+	Method:                   cnst.POST,
+	Path:                     "/api/v1/project/setRemainingTimeAndLogTime",
+	RequiresSession:          true,
+	ExampleResponseStructure: &timeLog{},
 	GetArgsStruct: func() interface{} {
 		return &setRemainingTimeAndLogTimeArgs{}
 	},
@@ -261,8 +272,9 @@ type moveTaskArgs struct {
 }
 
 var moveTask = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/moveTask",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/moveTask",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &moveTaskArgs{}
 	},
@@ -283,8 +295,9 @@ type deleteTaskArgs struct {
 }
 
 var deleteTask = &endpoint.Endpoint{
-	Method: cnst.POST,
-	Path:   "/api/v1/project/deleteTask",
+	Method:          cnst.POST,
+	Path:            "/api/v1/project/deleteTask",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteTaskArgs{}
 	},
@@ -305,9 +318,10 @@ type getTasksArgs struct {
 }
 
 var getTasks = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getTasks",
-	RequiresSession: false,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getTasks",
+	RequiresSession:          false,
+	ExampleResponseStructure: []*task{{}},
 	GetArgsStruct: func() interface{} {
 		return &getTasksArgs{}
 	},
@@ -329,9 +343,10 @@ type getChildTasksArgs struct {
 }
 
 var getChildTasks = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/project/getChildTasks",
-	RequiresSession: false,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getChildTasks",
+	RequiresSession:          false,
+	ExampleResponseStructure: []*task{{}},
 	GetArgsStruct: func() interface{} {
 		return &getChildTasksArgs{}
 	},

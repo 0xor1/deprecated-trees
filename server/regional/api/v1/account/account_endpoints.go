@@ -1,6 +1,7 @@
 package account
 
 import (
+	"bitbucket.org/0xor1/task/server/util/activity"
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
@@ -38,9 +39,10 @@ type getPublicProjectsEnabledArgs struct {
 }
 
 var getPublicProjectsEnabled = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/account/getPublicProjectsEnabled",
-	RequiresSession: true,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/account/getPublicProjectsEnabled",
+	RequiresSession:          true,
+	ExampleResponseStructure: false,
 	GetArgsStruct: func() interface{} {
 		return &getPublicProjectsEnabledArgs{}
 	},
@@ -93,9 +95,10 @@ type getMembersResp struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/account/getMembers",
-	RequiresSession: true,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/account/getMembers",
+	RequiresSession:          true,
+	ExampleResponseStructure: &getMembersResp{Members: []*member{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
@@ -117,9 +120,10 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/account/getActivities",
-	RequiresSession: true,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/account/getActivities",
+	RequiresSession:          true,
+	ExampleResponseStructure: []*activity.Activity{{}},
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},
@@ -139,9 +143,10 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:          cnst.GET,
-	Path:            "/api/v1/account/getMe",
-	RequiresSession: true,
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/account/getMe",
+	RequiresSession:          true,
+	ExampleResponseStructure: &member{},
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
