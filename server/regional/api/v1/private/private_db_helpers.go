@@ -23,7 +23,7 @@ func dbDeleteAccount(ctx ctx.Ctx, shard int, account id.Id) {
 	err.PanicIf(e)
 }
 
-func dbGetAllInactiveMemberIdsFromInputSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) []id.Id {
+func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) []id.Id {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, account, members[0])
 	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (?`)

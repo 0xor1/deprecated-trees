@@ -13,21 +13,21 @@ import (
 	"bitbucket.org/0xor1/task/server/util/activity"
 )
 
-func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, accountId id.Id, publicProjectsEnabled bool) {
-	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.Me(), publicProjectsEnabled)
+func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicProjectsEnabled bool) {
+	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, account, ctx.Me(), publicProjectsEnabled)
 	err.PanicIf(e)
 }
 
-func dbGetPublicProjectsEnabled(ctx ctx.Ctx, shard int, accountId id.Id) bool {
-	return db.GetPublicProjectsEnabled(ctx, shard, accountId)
+func dbGetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
+	return db.GetPublicProjectsEnabled(ctx, shard, account)
 }
 
-func dbSetMemberRole(ctx ctx.Ctx, shard int, accountId, memberId id.Id, role cnst.AccountRole) {
-	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.Me(), memberId, role)
+func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.AccountRole) {
+	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, account, ctx.Me(), member, role)
 }
 
-func dbGetMember(ctx ctx.Ctx, shard int, accountId, memberId id.Id) *member {
-	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
+func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
+	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
 	res := member{}
 	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
@@ -66,17 +66,17 @@ AND (
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
-func dbGetMembers(ctx ctx.Ctx, shard int, accountId id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
+func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	query := bytes.NewBufferString(`SELECT a1.id, a1.isActive, a1.role FROM accountMembers a1`)
 	args := make([]interface{}, 0, 7)
 	if after != nil {
 		query.WriteString(`, accountMembers a2`)
 	}
 	query.WriteString(` WHERE a1.account=? AND a1.isActive=true`)
-	args = append(args, accountId)
+	args = append(args, account)
 	if after != nil {
 		query.WriteString(` AND a2.account=? AND a2.id=? AND ((a1.name>a2.name AND a1.role=a2.role) OR a1.role>a2.role)`)
-		args = append(args, accountId, *after)
+		args = append(args, account, *after)
 	}
 	if role != nil {
 		query.WriteString(` AND a1.role=?`)
@@ -107,13 +107,13 @@ func dbGetMembers(ctx ctx.Ctx, shard int, accountId id.Id, role *cnst.AccountRol
 	return &getMembersResp{Members: res, More: false}
 }
 
-func dbGetActivities(ctx ctx.Ctx, shard int, accountId id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
+func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
 		panic(err.InvalidArguments)
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
-	args = append(args, accountId)
+	args = append(args, account)
 	if item != nil {
 		query.WriteString(` AND item=?`)
 		args = append(args, *item)

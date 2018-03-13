@@ -227,21 +227,21 @@ var setRemainingTimeAndLogTime = &endpoint.Endpoint{
 	},
 }
 
-func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, accountId, projectId, taskId id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
+func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
 	if duration != nil {
-		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, accountId, projectId, ctx.Me()))
+		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, account, project, ctx.Me()))
 	} else if remainingTime != nil {
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, shard, accountId, projectId, ctx.Me()))
+		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, shard, account, project, ctx.Me()))
 	} else {
 		panic(err.InvalidArguments)
 	}
 
 	loggedOn := t.Now()
-	dbSetRemainingTimeAndOrLogTime(ctx, shard, accountId, projectId, taskId, remainingTime, &loggedOn, duration, note)
+	dbSetRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, &loggedOn, duration, note)
 	if duration != nil {
 		return &timeLog{
-			Project:  projectId,
-			Task:     taskId,
+			Project:  project,
+			Task:     task,
 			Member:   ctx.Me(),
 			LoggedOn: loggedOn,
 			Duration: *duration,

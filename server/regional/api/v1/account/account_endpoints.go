@@ -80,7 +80,7 @@ var setMemberRole = &endpoint.Endpoint{
 
 type getMembersArgs struct {
 	Shard        int               `json:"shard"`
-	AccountId    id.Id             `json:"accountId"`
+	Account    id.Id             `json:"account"`
 	Role         *cnst.AccountRole `json:"role,omitempty"`
 	NameContains *string           `json:"nameContains,omitempty"`
 	After        *id.Id            `json:"after,omitempty"`
@@ -101,8 +101,8 @@ var getMembers = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
-		return dbGetMembers(ctx, args.Shard, args.AccountId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
+		return dbGetMembers(ctx, args.Shard, args.Account, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 

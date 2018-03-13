@@ -8,53 +8,53 @@ func ForSystem() string {
 	return "sys"
 }
 
-func ForAccountMaster(accountId id.Id) string {
-	return dlmKeyFor("amstr", accountId)
+func ForAccountMaster(account id.Id) string {
+	return dlmKeyFor("amstr", account)
 }
 
-func ForAccount(accountId id.Id) string {
-	return dlmKeyFor("a", accountId)
+func ForAccount(account id.Id) string {
+	return dlmKeyFor("a", account)
 }
 
-func ForAccountActivities(accountId id.Id) string {
-	return dlmKeyFor("aa", accountId)
+func ForAccountActivities(account id.Id) string {
+	return dlmKeyFor("aa", account)
 }
 
-func ForAccountMember(accountId id.Id) string {
-	return dlmKeyFor("am", accountId)
+func ForAccountMember(account id.Id) string {
+	return dlmKeyFor("am", account)
 }
 
-func ForAllAccountMembers(accountId id.Id) string {
-	return dlmKeyFor("ams", accountId)
+func ForAllAccountMembers(account id.Id) string {
+	return dlmKeyFor("ams", account)
 }
 
-func ForProjectMaster(projectId id.Id) string {
-	return dlmKeyFor("pmstr", projectId)
+func ForProjectMaster(project id.Id) string {
+	return dlmKeyFor("pmstr", project)
 }
 
-func ForProject(projectId id.Id) string {
-	return dlmKeyFor("p", projectId)
+func ForProject(project id.Id) string {
+	return dlmKeyFor("p", project)
 }
 
-func ForProjectActivities(projectId id.Id) string {
-	return dlmKeyFor("pa", projectId)
+func ForProjectActivities(project id.Id) string {
+	return dlmKeyFor("pa", project)
 }
 
-func ForProjectMember(projectMemberId id.Id) string {
-	return dlmKeyFor("pm", projectMemberId)
+func ForProjectMember(projectMember id.Id) string {
+	return dlmKeyFor("pm", projectMember)
 }
 
-func ForAllProjectMembers(projectId id.Id) string {
-	return dlmKeyFor("pms", projectId)
+func ForAllProjectMembers(project id.Id) string {
+	return dlmKeyFor("pms", project)
 }
 
-func ForTask(taskId id.Id) string {
-	return dlmKeyFor("t", taskId)
+func ForTask(task id.Id) string {
+	return dlmKeyFor("t", task)
 }
 
-func ForTasks(taskIds []id.Id) []string {
-	strs := make([]string, 0, len(taskIds))
-	for _, tId := range taskIds {
+func ForTasks(tasks []id.Id) []string {
+	strs := make([]string, 0, len(tasks))
+	for _, tId := range tasks {
 		strs = append(strs, ForTask(tId))
 	}
 	return strs

@@ -92,10 +92,10 @@ var addMembers = &endpoint.Endpoint{
 			allIds = append(allIds, mem.Id)
 		}
 
-		inactiveMemberIds := dbGetAllInactiveMemberIdsFromInputSet(ctx, args.Shard, args.Account, allIds)
+		inactiveMemberIds := dbGetAllInactiveMembersFromInputSet(ctx, args.Shard, args.Account, allIds)
 		inactiveMembers := make([]*private.AddMember, 0, len(inactiveMemberIds))
-		for _, inactiveMemberId := range inactiveMemberIds {
-			idStr := inactiveMemberId.String()
+		for _, inactiveMember := range inactiveMemberIds {
+			idStr := inactiveMember.String()
 			inactiveMembers = append(inactiveMembers, newMembersMap[idStr])
 			delete(newMembersMap, idStr)
 		}

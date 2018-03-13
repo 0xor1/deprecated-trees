@@ -13,75 +13,75 @@ import (
 	"bitbucket.org/0xor1/task/server/util/db"
 )
 
-func dbGetProjectExists(ctx ctx.Ctx, shard int, accountId, projectId id.Id) bool {
-	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, accountId, projectId)
+func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
+	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, account, project)
 	exists := false
 	err.PanicIf(row.Scan(&exists))
 	return exists
 }
 
-func dbCreateProject(ctx ctx.Ctx, shard int, accountId, myId id.Id, project *project) {
-	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, accountId, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
+func dbCreateProject(ctx ctx.Ctx, shard int, account, myId id.Id, project *project) {
+	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	err.PanicIf(e)
 }
 
-func dbSetIsPublic(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, isPublic bool) {
-	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, accountId, projectId, myId, isPublic)
+func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project, myId id.Id, isPublic bool) {
+	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, account, project, myId, isPublic)
 	err.PanicIf(e)
 }
 
-func dbGetProject(ctx ctx.Ctx, shard int, accountId, projectId id.Id) *project {
-	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, accountId, projectId, accountId, projectId, projectId)
+func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project {
+	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, account, proj, account, proj, proj)
 	result := project{}
 	err.PanicIf(row.Scan(&result.Id, &result.IsArchived, &result.Name, &result.CreatedOn, &result.StartOn, &result.DueOn, &result.FileCount, &result.FileSize, &result.IsPublic, &result.Description, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel))
 	return &result
 }
 
-func dbGetPublicProjects(ctx ctx.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
-	return dbGetProjects(ctx, shard, `AND isPublic=true`, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
+func dbGetPublicProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+	return dbGetProjects(ctx, shard, `AND isPublic=true`, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, accountId, myId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
-	return dbGetProjects(ctx, shard, `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
+func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, account, myId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+	return dbGetProjects(ctx, shard, `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, account, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetAllProjects(ctx ctx.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
-	return dbGetProjects(ctx, shard, ``, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
+func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+	return dbGetProjects(ctx, shard, ``, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbSetProjectIsArchived(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, isArchived bool) {
-	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, accountId, projectId, myId, isArchived)
+func dbSetProjectIsArchived(ctx ctx.Ctx, shard int, account, project, myId id.Id, isArchived bool) {
+	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, account, project, myId, isArchived)
 	err.PanicIf(e)
 }
 
-func dbDeleteProject(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id) {
-	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, accountId, projectId, myId)
+func dbDeleteProject(ctx ctx.Ctx, shard int, account, project, myId id.Id) {
+	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, account, project, myId)
 	err.PanicIf(e)
 }
 
-func dbAddMemberOrSetActive(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, member *AddProjectMember) {
-	db.MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, accountId, projectId, myId, member.Id, member.Role)
+func dbAddMemberOrSetActive(ctx ctx.Ctx, shard int, account, project, myId id.Id, member *AddProjectMember) {
+	db.MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, account, project, myId, member.Id, member.Role)
 }
 
-func dbSetMemberRole(ctx ctx.Ctx, shard int, accountId, projectId, myId, member id.Id, role cnst.ProjectRole) {
-	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, accountId, projectId, myId, member, role)
+func dbSetMemberRole(ctx ctx.Ctx, shard int, account, project, myId, member id.Id, role cnst.ProjectRole) {
+	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, account, project, myId, member, role)
 }
 
-func dbSetMemberInactive(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, member id.Id) {
-	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, accountId, projectId, myId, member)
+func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project, myId id.Id, member id.Id) {
+	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, account, project, myId, member)
 }
 
-func dbGetMembers(ctx ctx.Ctx, shard int, accountId, projectId id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
+func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	query := bytes.NewBufferString(`SELECT p1.id, p1.isActive, p1.totalRemainingTime, p1.totalLoggedTime, p1.role FROM projectMembers p1`)
 	args := make([]interface{}, 0, 9)
 	if after != nil {
 		query.WriteString(`, projectMembers p2`)
 	}
 	query.WriteString(` WHERE p1.account=? AND p1.project=? AND p1.isActive=true`)
-	args = append(args, accountId, projectId)
+	args = append(args, account, project)
 	if after != nil {
 		query.WriteString(` AND p2.account=? AND p2.project=? p2.id=? AND ((p1.name>p2.name AND p1.role=p2.role) OR p1.role>p2.role)`)
-		args = append(args, accountId, projectId, *after)
+		args = append(args, account, project, *after)
 	}
 	if role != nil {
 		query.WriteString(` AND p1.role=?`)
@@ -112,20 +112,20 @@ func dbGetMembers(ctx ctx.Ctx, shard int, accountId, projectId id.Id, role *cnst
 	return &getMembersResp{Members: res, More: false}
 }
 
-func dbGetMember(ctx ctx.Ctx, shard int, accountId, projectId, memberId id.Id) *member {
-	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, accountId, projectId, memberId)
+func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *member {
+	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, account, project, mem)
 	res := member{}
 	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 
-func dbGetActivities(ctx ctx.Ctx, shard int, accountId, projectId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
+func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
 		panic(err.InvalidArguments)
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM projectActivities WHERE account=? AND project=?`)
 	args := make([]interface{}, 0, limit)
-	args = append(args, accountId, projectId)
+	args = append(args, account, project)
 	if item != nil {
 		query.WriteString(` AND item=?`)
 		args = append(args, *item)
@@ -162,12 +162,12 @@ func dbGetActivities(ctx ctx.Ctx, shard int, accountId, projectId id.Id, item, m
 	return res
 }
 
-func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, accountId id.Id, myId *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, myId *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
 	args := make([]interface{}, 0, 14)
-	args = append(args, accountId, isArchived)
+	args = append(args, account, isArchived)
 	if myId != nil {
-		args = append(args, accountId, *myId)
+		args = append(args, account, *myId)
 	}
 	if nameContains != nil {
 		query.WriteString(` AND name LIKE ?`)
@@ -199,7 +199,7 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, accountI
 	}
 	if after != nil {
 		query.WriteString(fmt.Sprintf(` AND %s %s= (SELECT %s FROM projects WHERE account=? AND id=?) AND id > ?`, sortBy, sortDir.GtLtSymbol(), sortBy))
-		args = append(args, accountId, *after, *after)
+		args = append(args, account, *after, *after)
 	}
 	query.WriteString(fmt.Sprintf(` ORDER BY %s %s, id LIMIT ?`, sortBy, sortDir))
 	args = append(args, limit+1)
@@ -222,7 +222,7 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, accountI
 		var isParallel bool
 		query.Reset()
 		args = make([]interface{}, 0, len(res)+1)
-		args = append(args, accountId, res[0].Id)
+		args = append(args, account, res[0].Id)
 		query.WriteString(`SELECT id, description, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel FROM tasks WHERE account=? AND project=id AND project IN (?`)
 		for _, proj := range res[1:] {
 			query.WriteString(`,?`)
