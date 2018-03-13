@@ -31,6 +31,7 @@ type createProjectArgs struct {
 var createProject = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/createProject",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &createProjectArgs{}
 	},
@@ -81,6 +82,7 @@ type setIsPublicArgs struct {
 var setIsPublic = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsPublic",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setIsPublicArgs{}
 	},
@@ -108,6 +110,7 @@ type setIsArchivedArgs struct {
 var setIsArchived = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsArchived",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setIsArchivedArgs{}
 	},
@@ -128,12 +131,13 @@ type getProjectArgs struct {
 var getProject = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getProject",
+	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getProjectArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 
 		return dbGetProject(ctx, args.Shard, args.Account, args.Project)
 	},
@@ -164,12 +168,16 @@ type getProjectsResp struct {
 var getProjects = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getProjects",
+	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getProjectsArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectsArgs)
-		myAccountRole := db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me())
+		var myAccountRole *cnst.AccountRole
+		if ctx.TryMe() != nil {
+			myAccountRole = db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me())
+		}
 		args.Limit = validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		if myAccountRole == nil {
 			return dbGetPublicProjects(ctx, args.Shard, args.Account, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
@@ -190,6 +198,7 @@ type deleteProjectArgs struct {
 var deleteProject = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/deleteProject",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteProjectArgs{}
 	},
@@ -212,6 +221,7 @@ type addMembersArgs struct {
 var addMembers = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/addMembers",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
@@ -251,6 +261,7 @@ type setMemberRoleArgs struct {
 var setMemberRole = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/setMemberRole",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
 	},
@@ -287,6 +298,7 @@ type removeMembersArgs struct {
 var removeMembers = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/removeMembers",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
@@ -323,12 +335,13 @@ type getMembersResp struct {
 var getMembers = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getMembers",
+	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		return dbGetMembers(ctx, args.Shard, args.Account, args.Project, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
@@ -342,6 +355,7 @@ type getMeArgs struct {
 var getMe = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getMe",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
@@ -365,6 +379,7 @@ type getActivitiesArgs struct {
 var getActivities = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getActivities",
+	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},
@@ -373,7 +388,7 @@ var getActivities = &endpoint.Endpoint{
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
 			panic(err.InvalidArguments)
 		}
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Project, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }

@@ -307,12 +307,13 @@ type getTasksArgs struct {
 var getTasks = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getTasks",
+	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getTasksArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getTasksArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		validate.EntityCount(len(args.Tasks), ctx.MaxProcessEntityCount())
 		return dbGetTasks(ctx, args.Shard, args.Account, args.Project, args.Tasks)
 	},
@@ -330,12 +331,13 @@ type getChildTasksArgs struct {
 var getChildTasks = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getChildTasks",
+	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
 		return &getChildTasksArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getChildTasksArgs)
-		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		return dbGetChildTasks(ctx, args.Shard, args.Account, args.Project, args.Parent, args.FromSibling, args.Limit)
 	},

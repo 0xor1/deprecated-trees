@@ -47,15 +47,24 @@ func GetAccountAndProjectRoles(ctx ctx.Ctx, shard int, account, project, member 
 	return accRole, projRole
 }
 
-func GetAccountAndProjectRolesAndProjectIsPublic(ctx ctx.Ctx, shard int, account, project, member id.Id) (*cnst.AccountRole, *cnst.ProjectRole, *bool) {
-	row := ctx.TreeQueryRow(shard, `SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND id=?`, account, member, account, project, member, account, project)
-	isPublic := false
-	var accRole *cnst.AccountRole
-	var projRole *cnst.ProjectRole
-	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&isPublic, &accRole, &projRole)) {
-		return nil, nil, nil
+func GetAccountAndProjectRolesAndProjectIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, member *id.Id) (*cnst.AccountRole, *cnst.ProjectRole, *bool) {
+	if member == nil {
+		row := ctx.TreeQueryRow(shard, `SELECT isPublic FROM projects WHERE account=? AND id=?`, account, project)
+		isPublic := false
+		if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&isPublic)) {
+			return nil, nil, nil
+		}
+		return nil, nil, &isPublic
+	} else {
+		row := ctx.TreeQueryRow(shard, `SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND id=?`, account, member, account, project, member, account, project)
+		isPublic := false
+		var accRole *cnst.AccountRole
+		var projRole *cnst.ProjectRole
+		if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&isPublic, &accRole, &projRole)) {
+			return nil, nil, nil
+		}
+		return accRole, projRole, &isPublic
 	}
-	return accRole, projRole, &isPublic
 }
 
 func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
