@@ -4,8 +4,9 @@ import (
 	"bitbucket.org/0xor1/task/server/util/activity"
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
+	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	t "bitbucket.org/0xor1/task/server/util/time"
@@ -32,13 +33,13 @@ type createProjectArgs struct {
 	Members     []*AddProjectMember `json:"members"`
 }
 
-var createProject = &core.Endpoint{
+var createProject = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/createProject",
 	GetArgsStruct: func() interface{} {
 		return &createProjectArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createProjectArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.AccountId) {
@@ -82,13 +83,13 @@ type setIsPublicArgs struct {
 	IsPublic  bool  `json:"isPublic"`
 }
 
-var setIsPublic = &core.Endpoint{
+var setIsPublic = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsPublic",
 	GetArgsStruct: func() interface{} {
 		return &setIsPublicArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setIsPublicArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 
@@ -109,13 +110,13 @@ type setIsArchivedArgs struct {
 	IsArchived bool  `json:"isArchived"`
 }
 
-var setIsArchived = &core.Endpoint{
+var setIsArchived = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/setIsArchived",
 	GetArgsStruct: func() interface{} {
 		return &setIsArchivedArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setIsArchivedArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		dbSetProjectIsArchived(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me(), args.IsArchived)
@@ -129,13 +130,13 @@ type getProjectArgs struct {
 	ProjectId id.Id `json:"projectId"`
 }
 
-var getProject = &core.Endpoint{
+var getProject = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getProject",
 	GetArgsStruct: func() interface{} {
 		return &getProjectArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 
@@ -165,13 +166,13 @@ type getProjectsResp struct {
 	More     bool       `json:"more"`
 }
 
-var getProjects = &core.Endpoint{
+var getProjects = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getProjects",
 	GetArgsStruct: func() interface{} {
 		return &getProjectsArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getProjectsArgs)
 		myAccountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me())
 		args.Limit = validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
@@ -191,13 +192,13 @@ type deleteProjectArgs struct {
 	ProjectId id.Id `json:"projectId"`
 }
 
-var deleteProject = &core.Endpoint{
+var deleteProject = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/deleteProject",
 	GetArgsStruct: func() interface{} {
 		return &deleteProjectArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteProjectArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		dbDeleteProject(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me())
@@ -213,13 +214,13 @@ type addMembersArgs struct {
 	Members   []*AddProjectMember `json:"members"`
 }
 
-var addMembers = &core.Endpoint{
+var addMembers = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/addMembers",
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(ctx.Me()) {
@@ -252,13 +253,13 @@ type setMemberRoleArgs struct {
 	Role      cnst.ProjectRole `json:"role"`
 }
 
-var setMemberRole = &core.Endpoint{
+var setMemberRole = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/setMemberRole",
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
 		if args.AccountId.Equal(ctx.Me()) {
 			panic(err.InvalidOperation)
@@ -288,13 +289,13 @@ type removeMembersArgs struct {
 	Members   []id.Id `json:"members"`
 }
 
-var removeMembers = &core.Endpoint{
+var removeMembers = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/project/removeMembers",
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(ctx.Me()) {
@@ -324,13 +325,13 @@ type getMembersResp struct {
 	More    bool      `json:"more"`
 }
 
-var getMembers = &core.Endpoint{
+var getMembers = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getMembers",
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me()))
 		return dbGetMembers(ctx, args.Shard, args.AccountId, args.ProjectId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
@@ -343,13 +344,13 @@ type getMeArgs struct {
 	ProjectId id.Id `json:"projectId"`
 }
 
-var getMe = &core.Endpoint{
+var getMe = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getMe",
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMeArgs)
 		return dbGetMember(ctx, args.Shard, args.AccountId, args.ProjectId, ctx.Me())
 	},
@@ -366,13 +367,13 @@ type getActivitiesArgs struct {
 	Limit          int        `json:"limit"`
 }
 
-var getActivities = &core.Endpoint{
+var getActivities = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/project/getActivities",
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
 			panic(err.InvalidArguments)
@@ -382,7 +383,7 @@ var getActivities = &core.Endpoint{
 	},
 }
 
-var Endpoints = []*core.Endpoint{
+var Endpoints = []*endpoint.Endpoint{
 	createProject,
 	setIsPublic,
 	setIsArchived,
@@ -592,65 +593,65 @@ func (c *client) GetActivities(css *clientsession.Store, shard int, accountId, p
 	return nil, e
 }
 
-func dbGetProjectExists(ctx *core.Ctx, shard int, accountId, projectId id.Id) bool {
+func dbGetProjectExists(ctx ctx.Ctx, shard int, accountId, projectId id.Id) bool {
 	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, accountId, projectId)
 	exists := false
 	err.PanicIf(row.Scan(&exists))
 	return exists
 }
 
-func dbCreateProject(ctx *core.Ctx, shard int, accountId, myId id.Id, project *project) {
+func dbCreateProject(ctx ctx.Ctx, shard int, accountId, myId id.Id, project *project) {
 	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, accountId, project.Id, myId, project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	err.PanicIf(e)
 }
 
-func dbSetIsPublic(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, isPublic bool) {
+func dbSetIsPublic(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, isPublic bool) {
 	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, accountId, projectId, myId, isPublic)
 	err.PanicIf(e)
 }
 
-func dbGetProject(ctx *core.Ctx, shard int, accountId, projectId id.Id) *project {
+func dbGetProject(ctx ctx.Ctx, shard int, accountId, projectId id.Id) *project {
 	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, accountId, projectId, accountId, projectId, projectId)
 	result := project{}
 	err.PanicIf(row.Scan(&result.Id, &result.IsArchived, &result.Name, &result.CreatedOn, &result.StartOn, &result.DueOn, &result.FileCount, &result.FileSize, &result.IsPublic, &result.Description, &result.TotalRemainingTime, &result.TotalLoggedTime, &result.MinimumRemainingTime, &result.LinkedFileCount, &result.ChatCount, &result.ChildCount, &result.DescendantCount, &result.IsParallel))
 	return &result
 }
 
-func dbGetPublicProjects(ctx *core.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+func dbGetPublicProjects(ctx ctx.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	return dbGetProjects(ctx, shard, `AND isPublic=true`, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetPublicAndSpecificAccessProjects(ctx *core.Ctx, shard int, accountId, myId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, accountId, myId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	return dbGetProjects(ctx, shard, `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, accountId, &myId, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetAllProjects(ctx *core.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+func dbGetAllProjects(ctx ctx.Ctx, shard int, accountId id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	return dbGetProjects(ctx, shard, ``, accountId, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbSetProjectIsArchived(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, isArchived bool) {
+func dbSetProjectIsArchived(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, isArchived bool) {
 	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, accountId, projectId, myId, isArchived)
 	err.PanicIf(e)
 }
 
-func dbDeleteProject(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id) {
+func dbDeleteProject(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, accountId, projectId, myId)
 	err.PanicIf(e)
 }
 
-func dbAddMemberOrSetActive(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, member *AddProjectMember) {
+func dbAddMemberOrSetActive(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, member *AddProjectMember) {
 	db.MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, accountId, projectId, myId, member.Id, member.Role)
 }
 
-func dbSetMemberRole(ctx *core.Ctx, shard int, accountId, projectId, myId, member id.Id, role cnst.ProjectRole) {
+func dbSetMemberRole(ctx ctx.Ctx, shard int, accountId, projectId, myId, member id.Id, role cnst.ProjectRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, accountId, projectId, myId, member, role)
 }
 
-func dbSetMemberInactive(ctx *core.Ctx, shard int, accountId, projectId, myId id.Id, member id.Id) {
+func dbSetMemberInactive(ctx ctx.Ctx, shard int, accountId, projectId, myId id.Id, member id.Id) {
 	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, accountId, projectId, myId, member)
 }
 
-func dbGetMembers(ctx *core.Ctx, shard int, accountId, projectId id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
+func dbGetMembers(ctx ctx.Ctx, shard int, accountId, projectId id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	query := bytes.NewBufferString(`SELECT p1.id, p1.isActive, p1.totalRemainingTime, p1.totalLoggedTime, p1.role FROM projectMembers p1`)
 	args := make([]interface{}, 0, 9)
 	if after != nil {
@@ -691,14 +692,14 @@ func dbGetMembers(ctx *core.Ctx, shard int, accountId, projectId id.Id, role *cn
 	return &getMembersResp{Members: res, More: false}
 }
 
-func dbGetMember(ctx *core.Ctx, shard int, accountId, projectId, memberId id.Id) *member {
+func dbGetMember(ctx ctx.Ctx, shard int, accountId, projectId, memberId id.Id) *member {
 	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, accountId, projectId, memberId)
 	res := member{}
 	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	return &res
 }
 
-func dbGetActivities(ctx *core.Ctx, shard int, accountId, projectId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
+func dbGetActivities(ctx ctx.Ctx, shard int, accountId, projectId id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
 		panic(err.InvalidArguments)
 	}
@@ -741,7 +742,7 @@ func dbGetActivities(ctx *core.Ctx, shard int, accountId, projectId id.Id, item,
 	return res
 }
 
-func dbGetProjects(ctx *core.Ctx, shard int, specificSqlFilterTxt string, accountId id.Id, myId *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
+func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, accountId id.Id, myId *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
 	args := make([]interface{}, 0, 14)
 	args = append(args, accountId, isArchived)

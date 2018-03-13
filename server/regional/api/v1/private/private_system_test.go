@@ -2,22 +2,24 @@ package private
 
 import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/config"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
+	"bitbucket.org/0xor1/task/server/util/server"
+	"bitbucket.org/0xor1/task/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
 )
 
 func Test_system(t *testing.T) {
-	staticResources := config.Config("", "", NewClient, Endpoints)
-	testServer := httptest.NewServer(staticResources)
+	SR := static.Config("", "", NewClient)
+	serv := server.New(SR, Endpoints)
+	testServer := httptest.NewServer(serv)
 	region := "lcl"
-	staticResources.RegionalV1PrivateClient = NewClient(map[string]string{
+	SR.RegionalV1PrivateClient = NewClient(map[string]string{
 		region: testServer.URL,
 	})
-	client := staticResources.RegionalV1PrivateClient
+	client := SR.RegionalV1PrivateClient
 
 	aliId := id.New()
 	orgId := id.New()
@@ -43,5 +45,5 @@ func Test_system(t *testing.T) {
 	client.DeleteAccount(region, 0, aliId, aliId)
 	client.DeleteAccount(region, 0, bob.Id, bob.Id)
 	client.DeleteAccount(region, 0, cat.Id, cat.Id)
-	staticResources.AvatarClient.DeleteAll()
+	SR.AvatarClient.DeleteAll()
 }

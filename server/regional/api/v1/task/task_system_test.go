@@ -7,8 +7,9 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/config"
 	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/server"
+	"bitbucket.org/0xor1/task/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -16,21 +17,22 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	staticResources := config.Config("", "", private.NewClient, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, Endpoints)
-	testServer := httptest.NewServer(staticResources)
+	SR := static.Config("", "", private.NewClient)
+	serv := server.New(SR, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, Endpoints)
+	testServer := httptest.NewServer(serv)
 	aliCss := clientsession.New()
 	centralClient := centralaccount.NewClient(testServer.URL)
 	projectClient := project.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
 	region := "lcl"
-	staticResources.RegionalV1PrivateClient = private.NewClient(map[string]string{
+	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
 		region: testServer.URL,
 	})
 
 	aliDisplayName := "Ali O'Mally"
 	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
 	activationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 	centralClient.Activate("ali@ali.com", activationCode)
 	aliId, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
 	assert.Nil(t, err)
@@ -41,17 +43,17 @@ func Test_system(t *testing.T) {
 	danDisplayName := "Dan the Man"
 	centralClient.Register("dan", "dan@dan.com", "d@n-Pwd-W00", region, "en", &danDisplayName, cnst.DarkTheme)
 	bobActivationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
 	bobId, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
 	catActivationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	centralClient.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
 	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 	danActivationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "dan@dan.com").Scan(&danActivationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "dan@dan.com").Scan(&danActivationCode)
 	centralClient.Activate("dan@dan.com", danActivationCode)
 	danCss := clientsession.New()
 	danId, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
@@ -146,5 +148,5 @@ func Test_system(t *testing.T) {
 	centralClient.DeleteAccount(bobCss, bobId)
 	centralClient.DeleteAccount(catCss, catId)
 	centralClient.DeleteAccount(danCss, danId)
-	staticResources.AvatarClient.DeleteAll()
+	SR.AvatarClient.DeleteAll()
 }

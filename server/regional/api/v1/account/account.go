@@ -4,8 +4,9 @@ import (
 	"bitbucket.org/0xor1/task/server/util/activity"
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
+	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/validate"
@@ -21,14 +22,14 @@ type setPublicProjectsEnabledArgs struct {
 	PublicProjectsEnabled bool  `json:"publicProjectsEnabled"`
 }
 
-var setPublicProjectsEnabled = &core.Endpoint{
+var setPublicProjectsEnabled = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/account/setPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setPublicProjectsEnabledArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setPublicProjectsEnabledArgs)
 		validate.MemberHasAccountOwnerAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		dbSetPublicProjectsEnabled(ctx, args.Shard, args.Account, args.PublicProjectsEnabled)
@@ -41,14 +42,14 @@ type getPublicProjectsEnabledArgs struct {
 	AccountId id.Id `json:"accountId"`
 }
 
-var getPublicProjectsEnabled = &core.Endpoint{
+var getPublicProjectsEnabled = &endpoint.Endpoint{
 	Method:          cnst.GET,
 	Path:            "/api/v1/account/getPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getPublicProjectsEnabledArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getPublicProjectsEnabledArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		return dbGetPublicProjectsEnabled(ctx, args.Shard, args.AccountId)
@@ -62,14 +63,14 @@ type setMemberRoleArgs struct {
 	Role      cnst.AccountRole `json:"role"`
 }
 
-var setMemberRole = &core.Endpoint{
+var setMemberRole = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/account/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberRoleArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me())
 		validate.MemberHasAccountAdminAccess(accountRole)
@@ -96,14 +97,14 @@ type getMembersResp struct {
 	More    bool      `json:"more"`
 }
 
-var getMembers = &core.Endpoint{
+var getMembers = &endpoint.Endpoint{
 	Method:          cnst.GET,
 	Path:            "/api/v1/account/getMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.AccountId, ctx.Me()))
 		return dbGetMembers(ctx, args.Shard, args.AccountId, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
@@ -120,14 +121,14 @@ type getActivitiesArgs struct {
 	Limit          int        `json:"limit"`
 }
 
-var getActivities = &core.Endpoint{
+var getActivities = &endpoint.Endpoint{
 	Method:          cnst.GET,
 	Path:            "/api/v1/account/getActivities",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getActivitiesArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
 		if args.OccurredAfter != nil && args.OccurredBefore != nil {
 			panic(err.InvalidArguments)
@@ -142,20 +143,20 @@ type getMeArgs struct {
 	AccountId id.Id `json:"accountId"`
 }
 
-var getMe = &core.Endpoint{
+var getMe = &endpoint.Endpoint{
 	Method:          cnst.GET,
 	Path:            "/api/v1/account/getMe",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMeArgs)
 		return dbGetMember(ctx, args.Shard, args.AccountId, ctx.Me())
 	},
 }
 
-var Endpoints = []*core.Endpoint{
+var Endpoints = []*endpoint.Endpoint{
 	setPublicProjectsEnabled,
 	getPublicProjectsEnabled,
 	setMemberRole,
@@ -250,20 +251,20 @@ func (c *client) GetMe(css *clientsession.Store, shard int, accountId id.Id) (*m
 	return val.(*member), e
 }
 
-func dbSetPublicProjectsEnabled(ctx *core.Ctx, shard int, accountId id.Id, publicProjectsEnabled bool) {
+func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, accountId id.Id, publicProjectsEnabled bool) {
 	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, accountId, ctx.Me(), publicProjectsEnabled)
 	err.PanicIf(e)
 }
 
-func dbGetPublicProjectsEnabled(ctx *core.Ctx, shard int, accountId id.Id) bool {
+func dbGetPublicProjectsEnabled(ctx ctx.Ctx, shard int, accountId id.Id) bool {
 	return db.GetPublicProjectsEnabled(ctx, shard, accountId)
 }
 
-func dbSetMemberRole(ctx *core.Ctx, shard int, accountId, memberId id.Id, role cnst.AccountRole) {
+func dbSetMemberRole(ctx ctx.Ctx, shard int, accountId, memberId id.Id, role cnst.AccountRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, accountId, ctx.Me(), memberId, role)
 }
 
-func dbGetMember(ctx *core.Ctx, shard int, accountId, memberId id.Id) *member {
+func dbGetMember(ctx ctx.Ctx, shard int, accountId, memberId id.Id) *member {
 	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
 	res := member{}
 	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
@@ -303,7 +304,7 @@ AND (
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
-func dbGetMembers(ctx *core.Ctx, shard int, accountId id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
+func dbGetMembers(ctx ctx.Ctx, shard int, accountId id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	query := bytes.NewBufferString(`SELECT a1.id, a1.isActive, a1.role FROM accountMembers a1`)
 	args := make([]interface{}, 0, 7)
 	if after != nil {
@@ -344,7 +345,7 @@ func dbGetMembers(ctx *core.Ctx, shard int, accountId id.Id, role *cnst.AccountR
 	return &getMembersResp{Members: res, More: false}
 }
 
-func dbGetActivities(ctx *core.Ctx, shard int, accountId id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
+func dbGetActivities(ctx ctx.Ctx, shard int, accountId id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
 		panic(err.InvalidArguments)
 	}

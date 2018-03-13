@@ -2,7 +2,8 @@ package private
 
 import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/core"
+	"bitbucket.org/0xor1/task/server/util/ctx"
+	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
@@ -24,14 +25,14 @@ type createAccountArgs struct {
 	MyDisplayName *string `json:"myDisplayName"`
 }
 
-var createAccount = &core.Endpoint{
+var createAccount = &endpoint.Endpoint{
 	Method:    cnst.POST,
 	Path:      "/api/v1/private/createAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &createAccountArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createAccountArgs)
 		return dbCreateAccount(ctx, args.AccountId, args.MyId, args.MyName, args.MyDisplayName)
 	},
@@ -43,14 +44,14 @@ type deleteAccountArgs struct {
 	MyId      id.Id `json:"myId"`
 }
 
-var deleteAccount = &core.Endpoint{
+var deleteAccount = &endpoint.Endpoint{
 	Method:    cnst.POST,
 	Path:      "/api/v1/private/deleteAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteAccountArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		if !args.MyId.Equal(args.AccountId) {
 			validate.MemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId))
@@ -68,14 +69,14 @@ type addMembersArgs struct {
 	Members   []*private.AddMember `json:"members"`
 }
 
-var addMembers = &core.Endpoint{
+var addMembers = &endpoint.Endpoint{
 	Method:    cnst.POST,
 	Path:      "/api/v1/private/addMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(args.MyId) {
@@ -126,14 +127,14 @@ type removeMembersArgs struct {
 	Members   []id.Id `json:"members"`
 }
 
-var removeMembers = &core.Endpoint{
+var removeMembers = &endpoint.Endpoint{
 	Method:    cnst.POST,
 	Path:      "/api/v1/private/removeMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
 		if args.AccountId.Equal(args.MyId) {
@@ -176,14 +177,14 @@ type memberIsOnlyAccountOwnerArgs struct {
 	MyId      id.Id `json:"myId"`
 }
 
-var memberIsOnlyAccountOwner = &core.Endpoint{
+var memberIsOnlyAccountOwner = &endpoint.Endpoint{
 	Method:    cnst.GET,
 	Path:      "/api/v1/private/memberIsOnlyAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &memberIsOnlyAccountOwnerArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*memberIsOnlyAccountOwnerArgs)
 		if args.AccountId.Equal(args.MyId) {
 			return true
@@ -201,14 +202,14 @@ type setMemberNameArgs struct {
 	NewName   string `json:"newName"`
 }
 
-var setMemberName = &core.Endpoint{
+var setMemberName = &endpoint.Endpoint{
 	Method:    cnst.POST,
 	Path:      "/api/v1/private/setMemberName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberNameArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberNameArgs)
 		dbSetMemberName(ctx, args.Shard, args.AccountId, args.MyId, args.NewName)
 		return nil
@@ -222,14 +223,14 @@ type setMemberDisplayNameArgs struct {
 	NewDisplayName *string `json:"newDisplayName"`
 }
 
-var setMemberDisplayName = &core.Endpoint{
+var setMemberDisplayName = &endpoint.Endpoint{
 	Method:    cnst.POST,
 	Path:      "/api/v1/private/setMemberDisplayName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberDisplayNameArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberDisplayNameArgs)
 		dbSetMemberDisplayName(ctx, args.Shard, args.AccountId, args.MyId, args.NewDisplayName)
 		return nil
@@ -242,14 +243,14 @@ type memberIsAccountOwnerArgs struct {
 	MyId      id.Id `json:"myId"`
 }
 
-var memberIsAccountOwner = &core.Endpoint{
+var memberIsAccountOwner = &endpoint.Endpoint{
 	Method:    cnst.GET,
 	Path:      "/api/v1/private/memberIsAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
 		return &memberIsAccountOwnerArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*memberIsAccountOwnerArgs)
 		if !args.MyId.Equal(args.AccountId) {
 			accountRole := dbGetAccountRole(ctx, args.Shard, args.AccountId, args.MyId)
@@ -263,7 +264,7 @@ var memberIsAccountOwner = &core.Endpoint{
 	},
 }
 
-var Endpoints = []*core.Endpoint{
+var Endpoints = []*endpoint.Endpoint{
 	createAccount,
 	deleteAccount,
 	addMembers,
@@ -274,19 +275,19 @@ var Endpoints = []*core.Endpoint{
 	memberIsAccountOwner,
 }
 
-func dbCreateAccount(ctx *core.Ctx, id id.Id, myId id.Id, myName string, myDisplayName *string) int {
+func dbCreateAccount(ctx ctx.Ctx, id id.Id, myId id.Id, myName string, myDisplayName *string) int {
 	shard := rand.Intn(ctx.TreeShardCount())
 	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, id, myId, myName, myDisplayName)
 	err.PanicIf(e)
 	return shard
 }
 
-func dbDeleteAccount(ctx *core.Ctx, shard int, account id.Id) {
+func dbDeleteAccount(ctx ctx.Ctx, shard int, account id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
 	err.PanicIf(e)
 }
 
-func dbGetAllInactiveMemberIdsFromInputSet(ctx *core.Ctx, shard int, accountId id.Id, members []id.Id) []id.Id {
+func dbGetAllInactiveMemberIdsFromInputSet(ctx ctx.Ctx, shard int, accountId id.Id, members []id.Id) []id.Id {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, accountId, members[0])
 	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (?`)
@@ -309,7 +310,7 @@ func dbGetAllInactiveMemberIdsFromInputSet(ctx *core.Ctx, shard int, accountId i
 	return res
 }
 
-func dbGetAccountRole(ctx *core.Ctx, shard int, accountId, memberId id.Id) *cnst.AccountRole {
+func dbGetAccountRole(ctx ctx.Ctx, shard int, accountId, memberId id.Id) *cnst.AccountRole {
 	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND id=?`, accountId, memberId)
 	res := cnst.AccountRole(3)
 	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
@@ -318,7 +319,7 @@ func dbGetAccountRole(ctx *core.Ctx, shard int, accountId, memberId id.Id) *cnst
 	return &res
 }
 
-func dbAddMembers(ctx *core.Ctx, shard int, accountId id.Id, members []*private.AddMember) {
+func dbAddMembers(ctx ctx.Ctx, shard int, accountId id.Id, members []*private.AddMember) {
 	queryArgs := make([]interface{}, 0, 3*len(members))
 	queryArgs = append(queryArgs, accountId, members[0].Id, members[0].Name, members[0].DisplayName, members[0].Role)
 	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, displayName, role) VALUES (?,?,?,?,?)`)
@@ -330,20 +331,20 @@ func dbAddMembers(ctx *core.Ctx, shard int, accountId id.Id, members []*private.
 	err.PanicIf(e)
 }
 
-func dbUpdateMembersAndSetActive(ctx *core.Ctx, shard int, accountId id.Id, members []*private.AddMember) {
+func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, accountId id.Id, members []*private.AddMember) {
 	for _, mem := range members {
 		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, accountId, mem.Id, mem.Name, mem.DisplayName, mem.Role)
 		err.PanicIf(e)
 	}
 }
 
-func dbGetTotalOwnerCount(ctx *core.Ctx, shard int, accountId id.Id) int {
+func dbGetTotalOwnerCount(ctx ctx.Ctx, shard int, accountId id.Id) int {
 	count := 0
 	err.IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, accountId).Scan(&count))
 	return count
 }
 
-func dbGetOwnerCountInSet(ctx *core.Ctx, shard int, accountId id.Id, members []id.Id) int {
+func dbGetOwnerCountInSet(ctx ctx.Ctx, shard int, accountId id.Id, members []id.Id) int {
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, accountId, members[0])
 	query := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (?`)
@@ -357,7 +358,7 @@ func dbGetOwnerCountInSet(ctx *core.Ctx, shard int, accountId id.Id, members []i
 	return count
 }
 
-func dbSetMembersInactive(ctx *core.Ctx, shard int, accountId id.Id, members []id.Id) {
+func dbSetMembersInactive(ctx ctx.Ctx, shard int, accountId id.Id, members []id.Id) {
 	accountIdBytes := accountId
 	for _, mem := range members {
 		_, e := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, accountIdBytes, mem)
@@ -365,17 +366,17 @@ func dbSetMembersInactive(ctx *core.Ctx, shard int, accountId id.Id, members []i
 	}
 }
 
-func dbSetMemberName(ctx *core.Ctx, shard int, accountId id.Id, member id.Id, newName string) {
+func dbSetMemberName(ctx ctx.Ctx, shard int, accountId id.Id, member id.Id, newName string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, accountId, member, newName)
 	err.PanicIf(e)
 }
 
-func dbSetMemberDisplayName(ctx *core.Ctx, shard int, accountId, member id.Id, newDisplayName *string) {
+func dbSetMemberDisplayName(ctx ctx.Ctx, shard int, accountId, member id.Id, newDisplayName *string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, accountId, member, newDisplayName)
 	err.PanicIf(e)
 }
 
-func dbLogAccountBatchAddOrRemoveMembersActivity(ctx *core.Ctx, shard int, accountId, member id.Id, members []id.Id, action string) {
+func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, accountId, member id.Id, members []id.Id, action string) {
 	query := bytes.NewBufferString(`INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (?,?,?,?,?,?,?,?)`)
 	args := make([]interface{}, 0, len(members)*8)
 	now := time.Now()

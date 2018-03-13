@@ -13,7 +13,7 @@ import (
 var (
 	entropyMtx = &sync.Mutex{}
 	entropy    = rand.New(rand.NewSource(time.NowUnixMillis()))
-	parseErr   = &err.Err{Code: "u_i_ip", Message: "failed to parse id"}
+	parseErr   = &err.Err{Code: "u_i_p", Message: "failed to parse id"}
 )
 
 //returns ulid as a byte slice

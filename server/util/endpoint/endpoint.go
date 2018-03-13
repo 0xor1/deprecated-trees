@@ -1,9 +1,9 @@
-package core
+package endpoint
 
 import (
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/crypt"
+	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/time"
 	"bytes"
@@ -20,7 +20,7 @@ var (
 	queryString        = "Query_String"
 	body               = "Body"
 	form               = "Form"
-	invalidEndpointErr = &err.Err{Code: "", Message: ""}
+	invalidEndpointErr = &err.Err{Code: "u_s_ie", Message: "invalid endpoint"}
 )
 
 type Endpoint struct {
@@ -31,14 +31,14 @@ type Endpoint struct {
 	RequiresSession          bool
 	ExampleResponseStructure interface{}
 	IsAuthentication         bool
-	PermissionDlmKeys        func(ctx *Ctx, args interface{}) []string
-	ValueDlmKeys             func(ctx *Ctx, args interface{}) []string
+	PermissionDlmKeys        func(ctx ctx.Ctx, args interface{}) []string
+	ValueDlmKeys             func(ctx ctx.Ctx, args interface{}) []string
 	FormStruct               map[string]string
 	ProcessForm              func(http.ResponseWriter, *http.Request) interface{}
 	GetArgsStruct            func() interface{}
-	PermissionCheck          func(ctx *Ctx, args interface{})
-	CtxHandler               func(ctx *Ctx, args interface{}) interface{}
-	StaticResources          *StaticResources
+	PermissionCheck          func(ctx ctx.Ctx, args interface{})
+	CtxHandler               func(ctx ctx.Ctx, args interface{}) interface{}
+	PrivateKeyGen            func(argsBytes []byte, ts string) []byte
 }
 
 func (ep *Endpoint) ValidateEndpoint() {
@@ -89,6 +89,17 @@ func (ep *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	}
 }
 
+type endpointDocumentation struct {
+	Note                     *string     `json:"note,omitempty"`
+	Method                   string      `json:"method"`
+	Path                     string      `json:"path"`
+	RequiresSession          bool        `json:"requiresSession"`
+	ArgsLocation             *string     `json:"argsLocation,omitempty"`
+	ArgsStructure            interface{} `json:"argsStructure,omitempty"`
+	ExampleResponseStructure interface{} `json:"exampleResponseStructure,omitempty"`
+	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
+}
+
 func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
 	reqUrl, e := url.Parse(host + ep.Path)
 	if e != nil {
@@ -112,7 +123,7 @@ func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func(
 		}
 		if ep.IsPrivate {
 			ts := fmt.Sprintf("%d", time.NowUnixMillis())
-			key := crypt.ScryptKey(append(argsBytes, []byte(ts)...), ep.StaticResources.RegionalV1PrivateClientSecret, ep.StaticResources.ScryptN, ep.StaticResources.ScryptR, ep.StaticResources.ScryptP, ep.StaticResources.ScryptKeyLen)
+			key := ep.PrivateKeyGen(argsBytes, ts)
 			urlVals.Set("_", base64.RawURLEncoding.EncodeToString(key))
 			urlVals.Set("ts", ts)
 		}
@@ -169,15 +180,4 @@ func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, args interf
 		}
 	}
 	return respVal, nil
-}
-
-type endpointDocumentation struct {
-	Note                     *string     `json:"note,omitempty"`
-	Method                   string      `json:"method"`
-	Path                     string      `json:"path"`
-	RequiresSession          bool        `json:"requiresSession"`
-	ArgsLocation             *string     `json:"argsLocation,omitempty"`
-	ArgsStructure            interface{} `json:"argsStructure,omitempty"`
-	ExampleResponseStructure interface{} `json:"exampleResponseStructure,omitempty"`
-	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
 }

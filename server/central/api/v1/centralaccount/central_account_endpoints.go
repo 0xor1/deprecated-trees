@@ -2,9 +2,10 @@ package centralaccount
 
 import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/core"
 	"bitbucket.org/0xor1/task/server/util/crypt"
+	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/dlm"
+	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
@@ -42,14 +43,14 @@ var (
 
 //endpoints
 
-var getRegions = &core.Endpoint{
+var getRegions = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getRegions",
 	ExampleResponseStructure: []string{"use", "usw", "eu"},
-	ValueDlmKeys: func(ctx *core.Ctx, _ interface{}) []string {
+	ValueDlmKeys: func(ctx ctx.Ctx, _ interface{}) []string {
 		return []string{dlm.ForSystem()}
 	},
-	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		return ctx.RegionalV1PrivateClient().GetRegions()
 	},
 }
@@ -64,13 +65,13 @@ type registerArgs struct {
 	Theme       cnst.Theme `json:"theme"`
 }
 
-var register = &core.Endpoint{
+var register = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/register",
 	GetArgsStruct: func() interface{} {
 		return &registerArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*registerArgs)
 		args.Name = strings.Trim(args.Name, " ")
 		validate.StringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
@@ -141,13 +142,13 @@ type resendActivationEmailArgs struct {
 	Email string `json:"email"`
 }
 
-var resendActivationEmail = &core.Endpoint{
+var resendActivationEmail = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/resendActivationEmail",
 	GetArgsStruct: func() interface{} {
 		return &resendActivationEmailArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*resendActivationEmailArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
@@ -164,13 +165,13 @@ type activateArgs struct {
 	ActivationCode string `json:"activationCode"`
 }
 
-var activate = &core.Endpoint{
+var activate = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/activate",
 	GetArgsStruct: func() interface{} {
 		return &activateArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*activateArgs)
 		args.ActivationCode = strings.Trim(args.ActivationCode, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
@@ -191,7 +192,7 @@ type authenticateArgs struct {
 	PwdTry string `json:"pwdTry"`
 }
 
-var authenticate = &core.Endpoint{
+var authenticate = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/authenticate",
 	ExampleResponseStructure: id.New(),
@@ -199,7 +200,7 @@ var authenticate = &core.Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &authenticateArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*authenticateArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
@@ -244,13 +245,13 @@ type confirmNewEmailArgs struct {
 	ConfirmationCode string `json:"confirmationCode"`
 }
 
-var confirmNewEmail = &core.Endpoint{
+var confirmNewEmail = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/confirmNewEmail",
 	GetArgsStruct: func() interface{} {
 		return &confirmNewEmailArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*confirmNewEmailArgs)
 		acc := dbGetPersonalAccountByEmail(ctx, args.CurrentEmail)
 		if acc == nil || acc.NewEmail == nil || args.NewEmail != *acc.NewEmail || acc.newEmailConfirmationCode == nil || args.ConfirmationCode != *acc.newEmailConfirmationCode {
@@ -273,13 +274,13 @@ type resetPwdArgs struct {
 	Email string `json:"email"`
 }
 
-var resetPwd = &core.Endpoint{
+var resetPwd = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/resetPwd",
 	GetArgsStruct: func() interface{} {
 		return &resetPwdArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*resetPwdArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
@@ -303,13 +304,13 @@ type setNewPwdFromPwdResetArgs struct {
 	NewPwd       string `json:"newPwd"`
 }
 
-var setNewPwdFromPwdReset = &core.Endpoint{
+var setNewPwdFromPwdReset = &endpoint.Endpoint{
 	Method: cnst.POST,
 	Path:   "/api/v1/centralAccount/setNewPwdFromPwdReset",
 	GetArgsStruct: func() interface{} {
 		return &setNewPwdFromPwdResetArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setNewPwdFromPwdResetArgs)
 		validate.StringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 
@@ -341,14 +342,14 @@ type getAccountArgs struct {
 	Name string `json:"name"`
 }
 
-var getAccount = &core.Endpoint{
+var getAccount = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getAccount",
 	ExampleResponseStructure: &account{},
 	GetArgsStruct: func() interface{} {
 		return &getAccountArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getAccountArgs)
 		return dbGetAccountByCiName(ctx, strings.Trim(args.Name, " "))
 	},
@@ -358,14 +359,14 @@ type getAccountsArgs struct {
 	Accounts []id.Id `json:"accounts"`
 }
 
-var getAccounts = &core.Endpoint{
+var getAccounts = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &getAccountsArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getAccountsArgs)
 		validate.EntityCount(len(args.Accounts), ctx.MaxProcessEntityCount())
 
@@ -377,14 +378,14 @@ type searchAccountsArgs struct {
 	NameOrDisplayNameStartsWith string `json:"nameOrDisplayNameStartsWith"`
 }
 
-var searchAccounts = &core.Endpoint{
+var searchAccounts = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/searchAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchAccountsArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchAccountsArgs)
 		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
 		if utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%") {
@@ -398,14 +399,14 @@ type searchPersonalAccountsArgs struct {
 	NameOrDisplayNameOrEmailStartsWith string `json:"nameOrDisplayNameOrEmailStartsWith"`
 }
 
-var searchPersonalAccounts = &core.Endpoint{
+var searchPersonalAccounts = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/searchPersonalAccounts",
 	ExampleResponseStructure: []*account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchPersonalAccountsArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchPersonalAccountsArgs)
 		args.NameOrDisplayNameOrEmailStartsWith = strings.Trim(args.NameOrDisplayNameOrEmailStartsWith, " ")
 		if utf8.RuneCountInString(args.NameOrDisplayNameOrEmailStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameOrEmailStartsWith, "%") {
@@ -415,12 +416,12 @@ var searchPersonalAccounts = &core.Endpoint{
 	},
 }
 
-var getMe = &core.Endpoint{
+var getMe = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getMe",
 	ExampleResponseStructure: &me{},
 	RequiresSession:          true,
-	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.Me())
 		if acc == nil {
 			panic(noSuchAccountErr)
@@ -434,14 +435,14 @@ type setMyPwdArgs struct {
 	OldPwd string `json:"oldPwd"`
 }
 
-var setMyPwd = &core.Endpoint{
+var setMyPwd = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setMyPwd",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMyPwdArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMyPwdArgs)
 		validate.StringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 
@@ -471,14 +472,14 @@ type setMyEmailArgs struct {
 	NewEmail string `json:"newEmail"`
 }
 
-var setMyEmail = &core.Endpoint{
+var setMyEmail = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setMyEmail",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMyEmailArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMyEmailArgs)
 		args.NewEmail = strings.Trim(args.NewEmail, " ")
 		validate.Email(args.NewEmail)
@@ -502,11 +503,11 @@ var setMyEmail = &core.Endpoint{
 	},
 }
 
-var resendMyNewEmailConfirmationEmail = &core.Endpoint{
+var resendMyNewEmailConfirmationEmail = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/resendMyNewEmailConfirmationEmail",
 	RequiresSession: true,
-	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.Me())
 		if acc == nil {
 			panic(noSuchAccountErr)
@@ -531,14 +532,14 @@ type setAccountNameArgs struct {
 	NewName string `json:"newName"`
 }
 
-var setAccountName = &core.Endpoint{
+var setAccountName = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setAccountName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setAccountNameArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountNameArgs)
 		args.NewName = strings.Trim(args.NewName, " ")
 		validate.StringArg("name", args.NewName, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
@@ -591,14 +592,14 @@ type setAccountDisplayNameArgs struct {
 	NewDisplayName *string `json:"newDisplayName"`
 }
 
-var setAccountDisplayName = &core.Endpoint{
+var setAccountDisplayName = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setAccountDisplayName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setAccountDisplayNameArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountDisplayNameArgs)
 		if args.NewDisplayName != nil {
 			*args.NewDisplayName = strings.Trim(*args.NewDisplayName, " ")
@@ -655,7 +656,7 @@ type setAccountAvatarArgs struct {
 	Avatar  io.ReadCloser `json:"avatar"`
 }
 
-var setAccountAvatar = &core.Endpoint{
+var setAccountAvatar = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/setAccountAvatar",
 	RequiresSession: true,
@@ -674,7 +675,7 @@ var setAccountAvatar = &core.Endpoint{
 			Avatar:  f,
 		}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountAvatarArgs)
 		if args.Avatar != nil {
 			defer args.Avatar.Close()
@@ -734,14 +735,14 @@ type migrateAccountArgs struct {
 	NewRegion string `json:"newRegion"`
 }
 
-var migrateAccount = &core.Endpoint{
+var migrateAccount = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/migrateAccount",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &migrateAccountArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, _ interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		panic(err.NotImplemented)
 		return nil
 	},
@@ -753,7 +754,7 @@ type createAccountArgs struct {
 	DisplayName *string `json:"displayName"`
 }
 
-var createAccount = &core.Endpoint{
+var createAccount = &endpoint.Endpoint{
 	Method:                   cnst.POST,
 	Path:                     "/api/v1/centralAccount/createAccount",
 	RequiresSession:          true,
@@ -761,7 +762,7 @@ var createAccount = &core.Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &createAccountArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createAccountArgs)
 		args.Name = strings.Trim(args.Name, " ")
 		validate.StringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
@@ -815,7 +816,7 @@ type getMyAccountsResp struct {
 	More     bool       `json:"more"`
 }
 
-var getMyAccounts = &core.Endpoint{
+var getMyAccounts = &endpoint.Endpoint{
 	Method: cnst.GET,
 	Path:   "/api/v1/centralAccount/getMyAccounts",
 	ExampleResponseStructure: &getMyAccountsResp{},
@@ -823,7 +824,7 @@ var getMyAccounts = &core.Endpoint{
 	GetArgsStruct: func() interface{} {
 		return &getMyAccountsArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMyAccountsArgs)
 		res := &getMyAccountsResp{}
 		res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.Me(), args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
@@ -835,14 +836,14 @@ type deleteAccountArgs struct {
 	Account id.Id `json:"account"`
 }
 
-var deleteAccount = &core.Endpoint{
+var deleteAccount = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/deleteAccount",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteAccountArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		acc := dbGetAccount(ctx, args.Account)
 		if acc == nil {
@@ -894,14 +895,14 @@ type addMembersArgs struct {
 	NewMembers []*AddMember `json:"newMembers"`
 }
 
-var addMembers = &core.Endpoint{
+var addMembers = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/addMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &addMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		if args.Account.Equal(ctx.Me()) {
 			panic(err.InvalidOperation)
@@ -945,14 +946,14 @@ type removeMembersArgs struct {
 	ExistingMembers []id.Id `json:"existingMembers"`
 }
 
-var removeMembers = &core.Endpoint{
+var removeMembers = &endpoint.Endpoint{
 	Method:          cnst.POST,
 	Path:            "/api/v1/centralAccount/removeMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &removeMembersArgs{}
 	},
-	CtxHandler: func(ctx *core.Ctx, a interface{}) interface{} {
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		if args.Account.Equal(ctx.Me()) {
 			panic(err.InvalidOperation)
@@ -970,7 +971,7 @@ var removeMembers = &core.Endpoint{
 	},
 }
 
-var Endpoints = []*core.Endpoint{
+var Endpoints = []*endpoint.Endpoint{
 	getRegions,
 	register,
 	resendActivationEmail,

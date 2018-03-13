@@ -4,8 +4,9 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/config"
 	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/server"
+	"bitbucket.org/0xor1/task/server/util/static"
 	"bitbucket.org/0xor1/task/server/util/time"
 	"encoding/base64"
 	"github.com/stretchr/testify/assert"
@@ -16,12 +17,13 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	staticResources := config.Config("", "", private.NewClient, Endpoints, private.Endpoints)
-	testServer := httptest.NewServer(staticResources)
+	SR := static.Config("", "", private.NewClient)
+	serv := server.New(SR, Endpoints, private.Endpoints)
+	testServer := httptest.NewServer(serv)
 	aliCss := clientsession.New()
 	client := NewClient(testServer.URL)
 	region := "lcl"
-	staticResources.RegionalV1PrivateClient = private.NewClient(map[string]string{
+	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
 		region: testServer.URL,
 	})
 
@@ -34,7 +36,7 @@ func Test_system(t *testing.T) {
 
 	client.ResendActivationEmail("ali@ali.com")
 	activationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 
 	client.Activate("ali@ali.com", activationCode)
 	aliId, err := client.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
@@ -43,13 +45,13 @@ func Test_system(t *testing.T) {
 
 	err = client.ResendMyNewEmailConfirmationEmail(aliCss)
 	newEmailConfirmationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
+	SR.AccountDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
 
 	client.ConfirmNewEmail("ali@ali.com", "aliNew@aliNew.com", newEmailConfirmationCode)
 
 	client.ResetPwd("aliNew@aliNew.com")
 	resetPwdCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
+	SR.AccountDb.QueryRow(`SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
 
 	client.SetNewPwdFromPwdReset("al1-Pwd-W00-2", "aliNew@aliNew.com", resetPwdCode)
 
@@ -151,12 +153,12 @@ func Test_system(t *testing.T) {
 	client.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, cnst.ColorBlindTheme)
 
 	bobActivationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	client.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
 	bobId, err := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
 	catActivationCode := ""
-	staticResources.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
+	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	client.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
 	catId, err := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
@@ -218,7 +220,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, catDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	staticResources.AvatarClient.DeleteAll()
+	SR.AvatarClient.DeleteAll()
 	client.DeleteAccount(aliCss, org.Id)
 	client.DeleteAccount(aliCss, org2.Id)
 	client.DeleteAccount(aliCss, aliId)

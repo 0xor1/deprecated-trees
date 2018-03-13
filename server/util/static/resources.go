@@ -1,21 +1,19 @@
-package config
+package static
 
 import (
 	"bitbucket.org/0xor1/task/server/util/avatar"
-	"bitbucket.org/0xor1/task/server/util/core"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/mail"
 	"bitbucket.org/0xor1/task/server/util/private"
-	t "bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/task/server/util/queryinfo"
+	"bitbucket.org/0xor1/task/server/util/redis"
+	"bitbucket.org/0xor1/task/server/util/time"
 	"encoding/base64"
 	"encoding/gob"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/0xor1/iredis"
 	"github.com/0xor1/isql"
-	"github.com/garyburd/redigo/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/spf13/viper"
@@ -23,12 +21,10 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // pass in empty strings for no config file
-func Config(configFile, configPath string, createRegionalV1PrivateClient func(regions map[string]string) private.V1Client, endpointSets ...[]*core.Endpoint) *core.StaticResources {
-	sr := &core.StaticResources{}
+func Config(configFile, configPath string, createPrivateV1Client func(map[string]string) private.V1Client) *Resources {
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "127.0.0.1:8787"
 	viper.SetDefault("serverAddress", "127.0.0.1:8787")
@@ -138,10 +134,8 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 	sessionStore.Options.Domain = viper.GetString("sessionDomain")
 	gob.Register(id.New()) //register Id type for sessionCookie
 
-	routes := map[string]*core.Endpoint{}
-
 	var logError func(error)
-	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*core.QueryInfo)
+	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
 	var avatarClient avatar.Client
 	var mailClient mail.Client
 
@@ -151,8 +145,8 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 			fmt.Println(err)
 			fmt.Println(string(debug.Stack()))
 		}
-		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*core.QueryInfo) {
-			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
+		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
+			fmt.Println(status, fmt.Sprintf("%dms", time.NowUnixMillis()-reqStartUnixMillis), method, path)
 			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
 			//queryInfosBytes, _ := json.Marshal(queryInfos)
 			//fmt.Println(string(queryInfosBytes))
@@ -166,24 +160,6 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 		//TODO setup datadog stats and error logging
 		panic(err.NotImplemented)
 	}
-
-	for _, endpointSet := range endpointSets {
-		for _, ep := range endpointSet {
-			ep.ValidateEndpoint()
-			lowerPath := strings.ToLower(ep.Path)
-			if _, exists := routes[lowerPath]; exists {
-				err.FmtPanic("duplicate endpoint path %q", lowerPath)
-			}
-			routes[lowerPath] = ep
-			ep.StaticResources = sr
-		}
-	}
-	routeDocs := make([]interface{}, 0, len(routes))
-	for _, ep := range routes {
-		routeDocs = append(routeDocs, ep.GetEndpointDocumentation())
-	}
-	apiDocs, e := json.MarshalIndent(routeDocs, "", "    ")
-	err.PanicIf(e)
 
 	nameRegexMatchers := make([]*regexp.Regexp, 0, len(viper.GetStringSlice("nameRegexMatchers")))
 	for _, str := range viper.GetStringSlice("nameRegexMatchers") {
@@ -216,68 +192,118 @@ func Config(configFile, configPath string, createRegionalV1PrivateClient func(re
 
 	var dlmAndDataRedisPool iredis.Pool
 	if viper.GetString("dlmAndDataRedisPool") != "" {
-		dlmAndDataRedisPool = createRedisPool(viper.GetString("dlmAndDataRedisPool"), logError)
+		dlmAndDataRedisPool = redis.CreatePool(viper.GetString("dlmAndDataRedisPool"), logError)
 	}
 
 	var privateKeyRedisPool iredis.Pool
 	if viper.GetString("privateKeyRedisPool") != "" {
-		privateKeyRedisPool = createRedisPool(viper.GetString("privateKeyRedisPool"), logError)
+		privateKeyRedisPool = redis.CreatePool(viper.GetString("privateKeyRedisPool"), logError)
 	}
 
-	sr.ServerAddress = viper.GetString("serverAddress")
-	sr.Env = viper.GetString("env")
-	sr.Region = viper.GetString("region")
-	sr.Version = viper.GetString("version")
-	sr.ApiDocsRoute = strings.ToLower(viper.GetString("apiDocsRoute"))
-	sr.SessionCookieName = viper.GetString("sessionCookieName")
-	sr.SessionStore = sessionStore
-	sr.Routes = routes
-	sr.ApiDocs = apiDocs
-	sr.MasterCacheKey = viper.GetString("masterCacheKey")
-	sr.NameRegexMatchers = nameRegexMatchers
-	sr.PwdRegexMatchers = pwdRegexMatchers
-	sr.NameMinRuneCount = viper.GetInt("nameMinRuneCount")
-	sr.NameMaxRuneCount = viper.GetInt("nameMaxRuneCount")
-	sr.PwdMinRuneCount = viper.GetInt("pwdMinRuneCount")
-	sr.PwdMaxRuneCount = viper.GetInt("pwdMaxRuneCount")
-	sr.MaxProcessEntityCount = viper.GetInt("maxProcessEntityCount")
-	sr.CryptCodeLen = viper.GetInt("cryptCodeLen")
-	sr.SaltLen = viper.GetInt("saltLen")
-	sr.ScryptN = viper.GetInt("scryptN")
-	sr.ScryptR = viper.GetInt("scryptR")
-	sr.ScryptP = viper.GetInt("scryptP")
-	sr.ScryptKeyLen = viper.GetInt("scryptKeyLen")
-	sr.RegionalV1PrivateClient = createRegionalV1PrivateClient(viper.GetStringMapString("regionalV1PrivateClientConfig"))
-	sr.MailClient = mailClient
-	sr.AvatarClient = avatarClient
-	sr.LogError = logError
-	sr.LogStats = logStats
-	sr.AccountDb = accountDb
-	sr.PwdDb = pwdDb
-	sr.TreeShards = treeShardDbs
-	sr.DlmAndDataRedisPool = dlmAndDataRedisPool
-	sr.PrivateKeyRedisPool = privateKeyRedisPool
-	return sr
+	return &Resources{
+		ServerAddress:           viper.GetString("serverAddress"),
+		Env:                     viper.GetString("env"),
+		Region:                  viper.GetString("region"),
+		Version:                 viper.GetString("version"),
+		ApiDocsRoute:            strings.ToLower(viper.GetString("apiDocsRoute")),
+		SessionCookieName:       viper.GetString("sessionCookieName"),
+		SessionStore:            sessionStore,
+		MasterCacheKey:          viper.GetString("masterCacheKey"),
+		NameRegexMatchers:       nameRegexMatchers,
+		PwdRegexMatchers:        pwdRegexMatchers,
+		NameMinRuneCount:        viper.GetInt("nameMinRuneCount"),
+		NameMaxRuneCount:        viper.GetInt("nameMaxRuneCount"),
+		PwdMinRuneCount:         viper.GetInt("pwdMinRuneCount"),
+		PwdMaxRuneCount:         viper.GetInt("pwdMaxRuneCount"),
+		MaxProcessEntityCount:   viper.GetInt("maxProcessEntityCount"),
+		CryptCodeLen:            viper.GetInt("cryptCodeLen"),
+		SaltLen:                 viper.GetInt("saltLen"),
+		ScryptN:                 viper.GetInt("scryptN"),
+		ScryptR:                 viper.GetInt("scryptR"),
+		ScryptP:                 viper.GetInt("scryptP"),
+		ScryptKeyLen:            viper.GetInt("scryptKeyLen"),
+		RegionalV1PrivateClient: createPrivateV1Client(viper.GetStringMapString("regionalV1PrivateClientConfig")),
+		MailClient:              mailClient,
+		AvatarClient:            avatarClient,
+		LogError:                logError,
+		LogStats:                logStats,
+		AccountDb:               accountDb,
+		PwdDb:                   pwdDb,
+		TreeShards:              treeShardDbs,
+		DlmAndDataRedisPool:     dlmAndDataRedisPool,
+		PrivateKeyRedisPool:     privateKeyRedisPool,
+	}
 }
 
-func createRedisPool(address string, log func(error)) iredis.Pool {
-	return &redis.Pool{
-		MaxIdle:     300,
-		IdleTimeout: time.Minute,
-		Dial: func() (redis.Conn, error) {
-			conn, e := redis.Dial("tcp", address, redis.DialDatabase(0), redis.DialConnectTimeout(1*time.Second), redis.DialReadTimeout(2*time.Second), redis.DialWriteTimeout(2*time.Second))
-			// Log any Redis connection error on stdout
-			if e != nil {
-				log(e)
-			}
-
-			return conn, e
-		},
-		TestOnBorrow: func(c redis.Conn, ti time.Time) error {
-			if time.Since(ti) < time.Minute {
-				return nil
-			}
-			return errors.New("Redis connection timed out")
-		},
-	}
+// Collection of application static resources, in lcl and dev "onebox" environments all values must be set
+// but in stg and prd environments central and regional endpoints are physically separated and so not all values are valid
+// e.g. account and pwd dbs are only initialised on central service, whilst redis pool and tree shards are only initialised
+// for regional endpoints.
+type Resources struct {
+	// server address eg "127.0.0.1:8787"
+	ServerAddress string
+	// must be one of "lcl", "dev", "stg", "prd"
+	Env string
+	// must be one of "lcl", "dev", "central", "use", "usw", "euw"
+	Region string
+	// commit sha
+	Version string
+	// api docs path
+	ApiDocsRoute string
+	// session cookie name
+	SessionCookieName string
+	// session cookie store
+	SessionStore *sessions.CookieStore
+	// indented json api docs
+	ApiDocs []byte
+	// incremental base64 value
+	MasterCacheKey string
+	// regexes that account names must match to be valid during account creation or name setting
+	NameRegexMatchers []*regexp.Regexp
+	// regexes that account pwds must match to be valid during account creation or pwd setting
+	PwdRegexMatchers []*regexp.Regexp
+	// minimum number of runes required for a valid account name
+	NameMinRuneCount int
+	// maximum number of runes required for a valid account name
+	NameMaxRuneCount int
+	// minimum number of runes required for a valid account pwd
+	PwdMinRuneCount int
+	// maximum number of runes required for a valid account pwd
+	PwdMaxRuneCount int
+	// max number of entities that can be processed at once, also used for max limit value on queries
+	MaxProcessEntityCount int
+	// length of cryptographic codes, used in email links for validating email addresses and resetting pwds
+	CryptCodeLen int
+	// length of salts used for pwd hashing
+	SaltLen int
+	// scrypt N value
+	ScryptN int
+	// scrypt R value
+	ScryptR int
+	// scrypt P value
+	ScryptP int
+	// scrypt key length
+	ScryptKeyLen int
+	// regional v1 private client secret
+	RegionalV1PrivateClientSecret []byte
+	// regional v1 private client used by central endpoints
+	RegionalV1PrivateClient private.V1Client
+	// mail client for sending emails
+	MailClient mail.Client
+	// avatar client for storing avatar images
+	AvatarClient avatar.Client
+	// error logging function
+	LogError func(error)
+	// stats logging function
+	LogStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
+	// account sql connection
+	AccountDb isql.ReplicaSet
+	// pwd sql connection
+	PwdDb isql.ReplicaSet
+	// tree shard sql connections
+	TreeShards map[int]isql.ReplicaSet
+	// redis pool for caching layer
+	DlmAndDataRedisPool iredis.Pool
+	// redis pool for private request keys to check for replay attacks
+	PrivateKeyRedisPool iredis.Pool
 }
