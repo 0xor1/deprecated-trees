@@ -1,0 +1,132 @@
+package private
+
+import (
+	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/task/server/util/private"
+	"strings"
+)
+
+func NewClient(regions map[string]string) private.V1Client {
+	lowerRegionsMap := map[string]string{}
+	for k, v := range regions {
+		lowerRegionsMap[strings.ToLower(k)] = v
+	}
+	return &client{
+		regions: lowerRegionsMap,
+	}
+}
+
+type client struct {
+	regions map[string]string
+}
+
+func (c *client) getHost(region string) string {
+	host, exists := c.regions[strings.ToLower(region)]
+	if !exists {
+		panic(err.NoSuchRegion)
+	}
+	return host
+}
+
+func (c *client) GetRegions() []string {
+	regions := make([]string, 0, len(c.regions))
+	for r := range c.regions {
+		regions = append(regions, r)
+	}
+	return regions
+}
+
+func (c *client) IsValidRegion(region string) bool {
+	_, exists := c.regions[strings.ToLower(region)]
+	return exists
+}
+
+func (c *client) CreateAccount(region string, account, myId id.Id, myName string, myDisplayName *string) (int, error) {
+	respVal := 0
+	val, e := createAccount.DoRequest(nil, c.getHost(region), &createAccountArgs{
+		Account:       account,
+		Me:            myId,
+		MyName:        myName,
+		MyDisplayName: myDisplayName,
+	}, nil, &respVal)
+	if val != nil {
+		return *val.(*int), e
+	}
+	return 0, e
+}
+
+func (c *client) DeleteAccount(region string, shard int, account, myId id.Id) error {
+	_, e := deleteAccount.DoRequest(nil, c.getHost(region), &deleteAccountArgs{
+		Shard:   shard,
+		Account: account,
+		Me:      myId,
+	}, nil, nil)
+	return e
+}
+
+func (c *client) AddMembers(region string, shard int, account, myId id.Id, members []*private.AddMember) error {
+	_, e := addMembers.DoRequest(nil, c.getHost(region), &addMembersArgs{
+		Shard:   shard,
+		Account: account,
+		Me:      myId,
+		Members: members,
+	}, nil, nil)
+	return e
+}
+
+func (c *client) RemoveMembers(region string, shard int, account, myId id.Id, members []id.Id) error {
+	_, err := removeMembers.DoRequest(nil, c.getHost(region), &removeMembersArgs{
+		Shard:   shard,
+		Account: account,
+		Me:      myId,
+		Members: members,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, myId id.Id) (bool, error) {
+	respVal := false
+	val, e := memberIsOnlyAccountOwner.DoRequest(nil, c.getHost(region), &memberIsOnlyAccountOwnerArgs{
+		Shard:   shard,
+		Account: account,
+		Me:      myId,
+	}, nil, &respVal)
+	if val != nil {
+		return *val.(*bool), e
+	}
+	return false, e
+}
+
+func (c *client) SetMemberName(region string, shard int, account, myId id.Id, newName string) error {
+	_, err := setMemberName.DoRequest(nil, c.getHost(region), &setMemberNameArgs{
+		Shard:   shard,
+		Account: account,
+		Me:      myId,
+		NewName: newName,
+	}, nil, nil)
+	return err
+}
+
+func (c *client) SetMemberDisplayName(region string, shard int, account, myId id.Id, newDisplayName *string) error {
+	_, e := setMemberDisplayName.DoRequest(nil, c.getHost(region), &setMemberDisplayNameArgs{
+		Shard:          shard,
+		Account:        account,
+		Me:             myId,
+		NewDisplayName: newDisplayName,
+	}, nil, nil)
+	return e
+}
+
+func (c *client) MemberIsAccountOwner(region string, shard int, account, myId id.Id) (bool, error) {
+	respVal := false
+	val, e := memberIsAccountOwner.DoRequest(nil, c.getHost(region), &memberIsAccountOwnerArgs{
+		Shard:   shard,
+		Account: account,
+		Me:      myId,
+	}, nil, &respVal)
+	if val != nil {
+		return *val.(*bool), e
+	}
+	return false, e
+}

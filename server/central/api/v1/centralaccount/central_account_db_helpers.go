@@ -135,14 +135,14 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*accoun
 }
 
 func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameOrEmailStartsWith string) []*account {
-	searchTerm := nameOrDisplayNameOrEmailStartsWith + "%"
 	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	//TODO need to profile these queries to check for best performance
 	var rows isql.Rows
 	var e error
 	if strings.Contains(nameOrDisplayNameOrEmailStartsWith, "@") {
-		rows, e = ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100)
+		rows, e = ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?`, nameOrDisplayNameOrEmailStartsWith, 0, 100)
 	} else {
+		searchTerm := nameOrDisplayNameOrEmailStartsWith + "%"
 		rows, e = ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
 	}
 	if rows != nil {
@@ -184,15 +184,15 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 	return res
 }
 
-func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *account, memberId id.Id) {
-	_, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, memberId)
+func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *account, member id.Id) {
+	_, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, member)
 	err.PanicIf(e)
 }
 
-func dbGetGroupAccounts(ctx ctx.Ctx, memberId id.Id, after *id.Id, limit int) ([]*account, bool) {
+func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*account, bool) {
 	args := make([]interface{}, 0, 3)
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
-	args = append(args, memberId)
+	args = append(args, member)
 	if after != nil {
 		query.WriteString(` AND name > (SELECT name FROM accounts WHERE id = ?)`)
 		args = append(args, *after)
@@ -216,21 +216,21 @@ func dbGetGroupAccounts(ctx ctx.Ctx, memberId id.Id, after *id.Id, limit int) ([
 	return res, false
 }
 
-func dbCreateMemberships(ctx ctx.Ctx, accountId id.Id, members []id.Id) {
+func dbCreateMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
 	args := make([]interface{}, 0, len(members)*2)
-	args = append(args, accountId, members[0])
+	args = append(args, account, members[0])
 	query := bytes.NewBufferString(`INSERT INTO memberships (account, member) VALUES (?,?)`)
 	for _, member := range members[1:] {
 		query.WriteString(`,(?,?)`)
-		args = append(args, accountId, member)
+		args = append(args, account, member)
 	}
 	_, e := ctx.AccountExec(query.String(), args...)
 	err.PanicIf(e)
 }
 
-func dbDeleteMemberships(ctx ctx.Ctx, accountId id.Id, members []id.Id) {
+func dbDeleteMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
 	args := make([]interface{}, 0, len(members)+1)
-	args = append(args, accountId, members[0])
+	args = append(args, account, members[0])
 	query := bytes.NewBufferString(`DELETE FROM memberships WHERE account=? AND member IN (?`)
 	for _, member := range members[1:] {
 		query.WriteString(`,?`)

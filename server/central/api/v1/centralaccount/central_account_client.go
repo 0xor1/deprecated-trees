@@ -192,17 +192,17 @@ func (c *client) ResendMyNewEmailConfirmationEmail(css *clientsession.Store) err
 	return e
 }
 
-func (c *client) SetAccountName(css *clientsession.Store, accountId id.Id, newName string) error {
+func (c *client) SetAccountName(css *clientsession.Store, account id.Id, newName string) error {
 	_, e := setAccountName.DoRequest(css, c.host, &setAccountNameArgs{
-		Account: accountId,
+		Account: account,
 		NewName: newName,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) SetAccountDisplayName(css *clientsession.Store, accountId id.Id, newDisplayName *string) error {
+func (c *client) SetAccountDisplayName(css *clientsession.Store, account id.Id, newDisplayName *string) error {
 	_, e := setAccountDisplayName.DoRequest(css, c.host, &setAccountDisplayNameArgs{
-		Account:        accountId,
+		Account:        account,
 		NewDisplayName: newDisplayName,
 	}, nil, nil)
 	return e
