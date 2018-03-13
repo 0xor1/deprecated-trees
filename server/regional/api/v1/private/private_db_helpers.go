@@ -11,9 +11,9 @@ import (
 	"bitbucket.org/0xor1/task/server/util/time"
 )
 
-func dbCreateAccount(ctx ctx.Ctx, id id.Id, me id.Id, myName string, myDisplayName *string) int {
+func dbCreateAccount(ctx ctx.Ctx, account, me id.Id, myName string, myDisplayName *string) int {
 	shard := rand.Intn(ctx.TreeShardCount())
-	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, id, me, myName, myDisplayName)
+	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, account, me, myName, myDisplayName)
 	err.PanicIf(e)
 	return shard
 }

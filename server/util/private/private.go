@@ -8,14 +8,14 @@ import (
 type V1Client interface {
 	GetRegions() []string
 	IsValidRegion(region string) bool
-	CreateAccount(region string, account, myId id.Id, myName string, myDisplayName *string) (int, error)
-	DeleteAccount(region string, shard int, account, myId id.Id) error
-	AddMembers(region string, shard int, account, myId id.Id, members []*AddMember) error
-	RemoveMembers(region string, shard int, account, myId id.Id, members []id.Id) error
-	MemberIsOnlyAccountOwner(region string, shard int, account, myId id.Id) (bool, error)
-	SetMemberName(region string, shard int, account, myId id.Id, newName string) error
-	SetMemberDisplayName(region string, shard int, account, myId id.Id, newDisplayName *string) error
-	MemberIsAccountOwner(region string, shard int, account, myId id.Id) (bool, error)
+	CreateAccount(region string, account, me id.Id, myName string, myDisplayName *string) (int, error)
+	DeleteAccount(region string, shard int, account, me id.Id) error
+	AddMembers(region string, shard int, account, me id.Id, members []*AddMember) error
+	RemoveMembers(region string, shard int, account, me id.Id, members []id.Id) error
+	MemberIsOnlyAccountOwner(region string, shard int, account, me id.Id) (bool, error)
+	SetMemberName(region string, shard int, account, me id.Id, newName string) error
+	SetMemberDisplayName(region string, shard int, account, me id.Id, newDisplayName *string) error
+	MemberIsAccountOwner(region string, shard int, account, me id.Id) (bool, error)
 }
 
 type AddMember struct {

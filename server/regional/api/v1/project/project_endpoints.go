@@ -50,12 +50,12 @@ var createProject = &endpoint.Endpoint{
 		project.DueOn = args.DueOn
 		project.IsParallel = args.IsParallel
 		project.IsPublic = args.IsPublic
-		dbCreateProject(ctx, args.Shard, args.Account, ctx.Me(), project)
+		dbCreateProject(ctx, args.Shard, args.Account, project)
 		if args.Account.Equal(ctx.Me()) {
 			addMem := &AddProjectMember{}
 			addMem.Id = ctx.Me()
 			addMem.Role = cnst.ProjectAdmin
-			dbAddMemberOrSetActive(ctx, args.Shard, args.Account, project.Id, ctx.Me(), addMem)
+			dbAddMemberOrSetActive(ctx, args.Shard, args.Account, project.Id, addMem)
 		}
 
 		if len(args.Members) > 0 {
@@ -92,7 +92,7 @@ var setIsPublic = &endpoint.Endpoint{
 			panic(publicProjectsDisabledErr)
 		}
 
-		dbSetIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.Me(), args.IsPublic)
+		dbSetIsPublic(ctx, args.Shard, args.Account, args.Project, args.IsPublic)
 
 		return nil
 	},
@@ -114,7 +114,7 @@ var setIsArchived = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setIsArchivedArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		dbSetProjectIsArchived(ctx, args.Shard, args.Account, args.Project, ctx.Me(), args.IsArchived)
+		dbSetProjectIsArchived(ctx, args.Shard, args.Account, args.Project, args.IsArchived)
 		return nil
 	},
 }
@@ -196,7 +196,7 @@ var deleteProject = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteProjectArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		dbDeleteProject(ctx, args.Shard, args.Account, args.Project, ctx.Me())
+		dbDeleteProject(ctx, args.Shard, args.Account, args.Project)
 		//TODO delete s3 data, uploaded files etc
 		return nil
 	},
@@ -234,7 +234,7 @@ var addMembers = &endpoint.Endpoint{
 			if *accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin {
 				mem.Role = cnst.ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 			}
-			dbAddMemberOrSetActive(ctx, args.Shard, args.Account, args.Project, ctx.Me(), mem)
+			dbAddMemberOrSetActive(ctx, args.Shard, args.Account, args.Project, mem)
 		}
 		return nil
 	},
@@ -271,7 +271,7 @@ var setMemberRole = &endpoint.Endpoint{
 			if args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin) {
 				panic(err.InvalidArguments) // account owners and admins can only be project admins
 			}
-			dbSetMemberRole(ctx, args.Shard, args.Account, args.Project, ctx.Me(), args.Member, args.Role)
+			dbSetMemberRole(ctx, args.Shard, args.Account, args.Project, args.Member, args.Role)
 		}
 		return nil
 	},
@@ -299,7 +299,7 @@ var removeMembers = &endpoint.Endpoint{
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		for _, mem := range args.Members {
-			dbSetMemberInactive(ctx, args.Shard, args.Account, args.Project, ctx.Me(), mem)
+			dbSetMemberInactive(ctx, args.Shard, args.Account, args.Project, mem)
 		}
 		return nil
 	},

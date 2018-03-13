@@ -42,11 +42,11 @@ func (c *client) IsValidRegion(region string) bool {
 	return exists
 }
 
-func (c *client) CreateAccount(region string, account, myId id.Id, myName string, myDisplayName *string) (int, error) {
+func (c *client) CreateAccount(region string, account, me id.Id, myName string, myDisplayName *string) (int, error) {
 	respVal := 0
 	val, e := createAccount.DoRequest(nil, c.getHost(region), &createAccountArgs{
 		Account:       account,
-		Me:            myId,
+		Me:            me,
 		MyName:        myName,
 		MyDisplayName: myDisplayName,
 	}, nil, &respVal)
@@ -56,41 +56,41 @@ func (c *client) CreateAccount(region string, account, myId id.Id, myName string
 	return 0, e
 }
 
-func (c *client) DeleteAccount(region string, shard int, account, myId id.Id) error {
+func (c *client) DeleteAccount(region string, shard int, account, me id.Id) error {
 	_, e := deleteAccount.DoRequest(nil, c.getHost(region), &deleteAccountArgs{
 		Shard:   shard,
 		Account: account,
-		Me:      myId,
+		Me:      me,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) AddMembers(region string, shard int, account, myId id.Id, members []*private.AddMember) error {
+func (c *client) AddMembers(region string, shard int, account, me id.Id, members []*private.AddMember) error {
 	_, e := addMembers.DoRequest(nil, c.getHost(region), &addMembersArgs{
 		Shard:   shard,
 		Account: account,
-		Me:      myId,
+		Me:      me,
 		Members: members,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) RemoveMembers(region string, shard int, account, myId id.Id, members []id.Id) error {
+func (c *client) RemoveMembers(region string, shard int, account, me id.Id, members []id.Id) error {
 	_, err := removeMembers.DoRequest(nil, c.getHost(region), &removeMembersArgs{
 		Shard:   shard,
 		Account: account,
-		Me:      myId,
+		Me:      me,
 		Members: members,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, myId id.Id) (bool, error) {
+func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, me id.Id) (bool, error) {
 	respVal := false
 	val, e := memberIsOnlyAccountOwner.DoRequest(nil, c.getHost(region), &memberIsOnlyAccountOwnerArgs{
 		Shard:   shard,
 		Account: account,
-		Me:      myId,
+		Me:      me,
 	}, nil, &respVal)
 	if val != nil {
 		return *val.(*bool), e
@@ -98,32 +98,32 @@ func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, myI
 	return false, e
 }
 
-func (c *client) SetMemberName(region string, shard int, account, myId id.Id, newName string) error {
+func (c *client) SetMemberName(region string, shard int, account, me id.Id, newName string) error {
 	_, err := setMemberName.DoRequest(nil, c.getHost(region), &setMemberNameArgs{
 		Shard:   shard,
 		Account: account,
-		Me:      myId,
+		Me:      me,
 		NewName: newName,
 	}, nil, nil)
 	return err
 }
 
-func (c *client) SetMemberDisplayName(region string, shard int, account, myId id.Id, newDisplayName *string) error {
+func (c *client) SetMemberDisplayName(region string, shard int, account, me id.Id, newDisplayName *string) error {
 	_, e := setMemberDisplayName.DoRequest(nil, c.getHost(region), &setMemberDisplayNameArgs{
 		Shard:          shard,
 		Account:        account,
-		Me:             myId,
+		Me:             me,
 		NewDisplayName: newDisplayName,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) MemberIsAccountOwner(region string, shard int, account, myId id.Id) (bool, error) {
+func (c *client) MemberIsAccountOwner(region string, shard int, account, me id.Id) (bool, error) {
 	respVal := false
 	val, e := memberIsAccountOwner.DoRequest(nil, c.getHost(region), &memberIsAccountOwnerArgs{
 		Shard:   shard,
 		Account: account,
-		Me:      myId,
+		Me:      me,
 	}, nil, &respVal)
 	if val != nil {
 		return *val.(*bool), e

@@ -110,9 +110,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		//get a cookie session
 		ctx.session, _ = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
 		if ctx.session != nil {
-			iMyId := ctx.session.Values["me"]
-			if iMyId != nil {
-				id := iMyId.(id.Id)
+			iMe := ctx.session.Values["me"]
+			if iMe != nil {
+				id := iMe.(id.Id)
 				ctx.me = &id
 			}
 		}
@@ -180,14 +180,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//if this endpoint is the authentication endpoint it should return just the users id.Id, add it to the session cookie
 	if ep.IsAuthentication {
 		iId := ep.CtxHandler(ctx, args)
-		if myId, ok := iId.(id.Id); !ok {
+		if me, ok := iId.(id.Id); !ok {
 			err.FmtPanic("isAuthentication did not return id.Id type")
 		} else {
-			ctx.me = &myId //set me on _ctx for logging info in defer above
-			ctx.session.Values["me"] = myId
+			ctx.me = &me //set me on _ctx for logging info in defer above
+			ctx.session.Values["me"] = me
 			ctx.session.Values["AuthedOn"] = time.NowUnixMillis()
 			ctx.session.Save(req, resp)
-			writeJsonOk(ctx.resp, myId)
+			writeJsonOk(ctx.resp, me)
 		}
 	} else {
 		writeJsonOk(ctx.resp, ep.CtxHandler(ctx, args))
