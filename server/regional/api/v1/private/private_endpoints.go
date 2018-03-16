@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"bitbucket.org/0xor1/task/server/util/db"
 )
 
 var (
@@ -19,6 +20,7 @@ type createAccountArgs struct {
 	Me            id.Id   `json:"me"`
 	MyName        string  `json:"myName"`
 	MyDisplayName *string `json:"myDisplayName"`
+	HasAvatar     bool 	  `json:"hasAvatar"`
 }
 
 var createAccount = &endpoint.Endpoint{
@@ -30,7 +32,7 @@ var createAccount = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createAccountArgs)
-		return dbCreateAccount(ctx, args.Account, args.Me, args.MyName, args.MyDisplayName)
+		return dbCreateAccount(ctx, args.Account, args.Me, args.MyName, args.MyDisplayName, args.HasAvatar)
 	},
 }
 
@@ -50,7 +52,7 @@ var deleteAccount = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		if !args.Me.Equal(args.Account) {
-			validate.MemberHasAccountOwnerAccess(dbGetAccountRole(ctx, args.Shard, args.Account, args.Me))
+			validate.MemberHasAccountOwnerAccess(db.GetAccountRole(ctx, args.Shard, args.Account, args.Me))
 		}
 		dbDeleteAccount(ctx, args.Shard, args.Account)
 		//TODO delete s3 data, uploaded files etc
@@ -78,7 +80,7 @@ var addMembers = &endpoint.Endpoint{
 		if args.Account.Equal(args.Me) {
 			panic(err.InvalidOperation)
 		}
-		accountRole := dbGetAccountRole(ctx, args.Shard, args.Account, args.Me)
+		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
 		validate.MemberHasAccountAdminAccess(accountRole)
 
 		allIds := make([]id.Id, 0, len(args.Members))
@@ -137,7 +139,7 @@ var removeMembers = &endpoint.Endpoint{
 			panic(err.InvalidOperation)
 		}
 
-		accountRole := dbGetAccountRole(ctx, args.Shard, args.Account, args.Me)
+		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
 		if accountRole == nil {
 			panic(err.InsufficientPermission)
 		}
@@ -233,6 +235,27 @@ var setMemberDisplayName = &endpoint.Endpoint{
 	},
 }
 
+type setMemberHasAvatarArgs struct {
+	Shard          int     `json:"shard"`
+	Account        id.Id   `json:"account"`
+	Me             id.Id   `json:"me"`
+	HasAvatar      bool `json:"hasAvatar"`
+}
+
+var setMemberHasAvatar = &endpoint.Endpoint{
+	Method:    cnst.POST,
+	Path:      "/api/v1/private/setMemberHasAvatar",
+	IsPrivate: true,
+	GetArgsStruct: func() interface{} {
+		return &setMemberHasAvatarArgs{}
+	},
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
+		args := a.(*setMemberHasAvatarArgs)
+		dbSetMemberHasAvatar(ctx, args.Shard, args.Account, args.Me, args.HasAvatar)
+		return nil
+	},
+}
+
 type memberIsAccountOwnerArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
@@ -249,7 +272,7 @@ var memberIsAccountOwner = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*memberIsAccountOwnerArgs)
 		if !args.Me.Equal(args.Account) {
-			accountRole := dbGetAccountRole(ctx, args.Shard, args.Account, args.Me)
+			accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
 			if accountRole != nil && *accountRole == cnst.AccountOwner {
 				return true
 			} else {
@@ -268,5 +291,6 @@ var Endpoints = []*endpoint.Endpoint{
 	memberIsOnlyAccountOwner,
 	setMemberName,
 	setMemberDisplayName,
+	setMemberHasAvatar,
 	memberIsAccountOwner,
 }

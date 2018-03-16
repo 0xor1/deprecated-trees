@@ -1,7 +1,6 @@
 package private
 
 import (
-	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
@@ -11,9 +10,9 @@ import (
 	"math/rand"
 )
 
-func dbCreateAccount(ctx ctx.Ctx, account, me id.Id, myName string, myDisplayName *string) int {
+func dbCreateAccount(ctx ctx.Ctx, account, me id.Id, myName string, myDisplayName *string, hasAvatar bool) int {
 	shard := rand.Intn(ctx.TreeShardCount())
-	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?)`, account, me, myName, myDisplayName)
+	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?, ?)`, account, me, myName, myDisplayName, hasAvatar)
 	err.PanicIf(e)
 	return shard
 }
@@ -46,22 +45,13 @@ func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, 
 	return res
 }
 
-func dbGetAccountRole(ctx ctx.Ctx, shard int, account, member id.Id) *cnst.AccountRole {
-	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND id=?`, account, member)
-	res := cnst.AccountRole(3)
-	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&res)) {
-		return nil
-	}
-	return &res
-}
-
 func dbAddMembers(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddMember) {
 	queryArgs := make([]interface{}, 0, 3*len(members))
-	queryArgs = append(queryArgs, account, members[0].Id, members[0].Name, members[0].DisplayName, members[0].Role)
-	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, displayName, role) VALUES (?,?,?,?,?)`)
+	queryArgs = append(queryArgs, account, members[0].Id, members[0].Name, members[0].DisplayName, members[0].HasAvatar, members[0].Role)
+	query := bytes.NewBufferString(`INSERT INTO accountMembers (account, id, name, displayName, hasAvatar, role) VALUES (?,?,?,?,?,?)`)
 	for _, mem := range members[1:] {
-		query.WriteString(`,(?,?,?,?,?)`)
-		queryArgs = append(queryArgs, account, mem.Id, mem.Name, mem.DisplayName, mem.Role)
+		query.WriteString(`,(?,?,?,?,?,?)`)
+		queryArgs = append(queryArgs, account, mem.Id, mem.Name, mem.DisplayName, mem.HasAvatar, mem.Role)
 	}
 	_, e := ctx.TreeExec(shard, query.String(), queryArgs...)
 	err.PanicIf(e)
@@ -69,7 +59,7 @@ func dbAddMembers(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddM
 
 func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddMember) {
 	for _, mem := range members {
-		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?)`, account, mem.Id, mem.Name, mem.DisplayName, mem.Role)
+		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?, ?)`, account, mem.Id, mem.Name, mem.DisplayName, mem.HasAvatar, mem.Role)
 		err.PanicIf(e)
 	}
 }
@@ -108,6 +98,11 @@ func dbSetMemberName(ctx ctx.Ctx, shard int, account id.Id, member id.Id, newNam
 
 func dbSetMemberDisplayName(ctx ctx.Ctx, shard int, account, member id.Id, newDisplayName *string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, account, member, newDisplayName)
+	err.PanicIf(e)
+}
+
+func dbSetMemberHasAvatar(ctx ctx.Ctx, shard int, account, member id.Id, hasAvatar bool) {
+	_, e := ctx.TreeExec(shard, `UPDATE accountMembers SET hasAvatar=? WHERE account=? AND id=?`, hasAvatar, account, member)
 	err.PanicIf(e)
 }
 

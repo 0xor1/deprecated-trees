@@ -27,9 +27,9 @@ func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.Ac
 }
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
-	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
+	row := ctx.TreeQueryRow(shard, `SELECT id, name, displayName, hasAvatar, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
 	res := member{}
-	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
+	err.PanicIf(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.HasAvatar, &res.IsActive, &res.Role))
 	return &res
 }
 
@@ -50,7 +50,7 @@ AND (
 ORDER BY role ASC, name ASC LIMIT :lim
 
 2)
-SELECT a1.id, a1.isActive, a1.role
+SELECT a1.id, a1.name, a1.displayName, a1.hasAvatar, a1.isActive, a1.role
 FROM accountMembers a1, accountMembers a2
 WHERE a1.account=:acc
 AND a1.isActive=true
@@ -67,7 +67,7 @@ ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
-	query := bytes.NewBufferString(`SELECT a1.id, a1.isActive, a1.role FROM accountMembers a1`)
+	query := bytes.NewBufferString(`SELECT a1.id, a1.name, a1.displayName, a1.hasAvatar, a1.isActive, a1.role FROM accountMembers a1`)
 	args := make([]interface{}, 0, 7)
 	if after != nil {
 		query.WriteString(`, accountMembers a2`)
@@ -98,7 +98,7 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 	res := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
-		err.PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.Role))
+		err.PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.HasAvatar, &mem.IsActive, &mem.Role))
 		res = append(res, &mem)
 	}
 	if len(res) == limit+1 {

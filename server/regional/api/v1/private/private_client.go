@@ -42,13 +42,14 @@ func (c *client) IsValidRegion(region string) bool {
 	return exists
 }
 
-func (c *client) CreateAccount(region string, account, me id.Id, myName string, myDisplayName *string) (int, error) {
+func (c *client) CreateAccount(region string, account, me id.Id, myName string, myDisplayName *string, hasAvatar bool) (int, error) {
 	respVal := 0
 	val, e := createAccount.DoRequest(nil, c.getHost(region), &createAccountArgs{
 		Account:       account,
 		Me:            me,
 		MyName:        myName,
 		MyDisplayName: myDisplayName,
+		HasAvatar: hasAvatar,
 	}, nil, &respVal)
 	if val != nil {
 		return *val.(*int), e
@@ -99,13 +100,13 @@ func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, me 
 }
 
 func (c *client) SetMemberName(region string, shard int, account, me id.Id, newName string) error {
-	_, err := setMemberName.DoRequest(nil, c.getHost(region), &setMemberNameArgs{
+	_, e := setMemberName.DoRequest(nil, c.getHost(region), &setMemberNameArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,
 		NewName: newName,
 	}, nil, nil)
-	return err
+	return e
 }
 
 func (c *client) SetMemberDisplayName(region string, shard int, account, me id.Id, newDisplayName *string) error {
@@ -114,6 +115,16 @@ func (c *client) SetMemberDisplayName(region string, shard int, account, me id.I
 		Account:        account,
 		Me:             me,
 		NewDisplayName: newDisplayName,
+	}, nil, nil)
+	return e
+}
+
+func (c *client) SetMemberHasAvatar(region string, shard int, account, me id.Id, hasAvatar bool) error {
+	_, e := setMemberHasAvatar.DoRequest(nil, c.getHost(region), &setMemberHasAvatarArgs{
+		Shard:          shard,
+		Account:        account,
+		Me:             me,
+		HasAvatar: hasAvatar,
 	}, nil, nil)
 	return e
 }

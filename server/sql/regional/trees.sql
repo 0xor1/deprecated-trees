@@ -18,6 +18,7 @@ CREATE TABLE accountMembers(
   id BINARY(16) NOT NULL,
   name VARCHAR(50) NOT NULL,
   displayName VARCHAR(100) NULL,
+  hasAvatar BOOL NOT NULL DEFAULT FALSE,
   isActive BOOL NOT NULL DEFAULT TRUE,
   role TINYINT UNSIGNED NOT NULL DEFAULT 2, #0 owner, 1 admin, 2 memberOfAllProjects, 3 memberOfOnlySpecificProjects
   PRIMARY KEY (account, isActive, role, name),
@@ -150,10 +151,10 @@ CREATE TABLE timeLogs(
 
 DROP PROCEDURE IF EXISTS registerAccount;
 DELIMITER $$
-CREATE PROCEDURE registerAccount(_account BINARY(16), _me BINARY(16), _myName VARCHAR(50), _myDisplayName VARCHAR(100))
+CREATE PROCEDURE registerAccount(_account BINARY(16), _me BINARY(16), _myName VARCHAR(50), _myDisplayName VARCHAR(100), _hasAvatar BOOL)
 BEGIN
 	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_account, false);
-  INSERT INTO accountMembers (account, id, name, displayName, isActive, role) VALUES (_account, _me, _myName, _myDisplayName, true, 0);
+  INSERT INTO accountMembers (account, id, name, displayName, hasAvatar, isActive, role) VALUES (_account, _me, _myName, _myDisplayName, _hasAvatar, true, 0);
   INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'created', NULL, NULL);
 END;
 $$
@@ -192,9 +193,9 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS updateMembersAndSetActive;
 DELIMITER $$
-CREATE PROCEDURE updateMembersAndSetActive(_account BINARY(16), _member BINARY(16), _memberName VARCHAR(50), _displayName VARCHAR(100), _role TINYINT UNSIGNED)
+CREATE PROCEDURE updateMembersAndSetActive(_account BINARY(16), _member BINARY(16), _memberName VARCHAR(50), _displayName VARCHAR(100), _hasAvatar BOOL, _role TINYINT UNSIGNED)
   BEGIN
-    UPDATE accountMembers SET isActive=TRUE, role=_role, name=_memberName, displayName=_displayName WHERE account=_account AND id=_member;
+    UPDATE accountMembers SET isActive=TRUE, role=_role, name=_memberName, displayName=_displayName, hasAvatar=_hasAvatar WHERE account=_account AND id=_member;
     UPDATE projectMembers SET name=_memberName, displayName=_displayName WHERE account=_account AND id=_member;
   END;
 $$

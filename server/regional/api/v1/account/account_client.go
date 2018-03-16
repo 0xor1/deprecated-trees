@@ -48,7 +48,10 @@ func (c *client) GetPublicProjectsEnabled(css *clientsession.Store, shard int, a
 		Shard:   shard,
 		Account: account,
 	}, nil, &respVal)
-	return *val.(*bool), e
+	if val != nil {
+		return *val.(*bool), e
+	}
+	return false, e
 }
 
 func (c *client) SetMemberRole(css *clientsession.Store, shard int, account, member id.Id, role cnst.AccountRole) error {
@@ -70,7 +73,10 @@ func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, 
 		After:        after,
 		Limit:        limit,
 	}, nil, &getMembersResp{})
-	return val.(*getMembersResp), e
+	if val != nil {
+		return val.(*getMembersResp), e
+	}
+	return nil, e
 }
 
 func (c *client) GetActivities(css *clientsession.Store, shard int, account id.Id, itemId *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error) {
@@ -83,7 +89,10 @@ func (c *client) GetActivities(css *clientsession.Store, shard int, account id.I
 		OccurredBefore: occurredBefore,
 		Limit:          limit,
 	}, nil, &[]*activity.Activity{})
-	return *val.(*[]*activity.Activity), e
+	if val != nil {
+		return *val.(*[]*activity.Activity), e
+	}
+	return nil, e
 }
 
 func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*member, error) {
@@ -91,5 +100,8 @@ func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*mem
 		Shard:   shard,
 		Account: account,
 	}, nil, &member{})
-	return val.(*member), e
+	if val != nil {
+		return val.(*member), e
+	}
+	return nil, e
 }

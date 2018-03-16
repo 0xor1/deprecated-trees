@@ -23,7 +23,7 @@ func Test_system(t *testing.T) {
 
 	aliId := id.New()
 	orgId := id.New()
-	client.CreateAccount(region, orgId, aliId, "ali", nil)
+	client.CreateAccount(region, orgId, aliId, "ali", nil, false)
 	bob := private.AddMember{}
 	bob.Id = id.New()
 	bob.Name = "bob"
@@ -37,6 +37,7 @@ func Test_system(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, val)
 	client.SetMemberName(region, 0, orgId, aliId, "aliNew")
+	client.SetMemberHasAvatar(region, 0, orgId, aliId, true)
 	val, err = client.MemberIsAccountOwner(region, 0, orgId, aliId)
 	assert.Nil(t, err)
 	assert.True(t, val)

@@ -117,7 +117,7 @@ var register = &endpoint.Endpoint{
 			}
 		}()
 		var e error
-		acc.Shard, e = ctx.RegionalV1PrivateClient().CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, acc.DisplayName)
+		acc.Shard, e = ctx.RegionalV1PrivateClient().CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, acc.DisplayName, acc.HasAvatar)
 		err.PanicIf(e)
 		acc.IsPersonal = true
 		acc.Email = args.Email
@@ -584,7 +584,7 @@ var setAccountName = &endpoint.Endpoint{
 			ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName) //first rename myself in my personal org
 			var after *id.Id
 			for {
-				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
+				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
 				for _, acc := range accs {
 					ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName)
 				}
@@ -648,7 +648,7 @@ var setAccountDisplayName = &endpoint.Endpoint{
 			ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName) //first set my display name in my personal org
 			var after *id.Id
 			for {
-				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
+				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
 				for _, acc := range accs {
 					ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName)
 				}
@@ -710,6 +710,7 @@ var setAccountAvatar = &endpoint.Endpoint{
 			}
 		}
 
+		hasAvatarStatusChanged := false
 		if args.Avatar != nil {
 			avatarImage, _, e := image.Decode(args.Avatar)
 			err.PanicIf(e)
@@ -725,17 +726,26 @@ var setAccountAvatar = &endpoint.Endpoint{
 			data := buff.Bytes()
 			reader := bytes.NewReader(data)
 			ctx.AvatarClient().Save(ctx.Me().String(), "image/png", reader)
-			if !account.HasAvatar {
-				//if account didn't previously have an avatar then lets update the store to reflect it's new state
-				account.HasAvatar = true
-				dbUpdateAccount(ctx, account)
-			}
+			hasAvatarStatusChanged = !account.HasAvatar
 		} else {
 			ctx.AvatarClient().Delete(ctx.Me().String())
-			if account.HasAvatar {
-				//if account did previously have an avatar then lets update the store to reflect it's new state
-				account.HasAvatar = false
-				dbUpdateAccount(ctx, account)
+			hasAvatarStatusChanged = account.HasAvatar
+		}
+		if hasAvatarStatusChanged {
+			account.HasAvatar = !account.HasAvatar
+			dbUpdateAccount(ctx, account)
+			ctx.RegionalV1PrivateClient().SetMemberHasAvatar(account.Region, account.Shard, account.Id, ctx.Me(), account.HasAvatar) //first set hasAvatar in my personal org
+			var after *id.Id
+			for {
+				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+				for _, acc := range accs {
+					ctx.RegionalV1PrivateClient().SetMemberHasAvatar(acc.Region, acc.Shard, acc.Id, ctx.Me(), account.HasAvatar)
+				}
+				if more {
+					after = &accs[len(accs)-1].Id
+				} else {
+					break
+				}
 			}
 		}
 		return nil
@@ -809,7 +819,7 @@ var createAccount = &endpoint.Endpoint{
 				panic(r)
 			}
 		}()
-		shard, e := ctx.RegionalV1PrivateClient().CreateAccount(args.Region, account.Id, ctx.Me(), owner.Name, owner.DisplayName)
+		shard, e := ctx.RegionalV1PrivateClient().CreateAccount(args.Region, account.Id, ctx.Me(), owner.Name, owner.DisplayName, owner.HasAvatar)
 		err.PanicIf(e)
 
 		account.Shard = shard
@@ -839,7 +849,7 @@ var getMyAccounts = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMyAccountsArgs)
 		res := &getMyAccountsResp{}
-		res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.Me(), args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		res.Accounts, res.More = dbGetMyGroupAccounts(ctx, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 		return res
 	},
 }
@@ -880,7 +890,7 @@ var deleteAccount = &endpoint.Endpoint{
 		if ctx.Me().Equal(args.Account) {
 			var after *id.Id
 			for {
-				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
+				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
 				for _, acc := range accs {
 					isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.Me())
 					err.PanicIf(e)
@@ -944,6 +954,7 @@ var addMembers = &endpoint.Endpoint{
 			ami.Role = role
 			ami.Name = acc.Name
 			ami.DisplayName = acc.DisplayName
+			ami.HasAvatar = acc.HasAvatar
 			members = append(members, ami)
 		}
 
