@@ -22,6 +22,7 @@ func Test_system(t *testing.T) {
 	testServer := httptest.NewServer(serv)
 	aliCss := clientsession.New()
 	centralClient := centralaccount.NewClient(testServer.URL)
+	accountClient := account.NewClient(testServer.URL)
 	projectClient := project.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
 	region := "lcl"
@@ -128,6 +129,24 @@ func Test_system(t *testing.T) {
 	client.MoveTask(aliCss, 0, org.Id, proj.Id, taskG.Id, taskA.Id, &taskJ.Id)
 	client.MoveTask(aliCss, 0, org.Id, proj.Id, taskG.Id, taskL.Id, &taskM.Id)
 
+	ancestors, err := client.GetAncestorTasks(aliCss, 0, org.Id, proj.Id, taskM.Id, 100)
+	assert.Equal(t, 3, len(ancestors))
+	assert.True(t, proj.Id.Equal(ancestors[0].Id))
+	assert.True(t, taskA.Id.Equal(ancestors[1].Id))
+	assert.True(t, taskL.Id.Equal(ancestors[2].Id))
+
+	//test setting project as public and try getting info without a session
+	ancestors, err = client.GetAncestorTasks(nil, 0, org.Id, proj.Id, taskM.Id, 100)
+	assert.Equal(t, 0, len(ancestors))
+	assert.NotNil(t, err)
+	accountClient.SetPublicProjectsEnabled(aliCss, 0, org.Id, true)
+	projectClient.SetIsPublic(aliCss, 0, org.Id, proj.Id, true)
+	ancestors, err = client.GetAncestorTasks(nil, 0, org.Id, proj.Id, taskM.Id, 100)
+	assert.Equal(t, 3, len(ancestors))
+	assert.True(t, proj.Id.Equal(ancestors[0].Id))
+	assert.True(t, taskA.Id.Equal(ancestors[1].Id))
+	assert.True(t, taskL.Id.Equal(ancestors[2].Id))
+
 	client.DeleteTask(aliCss, 0, org.Id, proj.Id, taskA.Id)
 	client.DeleteTask(aliCss, 0, org.Id, proj.Id, taskD.Id)
 
@@ -143,6 +162,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 1, len(res))
 	res, err = client.GetChildTasks(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskF.Id, 100)
 	assert.Equal(t, 0, len(res))
+
 	centralClient.DeleteAccount(aliCss, org.Id)
 	centralClient.DeleteAccount(aliCss, aliId)
 	centralClient.DeleteAccount(bobCss, bobId)

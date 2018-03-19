@@ -82,13 +82,17 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if r != nil {
 			e, ok := r.(*err.Err)
 			if ok && e != nil {
-				writeJson(resp, http.StatusInternalServerError, e)
+				if e == err.InsufficientPermission {
+					http.NotFound(resp, req)
+				} else {
+					writeJson(resp, http.StatusInternalServerError, e)
+				}
 			} else {
 				writeJson(resp, http.StatusInternalServerError, err.External)
 			}
-			err := r.(error)
-			if err != nil {
-				s.SR.LogError(err)
+			er := r.(error)
+			if er != nil {
+				s.SR.LogError(er)
 			}
 		}
 		s.SR.LogStats(resp.code, req.Method, lowerPath, ctx.requestStartUnixMillis, getQueryInfos(ctx))

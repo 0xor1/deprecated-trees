@@ -49,7 +49,7 @@ func (c *client) CreateAccount(region string, account, me id.Id, myName string, 
 		Me:            me,
 		MyName:        myName,
 		MyDisplayName: myDisplayName,
-		HasAvatar: hasAvatar,
+		HasAvatar:     hasAvatar,
 	}, nil, &respVal)
 	if val != nil {
 		return *val.(*int), e
@@ -121,9 +121,9 @@ func (c *client) SetMemberDisplayName(region string, shard int, account, me id.I
 
 func (c *client) SetMemberHasAvatar(region string, shard int, account, me id.Id, hasAvatar bool) error {
 	_, e := setMemberHasAvatar.DoRequest(nil, c.getHost(region), &setMemberHasAvatarArgs{
-		Shard:          shard,
-		Account:        account,
-		Me:             me,
+		Shard:     shard,
+		Account:   account,
+		Me:        me,
 		HasAvatar: hasAvatar,
 	}, nil, nil)
 	return e

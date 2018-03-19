@@ -906,7 +906,7 @@ CREATE PROCEDURE getTasks(_account BINARY(16), _project BINARY(16), _taskIdsStr 
         SET offset = offset + 32;
       END WHILE;
     END IF;
-    SELECT id, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
+    SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
                                                                                                                                                                                                                  _account AND project = _project AND id IN (SELECT id FROM tempIds);
     DROP TEMPORARY TABLE IF EXISTS tempIds;
     COMMIT;
@@ -924,8 +924,10 @@ CREATE PROCEDURE getChildTasks(_account BINARY(16), _project BINARY(16), _parent
     DROP TEMPORARY TABLE IF EXISTS tempResult;
     CREATE TEMPORARY TABLE tempResult(
       selectOrder INT NOT NULL,
-      nextSibling BINARY(16) NULL,
       id BINARY(16) NOT NULL,
+      parent BINARY(16) NULL,
+      firstChild BINARY(16) NULL,
+      nextSibling BINARY(16) NULL,
       isAbstract BOOL NOT NULL,
       name VARCHAR(250) NOT NULL,
       description VARCHAR(1250) NULL,
@@ -951,13 +953,45 @@ CREATE PROCEDURE getChildTasks(_account BINARY(16), _project BINARY(16), _parent
         SELECT firstChild INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = _parent;
       END IF;
       WHILE idVariable IS NOT NULL AND idx < _limit DO
-        INSERT INTO tempResult SELECT idx, nextSibling, id, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
+        INSERT INTO tempResult SELECT idx, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
                                                                                                                                                                                                                                                               _account AND project = _project AND id = idVariable;
         SELECT nextSibling INTO idVariable FROM tempResult WHERE selectOrder = idx;
         SET idx = idx + 1;
       END WHILE;
     END IF;
-    SELECT id, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tempResult ORDER BY selectOrder ASC;
+    SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tempResult ORDER BY selectOrder ASC;
+    DROP TEMPORARY TABLE IF EXISTS tempResult;
+    COMMIT;
+  END;
+$$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS getAncestorTasks;
+DELIMITER $$
+CREATE PROCEDURE getAncestorTasks(_account BINARY(16), _project BINARY(16), _task BINARY(16), _limit INT)
+  BEGIN
+    DECLARE projectExists BOOL DEFAULT FALSE;
+    DECLARE idx INT DEFAULT 0;
+    DROP TEMPORARY TABLE IF EXISTS tempResult;
+    CREATE TEMPORARY TABLE tempResult(
+      selectOrder INT NOT NULL,
+      id BINARY(16) NOT NULL,
+      name VARCHAR(250) NOT NULL,
+      parent BINARY(16) NULL,
+      PRIMARY KEY (selectOrder)
+    );
+    START TRANSACTION;
+
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project LOCK IN SHARE MODE;
+    IF projectExists THEN
+      SELECT parent INTO _task FROM tasks WHERE account = _account AND project = _project AND id = _task;
+      WHILE _task IS NOT NULL AND idx < _limit DO
+        INSERT INTO tempResult SELECT idx, id, name, parent FROM tasks WHERE account=_account AND project=_project AND id=_task;
+        SELECT parent INTO _task FROM tempResult WHERE selectOrder = idx;
+        SET idx = idx + 1;
+      END WHILE;
+    END IF;
+    SELECT id, name FROM tempResult ORDER BY selectOrder DESC;
     DROP TEMPORARY TABLE IF EXISTS tempResult;
     COMMIT;
   END;

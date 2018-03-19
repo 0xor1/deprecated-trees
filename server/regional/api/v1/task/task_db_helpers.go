@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parentId id.Id, nextSibling *id.Id, newTask *task) {
+func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSibling *id.Id, newTask *task) {
 	args := make([]interface{}, 0, 18)
-	args = append(args, account, project, parentId, ctx.Me())
+	args = append(args, account, project, parent, ctx.Me())
 	if nextSibling != nil {
 		args = append(args, *nextSibling)
 	} else {
@@ -59,12 +59,12 @@ func dbSetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, ta
 	db.TreeChangeHelper(ctx, shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, loggedOn, duration, note)
 }
 
-func dbMoveTask(ctx ctx.Ctx, shard int, account, project, task, newParentId id.Id, newPreviousSibling *id.Id) {
+func dbMoveTask(ctx ctx.Ctx, shard int, account, project, task, newParent id.Id, newPreviousSibling *id.Id) {
 	var prevSib []byte
 	if newPreviousSibling != nil {
 		prevSib = *newPreviousSibling
 	}
-	db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, account, project, task, newParentId, ctx.Me(), prevSib)
+	db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, account, project, task, newParent, ctx.Me(), prevSib)
 }
 
 func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
@@ -84,19 +84,19 @@ func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) [
 	res := make([]*task, 0, len(tasks))
 	for rows.Next() {
 		ta := task{}
-		err.PanicIf(rows.Scan(&ta.Id, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
+		err.PanicIf(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		res = append(res, &ta)
 	}
 	return res
 }
 
-func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parentId id.Id, fromSibling *id.Id, limit int) []*task {
+func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*task {
 	var fromSib []byte
 	if fromSibling != nil {
 		fromSib = *fromSibling
 	}
-	rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, account, project, parentId, fromSib, limit)
+	rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, account, project, parent, fromSib, limit)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -104,9 +104,24 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parentId id.Id, f
 	res := make([]*task, 0, limit)
 	for rows.Next() {
 		ta := task{}
-		err.PanicIf(rows.Scan(&ta.Id, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
+		err.PanicIf(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		res = append(res, &ta)
+	}
+	return res
+}
+
+func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) []*ancestor {
+	rows, e := ctx.TreeQuery(shard, `CALL getAncestorTasks(?, ?, ?, ?)`, account, project, child, limit)
+	if rows != nil {
+		defer rows.Close()
+	}
+	err.PanicIf(e)
+	res := make([]*ancestor, 0, limit)
+	for rows.Next() {
+		an := ancestor{}
+		err.PanicIf(rows.Scan(&an.Id, &an.Name))
+		res = append(res, &an)
 	}
 	return res
 }

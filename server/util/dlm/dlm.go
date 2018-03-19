@@ -54,8 +54,8 @@ func ForTask(task id.Id) string {
 
 func ForTasks(tasks []id.Id) []string {
 	strs := make([]string, 0, len(tasks))
-	for _, tId := range tasks {
-		strs = append(strs, ForTask(tId))
+	for _, task := range tasks {
+		strs = append(strs, ForTask(task))
 	}
 	return strs
 }

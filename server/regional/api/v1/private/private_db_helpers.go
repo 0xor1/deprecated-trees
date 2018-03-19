@@ -111,9 +111,9 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, account
 	args := make([]interface{}, 0, len(members)*8)
 	now := time.Now()
 	args = append(args, account, now, member, members[0], "member", action, nil, nil)
-	for _, memId := range members[1:] {
+	for _, mem := range members[1:] {
 		query.WriteString(`,(?,?,?,?,?,?,?,?)`)
-		args = append(args, account, now, member, memId, "member", action, nil, nil)
+		args = append(args, account, now, member, mem, "member", action, nil, nil)
 	}
 	_, e := ctx.TreeExec(shard, query.String(), args...)
 	err.PanicIf(e)

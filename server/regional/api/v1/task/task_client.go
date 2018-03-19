@@ -18,6 +18,7 @@ type Client interface {
 	DeleteTask(css *clientsession.Store, shard int, account, project, task id.Id) error
 	GetTasks(css *clientsession.Store, shard int, account, project id.Id, tasks []id.Id) ([]*task, error)
 	GetChildTasks(css *clientsession.Store, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) ([]*task, error)
+	GetAncestorTasks(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*ancestor, error)
 }
 
 func NewClient(host string) Client {
@@ -182,6 +183,20 @@ func (c *client) GetChildTasks(css *clientsession.Store, shard int, account, pro
 	}, nil, &[]*task{})
 	if val != nil {
 		return *val.(*[]*task), e
+	}
+	return nil, e
+}
+
+func (c *client) GetAncestorTasks(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*ancestor, error) {
+	val, e := getAncestorTasks.DoRequest(css, c.host, &getAncestorTasksArgs{
+		Shard:   shard,
+		Account: account,
+		Project: project,
+		Task:    child,
+		Limit:   limit,
+	}, nil, &[]*ancestor{})
+	if val != nil {
+		return *val.(*[]*ancestor), e
 	}
 	return nil, e
 }

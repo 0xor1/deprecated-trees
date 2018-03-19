@@ -3,12 +3,12 @@ package private
 import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
+	"bitbucket.org/0xor1/task/server/util/db"
 	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
 	"bitbucket.org/0xor1/task/server/util/validate"
-	"bitbucket.org/0xor1/task/server/util/db"
 )
 
 var (
@@ -20,7 +20,7 @@ type createAccountArgs struct {
 	Me            id.Id   `json:"me"`
 	MyName        string  `json:"myName"`
 	MyDisplayName *string `json:"myDisplayName"`
-	HasAvatar     bool 	  `json:"hasAvatar"`
+	HasAvatar     bool    `json:"hasAvatar"`
 }
 
 var createAccount = &endpoint.Endpoint{
@@ -236,10 +236,10 @@ var setMemberDisplayName = &endpoint.Endpoint{
 }
 
 type setMemberHasAvatarArgs struct {
-	Shard          int     `json:"shard"`
-	Account        id.Id   `json:"account"`
-	Me             id.Id   `json:"me"`
-	HasAvatar      bool `json:"hasAvatar"`
+	Shard     int   `json:"shard"`
+	Account   id.Id `json:"account"`
+	Me        id.Id `json:"me"`
+	HasAvatar bool  `json:"hasAvatar"`
 }
 
 var setMemberHasAvatar = &endpoint.Endpoint{

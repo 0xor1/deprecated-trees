@@ -358,6 +358,30 @@ var getChildTasks = &endpoint.Endpoint{
 	},
 }
 
+type getAncestorTasksArgs struct {
+	Shard   int   `json:"shard"`
+	Account id.Id `json:"account"`
+	Project id.Id `json:"project"`
+	Task    id.Id `json:"task"`
+	Limit   int   `json:"limit"`
+}
+
+var getAncestorTasks = &endpoint.Endpoint{
+	Method:                   cnst.GET,
+	Path:                     "/api/v1/project/getAncestorTasks",
+	RequiresSession:          false,
+	ExampleResponseStructure: []*ancestor{{}},
+	GetArgsStruct: func() interface{} {
+		return &getAncestorTasksArgs{}
+	},
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
+		args := a.(*getAncestorTasksArgs)
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
+		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
+		return dbGetAncestorTasks(ctx, args.Shard, args.Account, args.Project, args.Task, args.Limit)
+	},
+}
+
 var Endpoints = []*endpoint.Endpoint{
 	createTask,
 	setName,
@@ -371,10 +395,14 @@ var Endpoints = []*endpoint.Endpoint{
 	deleteTask,
 	getTasks,
 	getChildTasks,
+	getAncestorTasks,
 }
 
 type task struct {
 	Id                   id.Id     `json:"id"`
+	Parent               *id.Id    `json:"parent,omitempty"`
+	FirstChild           *id.Id    `json:"firstChild,omitempty"`
+	NextSibling          *id.Id    `json:"nextSibling,omitempty"`
 	IsAbstract           bool      `json:"isAbstract"`
 	Name                 string    `json:"name"`
 	Description          *string   `json:"description"`
@@ -388,6 +416,12 @@ type task struct {
 	DescendantCount      *uint64   `json:"descendantCount,omitempty"` //only abstract tasks
 	IsParallel           *bool     `json:"isParallel,omitempty"`      //only abstract tasks
 	Member               *id.Id    `json:"member,omitempty"`          //only task tasks
+}
+
+type ancestor struct {
+	Id   id.Id  `json:"id"`
+	Name string `json:"name"`
+	//may want to add on time values here to render progress bars within breadcrumb ui component
 }
 
 type timeLog struct {

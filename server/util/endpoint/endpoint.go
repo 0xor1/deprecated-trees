@@ -167,12 +167,20 @@ func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, args interf
 	if e != nil {
 		return nil, e
 	}
-	if respVal != nil {
-
-		e = json.NewDecoder(resp.Body).Decode(respVal)
-		if e != nil {
-			return nil, e
+	if resp.StatusCode == http.StatusOK {
+		if respVal != nil {
+			e = json.NewDecoder(resp.Body).Decode(respVal)
+			if e != nil {
+				return nil, e
+			}
 		}
+	} else {
+		e := &err.Err{}
+		er := json.NewDecoder(resp.Body).Decode(e)
+		if er != nil {
+			return nil, er
+		}
+		return nil, e
 	}
 	return respVal, nil
 }

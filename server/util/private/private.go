@@ -23,6 +23,6 @@ type AddMember struct {
 	Id          id.Id            `json:"id"`
 	Name        string           `json:"name"`
 	DisplayName *string          `json:"displayName"`
-	HasAvatar 	bool          	 `json:"hasAvatar"`
+	HasAvatar   bool             `json:"hasAvatar"`
 	Role        cnst.AccountRole `json:"role"`
 }

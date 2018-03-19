@@ -166,10 +166,10 @@ var Endpoints = []*endpoint.Endpoint{
 }
 
 type member struct {
-	Id       id.Id            `json:"id"`
-	Name     string           `json:"name"`
-	DisplayName *string       `json:"displayName,omitempty"`
-	HasAvatar bool            `json:"hasAvatar"`
-	Role     cnst.AccountRole `json:"role"`
-	IsActive bool             `json:"isActive"`
+	Id          id.Id            `json:"id"`
+	Name        string           `json:"name"`
+	DisplayName *string          `json:"displayName,omitempty"`
+	HasAvatar   bool             `json:"hasAvatar"`
+	Role        cnst.AccountRole `json:"role"`
+	IsActive    bool             `json:"isActive"`
 }
