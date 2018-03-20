@@ -253,8 +253,8 @@ func writeJson(w http.ResponseWriter, code int, body interface{}) {
 }
 
 func writeRawJson(w http.ResponseWriter, code int, body []byte) {
+	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(code)
-	w.Header().Add("Content-Type", "application/json;charset=utf-8")
 	_, e := w.Write(body)
 	err.PanicIf(e)
 }

@@ -206,6 +206,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	}
 
 	return &Resources{
+		ServerCreatedOn: 		 t.NowUnixMillis(),
 		ServerAddress:           viper.GetString("serverAddress"),
 		Env:                     viper.GetString("env"),
 		Region:                  viper.GetString("region"),
@@ -247,6 +248,8 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 // e.g. account and pwd dbs are only initialised on central service, whilst redis pool and tree shards are only initialised
 // for regional endpoints.
 type Resources struct {
+	// server created on unix millisecs
+	ServerCreatedOn int64
 	// server address eg "127.0.0.1:8787"
 	ServerAddress string
 	// must be one of "lcl", "dev", "stg", "prd"
