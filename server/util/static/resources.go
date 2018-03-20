@@ -36,6 +36,8 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	viper.SetDefault("version", "lcl")
 	// api docs path
 	viper.SetDefault("apiDocsRoute", "/api/docs")
+	// api mget path
+	viper.SetDefault("apiMGetRoute", "/api/mget")
 	// session cookie name
 	viper.SetDefault("sessionCookieName", "t")
 	// cookie session domain
@@ -206,6 +208,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 		Region:                  viper.GetString("region"),
 		Version:                 viper.GetString("version"),
 		ApiDocsRoute:            strings.ToLower(viper.GetString("apiDocsRoute")),
+		ApiMGetRoute:            strings.ToLower(viper.GetString("apiMGetRoute")),
 		SessionCookieName:       viper.GetString("sessionCookieName"),
 		SessionStore:            sessionStore,
 		MasterCacheKey:          viper.GetString("masterCacheKey"),
@@ -250,6 +253,8 @@ type Resources struct {
 	Version string
 	// api docs path
 	ApiDocsRoute string
+	// api mget path
+	ApiMGetRoute string
 	// session cookie name
 	SessionCookieName string
 	// session cookie store
