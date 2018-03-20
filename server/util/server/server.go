@@ -8,7 +8,8 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/queryinfo"
 	"bitbucket.org/0xor1/task/server/util/static"
-	"bitbucket.org/0xor1/task/server/util/time"
+	t "bitbucket.org/0xor1/task/server/util/time"
+	"time"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -19,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"fmt"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -62,7 +64,7 @@ type Server struct {
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resp := &responseWrapper{code: 0, w: w}
 	ctx := &_ctx{
-		requestStartUnixMillis: time.NowUnixMillis(),
+		requestStartUnixMillis: t.NowUnixMillis(),
 		resp:               resp,
 		req:                req,
 		retrievedDlms:      map[string]int64{},
@@ -77,7 +79,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	lowerPath := strings.ToLower(req.URL.Path)
 	// defer func handles logging panic errors and returning 500s and logging request/response/database/cache stats to datadog in none lcl env
 	defer func() {
-		context.Clear(req) //required for guerilla cookie session usage, or resources will leak
+		context.Clear(req) //required for guerrilla cookie session usage, or resources will leak
 		r := recover()
 		if r != nil {
 			e, ok := r.(*err.Err)
@@ -102,8 +104,46 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 	}
 	//check for special case of api docs first
-	if lowerPath == s.SR.ApiDocsRoute {
+	if req.Method == cnst.GET && lowerPath == s.SR.ApiDocsRoute {
 		writeRawJson(resp, 200, s.SR.ApiDocs)
+		return
+	}
+	//check for special case of api mget
+	if req.Method == cnst.GET && lowerPath == s.SR.ApiMGetRoute {
+		reqs := map[string]string{}
+		err.PanicIf(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
+		responseChan := make(chan *mgetResponse)
+		bodyOnly := strings.ToLower(req.URL.Query().Get("format")) == "bodyonly"
+		for key, reqUrl := range reqs {
+			go func(key, reqUrl string) {
+				r, _ := http.NewRequest(cnst.GET, reqUrl, nil)
+				for _, c := range req.Cookies() {
+					r.AddCookie(c)
+				}
+				w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
+				s.ServeHTTP(w, r)
+				responseChan <- &mgetResponse{
+					BodyOnly: bodyOnly,
+					Key: key,
+					Code: w.code,
+					Header: w.header,
+					Body: w.body.Bytes(),
+				}
+			}(key, reqUrl)
+		}
+		timeoutChan := time.After(s.SR.ApiMGetTimeout)
+		timedOut := false
+		fullMGetResponse := map[string]*mgetResponse{}
+		for !(len(reqs) == len(fullMGetResponse) || timedOut) {
+			select {
+			case resp := <-responseChan:
+				fullMGetResponse[resp.Key] = resp
+			case <-timeoutChan:
+				timedOut = true
+			}
+		}
+
+		writeJsonOk(ctx.resp, fullMGetResponse)
 		return
 	}
 	//get endpoint
@@ -120,8 +160,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if ctx.session != nil {
 			iMe := ctx.session.Values["me"]
 			if iMe != nil {
-				id := iMe.(id.Id)
-				ctx.me = &id
+				me := iMe.(id.Id)
+				ctx.me = &me
 			}
 		}
 		//check for valid me value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
@@ -153,7 +193,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		ts, e := strconv.ParseInt(reqQueryValues.Get("ts"), 10, 64)
 		err.PanicIf(e)
 		//if the timestamp the req was sent is over a minute ago, reject the request
-		if time.NowUnixMillis()-ts > 60000 {
+		if t.NowUnixMillis()-ts > 60000 {
 			err.FmtPanic("suspicious private request sent over a minute ago")
 		}
 		key, e := base64.RawURLEncoding.DecodeString(reqQueryValues.Get("_"))
@@ -193,7 +233,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		} else {
 			ctx.me = &me //set me on _ctx for logging info in defer above
 			ctx.session.Values["me"] = me
-			ctx.session.Values["AuthedOn"] = time.NowUnixMillis()
+			ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
 			ctx.session.Save(req, resp)
 			writeJsonOk(ctx.resp, me)
 		}
@@ -235,4 +275,40 @@ func (r *responseWrapper) Write(data []byte) (int, error) {
 func (r *responseWrapper) WriteHeader(code int) {
 	r.code = code
 	r.w.WriteHeader(code)
+}
+
+type mgetResponseWriter struct{
+	code int
+	header http.Header
+	body *bytes.Buffer
+}
+
+func (r *mgetResponseWriter) Header() http.Header {
+	return r.header
+}
+
+func (r *mgetResponseWriter) Write(data []byte) (int, error) {
+	return r.body.Write(data)
+}
+
+func (r *mgetResponseWriter) WriteHeader(code int) {
+	r.code = code
+}
+
+
+type mgetResponse struct{
+	BodyOnly bool       `json:"bodyOnly"`
+	Key  string         `json:"key"`
+	Code int 			`json:"code"`
+	Header http.Header  `json:"header"`
+	Body []byte			`json:"body"`
+}
+
+func (r *mgetResponse) MarshalJSON() ([]byte, error) {
+	if !r.BodyOnly {
+		h, _ := json.Marshal(r.Header)
+		return []byte(fmt.Sprintf(`{"key":%q,"code":%d,"header":%s,"body":%s}`, r.Key, r.Code, h, r.Body)), nil
+	} else {
+		return r.Body, nil
+	}
 }

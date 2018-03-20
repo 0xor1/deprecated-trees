@@ -8,7 +8,8 @@ import (
 	"bitbucket.org/0xor1/task/server/util/private"
 	"bitbucket.org/0xor1/task/server/util/queryinfo"
 	"bitbucket.org/0xor1/task/server/util/redis"
-	"bitbucket.org/0xor1/task/server/util/time"
+	t "bitbucket.org/0xor1/task/server/util/time"
+	"time"
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
@@ -38,6 +39,8 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	viper.SetDefault("apiDocsRoute", "/api/docs")
 	// api mget path
 	viper.SetDefault("apiMGetRoute", "/api/mget")
+	// api mget timeout
+	viper.SetDefault("apiMGetTimeout", "2s")
 	// session cookie name
 	viper.SetDefault("sessionCookieName", "t")
 	// cookie session domain
@@ -148,7 +151,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 			fmt.Println(string(debug.Stack()))
 		}
 		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
-			fmt.Println(status, fmt.Sprintf("%dms", time.NowUnixMillis()-reqStartUnixMillis), method, path)
+			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
 			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
 			//queryInfosBytes, _ := json.Marshal(queryInfos)
 			//fmt.Println(string(queryInfosBytes))
@@ -209,6 +212,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 		Version:                 viper.GetString("version"),
 		ApiDocsRoute:            strings.ToLower(viper.GetString("apiDocsRoute")),
 		ApiMGetRoute:            strings.ToLower(viper.GetString("apiMGetRoute")),
+		ApiMGetTimeout:          viper.GetDuration("apiMGetTimeout"),
 		SessionCookieName:       viper.GetString("sessionCookieName"),
 		SessionStore:            sessionStore,
 		MasterCacheKey:          viper.GetString("masterCacheKey"),
@@ -255,6 +259,8 @@ type Resources struct {
 	ApiDocsRoute string
 	// api mget path
 	ApiMGetRoute string
+	// api mget path
+	ApiMGetTimeout time.Duration
 	// session cookie name
 	SessionCookieName string
 	// session cookie store
