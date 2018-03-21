@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"regexp"
 	"sync"
+	"strings"
 )
 
 var (
@@ -94,8 +95,8 @@ func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.R
 	return sqlQueryRow(c, c.SR.TreeShards[shard], query, args...)
 }
 
-func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args interface{}) bool {
-	if key == "" {
+func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args ...interface{}) bool {
+	if key == "" || boolVal(c.req.URL.Query().Get("skipCache")) {
 		return false
 	}
 	dlm, e := getDlm(c, dlmKeys)
@@ -103,10 +104,7 @@ func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args
 		c.Log(e)
 		return false
 	}
-	if dlm > c.requestStartUnixMillis {
-		return false
-	}
-	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, Args: args})
+	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, DlmKeys: dlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return false
@@ -114,8 +112,11 @@ func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args
 	cnn := c.SR.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	start := time.NowUnixMillis()
-	jsonBytes, e = redis.Bytes(cnn.Do("GET", jsonBytes))
+	jsonBytes, e = redis.Bytes(cnn.Do("GET", string(jsonBytes)))
 	writeQueryInfo(c, "GET", jsonBytes, start)
+	if e == redis.ErrNil {
+		return false
+	}
 	if e != nil {
 		c.Log(e)
 		return false
@@ -131,22 +132,24 @@ func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args
 	return true
 }
 
-func (c *_ctx) SetCacheValue(val interface{}, key string, dlmKeys []string, args interface{}) {
+func (c *_ctx) SetCacheValue(val interface{}, key string, dlmKeys []string, args ...interface{}) {
 	if val == nil || key == "" {
 		panic(err.InvalidArguments)
+	}
+	dlm, e := getDlm(c, dlmKeys)
+	if e != nil {
+		c.Log(e)
+		return
 	}
 	valBytes, e := json.Marshal(val)
 	if e != nil {
 		c.Log(e)
 		return
 	}
-	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, Args: args})
+	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, DlmKeys: dlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return
-	}
-	for _, dlmKey := range dlmKeys {
-		c.dlmsToUpdate[dlmKey] = nil
 	}
 	c.cacheItemsToUpdate[string(cacheKeyBytes)] = valBytes
 }
@@ -261,18 +264,11 @@ func getQueryInfos(ctx *_ctx) []*queryinfo.QueryInfo {
 }
 
 func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
-	panicIfRetrievedDlmsAreMissingEntries := false
-	if len(ctx.retrievedDlms) > 0 {
-		panicIfRetrievedDlmsAreMissingEntries = true
-	}
 	dlmsToFetch := make([]interface{}, 0, len(dlmKeys))
 	latestDlm := int64(0)
 	for _, dlmKey := range dlmKeys {
 		dlm, exists := ctx.retrievedDlms[dlmKey]
 		if !exists {
-			if panicIfRetrievedDlmsAreMissingEntries {
-				err.FmtPanic("missing dlm key %q on path %s", dlmKey, ctx.req.URL.Path)
-			}
 			dlmsToFetch = append(dlmsToFetch, dlmKey)
 		} else if exists && dlm > latestDlm {
 			latestDlm = dlm
@@ -287,7 +283,8 @@ func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
 		if e != nil {
 			return 0, e
 		}
-		for _, dlm := range dlms {
+		for i, dlm := range dlms {
+			ctx.retrievedDlms[dlmsToFetch[i].(string)] = dlm
 			if dlm > latestDlm {
 				latestDlm = dlm
 			}
@@ -335,11 +332,21 @@ func doCacheUpdate(ctx *_ctx) {
 			ctx.Log(e)
 		}
 	}
-
 }
 
 type valueCacheKey struct {
 	MasterKey string      `json:"masterKey"`
 	Key       string      `json:"key"`
+	DlmKeys   []string    `json:"dlmKeys"`
+	Dlm       int64       `json:"dlm"`
 	Args      interface{} `json:"args"`
+}
+
+func boolVal(val string) bool {
+	switch strings.ToLower(val) {
+	case "1", "y", "yes", "t", "true":
+		return true
+	default:
+		return false
+	}
 }

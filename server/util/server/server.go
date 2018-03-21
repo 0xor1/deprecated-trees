@@ -207,7 +207,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer cnn.Close()
 		cnn.Send("MULTI")
 		cnn.Send("SETNX", reqQueryValues.Get("_"), "")
-		cnn.Send("EXPIRE", reqQueryValues.Get("_"), 60)
+		cnn.Send("EXPIRE", reqQueryValues.Get("_"), 61)
 		vals, e := redis.Ints(cnn.Do("EXEC"))
 		err.PanicIf(e)
 		if len(vals) != 2 {
@@ -226,20 +226,27 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		err.PanicIf(json.Unmarshal(argsBytes, args))
 	}
 	//if this endpoint is the authentication endpoint it should return just the users id.Id, add it to the session cookie
+	result := ep.CtxHandler(ctx, args)
 	if ep.IsAuthentication {
-		iId := ep.CtxHandler(ctx, args)
-		if me, ok := iId.(id.Id); !ok {
+		if me, ok := result.(id.Id); !ok {
 			err.FmtPanic("isAuthentication did not return id.Id type")
 		} else {
 			ctx.me = &me //set me on _ctx for logging info in defer above
 			ctx.session.Values["me"] = me
 			ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
 			ctx.session.Save(req, resp)
-			writeJsonOk(ctx.resp, me)
 		}
-	} else {
-		writeJsonOk(ctx.resp, ep.CtxHandler(ctx, args))
 	}
+	if boolVal(ctx.req.URL.Query().Get("profile")) {
+		writeJsonOk(ctx.resp, &profileResponse{
+			DurationMillis: t.NowUnixMillis() - ctx.requestStartUnixMillis,
+			QueryInfos: getQueryInfos(ctx),
+			Result: result,
+		})
+	} else {
+		writeJsonOk(ctx.resp, result)
+	}
+	doCacheUpdate(ctx)
 }
 
 func writeJsonOk(w http.ResponseWriter, body interface{}) {
@@ -311,4 +318,10 @@ func (r *mgetResponse) MarshalJSON() ([]byte, error) {
 	} else {
 		return r.Body, nil
 	}
+}
+
+type profileResponse struct {
+	DurationMillis int64                  `json:"durationMillis"`
+	QueryInfos     []*queryinfo.QueryInfo `json:"queryInfos"`
+	Result         interface{}            `json:"result"`
 }

@@ -46,6 +46,7 @@ func (ep *Endpoint) ValidateEndpoint() {
 		(ep.ProcessForm != nil && ep.Method != cnst.POST) || // if processForm is passed it must be a POST call
 		(ep.ProcessForm != nil && ep.IsPrivate) || // if processForm is passed it must not be a private call, private endpoints dont support forms
 		(ep.ProcessForm != nil && len(ep.FormStruct) == 0) || // if processForm is passed FormStruct must be given for documentation
+		(ep.PermissionCheck != nil || ep.PermissionDlmKeys != nil) && !(ep.PermissionCheck != nil && ep.PermissionDlmKeys != nil) || // if permission dlms are passed, permission check fn must be passed, and vice versa
 		ep.CtxHandler == nil { // every endpoint needs a handler
 		panic(invalidEndpointErr)
 	}

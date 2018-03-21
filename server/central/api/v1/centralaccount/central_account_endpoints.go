@@ -4,7 +4,6 @@ import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/crypt"
 	"bitbucket.org/0xor1/task/server/util/ctx"
-	"bitbucket.org/0xor1/task/server/util/dlm"
 	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
@@ -48,9 +47,6 @@ var getRegions = &endpoint.Endpoint{
 	Path:                     "/api/v1/centralAccount/getRegions",
 	RequiresSession:          false,
 	ExampleResponseStructure: []string{"use", "usw", "eu"},
-	ValueDlmKeys: func(ctx ctx.Ctx, _ interface{}) []string {
-		return []string{dlm.ForSystem()}
-	},
 	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		return ctx.RegionalV1PrivateClient().GetRegions()
 	},
