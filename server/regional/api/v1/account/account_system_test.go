@@ -83,4 +83,7 @@ func Test_System(t *testing.T) {
 	centralClient.DeleteAccount(bobCss, bobId)
 	centralClient.DeleteAccount(catCss, catId)
 	SR.AvatarClient.DeleteAll()
+	cnn := SR.DlmAndDataRedisPool.Get()
+	defer cnn.Close()
+	cnn.Do("FLUSHALL")
 }

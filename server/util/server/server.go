@@ -9,10 +9,10 @@ import (
 	"bitbucket.org/0xor1/task/server/util/queryinfo"
 	"bitbucket.org/0xor1/task/server/util/static"
 	t "bitbucket.org/0xor1/task/server/util/time"
-	"time"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/context"
 	"io/ioutil"
@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"fmt"
+	"time"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -70,7 +70,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		retrievedDlms:      map[string]int64{},
 		dlmsToUpdate:       map[string]interface{}{},
 		cacheItemsToUpdate: map[string]interface{}{},
-		cacheKeysToDelete:  map[string]interface{}{},
 		queryInfosMtx:      &sync.RWMutex{},
 		queryInfos:         make([]*queryinfo.QueryInfo, 0, 10),
 		SR:                 s.SR,
@@ -124,10 +123,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				s.ServeHTTP(w, r)
 				responseChan <- &mgetResponse{
 					BodyOnly: bodyOnly,
-					Key: key,
-					Code: w.code,
-					Header: w.header,
-					Body: w.body.Bytes(),
+					Key:      key,
+					Code:     w.code,
+					Header:   w.header,
+					Body:     w.body.Bytes(),
 				}
 			}(key, reqUrl)
 		}
@@ -240,8 +239,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if boolVal(ctx.req.URL.Query().Get("profile")) {
 		writeJsonOk(ctx.resp, &profileResponse{
 			DurationMillis: t.NowUnixMillis() - ctx.requestStartUnixMillis,
-			QueryInfos: getQueryInfos(ctx),
-			Result: result,
+			QueryInfos:     getQueryInfos(ctx),
+			Result:         result,
 		})
 	} else {
 		writeJsonOk(ctx.resp, result)
@@ -284,10 +283,10 @@ func (r *responseWrapper) WriteHeader(code int) {
 	r.w.WriteHeader(code)
 }
 
-type mgetResponseWriter struct{
-	code int
+type mgetResponseWriter struct {
+	code   int
 	header http.Header
-	body *bytes.Buffer
+	body   *bytes.Buffer
 }
 
 func (r *mgetResponseWriter) Header() http.Header {
@@ -302,13 +301,12 @@ func (r *mgetResponseWriter) WriteHeader(code int) {
 	r.code = code
 }
 
-
-type mgetResponse struct{
-	BodyOnly bool       `json:"bodyOnly"`
-	Key  string         `json:"key"`
-	Code int 			`json:"code"`
-	Header http.Header  `json:"header"`
-	Body []byte			`json:"body"`
+type mgetResponse struct {
+	BodyOnly bool        `json:"bodyOnly"`
+	Key      string      `json:"key"`
+	Code     int         `json:"code"`
+	Header   http.Header `json:"header"`
+	Body     []byte      `json:"body"`
 }
 
 func (r *mgetResponse) MarshalJSON() ([]byte, error) {

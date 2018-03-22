@@ -2,6 +2,7 @@ package server
 
 import (
 	"bitbucket.org/0xor1/task/server/util/avatar"
+	"bitbucket.org/0xor1/task/server/util/cachekey"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/mail"
@@ -11,13 +12,14 @@ import (
 	"bitbucket.org/0xor1/task/server/util/time"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/0xor1/isql"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
 	"net/http"
 	"regexp"
-	"sync"
 	"strings"
+	"sync"
 )
 
 var (
@@ -36,7 +38,6 @@ type _ctx struct {
 	retrievedDlms          map[string]int64
 	dlmsToUpdate           map[string]interface{}
 	cacheItemsToUpdate     map[string]interface{}
-	cacheKeysToDelete      map[string]interface{}
 	SR                     *static.Resources
 }
 
@@ -95,16 +96,16 @@ func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.R
 	return sqlQueryRow(c, c.SR.TreeShards[shard], query, args...)
 }
 
-func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args ...interface{}) bool {
-	if key == "" || boolVal(c.req.URL.Query().Get("skipCache")) {
+func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool {
+	if !c.SR.CachingEnabled || key.Key == "" || boolVal(c.req.URL.Query().Get("skipCache")) {
 		return false
 	}
-	dlm, e := getDlm(c, dlmKeys)
+	dlm, e := getDlm(c, key.DlmKeys)
 	if e != nil {
 		c.Log(e)
 		return false
 	}
-	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, DlmKeys: dlmKeys, Dlm: dlm, Args: args})
+	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return false
@@ -113,7 +114,7 @@ func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args
 	defer cnn.Close()
 	start := time.NowUnixMillis()
 	jsonBytes, e = redis.Bytes(cnn.Do("GET", string(jsonBytes)))
-	writeQueryInfo(c, "GET", jsonBytes, start)
+	writeQueryInfo(c, "GET", string(jsonBytes), start)
 	if e == redis.ErrNil {
 		return false
 	}
@@ -129,14 +130,15 @@ func (c *_ctx) GetCacheValue(val interface{}, key string, dlmKeys []string, args
 		c.Log(e)
 		return false
 	}
+	fmt.Println("GOT CACHED VALUE", key.Key, key.DlmKeys, val)
 	return true
 }
 
-func (c *_ctx) SetCacheValue(val interface{}, key string, dlmKeys []string, args ...interface{}) {
-	if val == nil || key == "" {
-		panic(err.InvalidArguments)
+func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) {
+	if !c.SR.CachingEnabled {
+		return
 	}
-	dlm, e := getDlm(c, dlmKeys)
+	dlm, e := getDlm(c, key.DlmKeys)
 	if e != nil {
 		c.Log(e)
 		return
@@ -146,7 +148,7 @@ func (c *_ctx) SetCacheValue(val interface{}, key string, dlmKeys []string, args
 		c.Log(e)
 		return
 	}
-	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key, DlmKeys: dlmKeys, Dlm: dlm, Args: args})
+	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return
@@ -154,9 +156,12 @@ func (c *_ctx) SetCacheValue(val interface{}, key string, dlmKeys []string, args
 	c.cacheItemsToUpdate[string(cacheKeyBytes)] = valBytes
 }
 
-func (c *_ctx) DeleteDlmKeys(keys []string) {
-	for _, key := range keys {
-		c.cacheKeysToDelete[key] = nil
+func (c *_ctx) UpdateDlms(cacheKeys *cachekey.Key) {
+	if !c.SR.CachingEnabled {
+		return
+	}
+	for _, key := range cacheKeys.DlmKeys {
+		c.dlmsToUpdate[key] = nil
 	}
 }
 
@@ -293,14 +298,8 @@ func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
 	return latestDlm, nil
 }
 
-func setDlmsForUpdate(ctx *_ctx, dlmKeys []string) {
-	for _, key := range dlmKeys {
-		ctx.dlmsToUpdate[key] = nil
-	}
-}
-
 func doCacheUpdate(ctx *_ctx) {
-	if len(ctx.dlmsToUpdate) == 0 && len(ctx.cacheItemsToUpdate) == 0 && len(ctx.cacheKeysToDelete) == 0 {
+	if !ctx.SR.CachingEnabled || (len(ctx.dlmsToUpdate) == 0 && len(ctx.cacheItemsToUpdate) == 0) {
 		return
 	}
 	setArgs := make([]interface{}, 0, (len(ctx.dlmsToUpdate)*2)+(len(ctx.cacheItemsToUpdate)*2))
@@ -310,24 +309,12 @@ func doCacheUpdate(ctx *_ctx) {
 	for k, v := range ctx.cacheItemsToUpdate {
 		setArgs = append(setArgs, k, v)
 	}
-	delArgs := make([]interface{}, 0, len(ctx.cacheKeysToDelete))
-	for k := range ctx.cacheKeysToDelete {
-		delArgs = append(delArgs, k)
-	}
 	cnn := ctx.SR.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	if len(setArgs) > 0 {
 		start := time.NowUnixMillis()
 		_, e := cnn.Do("MSET", setArgs...)
 		writeQueryInfo(ctx, "MSET", setArgs, start)
-		if e != nil {
-			ctx.Log(e)
-		}
-	}
-	if len(delArgs) > 0 {
-		start := time.NowUnixMillis()
-		_, e := cnn.Do("DEL", setArgs...)
-		writeQueryInfo(ctx, "DEL", setArgs, start)
 		if e != nil {
 			ctx.Log(e)
 		}

@@ -2,6 +2,7 @@ package account
 
 import (
 	"bitbucket.org/0xor1/task/server/util/activity"
+	"bitbucket.org/0xor1/task/server/util/cachekey"
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
@@ -16,20 +17,23 @@ import (
 func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicProjectsEnabled bool) {
 	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, account, ctx.Me(), publicProjectsEnabled)
 	err.PanicIf(e)
-}
-
-func dbGetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
-	return db.GetPublicProjectsEnabled(ctx, shard, account)
+	ctx.UpdateDlms(cachekey.NewSet().Account(account).AccountActivities(account))
 }
 
 func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.AccountRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, account, ctx.Me(), member, role)
+	ctx.UpdateDlms(cachekey.NewSet().AccountMember(account, member).AccountActivities(account))
 }
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
-	row := ctx.TreeQueryRow(shard, `SELECT id, name, displayName, hasAvatar, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
 	res := member{}
+	cacheKey := cachekey.NewGet("account.dbGetMember").AccountMember(account, mem)
+	if ctx.GetCacheValue(&res, cacheKey, shard, account, mem) {
+		return &res
+	}
+	row := ctx.TreeQueryRow(shard, `SELECT id, name, displayName, hasAvatar, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
 	err.PanicIf(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.HasAvatar, &res.IsActive, &res.Role))
+	ctx.SetCacheValue(res, cacheKey, shard, account, mem)
 	return &res
 }
 
@@ -67,6 +71,11 @@ ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
+	fullRes := getMembersResp{}
+	cacheKey := cachekey.NewGet("account.dbGetMembers").AccountMembersMaster(account)
+	if ctx.GetCacheValue(&fullRes, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit) {
+		return &fullRes
+	}
 	query := bytes.NewBufferString(`SELECT a1.id, a1.name, a1.displayName, a1.hasAvatar, a1.isActive, a1.role FROM accountMembers a1`)
 	args := make([]interface{}, 0, 7)
 	if after != nil {
@@ -102,14 +111,24 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 		res = append(res, &mem)
 	}
 	if len(res) == limit+1 {
-		return &getMembersResp{Members: res[:limit], More: true}
+		fullRes.Members = res[:limit]
+		fullRes.More = true
+	} else {
+		fullRes.Members = res
+		fullRes.More = false
 	}
-	return &getMembersResp{Members: res, More: false}
+	ctx.SetCacheValue(&fullRes, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit)
+	return &fullRes
 }
 
 func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
 	if occurredAfter != nil && occurredBefore != nil {
 		panic(err.InvalidArguments)
+	}
+	res := make([]*activity.Activity, 0, limit)
+	cacheKey := cachekey.NewGet("account.dbGetActivities").AccountActivities(account)
+	if ctx.GetCacheValue(&res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit) {
+		return res
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
@@ -140,12 +159,11 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 		defer rows.Close()
 	}
 	err.PanicIf(e)
-
-	res := make([]*activity.Activity, 0, limit)
 	for rows.Next() {
 		act := activity.Activity{}
 		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
+	ctx.SetCacheValue(res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit)
 	return res
 }

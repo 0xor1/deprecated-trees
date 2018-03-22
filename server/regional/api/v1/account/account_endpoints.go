@@ -49,7 +49,7 @@ var getPublicProjectsEnabled = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getPublicProjectsEnabledArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		return dbGetPublicProjectsEnabled(ctx, args.Shard, args.Account)
+		return db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account)
 	},
 }
 

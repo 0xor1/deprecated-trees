@@ -2,6 +2,7 @@ package ctx
 
 import (
 	"bitbucket.org/0xor1/task/server/util/avatar"
+	"bitbucket.org/0xor1/task/server/util/cachekey"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/mail"
 	"bitbucket.org/0xor1/task/server/util/private"
@@ -29,9 +30,9 @@ type Ctx interface {
 	TreeQuery(shard int, query string, args ...interface{}) (isql.Rows, error)
 	TreeQueryRow(shard int, query string, args ...interface{}) isql.Row
 	//cache access
-	GetCacheValue(val interface{}, key string, dlmKeys []string, args ...interface{}) bool
-	SetCacheValue(val interface{}, key string, dlmKeys []string, args ...interface{})
-	DeleteDlmKeys(keys []string)
+	GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool
+	SetCacheValue(val interface{}, key *cachekey.Key, args ...interface{})
+	UpdateDlms(cacheKeys *cachekey.Key)
 	//basic static values
 	NameRegexMatchers() []*regexp.Regexp
 	PwdRegexMatchers() []*regexp.Regexp

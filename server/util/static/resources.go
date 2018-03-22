@@ -9,7 +9,6 @@ import (
 	"bitbucket.org/0xor1/task/server/util/queryinfo"
 	"bitbucket.org/0xor1/task/server/util/redis"
 	t "bitbucket.org/0xor1/task/server/util/time"
-	"time"
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
@@ -22,6 +21,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // pass in empty strings for no config file
@@ -54,6 +54,8 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 		"3ICuYRUelY-4Fhak0Iw0_5CW24bJvxFWM0jAA78IIp8",
 		"u80sYkgbBav52fJXbENYhN3Iyof7WhuLHHMaS_rmUQw",
 	})
+	// is caching enabled
+	viper.SetDefault("cachingEnabled", true)
 	// incremental base64 value
 	viper.SetDefault("masterCacheKey", "0")
 	// regexes that account names must match to be valid during account creation or name setting
@@ -206,7 +208,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	}
 
 	return &Resources{
-		ServerCreatedOn: 		 t.NowUnixMillis(),
+		ServerCreatedOn:         t.NowUnixMillis(),
 		ServerAddress:           viper.GetString("serverAddress"),
 		Env:                     viper.GetString("env"),
 		Region:                  viper.GetString("region"),
@@ -216,6 +218,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 		ApiMGetTimeout:          viper.GetDuration("apiMGetTimeout"),
 		SessionCookieName:       viper.GetString("sessionCookieName"),
 		SessionStore:            sessionStore,
+		CachingEnabled:          viper.GetBool("cachingEnabled"),
 		MasterCacheKey:          viper.GetString("masterCacheKey"),
 		NameRegexMatchers:       nameRegexMatchers,
 		PwdRegexMatchers:        pwdRegexMatchers,
@@ -270,6 +273,8 @@ type Resources struct {
 	SessionStore *sessions.CookieStore
 	// indented json api docs
 	ApiDocs []byte
+	// is caching enabled
+	CachingEnabled bool
 	// incremental base64 value
 	MasterCacheKey string
 	// regexes that account names must match to be valid during account creation or name setting

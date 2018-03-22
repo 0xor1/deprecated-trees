@@ -605,7 +605,7 @@ BEGIN
       END IF;
     END IF;
   END IF;
-  SELECT changeMade;
+  SELECT changeMade, existingMember;
   COMMIT;
 END;
 $$
@@ -672,7 +672,7 @@ BEGIN
       CALL _setAncestralChainAggregateValuesFromTask(_account, _project, nextTask);
     END IF;
   END IF;
-  SELECT * FROM tempUpdatedIds;
+  SELECT id, existingMember FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   COMMIT;
 END;
@@ -863,7 +863,7 @@ BEGIN
           ELSE
             UPDATE tasks SET nextSibling = originalNextSiblingId WHERE account=_account AND project = _project AND id = originalPreviousSiblingId;
           END IF;
-          DELETE FROM tasks WHERE id IN (SELECT id FROM tempAllIds);
+          DELETE FROM tasks WHERE account=_account AND project=_project AND id IN (SELECT id FROM tempAllIds);
           INSERT INTO tempUpdatedIds SELECT id FROM tempAllIds tmpAll ON DUPLICATE KEY UPDATE id=tmpAll.id;
           CALL _setAncestralChainAggregateValuesFromTask(_account, _project, originalParentId);
           SET changeMade = TRUE;
