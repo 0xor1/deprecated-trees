@@ -485,7 +485,8 @@ DELIMITER $$
 CREATE PROCEDURE setTaskName(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _name VARCHAR(250))
   BEGIN
     DECLARE oldName VARCHAR(250) DEFAULT '';
-    SELECT name INTO oldName FROM tasks WHERE account=_account AND project = _project AND id = _task;
+    DECLARE taskParent BINARY(16) DEFAULT NULL;
+    SELECT name, parent INTO oldName, taskParent FROM tasks WHERE account=_account AND project = _project AND id = _task;
     UPDATE tasks SET name=_name WHERE account=_account AND project = _project AND id = _task;
     IF _project = _task THEN
       UPDATE projects SET name=_name WHERE account=_account AND id = _task;
@@ -496,6 +497,7 @@ CREATE PROCEDURE setTaskName(_account BINARY(16), _project BINARY(16), _task BIN
       INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setName', NULL, oldName);
       UPDATE projectActivities SET itemName=_name WHERE account=_account AND project = _project AND item = _task;
     END IF;
+    SELECT taskParent;
   END;
 $$
 DELIMITER ;
@@ -507,17 +509,18 @@ CREATE PROCEDURE setTaskDescription(_account BINARY(16), _project BINARY(16), _t
     UPDATE tasks SET description=_description WHERE account = _account AND project = _project AND id = _task;
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
       _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setDescription', NULL, _description);
+    SELECT parent FROM tasks WHERE account=_account AND project = _project AND id = _task;
   END;
 $$
 DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskIsParallel;
 DELIMITER $$
-CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _isParallel BOOL)
+CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _task BINARY(16), _me BINARY(16), _isParallel BOOL)
 BEGIN
 	DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
-  DECLARE nextTask BINARY(16) DEFAULT NULL;
+  DECLARE taskParent BINARY(16) DEFAULT NULL;
   DECLARE currentIsParallel BOOL DEFAULT FALSE;
   DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE changeMade BOOL DEFAULT FALSE;
@@ -529,8 +532,8 @@ BEGIN
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
-    SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO taskExists, nextTask, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
-                                                                                                                                                           _account AND project = _project AND id = _task;
+    SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO taskExists, taskParent, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
+                                                                                                                                                           _account AND project = _project AND parent=_parent AND id = _task;
     IF taskExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
       SET changeMade = TRUE;
       IF _isParallel THEN
@@ -541,6 +544,7 @@ BEGIN
           _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsParallel', NULL, 'false');
       END IF;
       UPDATE tasks SET isParallel=_isParallel WHERE account = _account AND project = _project AND id = _task;
+      INSERT tempUpdatedIds VALUES (taskParent);
       IF currentMinimumRemainingTime <> 0 THEN
         CALL _setAncestralChainAggregateValuesFromTask(_account, _project, _task);
       END IF;
@@ -555,7 +559,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskMember;
 DELIMITER $$
-CREATE PROCEDURE setTaskMember(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _member BINARY(16))
+CREATE PROCEDURE setTaskMember(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _task BINARY(16), _me BINARY(16), _member BINARY(16))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE memberExistsAndIsActive BOOL DEFAULT TRUE;
@@ -569,7 +573,7 @@ BEGIN
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
     SELECT COUNT(*)=1, totalRemainingTime, member INTO taskExistsAndIsConcrete, taskTotalRemainingTime, existingMember FROM tasks WHERE account =
-                                                                                                                                        _account AND project = _project AND id = _task AND isAbstract = FALSE;
+                                                                                                                                        _account AND project = _project AND parent=_parent AND id = _task AND isAbstract = FALSE;
     IF (existingMember <> _member OR (existingMember IS NOT NULL AND _member IS NULL) OR (existingMember IS NULL AND _member IS NOT NULL)) AND taskExistsAndIsConcrete THEN
       IF taskTotalRemainingTime > 0 THEN
         IF _member IS NOT NULL THEN
@@ -614,7 +618,7 @@ DELIMITER ;
 ## Pass NULL in _timeRemaining to not set a new TotalTimeRemaining value, pass NULL or zero to _duration to not log time
 DROP PROCEDURE IF EXISTS setRemainingTimeAndOrLogTime;
 DELIMITER $$
-CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
+CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
@@ -634,7 +638,7 @@ BEGIN
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
   IF projectExists THEN
     SELECT COUNT(*)=1, name, member, parent, totalRemainingTime INTO taskExists, taskName, existingMember, nextTask, originalMinimumRemainingTime FROM tasks WHERE account =
-                                                                                                                                                                   _account AND project = _project AND id = _task AND isAbstract = FALSE;
+                                                                                                                                                                   _account AND project = _project AND parent=_parent AND id = _task AND isAbstract = FALSE;
     IF _timeRemaining IS NULL THEN
       SET _timeRemaining = originalMinimumRemainingTime;
     END IF;
@@ -839,6 +843,12 @@ BEGIN
     id BINARY(16) NOT NULL,
     PRIMARY KEY (id)
   );
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedMembers;
+  CREATE TEMPORARY TABLE tempUpdatedMembers(
+    id BINARY(16) NOT NULL,
+    totalRemainingTimeReduction BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (id)
+  );
   START TRANSACTION;
 
   IF _project <> _task THEN
@@ -863,6 +873,13 @@ BEGIN
           ELSE
             UPDATE tasks SET nextSibling = originalNextSiblingId WHERE account=_account AND project = _project AND id = originalPreviousSiblingId;
           END IF;
+          #update all the projectMembers who totalRemainingTimes have been reduced by having tasks they were assigned to deleted
+          INSERT INTO tempUpdatedMembers SELECT member, SUM(totalRemainingTime) FROM tasks WHERE account=_account AND project=_project AND id IN (SELECT id FROM tempAllIds) AND member IS NOT NULL GROUP BY member;
+          UPDATE projectMembers pm
+            INNER JOIN  tempUpdatedMembers tum
+            ON pm.account=_account AND pm.project=_project AND pm.id=tum.id
+            SET pm.totalRemainingTime=pm.totalRemainingTime-tum.totalRemainingTimeReduction;
+          #delete the tasks
           DELETE FROM tasks WHERE account=_account AND project=_project AND id IN (SELECT id FROM tempAllIds);
           INSERT INTO tempUpdatedIds SELECT id FROM tempAllIds tmpAll ON DUPLICATE KEY UPDATE id=tmpAll.id;
           CALL _setAncestralChainAggregateValuesFromTask(_account, _project, originalParentId);
@@ -875,11 +892,15 @@ BEGIN
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'deleted', taskName, CONCAT('{"totalRemainingTime":', CAST(originalTotalRemainingTime as char character set utf8), ',"totalLoggedTime":', CAST(originalTotalLoggedTime as char character set utf8), ',"descendantCount":', CAST(originalDescendantCount as char character set utf8), '}'));
   END IF;
 
-  SELECT * FROM tempUpdatedIds;
+  SELECT COUNT(*) INTO deleteCount FROM tempUpdatedIds;
+  SELECT id, deleteCount FROM tempUpdatedIds
+  UNION
+  SELECT id, deleteCount FROM tempUpdatedMembers;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempAllIds;
   DROP TEMPORARY TABLE IF EXISTS tempCurrentIds;
   DROP TEMPORARY TABLE IF EXISTS tempLatestIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedMembers;
   COMMIT;
 END;
 $$

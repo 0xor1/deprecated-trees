@@ -12,7 +12,6 @@ import (
 	"bitbucket.org/0xor1/task/server/util/time"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/0xor1/isql"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
@@ -130,7 +129,6 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 		c.Log(e)
 		return false
 	}
-	fmt.Println("GOT CACHED VALUE", key.Key, key.DlmKeys, val)
 	return true
 }
 

@@ -144,10 +144,22 @@ func (k *Key) ProjectMembers(account, project id.Id, members []id.Id) *Key {
 	return k
 }
 
+func (k *Key) TaskParent(account, project, parent id.Id) *Key {
+	if k.isGet {
+		k.setKey("amstr", account) //account master
+		k.setKey("pmstr", project) //project master
+	}
+	k.setKey("t", parent)
+	return k.setKey("tp", parent)
+}
+
 func (k *Key) Task(account, project, task id.Id) *Key {
 	if k.isGet {
 		k.setKey("amstr", account) //account master
 		k.setKey("pmstr", project) //project master
+	}
+	if project.Equal(task) {
+		k.setKey("p", project)
 	}
 	return k.setKey("t", task)
 }
@@ -158,6 +170,9 @@ func (k *Key) Tasks(account, project id.Id, tasks []id.Id) *Key {
 		k.setKey("pmstr", project) //project master
 	}
 	for _, task := range tasks {
+		if project.Equal(task) {
+			k.setKey("p", project)
+		}
 		k.setKey("t", task)
 	}
 	return k

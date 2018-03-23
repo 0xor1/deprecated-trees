@@ -121,11 +121,12 @@ var setDescription = &endpoint.Endpoint{
 }
 
 type setIsParallelArgs struct {
-	Shard      int   `json:"shard"`
-	Account    id.Id `json:"account"`
-	Project    id.Id `json:"project"`
-	Task       id.Id `json:"task"`
-	IsParallel bool  `json:"isParallel"`
+	Shard      int    `json:"shard"`
+	Account    id.Id  `json:"account"`
+	Project    id.Id  `json:"project"`
+	Parent     *id.Id `json:"parent"`
+	Task       id.Id  `json:"task"`
+	IsParallel bool   `json:"isParallel"`
 }
 
 var setIsParallel = &endpoint.Endpoint{
@@ -137,9 +138,13 @@ var setIsParallel = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setIsParallelArgs)
+		isProjectTask := args.Project.Equal(args.Task)
+		if isProjectTask && args.Parent != nil || !isProjectTask && args.Parent == nil {
+			panic(err.InvalidArguments)
+		}
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
-		dbSetIsParallel(ctx, args.Shard, args.Account, args.Project, args.Task, args.IsParallel)
+		dbSetIsParallel(ctx, args.Shard, args.Account, args.Project, args.Parent, args.Task, args.IsParallel)
 		return nil
 	},
 }
@@ -148,6 +153,7 @@ type setMemberArgs struct {
 	Shard   int    `json:"shard"`
 	Account id.Id  `json:"account"`
 	Project id.Id  `json:"project"`
+	Parent  id.Id  `json:"parent"`
 	Task    id.Id  `json:"task"`
 	Member  *id.Id `json:"member,omitempty"`
 }
@@ -165,7 +171,7 @@ var setMember = &endpoint.Endpoint{
 		if args.Member != nil {
 			validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.Account, args.Project, *args.Member))
 		}
-		dbSetMember(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member)
+		dbSetMember(ctx, args.Shard, args.Account, args.Project, args.Parent, args.Task, args.Member)
 		return nil
 	},
 }
@@ -174,6 +180,7 @@ type setRemainingTimeArgs struct {
 	Shard         int    `json:"shard"`
 	Account       id.Id  `json:"account"`
 	Project       id.Id  `json:"project"`
+	Parent        id.Id  `json:"parent"`
 	Task          id.Id  `json:"task"`
 	RemainingTime uint64 `json:"remainingTime"`
 }
@@ -187,7 +194,7 @@ var setRemainingTime = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setRemainingTimeArgs)
-		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.RemainingTime, nil, nil)
+		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Parent, args.Task, &args.RemainingTime, nil, nil)
 	},
 }
 
@@ -195,6 +202,7 @@ type logTimeArgs struct {
 	Shard    int     `json:"shard"`
 	Account  id.Id   `json:"account"`
 	Project  id.Id   `json:"project"`
+	Parent   id.Id   `json:"parent"`
 	Task     id.Id   `json:"task"`
 	Duration uint64  `json:"duration"`
 	Note     *string `json:"note,omitempty"`
@@ -210,7 +218,7 @@ var logTime = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*logTimeArgs)
-		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, nil, &args.Duration, args.Note)
+		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Parent, args.Task, nil, &args.Duration, args.Note)
 	},
 }
 
@@ -218,6 +226,7 @@ type setRemainingTimeAndLogTimeArgs struct {
 	Shard         int     `json:"shard"`
 	Account       id.Id   `json:"account"`
 	Project       id.Id   `json:"project"`
+	Parent        id.Id   `json:"parent"`
 	Task          id.Id   `json:"task"`
 	RemainingTime uint64  `json:"remainingTime"`
 	Duration      uint64  `json:"duration"`
@@ -234,11 +243,11 @@ var setRemainingTimeAndLogTime = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setRemainingTimeAndLogTimeArgs)
-		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.RemainingTime, &args.Duration, args.Note)
+		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Parent, args.Task, &args.RemainingTime, &args.Duration, args.Note)
 	},
 }
 
-func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
+func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, parent, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
 	if duration != nil {
 		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, account, project, ctx.Me()))
 	} else if remainingTime != nil {
@@ -248,7 +257,7 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 	}
 
 	loggedOn := t.Now()
-	dbSetRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, &loggedOn, duration, note)
+	dbSetRemainingTimeAndOrLogTime(ctx, shard, account, project, parent, task, remainingTime, &loggedOn, duration, note)
 	if duration != nil {
 		return &timeLog{
 			Project:  project,
@@ -303,6 +312,9 @@ var deleteTask = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteTaskArgs)
+		if args.Project.Equal(args.Task) {
+			panic(err.InvalidArguments)
+		}
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		dbDeleteTask(ctx, args.Shard, args.Account, args.Project, args.Task)
