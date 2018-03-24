@@ -96,7 +96,7 @@ func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.R
 }
 
 func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool {
-	if !c.SR.CachingEnabled || key.Key == "" || boolVal(c.req.URL.Query().Get("skipCache")) {
+	if !c.SR.CachingEnabled || key.KeyVal == "" || queryBoolVal(c, "skipCache") {
 		return false
 	}
 	dlm, e := getDlm(c, key.DlmKeys)
@@ -104,7 +104,7 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 		c.Log(e)
 		return false
 	}
-	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
+	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.KeyVal, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return false
@@ -146,7 +146,7 @@ func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 		c.Log(e)
 		return
 	}
-	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
+	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.KeyVal, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return
@@ -154,7 +154,7 @@ func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 	c.cacheItemsToUpdate[string(cacheKeyBytes)] = valBytes
 }
 
-func (c *_ctx) UpdateDlms(cacheKeys *cachekey.Key) {
+func (c *_ctx) TouchDlms(cacheKeys *cachekey.Key) {
 	if !c.SR.CachingEnabled {
 		return
 	}
@@ -327,8 +327,8 @@ type valueCacheKey struct {
 	Args      interface{} `json:"args"`
 }
 
-func boolVal(val string) bool {
-	switch strings.ToLower(val) {
+func queryBoolVal(ctx *_ctx, name string) bool {
+	switch strings.ToLower(ctx.req.URL.Query().Get(name)) {
 	case "1", "y", "yes", "t", "true":
 		return true
 	default:

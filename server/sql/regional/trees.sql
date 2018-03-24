@@ -184,9 +184,18 @@ DROP PROCEDURE IF EXISTS setAccountMemberInactive;
 DELIMITER $$
 CREATE PROCEDURE setAccountMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedTasks;
+  CREATE TEMPORARY TABLE tempUpdatedTasks(
+    project BINARY(16) NOT NULL,
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (project, id)
+  );
   UPDATE accountMembers SET isActive=FALSE, role=3 WHERE account=_account AND id=_member;
   UPDATE projectMembers SET isActive=FALSE, totalRemainingTime=0, role=2 WHERE account=_account AND id=_member;
+  INSERT INTO tempUpdatedTasks SELECT project, id FROM tasks WHERE account=_account AND member=_member;
   UPDATE tasks SET member=NULL WHERE account=_account AND member=_member;
+  SELECT project, id FROM tempUpdatedTasks;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedTasks;
 END;
 $$
 DELIMITER ;

@@ -21,10 +21,15 @@ func dbCreateAccount(ctx ctx.Ctx, account, me id.Id, myName string, myDisplayNam
 func dbDeleteAccount(ctx ctx.Ctx, shard int, account id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountMaster(account))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMaster(account))
 }
 
 func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) []id.Id {
+	res := make([]id.Id, 0, len(members))
+	cacheKey := cachekey.NewGet().Key("private.dbGetAllInactiveMembersFromInputSet").AccountMembers(account, members)
+	if ctx.GetCacheValue(&res, cacheKey, shard, account, members) {
+		return res
+	}
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, account, members[0])
 	query := bytes.NewBufferString(`SELECT id FROM accountMembers WHERE account=? AND isActive=false AND id IN (?`)
@@ -33,11 +38,6 @@ func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, 
 		queryArgs = append(queryArgs, mem)
 	}
 	query.WriteString(`)`)
-	res := make([]id.Id, 0, len(members))
-	cacheKey := cachekey.NewGet("private.dbGetAllInactiveMembersFromInputSet").AccountMembers(account, members)
-	if ctx.GetCacheValue(&res, cacheKey, queryArgs...) {
-		return res
-	}
 	rows, e := ctx.TreeQuery(shard, query.String(), queryArgs...)
 	if rows != nil {
 		defer rows.Close()
@@ -48,7 +48,7 @@ func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, 
 		rows.Scan(&i)
 		res = append(res, id.Id(i))
 	}
-	ctx.SetCacheValue(res, cacheKey, queryArgs...)
+	ctx.SetCacheValue(res, cacheKey, shard, account, members)
 	return res
 }
 
@@ -62,7 +62,7 @@ func dbAddMembers(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddM
 	}
 	_, e := ctx.TreeExec(shard, query.String(), queryArgs...)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountMembersMaster(account))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMembersSet(account))
 }
 
 func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddMember) {
@@ -72,12 +72,12 @@ func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members 
 		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?, ?)`, account, mem.Id, mem.Name, mem.DisplayName, mem.HasAvatar, mem.Role)
 		err.PanicIf(e)
 	}
-	ctx.UpdateDlms(cachekey.NewSet().AccountMembersMaster(account))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMembers(account, memberIds))
 }
 
 func dbGetTotalOwnerCount(ctx ctx.Ctx, shard int, account id.Id) int {
 	count := 0
-	cacheKey := cachekey.NewGet("private.dbGetTotalOwnerCount").AccountMembersMaster(account)
+	cacheKey := cachekey.NewGet().Key("private.dbGetTotalOwnerCount").AccountMembersSet(account)
 	if ctx.GetCacheValue(&count, cacheKey, shard, account) {
 		return count
 	}
@@ -87,6 +87,11 @@ func dbGetTotalOwnerCount(ctx ctx.Ctx, shard int, account id.Id) int {
 }
 
 func dbGetOwnerCountInSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) int {
+	count := 0
+	cacheKey := cachekey.NewGet().Key("private.dbGetOwnerCountInSet").AccountMembers(account, members)
+	if ctx.GetCacheValue(&count, cacheKey, shard, account, members) {
+		return count
+	}
 	queryArgs := make([]interface{}, 0, len(members)+1)
 	queryArgs = append(queryArgs, account, members[0])
 	query := bytes.NewBufferString(`SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0 AND id IN (?`)
@@ -95,40 +100,42 @@ func dbGetOwnerCountInSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 		queryArgs = append(queryArgs, mem)
 	}
 	query.WriteString(`)`)
-	count := 0
-	cacheKey := cachekey.NewGet("private.dbGetOwnerCountInSet").AccountMembers(account, members)
-	if ctx.GetCacheValue(&count, cacheKey, shard, account, members) {
-		return count
-	}
 	err.IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, query.String(), queryArgs...).Scan(&count))
 	ctx.SetCacheValue(count, cacheKey, shard, account, members)
 	return count
 }
 
 func dbSetMembersInactive(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) {
+	cacheKey := cachekey.NewDlms().AccountMembers(account, members)
 	for _, mem := range members {
-		_, e := ctx.TreeExec(shard, `CALL setAccountMemberInactive(?, ?)`, account, mem)
+		rows, e := ctx.TreeQuery(shard, `CALL setAccountMemberInactive(?, ?)`, account, mem)
 		err.PanicIf(e)
+		for rows.Next() {
+			var project id.Id
+			var task id.Id
+			err.PanicIf(rows.Scan(&project, task))
+			cacheKey.Task(account, project, task).ProjectMembersSet(account, project).ProjectMember(account, project, mem)
+		}
 	}
-	ctx.UpdateDlms(cachekey.NewSet().AccountMembersMaster(account))
+	ctx.TouchDlms(cacheKey)
 }
 
 func dbSetMemberName(ctx ctx.Ctx, shard int, account id.Id, member id.Id, newName string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, account, member, newName)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountMember(account, member))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member))
 }
 
 func dbSetMemberDisplayName(ctx ctx.Ctx, shard int, account, member id.Id, newDisplayName *string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, account, member, newDisplayName)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountMember(account, member))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member))
 }
 
 func dbSetMemberHasAvatar(ctx ctx.Ctx, shard int, account, member id.Id, hasAvatar bool) {
 	_, e := ctx.TreeExec(shard, `UPDATE accountMembers SET hasAvatar=? WHERE account=? AND id=?`, hasAvatar, account, member)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountMember(account, member))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member))
 }
 
 func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, account, member id.Id, members []id.Id, action string) {
@@ -142,5 +149,5 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, account
 	}
 	_, e := ctx.TreeExec(shard, query.String(), args...)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountActivities(account))
+	ctx.TouchDlms(cachekey.NewDlms().AccountActivities(account))
 }

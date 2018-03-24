@@ -12,26 +12,27 @@ var (
 
 type Key struct {
 	isGet   bool
-	Key     string
+	KeyVal  string
 	DlmKeys []string
 }
 
-func NewGet(key string) *Key {
-	if key == "" {
-		panic(errInvalidCacheKey)
-	}
+func NewGet() *Key {
 	return &Key{
 		isGet:   true,
-		Key:     key,
 		DlmKeys: make([]string, 0, 10),
 	}
 }
 
-func NewSet() *Key {
+func NewDlms() *Key {
 	return &Key{
 		isGet:   false,
-		DlmKeys: make([]string, 0, 6),
+		DlmKeys: make([]string, 0, 10),
 	}
+}
+
+func (k *Key) Key(key string) *Key {
+	k.KeyVal = key
+	return k
 }
 
 func (k *Key) AccountMaster(account id.Id) *Key {
@@ -40,140 +41,124 @@ func (k *Key) AccountMaster(account id.Id) *Key {
 
 func (k *Key) Account(account id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
+		k.AccountMaster(account)
 	}
 	return k.setKey("a", account)
 }
 
 func (k *Key) AccountActivities(account id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
+		k.AccountMaster(account)
 	}
 	return k.setKey("aa", account)
 }
 
-func (k *Key) AccountMembersMaster(account id.Id) *Key {
+func (k *Key) AccountMembersSet(account id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
+		k.AccountMaster(account)
 	}
-	return k.setKey("ammstr", account)
+	return k.setKey("ams", account)
 }
 
 func (k *Key) AccountMember(account, member id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account)  //account master
-		k.setKey("ammstr", account) //account members master
+		k.AccountMaster(account)
+	} else {
+		k.AccountMembersSet(account)
 	}
 	return k.setKey("am", member)
 }
 
 func (k *Key) AccountMembers(account id.Id, members []id.Id) *Key {
-	if k.isGet {
-		k.setKey("amstr", account)  //account master
-		k.setKey("ammstr", account) //account members master
-	}
 	for _, member := range members {
-		k.setKey("am", member)
+		k.AccountMember(account, member)
 	}
 	return k
 }
 
-func (k *Key) AccountProjectsMaster(account id.Id) *Key {
+func (k *Key) AccountProjectsSet(account id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
+		k.AccountMaster(account)
 	}
-	return k.setKey("apmstr", account)
+	return k.setKey("aps", account)
 }
 
 func (k *Key) ProjectMaster(account, project id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
+		k.AccountMaster(account)
 	}
 	return k.setKey("pmstr", project)
 }
 
 func (k *Key) Project(account, project id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
-		k.setKey("pmstr", project) //project master
+		k.ProjectMaster(account, project)
+	} else {
+		k.AccountProjectsSet(account)
 	}
-	return k.setKey("p", project)
+	return k.setKey("p", project).setKey("t", project) //projects are also tasks
 }
 
 func (k *Key) ProjectActivities(account, project id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
-		k.setKey("pmstr", project) //project master
+		k.ProjectMaster(account, project)
 	}
 	return k.setKey("pa", project)
 }
 
-func (k *Key) ProjectMembersMaster(account, project id.Id) *Key {
+func (k *Key) ProjectMembersSet(account, project id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account)  //account master
-		k.setKey("ammstr", account) //account members master
-		k.setKey("pmstr", project)  //project master
+		k.ProjectMaster(account, project)
 	}
-	return k.setKey("pmmstr", project)
+	return k.setKey("pms", project)
 }
 
 func (k *Key) ProjectMember(account, project, member id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account)  //account master
-		k.setKey("ammstr", account) //account members master
-		k.setKey("am", member)      //account member (for name/displayName changes)
-		k.setKey("pmstr", project)  //project master
-		k.setKey("pmmstr", project) //project members master
+		k.ProjectMaster(account, project)
+		k.AccountMember(account, member) //account member (for name/displayName changes)
+	} else {
+		k.ProjectMembersSet(account, project)
 	}
 	return k.setKey("pm", member)
 }
 
 func (k *Key) ProjectMembers(account, project id.Id, members []id.Id) *Key {
-	if k.isGet {
-		k.setKey("amstr", account)  //account master
-		k.setKey("ammstr", account) //account members master
-		for _, member := range members {
-			k.setKey("am", member) //account member (for name/displayName changes)
-		}
-		k.setKey("pmstr", project)  //project master
-		k.setKey("pmmstr", project) //project members master
-	}
 	for _, member := range members {
-		k.setKey("pm", member)
+		k.ProjectMember(account, project, member)
 	}
 	return k
 }
 
-func (k *Key) TaskParent(account, project, parent id.Id) *Key {
+func (k *Key) TaskChildrenSet(account, project, parent id.Id) *Key {
 	if k.isGet {
-		k.setKey("amstr", account) //account master
-		k.setKey("pmstr", project) //project master
+		k.ProjectMaster(account, project)
 	}
-	k.setKey("t", parent)
-	return k.setKey("tp", parent)
+	return k.setKey("tcs", parent)
+}
+
+func (k *Key) TaskChildrenSets(account, project id.Id, tasks []id.Id) *Key {
+	for _, task := range tasks {
+		k.TaskChildrenSet(account, project, task)
+	}
+	return k
 }
 
 func (k *Key) Task(account, project, task id.Id) *Key {
-	if k.isGet {
-		k.setKey("amstr", account) //account master
-		k.setKey("pmstr", project) //project master
-	}
 	if project.Equal(task) {
-		k.setKey("p", project)
+		k.Project(account, project) //let project handle project nodes
+	} else {
+		if k.isGet {
+			k.ProjectMaster(account, project)
+		}
+		k.setKey("t", task)
 	}
-	return k.setKey("t", task)
+	return k
 }
 
 func (k *Key) Tasks(account, project id.Id, tasks []id.Id) *Key {
-	if k.isGet {
-		k.setKey("amstr", account) //account master
-		k.setKey("pmstr", project) //project master
-	}
 	for _, task := range tasks {
-		if project.Equal(task) {
-			k.setKey("p", project)
-		}
-		k.setKey("t", task)
+		k.Task(account, project, task)
 	}
 	return k
 }

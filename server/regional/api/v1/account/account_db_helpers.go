@@ -17,17 +17,21 @@ import (
 func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicProjectsEnabled bool) {
 	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, account, ctx.Me(), publicProjectsEnabled)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().Account(account).AccountActivities(account))
+	cacheKey := cachekey.NewDlms().Account(account).AccountActivities(account)
+	if !publicProjectsEnabled { //if setting publicProjectsEnabled to false this could have set some projects to not public
+		cacheKey.AccountProjectsSet(account)
+	}
+	ctx.TouchDlms(cacheKey)
 }
 
 func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.AccountRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, account, ctx.Me(), member, role)
-	ctx.UpdateDlms(cachekey.NewSet().AccountMember(account, member).AccountActivities(account))
+	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member).AccountActivities(account))
 }
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
 	res := member{}
-	cacheKey := cachekey.NewGet("account.dbGetMember").AccountMember(account, mem)
+	cacheKey := cachekey.NewGet().Key("account.dbGetMember").AccountMember(account, mem)
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, mem) {
 		return &res
 	}
@@ -72,7 +76,7 @@ ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	fullRes := getMembersResp{}
-	cacheKey := cachekey.NewGet("account.dbGetMembers").AccountMembersMaster(account)
+	cacheKey := cachekey.NewGet().Key("account.dbGetMembers").AccountMembersSet(account)
 	if ctx.GetCacheValue(&fullRes, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit) {
 		return &fullRes
 	}
@@ -126,7 +130,7 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 		panic(err.InvalidArguments)
 	}
 	res := make([]*activity.Activity, 0, limit)
-	cacheKey := cachekey.NewGet("account.dbGetActivities").AccountActivities(account)
+	cacheKey := cachekey.NewGet().Key("account.dbGetActivities").AccountActivities(account)
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit) {
 		return res
 	}

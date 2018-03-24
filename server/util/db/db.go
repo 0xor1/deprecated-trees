@@ -14,7 +14,7 @@ var (
 
 func GetAccountRole(ctx ctx.Ctx, shard int, account, member id.Id) *cnst.AccountRole {
 	var accRole *cnst.AccountRole
-	cacheKey := cachekey.NewGet("db.GetAccountRole").AccountMember(account, member)
+	cacheKey := cachekey.NewGet().Key("db.GetAccountRole").AccountMember(account, member)
 	if ctx.GetCacheValue(&accRole, cacheKey, shard, account, member) {
 		return accRole
 	}
@@ -26,7 +26,7 @@ func GetAccountRole(ctx ctx.Ctx, shard int, account, member id.Id) *cnst.Account
 
 func GetProjectRole(ctx ctx.Ctx, shard int, account, project, member id.Id) *cnst.ProjectRole {
 	var projRole *cnst.ProjectRole
-	cacheKey := cachekey.NewGet("db.GetProjectRole").ProjectMember(account, project, member)
+	cacheKey := cachekey.NewGet().Key("db.GetProjectRole").ProjectMember(account, project, member)
 	if ctx.GetCacheValue(&projRole, cacheKey, shard, account, project, member) {
 		return projRole
 	}
@@ -39,7 +39,7 @@ func GetProjectRole(ctx ctx.Ctx, shard int, account, project, member id.Id) *cns
 func GetAccountAndProjectRoles(ctx ctx.Ctx, shard int, account, project, member id.Id) (*cnst.AccountRole, *cnst.ProjectRole) {
 	var accRole *cnst.AccountRole
 	var projRole *cnst.ProjectRole
-	cacheKey := cachekey.NewGet("db.GetAccountAndProjectRoles").AccountMember(account, member).ProjectMember(account, project, member)
+	cacheKey := cachekey.NewGet().Key("db.GetAccountAndProjectRoles").AccountMember(account, member).ProjectMember(account, project, member)
 	if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole}, cacheKey, shard, account, project, member) {
 		return accRole, projRole
 	}
@@ -53,7 +53,7 @@ func GetAccountAndProjectRolesAndProjectIsPublic(ctx ctx.Ctx, shard int, account
 	var accRole *cnst.AccountRole
 	var projRole *cnst.ProjectRole
 	var isPublic *bool
-	cacheKey := cachekey.NewGet("db.GetAccountAndProjectRolesAndProjectIsPublic").Project(account, project)
+	cacheKey := cachekey.NewGet().Key("db.GetAccountAndProjectRolesAndProjectIsPublic").Project(account, project)
 	if member == nil {
 		if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole, &isPublic}, cacheKey, []interface{}{shard, account, project}...) {
 			return accRole, projRole, isPublic
@@ -75,7 +75,7 @@ func GetAccountAndProjectRolesAndProjectIsPublic(ctx ctx.Ctx, shard int, account
 
 func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 	var enabled bool
-	cacheKey := cachekey.NewGet("db.GetPublicProjectsEnabled").Account(account)
+	cacheKey := cachekey.NewGet().Key("db.GetPublicProjectsEnabled").Account(account)
 	if ctx.GetCacheValue(&enabled, cacheKey, shard, account) {
 		return enabled
 	}
@@ -102,6 +102,9 @@ func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) [
 		var i id.Id
 		rows.Scan(&i)
 		res = append(res, i)
+	}
+	if len(res) == 0 {
+		panic(ErrNoChangeMade)
 	}
 	return res
 }

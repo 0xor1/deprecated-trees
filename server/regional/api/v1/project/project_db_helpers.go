@@ -16,7 +16,7 @@ import (
 
 func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 	var exists bool
-	cacheKey := cachekey.NewGet("db.GetProjectExists").Project(account, project)
+	cacheKey := cachekey.NewGet().Key("db.GetProjectExists").Project(account, project)
 	if ctx.GetCacheValue(&exists, cacheKey, shard, account, project) {
 		return exists
 	}
@@ -29,18 +29,18 @@ func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *project) {
 	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountActivities(account).AccountProjectsMaster(account))
+	ctx.TouchDlms(cachekey.NewDlms().AccountActivities(account).AccountProjectsSet(account))
 }
 
 func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, isPublic bool) {
 	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, account, project, ctx.Me(), isPublic)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountActivities(account).AccountProjectsMaster(account).Project(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
 }
 
 func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project {
 	res := project{}
-	cacheKey := cachekey.NewGet("project.dbGetProject").Project(account, proj)
+	cacheKey := cachekey.NewGet().Key("project.dbGetProject").Project(account, proj)
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, proj) {
 		return &res
 	}
@@ -65,33 +65,33 @@ func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *strin
 func dbSetProjectIsArchived(ctx ctx.Ctx, shard int, account, project id.Id, isArchived bool) {
 	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, account, project, ctx.Me(), isArchived)
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountProjectsMaster(account).Project(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewDlms().Project(account, project).ProjectActivities(account, project))
 }
 
 func dbDeleteProject(ctx ctx.Ctx, shard int, account, project id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, account, project, ctx.Me())
 	err.PanicIf(e)
-	ctx.UpdateDlms(cachekey.NewSet().AccountProjectsMaster(account).ProjectMaster(account, project))
+	ctx.TouchDlms(cachekey.NewDlms().AccountProjectsSet(account).ProjectMaster(account, project))
 }
 
 func dbAddMemberOrSetActive(ctx ctx.Ctx, shard int, account, project id.Id, member *AddProjectMember) {
 	db.MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, account, project, ctx.Me(), member.Id, member.Role)
-	ctx.UpdateDlms(cachekey.NewSet().ProjectMember(account, project, member.Id).ProjectMembersMaster(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewDlms().ProjectMember(account, project, member.Id).ProjectActivities(account, project))
 }
 
 func dbSetMemberRole(ctx ctx.Ctx, shard int, account, project, member id.Id, role cnst.ProjectRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, account, project, ctx.Me(), member, role)
-	ctx.UpdateDlms(cachekey.NewSet().ProjectMember(account, project, member).ProjectMembersMaster(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }
 
 func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member id.Id) {
 	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, account, project, ctx.Me(), member)
-	ctx.UpdateDlms(cachekey.NewSet().ProjectMember(account, project, member).ProjectMembersMaster(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	fullRes := getMembersResp{}
-	cacheKey := cachekey.NewGet("project.dbGetMembers").ProjectMembersMaster(account, project)
+	cacheKey := cachekey.NewGet().Key("project.dbGetMembers").ProjectMembersSet(account, project)
 	if ctx.GetCacheValue(&fullRes, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit) {
 		return &fullRes
 	}
@@ -142,7 +142,7 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *member {
 	res := member{}
-	cacheKey := cachekey.NewGet("project.dbGetMember").ProjectMember(account, project, mem)
+	cacheKey := cachekey.NewGet().Key("project.dbGetMember").ProjectMember(account, project, mem)
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, mem) {
 		return &res
 	}
@@ -157,7 +157,7 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 		panic(err.InvalidArguments)
 	}
 	res := make([]*activity.Activity, 0, limit)
-	cacheKey := cachekey.NewGet("project.dbGetActivities").ProjectActivities(account, project)
+	cacheKey := cachekey.NewGet().Key("project.dbGetActivities").ProjectActivities(account, project)
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, item, member, occurredAfter, occurredBefore, limit) {
 		return res
 	}
@@ -201,7 +201,7 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 
 func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	fullRes := getProjectsResp{}
-	cacheKey := cachekey.NewGet("project.dbGetProjects").AccountProjectsMaster(account)
+	cacheKey := cachekey.NewGet().Key("project.dbGetProjects").AccountProjectsSet(account)
 	if ctx.GetCacheValue(&fullRes, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) {
 		return &fullRes
 	}

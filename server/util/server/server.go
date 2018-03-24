@@ -112,7 +112,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		reqs := map[string]string{}
 		err.PanicIf(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
 		responseChan := make(chan *mgetResponse)
-		bodyOnly := strings.ToLower(req.URL.Query().Get("format")) == "bodyonly"
 		for key, reqUrl := range reqs {
 			go func(key, reqUrl string) {
 				r, _ := http.NewRequest(cnst.GET, reqUrl, nil)
@@ -122,11 +121,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
 				s.ServeHTTP(w, r)
 				responseChan <- &mgetResponse{
-					BodyOnly: bodyOnly,
-					Key:      key,
-					Code:     w.code,
-					Header:   w.header,
-					Body:     w.body.Bytes(),
+					includeHeaders: queryBoolVal(ctx, "includeHeaders"),
+					Key:            key,
+					Code:           w.code,
+					Header:         w.header,
+					Body:           w.body.Bytes(),
 				}
 			}(key, reqUrl)
 		}
@@ -236,7 +235,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ctx.session.Save(req, resp)
 		}
 	}
-	if boolVal(ctx.req.URL.Query().Get("profile")) {
+	if queryBoolVal(ctx, "profile") {
 		writeJsonOk(ctx.resp, &profileResponse{
 			DurationMillis: t.NowUnixMillis() - ctx.requestStartUnixMillis,
 			QueryInfos:     getQueryInfos(ctx),
@@ -302,19 +301,19 @@ func (r *mgetResponseWriter) WriteHeader(code int) {
 }
 
 type mgetResponse struct {
-	BodyOnly bool        `json:"bodyOnly"`
-	Key      string      `json:"key"`
-	Code     int         `json:"code"`
-	Header   http.Header `json:"header"`
-	Body     []byte      `json:"body"`
+	includeHeaders bool
+	Key            string      `json:"key"`
+	Code           int         `json:"code"`
+	Header         http.Header `json:"header"`
+	Body           []byte      `json:"body"`
 }
 
 func (r *mgetResponse) MarshalJSON() ([]byte, error) {
-	if !r.BodyOnly {
+	if r.includeHeaders {
 		h, _ := json.Marshal(r.Header)
-		return []byte(fmt.Sprintf(`{"key":%q,"code":%d,"header":%s,"body":%s}`, r.Key, r.Code, h, r.Body)), nil
+		return []byte(fmt.Sprintf(`{"code":%d,"header":%s,"body":%s}`, r.Code, h, r.Body)), nil
 	} else {
-		return r.Body, nil
+		return []byte(fmt.Sprintf(`{"code":%d,"body":%s}`, r.Code, r.Body)), nil
 	}
 }
 

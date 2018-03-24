@@ -32,7 +32,7 @@ type Ctx interface {
 	//cache access
 	GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool
 	SetCacheValue(val interface{}, key *cachekey.Key, args ...interface{})
-	UpdateDlms(cacheKeys *cachekey.Key)
+	TouchDlms(cacheKeys *cachekey.Key)
 	//basic static values
 	NameRegexMatchers() []*regexp.Regexp
 	PwdRegexMatchers() []*regexp.Regexp
