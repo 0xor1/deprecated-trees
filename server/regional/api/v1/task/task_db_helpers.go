@@ -56,23 +56,21 @@ func dbSetDescription(ctx ctx.Ctx, shard int, account, project, task id.Id, desc
 	ctx.TouchDlms(cacheKey)
 }
 
-func dbSetIsParallel(ctx ctx.Ctx, shard int, account, project id.Id, parent *id.Id, task id.Id, isParallel bool) {
+func dbSetIsParallel(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id, isParallel bool) {
 	cacheKey := cachekey.NewDlms().ProjectActivities(account, project)
-	if parent != nil {
-		cacheKey.TaskChildrenSet(account, project, *parent)
-	}
-	tasks := db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?, ?)`, account, project, parent, task, ctx.Me(), isParallel)
-	ctx.TouchDlms(cacheKey.Tasks(account, project, tasks).TaskChildrenSets(account, project, tasks))
+	updatedTasks := db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), isParallel)
+	ctx.TouchDlms(cacheKey.Tasks(account, project, updatedTasks).TaskChildrenSets(account, project, updatedTasks))
 }
 
-func dbSetMember(ctx ctx.Ctx, shard int, account, project, parent, task id.Id, member *id.Id) {
+func dbSetMember(ctx ctx.Ctx, shard int, account, project, task id.Id, member *id.Id) {
 	var memArg []byte
 	if member != nil {
 		memArg = *member
 	}
 	changeMade := false
+	var parent id.Id
 	var existingMember *id.Id
-	err.PanicIf(ctx.TreeQueryRow(shard, `CALL setTaskMember(?, ?, ?, ?, ?, ?)`, account, project, parent, task, ctx.Me(), memArg).Scan(&changeMade, &existingMember))
+	err.PanicIf(ctx.TreeQueryRow(shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), memArg).Scan(&changeMade, &parent, &existingMember))
 	if changeMade {
 		cacheKey := cachekey.NewDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).Task(account, project, task)
 		if member != nil {
@@ -87,8 +85,8 @@ func dbSetMember(ctx ctx.Ctx, shard int, account, project, parent, task id.Id, m
 	}
 }
 
-func dbSetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, parent, task id.Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, parent, task, ctx.Me(), remainingTime, loggedOn, duration, note)
+func dbSetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
+	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, loggedOn, duration, note)
 	err.PanicIf(e)
 	tasks := make([]id.Id, 0, 100)
 	var existingMember *id.Id

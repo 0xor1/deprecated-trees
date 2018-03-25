@@ -525,10 +525,11 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskIsParallel;
 DELIMITER $$
-CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _task BINARY(16), _me BINARY(16), _isParallel BOOL)
+CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _isParallel BOOL)
 BEGIN
 	DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
+  DECLARE taskParent BINARY(16) DEFAULT NULL;
   DECLARE currentIsParallel BOOL DEFAULT FALSE;
   DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
@@ -539,14 +540,7 @@ BEGIN
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
-    IF _parent IS NULL THEN
-      SELECT COUNT(*)=1, isParallel, minimumRemainingTime INTO taskExists, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
-                                                                                                                                                               _account AND project = _project AND parent IS NULL AND id = _task;
-    ELSE
-      SELECT COUNT(*)=1, isParallel, minimumRemainingTime INTO taskExists, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
-                                                                                                                                                               _account AND project = _project AND parent=_parent AND id = _task;
-    END IF;
-
+    SELECT COUNT(*)=1, isParallel, parent, minimumRemainingTime INTO taskExists, currentIsParallel, taskParent, currentMinimumRemainingTime FROM tasks WHERE account = _account AND id=_task;
     IF taskExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
       IF _isParallel THEN
         INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
@@ -556,8 +550,8 @@ BEGIN
           _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsParallel', NULL, 'false');
       END IF;
       UPDATE tasks SET isParallel=_isParallel WHERE account = _account AND project = _project AND id = _task;
-      IF _parent IS NOT NULL THEN
-        INSERT tempUpdatedIds VALUES (_parent);
+      IF taskParent IS NOT NULL THEN
+        INSERT tempUpdatedIds VALUES (taskParent);
       END IF;
       IF currentMinimumRemainingTime <> 0 THEN
         CALL _setAncestralChainAggregateValuesFromTask(_account, _project, _task);
@@ -575,7 +569,7 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskMember;
 DELIMITER $$
-CREATE PROCEDURE setTaskMember(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _task BINARY(16), _me BINARY(16), _member BINARY(16))
+CREATE PROCEDURE setTaskMember(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _member BINARY(16))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE memberExistsAndIsActive BOOL DEFAULT TRUE;
@@ -584,12 +578,13 @@ BEGIN
   DECLARE taskTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE existingMemberTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE existingMember BINARY(16) DEFAULT NULL;
+  DECLARE taskParent BINARY(16) DEFAULT NULL;
   DECLARE existingMemberExists BOOL DEFAULT FALSE; #seems pointless but it's justa var to stick a value in when locking the row
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
-    SELECT COUNT(*)=1, totalRemainingTime, member INTO taskExistsAndIsConcrete, taskTotalRemainingTime, existingMember FROM tasks WHERE account =
-                                                                                                                                        _account AND project = _project AND parent=_parent AND id = _task AND isAbstract = FALSE;
+    SELECT COUNT(*)=1, totalRemainingTime, parent, member INTO taskExistsAndIsConcrete, taskTotalRemainingTime, taskParent, existingMember FROM tasks WHERE account =
+                                                                                                                                        _account AND project = _project AND id = _task AND isAbstract = FALSE;
     IF (existingMember <> _member OR (existingMember IS NOT NULL AND _member IS NULL) OR (existingMember IS NULL AND _member IS NOT NULL)) AND taskExistsAndIsConcrete THEN
       IF taskTotalRemainingTime > 0 THEN
         IF _member IS NOT NULL THEN
@@ -625,7 +620,7 @@ BEGIN
       END IF;
     END IF;
   END IF;
-  SELECT changeMade, existingMember;
+  SELECT changeMade, taskParent, existingMember;
   COMMIT;
 END;
 $$
@@ -634,7 +629,7 @@ DELIMITER ;
 ## Pass NULL in _timeRemaining to not set a new TotalTimeRemaining value, pass NULL or zero to _duration to not log time
 DROP PROCEDURE IF EXISTS setRemainingTimeAndOrLogTime;
 DELIMITER $$
-CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
+CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
@@ -654,7 +649,7 @@ BEGIN
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
   IF projectExists THEN
     SELECT COUNT(*)=1, name, member, parent, totalRemainingTime INTO taskExists, taskName, existingMember, nextTask, originalMinimumRemainingTime FROM tasks WHERE account =
-                                                                                                                                                                   _account AND project = _project AND parent=_parent AND id = _task AND isAbstract = FALSE;
+                                                                                                                                                                   _account AND project = _project AND id = _task AND isAbstract = FALSE;
     IF _timeRemaining IS NULL THEN
       SET _timeRemaining = originalMinimumRemainingTime;
     END IF;
@@ -685,6 +680,7 @@ BEGIN
       UPDATE tasks SET totalRemainingTime=_timeRemaining, minimumRemainingTime=_timeRemaining, totalLoggedTime=totalLoggedTime+_duration WHERE account =
                                                                                                                                                _account AND project = _project AND id = _task;
       INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
+      INSERT INTO tempUpdatedIds VALUES (nextTask) ON DUPLICATE KEY UPDATE id=id;
       IF _timeRemaining <> originalMinimumRemainingTime THEN
         INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
           _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _me, _task, 'task', 'setRemainingTime', taskName, CAST(_timeRemaining as char character set utf8));

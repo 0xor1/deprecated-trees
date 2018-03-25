@@ -9,11 +9,11 @@ type Client interface {
 	Create(css *clientsession.Store, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, remainingTime *uint64) (*task, error)
 	SetName(css *clientsession.Store, shard int, account, project, task id.Id, name string) error
 	SetDescription(css *clientsession.Store, shard int, account, project, task id.Id, description *string) error
-	SetIsParallel(css *clientsession.Store, shard int, account, project id.Id, parent *id.Id, task id.Id, isParallel bool) error                                                 //only applys to abstract tasks
-	SetMember(css *clientsession.Store, shard int, account, project, parent, task id.Id, member *id.Id) error                                                                    //only applys to task tasks
-	SetRemainingTime(css *clientsession.Store, shard int, account, project, parent, task id.Id, remainingTime uint64) error                                                      //only applys to task tasks
-	LogTime(css *clientsession.Store, shard int, account, project, parent, task id.Id, duration uint64, note *string) (*timeLog, error)                                          //only applys to task tasks
-	SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, account, project, parent, task id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) //only applys to task tasks
+	SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error                                                              //only applys to abstract tasks
+	SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error                                                                    //only applys to task tasks
+	SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error                                                      //only applys to task tasks
+	LogTime(css *clientsession.Store, shard int, account, project, task id.Id, duration uint64, note *string) (*timeLog, error)                                          //only applys to task tasks
+	SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) //only applys to task tasks
 	Move(css *clientsession.Store, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
 	Delete(css *clientsession.Store, shard int, account, project, task id.Id) error
 	Get(css *clientsession.Store, shard int, account, project id.Id, tasks []id.Id) ([]*task, error)
@@ -73,48 +73,44 @@ func (c *client) SetDescription(css *clientsession.Store, shard int, account, pr
 	return e
 }
 
-func (c *client) SetIsParallel(css *clientsession.Store, shard int, account, project id.Id, parent *id.Id, task id.Id, isParallel bool) error {
+func (c *client) SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error {
 	_, e := setIsParallel.DoRequest(css, c.host, &setIsParallelArgs{
 		Shard:      shard,
 		Account:    account,
 		Project:    project,
-		Parent:     parent,
 		Task:       task,
 		IsParallel: isParallel,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) SetMember(css *clientsession.Store, shard int, account, project, parent, task id.Id, member *id.Id) error {
+func (c *client) SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error {
 	_, e := setMember.DoRequest(css, c.host, &setMemberArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
-		Parent:  parent,
 		Task:    task,
 		Member:  member,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) SetRemainingTime(css *clientsession.Store, shard int, account, project, parent, task id.Id, remainingTime uint64) error {
+func (c *client) SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error {
 	_, e := setRemainingTime.DoRequest(css, c.host, &setRemainingTimeArgs{
 		Shard:         shard,
 		Account:       account,
 		Project:       project,
-		Parent:        parent,
 		Task:          task,
 		RemainingTime: remainingTime,
 	}, nil, nil)
 	return e
 }
 
-func (c *client) LogTime(css *clientsession.Store, shard int, account, project, parent, task id.Id, duration uint64, note *string) (*timeLog, error) {
+func (c *client) LogTime(css *clientsession.Store, shard int, account, project, task id.Id, duration uint64, note *string) (*timeLog, error) {
 	val, e := logTime.DoRequest(css, c.host, &logTimeArgs{
 		Shard:    shard,
 		Account:  account,
 		Project:  project,
-		Parent:   parent,
 		Task:     task,
 		Duration: duration,
 		Note:     note,
@@ -125,12 +121,11 @@ func (c *client) LogTime(css *clientsession.Store, shard int, account, project, 
 	return nil, e
 }
 
-func (c *client) SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, account, project, parent, task id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) {
+func (c *client) SetRemainingTimeAndLogTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*timeLog, error) {
 	val, e := setRemainingTimeAndLogTime.DoRequest(css, c.host, &setRemainingTimeAndLogTimeArgs{
 		Shard:         shard,
 		Account:       account,
 		Project:       project,
-		Parent:        parent,
 		Task:          task,
 		RemainingTime: remainingTime,
 		Duration:      duration,
