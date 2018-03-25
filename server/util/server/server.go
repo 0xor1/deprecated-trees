@@ -237,9 +237,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if queryBoolVal(ctx, "profile") {
 		writeJsonOk(ctx.resp, &profileResponse{
-			DurationMillis: t.NowUnixMillis() - ctx.requestStartUnixMillis,
-			QueryInfos:     getQueryInfos(ctx),
-			Result:         result,
+			Duration:   t.NowUnixMillis() - ctx.requestStartUnixMillis,
+			QueryInfos: getQueryInfos(ctx),
+			Result:     result,
 		})
 	} else {
 		writeJsonOk(ctx.resp, result)
@@ -318,7 +318,7 @@ func (r *mgetResponse) MarshalJSON() ([]byte, error) {
 }
 
 type profileResponse struct {
-	DurationMillis int64                  `json:"durationMillis"`
-	QueryInfos     []*queryinfo.QueryInfo `json:"queryInfos"`
-	Result         interface{}            `json:"result"`
+	Duration   int64                  `json:"duration"`
+	QueryInfos []*queryinfo.QueryInfo `json:"queryInfos"`
+	Result     interface{}            `json:"result"`
 }

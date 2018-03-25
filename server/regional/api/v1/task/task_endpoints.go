@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type createTaskArgs struct {
+type createArgs struct {
 	Shard              int     `json:"shard"`
 	Account            id.Id   `json:"account"`
 	Project            id.Id   `json:"project"`
@@ -26,16 +26,16 @@ type createTaskArgs struct {
 	TotalRemainingTime *uint64 `json:"totalRemainingTime,omitempty"`
 }
 
-var createTask = &endpoint.Endpoint{
+var create = &endpoint.Endpoint{
 	Method:                   cnst.POST,
-	Path:                     "/api/v1/project/createTask",
+	Path:                     "/api/v1/task/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &task{},
 	GetArgsStruct: func() interface{} {
-		return &createTaskArgs{}
+		return &createArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*createTaskArgs)
+		args := a.(*createArgs)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		if (args.IsAbstract && (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)) {
 			panic(err.InvalidArguments)
@@ -78,7 +78,7 @@ type setNameArgs struct {
 
 var setName = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/setName",
+	Path:            "/api/v1/task/setName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setNameArgs{}
@@ -106,7 +106,7 @@ type setDescriptionArgs struct {
 
 var setDescription = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/setDescription",
+	Path:            "/api/v1/task/setDescription",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setDescriptionArgs{}
@@ -131,7 +131,7 @@ type setIsParallelArgs struct {
 
 var setIsParallel = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/setIsParallel",
+	Path:            "/api/v1/task/setIsParallel",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setIsParallelArgs{}
@@ -160,7 +160,7 @@ type setMemberArgs struct {
 
 var setMember = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/setMember",
+	Path:            "/api/v1/task/setMember",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setMemberArgs{}
@@ -187,7 +187,7 @@ type setRemainingTimeArgs struct {
 
 var setRemainingTime = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/setRemainingTime",
+	Path:            "/api/v1/task/setRemainingTime",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setRemainingTimeArgs{}
@@ -210,7 +210,7 @@ type logTimeArgs struct {
 
 var logTime = &endpoint.Endpoint{
 	Method:                   cnst.POST,
-	Path:                     "/api/v1/project/logTime",
+	Path:                     "/api/v1/task/logTime",
 	RequiresSession:          true,
 	ExampleResponseStructure: &timeLog{},
 	GetArgsStruct: func() interface{} {
@@ -235,7 +235,7 @@ type setRemainingTimeAndLogTimeArgs struct {
 
 var setRemainingTimeAndLogTime = &endpoint.Endpoint{
 	Method:                   cnst.POST,
-	Path:                     "/api/v1/project/setRemainingTimeAndLogTime",
+	Path:                     "/api/v1/task/setRemainingTimeAndLogTime",
 	RequiresSession:          true,
 	ExampleResponseStructure: &timeLog{},
 	GetArgsStruct: func() interface{} {
@@ -271,7 +271,7 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, pare
 	return nil
 }
 
-type moveTaskArgs struct {
+type moveArgs struct {
 	Shard              int    `json:"shard"`
 	Account            id.Id  `json:"account"`
 	Project            id.Id  `json:"project"`
@@ -280,15 +280,15 @@ type moveTaskArgs struct {
 	NewPreviousSibling *id.Id `json:"newPreviousSibling"`
 }
 
-var moveTask = &endpoint.Endpoint{
+var move = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/moveTask",
+	Path:            "/api/v1/task/move",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &moveTaskArgs{}
+		return &moveArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*moveTaskArgs)
+		args := a.(*moveArgs)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		dbMoveTask(ctx, args.Shard, args.Account, args.Project, args.Task, args.NewParent, args.NewPreviousSibling)
@@ -296,7 +296,7 @@ var moveTask = &endpoint.Endpoint{
 	},
 }
 
-type deleteTaskArgs struct {
+type deleteArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
 	Project id.Id `json:"project"`
@@ -305,13 +305,13 @@ type deleteTaskArgs struct {
 
 var deleteTask = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/deleteTask",
+	Path:            "/api/v1/task/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &deleteTaskArgs{}
+		return &deleteArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*deleteTaskArgs)
+		args := a.(*deleteArgs)
 		if args.Project.Equal(args.Task) {
 			panic(err.InvalidArguments)
 		}
@@ -322,30 +322,30 @@ var deleteTask = &endpoint.Endpoint{
 	},
 }
 
-type getTasksArgs struct {
+type getArgs struct {
 	Shard   int     `json:"shard"`
 	Account id.Id   `json:"account"`
 	Project id.Id   `json:"project"`
 	Tasks   []id.Id `json:"tasks"`
 }
 
-var getTasks = &endpoint.Endpoint{
+var get = &endpoint.Endpoint{
 	Method:                   cnst.GET,
-	Path:                     "/api/v1/project/getTasks",
+	Path:                     "/api/v1/task/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*task{{}},
 	GetArgsStruct: func() interface{} {
-		return &getTasksArgs{}
+		return &getArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*getTasksArgs)
+		args := a.(*getArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		validate.EntityCount(len(args.Tasks), ctx.MaxProcessEntityCount())
 		return dbGetTasks(ctx, args.Shard, args.Account, args.Project, args.Tasks)
 	},
 }
 
-type getChildTasksArgs struct {
+type getChildrenArgs struct {
 	Shard       int    `json:"shard"`
 	Account     id.Id  `json:"account"`
 	Project     id.Id  `json:"project"`
@@ -354,16 +354,16 @@ type getChildTasksArgs struct {
 	Limit       int    `json:"limit"`
 }
 
-var getChildTasks = &endpoint.Endpoint{
+var getChildren = &endpoint.Endpoint{
 	Method:                   cnst.GET,
-	Path:                     "/api/v1/project/getChildTasks",
+	Path:                     "/api/v1/task/getChildren",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*task{{}},
 	GetArgsStruct: func() interface{} {
-		return &getChildTasksArgs{}
+		return &getChildrenArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*getChildTasksArgs)
+		args := a.(*getChildrenArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		return dbGetChildTasks(ctx, args.Shard, args.Account, args.Project, args.Parent, args.FromSibling, args.Limit)
@@ -380,7 +380,7 @@ type getAncestorTasksArgs struct {
 
 var getAncestorTasks = &endpoint.Endpoint{
 	Method:                   cnst.GET,
-	Path:                     "/api/v1/project/getAncestorTasks",
+	Path:                     "/api/v1/task/getAncestorTasks",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*ancestor{{}},
 	GetArgsStruct: func() interface{} {
@@ -395,7 +395,7 @@ var getAncestorTasks = &endpoint.Endpoint{
 }
 
 var Endpoints = []*endpoint.Endpoint{
-	createTask,
+	create,
 	setName,
 	setDescription,
 	setIsParallel,
@@ -403,10 +403,10 @@ var Endpoints = []*endpoint.Endpoint{
 	setRemainingTime,
 	logTime,
 	setRemainingTimeAndLogTime,
-	moveTask,
+	move,
 	deleteTask,
-	getTasks,
-	getChildTasks,
+	get,
+	getChildren,
 	getAncestorTasks,
 }
 

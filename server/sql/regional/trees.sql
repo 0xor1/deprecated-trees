@@ -529,10 +529,8 @@ CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _pa
 BEGIN
 	DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
-  DECLARE taskParent BINARY(16) DEFAULT NULL;
   DECLARE currentIsParallel BOOL DEFAULT FALSE;
   DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-  DECLARE changeMade BOOL DEFAULT FALSE;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   CREATE TEMPORARY TABLE tempUpdatedIds(
     id BINARY(16) NOT NULL,
@@ -541,10 +539,15 @@ BEGIN
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
-    SELECT COUNT(*)=1, parent, isParallel, minimumRemainingTime INTO taskExists, taskParent, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
-                                                                                                                                                           _account AND project = _project AND parent=_parent AND id = _task;
+    IF _parent IS NULL THEN
+      SELECT COUNT(*)=1, isParallel, minimumRemainingTime INTO taskExists, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
+                                                                                                                                                               _account AND project = _project AND parent IS NULL AND id = _task;
+    ELSE
+      SELECT COUNT(*)=1, isParallel, minimumRemainingTime INTO taskExists, currentIsParallel, currentMinimumRemainingTime FROM tasks WHERE account =
+                                                                                                                                                               _account AND project = _project AND parent=_parent AND id = _task;
+    END IF;
+
     IF taskExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
-      SET changeMade = TRUE;
       IF _isParallel THEN
         INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
           _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsParallel', NULL, 'true');
@@ -553,9 +556,13 @@ BEGIN
           _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsParallel', NULL, 'false');
       END IF;
       UPDATE tasks SET isParallel=_isParallel WHERE account = _account AND project = _project AND id = _task;
-      INSERT tempUpdatedIds VALUES (taskParent);
+      IF _parent IS NOT NULL THEN
+        INSERT tempUpdatedIds VALUES (_parent);
+      END IF;
       IF currentMinimumRemainingTime <> 0 THEN
         CALL _setAncestralChainAggregateValuesFromTask(_account, _project, _task);
+      ELSE
+        INSERT tempUpdatedIds VALUES (_task);
       END IF;
     END IF;
   END IF;
