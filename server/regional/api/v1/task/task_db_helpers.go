@@ -31,7 +31,7 @@ func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSi
 	} else {
 		args = append(args, nil)
 	}
-	ctx.TouchDlms(cachekey.NewDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).Tasks(account, project, db.TreeChangeHelper(ctx, shard, `CALL createTask(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)))
+	ctx.TouchDlms(cachekey.NewDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL createTask(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)))
 }
 
 func dbSetName(ctx ctx.Ctx, shard int, account, project, task id.Id, name string) {
@@ -58,8 +58,7 @@ func dbSetDescription(ctx ctx.Ctx, shard int, account, project, task id.Id, desc
 
 func dbSetIsParallel(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id, isParallel bool) {
 	cacheKey := cachekey.NewDlms().ProjectActivities(account, project)
-	updatedTasks := db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), isParallel)
-	ctx.TouchDlms(cacheKey.Tasks(account, project, updatedTasks).TaskChildrenSets(account, project, updatedTasks))
+	ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), isParallel)))
 }
 
 func dbSetMember(ctx ctx.Ctx, shard int, account, project, task id.Id, member *id.Id) {
@@ -96,7 +95,7 @@ func dbSetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, ta
 		tasks = append(tasks, i)
 	}
 	if len(tasks) > 0 {
-		cacheKey := cachekey.NewDlms().ProjectActivities(account, project).Tasks(account, project, tasks).TaskChildrenSets(account, project, tasks)
+		cacheKey := cachekey.NewDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
 		if existingMember != nil {
 			cacheKey.ProjectMember(account, project, *existingMember)
 		}
@@ -107,8 +106,7 @@ func dbSetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, ta
 }
 
 func dbMoveTask(ctx ctx.Ctx, shard int, account, project, task, newParent id.Id, newPreviousSibling *id.Id) {
-	tasks := db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, account, project, task, newParent, ctx.Me(), newPreviousSibling)
-	ctx.TouchDlms(cachekey.NewDlms().ProjectActivities(account, project).Tasks(account, project, tasks).TaskChildrenSets(account, project, tasks))
+	ctx.TouchDlms(cachekey.NewDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, account, project, task, newParent, ctx.Me(), newPreviousSibling)))
 }
 
 func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
@@ -126,7 +124,7 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 			updatedProjectMembers = append(updatedProjectMembers, i)
 		}
 	}
-	ctx.TouchDlms(cachekey.NewDlms().ProjectActivities(account, project).Tasks(account, project, affectedTasks).TaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
+	ctx.TouchDlms(cachekey.NewDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
 }
 
 func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*task {
@@ -136,7 +134,7 @@ func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) [
 	}
 	idsStr := ids.String()
 	res := make([]*task, 0, len(tasks))
-	cacheKey := cachekey.NewGet().Key("project.dbGetTasks").Tasks(account, project, tasks)
+	cacheKey := cachekey.NewGet().Key("project.dbGetTasks").CombinedTaskAndTaskChildrenSets(account, project, tasks)
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, idsStr) {
 		return res
 	}

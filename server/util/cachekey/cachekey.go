@@ -138,13 +138,6 @@ func (k *Key) TaskChildrenSet(account, project, parent id.Id) *Key {
 	return k.setKey("tcs", parent)
 }
 
-func (k *Key) TaskChildrenSets(account, project id.Id, tasks []id.Id) *Key {
-	for _, task := range tasks {
-		k.TaskChildrenSet(account, project, task)
-	}
-	return k
-}
-
 func (k *Key) Task(account, project, task id.Id) *Key {
 	if project.Equal(task) {
 		k.Project(account, project) //let project handle project nodes
@@ -157,9 +150,12 @@ func (k *Key) Task(account, project, task id.Id) *Key {
 	return k
 }
 
-func (k *Key) Tasks(account, project id.Id, tasks []id.Id) *Key {
+func (k *Key) CombinedTaskAndTaskChildrenSets(account, project id.Id, tasks []id.Id) *Key {
 	for _, task := range tasks {
 		k.Task(account, project, task)
+	}
+	for _, task := range tasks {
+		k.TaskChildrenSet(account, project, task)
 	}
 	return k
 }
