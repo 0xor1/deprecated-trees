@@ -109,6 +109,7 @@ func (k *Key) ProjectActivities(account, project id.Id) *Key {
 func (k *Key) ProjectMembersSet(account, project id.Id) *Key {
 	if k.isGet {
 		k.ProjectMaster(account, project)
+		k.AccountMembersSet(account) //need to check this in case a member changed their name/displayName/hasAvatar
 	}
 	return k.setKey("pms", project)
 }

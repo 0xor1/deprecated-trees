@@ -146,6 +146,10 @@ func Test_system(t *testing.T) {
 	assert.True(t, proj.Id.Equal(ancestors[0].Id))
 	assert.True(t, taskA.Id.Equal(ancestors[1].Id))
 	assert.True(t, taskL.Id.Equal(ancestors[2].Id))
+	projectClient.SetIsPublic(aliCss, 0, org.Id, proj.Id, false)
+	ancestors, err = client.GetAncestors(nil, 0, org.Id, proj.Id, taskM.Id, 100)
+	assert.Equal(t, 0, len(ancestors))
+	assert.NotNil(t, err)
 
 	client.Delete(aliCss, 0, org.Id, proj.Id, taskA.Id)
 	client.Delete(aliCss, 0, org.Id, proj.Id, taskD.Id)

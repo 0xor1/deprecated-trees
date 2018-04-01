@@ -1143,6 +1143,9 @@ CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_account BINARY(16), 
       SET _task=nextTask;
 
     END WHILE;
+    IF _task IS NOT NULL THEN
+      INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
+    END IF;
   END;
 $$
 DELIMITER ;
