@@ -187,79 +187,8 @@ var setRemainingTime = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setRemainingTimeArgs)
-		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.RemainingTime, nil, nil)
+		return db.SetRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.RemainingTime, nil, nil)
 	},
-}
-
-type logTimeArgs struct {
-	Shard    int     `json:"shard"`
-	Account  id.Id   `json:"account"`
-	Project  id.Id   `json:"project"`
-	Task     id.Id   `json:"task"`
-	Duration uint64  `json:"duration"`
-	Note     *string `json:"note,omitempty"`
-}
-
-var logTime = &endpoint.Endpoint{
-	Method:                   cnst.POST,
-	Path:                     "/api/v1/task/logTime",
-	RequiresSession:          true,
-	ExampleResponseStructure: &timeLog{},
-	GetArgsStruct: func() interface{} {
-		return &logTimeArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*logTimeArgs)
-		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, nil, &args.Duration, args.Note)
-	},
-}
-
-type setRemainingTimeAndLogTimeArgs struct {
-	Shard         int     `json:"shard"`
-	Account       id.Id   `json:"account"`
-	Project       id.Id   `json:"project"`
-	Task          id.Id   `json:"task"`
-	RemainingTime uint64  `json:"remainingTime"`
-	Duration      uint64  `json:"duration"`
-	Note          *string `json:"note,omitempty"`
-}
-
-var setRemainingTimeAndLogTime = &endpoint.Endpoint{
-	Method:                   cnst.POST,
-	Path:                     "/api/v1/task/setRemainingTimeAndLogTime",
-	RequiresSession:          true,
-	ExampleResponseStructure: &timeLog{},
-	GetArgsStruct: func() interface{} {
-		return &setRemainingTimeAndLogTimeArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setRemainingTimeAndLogTimeArgs)
-		return setRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.RemainingTime, &args.Duration, args.Note)
-	},
-}
-
-func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog {
-	if duration != nil {
-		validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, shard, account, project, ctx.Me()))
-	} else if remainingTime != nil {
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, shard, account, project, ctx.Me()))
-	} else {
-		panic(err.InvalidArguments)
-	}
-
-	loggedOn := t.Now()
-	dbSetRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, &loggedOn, duration, note)
-	if duration != nil {
-		return &timeLog{
-			Project:  project,
-			Task:     task,
-			Member:   ctx.Me(),
-			LoggedOn: loggedOn,
-			Duration: *duration,
-			Note:     note,
-		}
-	}
-	return nil
 }
 
 type moveArgs struct {
@@ -392,8 +321,6 @@ var Endpoints = []*endpoint.Endpoint{
 	setIsParallel,
 	setMember,
 	setRemainingTime,
-	logTime,
-	setRemainingTimeAndLogTime,
 	move,
 	deleteTask,
 	get,
@@ -425,14 +352,4 @@ type ancestor struct {
 	Id   id.Id  `json:"id"`
 	Name string `json:"name"`
 	//may want to add on time values here to render progress bars within breadcrumb ui component
-}
-
-type timeLog struct {
-	Project  id.Id     `json:"project"`
-	Task     id.Id     `json:"task"`
-	Member   id.Id     `json:"member"`
-	LoggedOn time.Time `json:"loggedOn"`
-	TaskName string    `json:"taskName"`
-	Duration uint64    `json:"duration"`
-	Note     *string   `json:"note"`
 }

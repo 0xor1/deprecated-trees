@@ -153,9 +153,7 @@ func (k *Key) Task(account, project, task id.Id) *Key {
 func (k *Key) CombinedTaskAndTaskChildrenSets(account, project id.Id, tasks []id.Id) *Key {
 	for _, task := range tasks {
 		k.Task(account, project, task)
-	}
-	for _, task := range tasks {
-		k.TaskChildrenSet(account, project, task)
+		k.setKey("tcs", task)
 	}
 	return k
 }

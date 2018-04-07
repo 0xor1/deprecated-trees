@@ -134,7 +134,7 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 	if ctx.GetCacheValue(&res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit) {
 		return res
 	}
-	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
+	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
 	args := make([]interface{}, 0, limit)
 	args = append(args, account)
 	if item != nil {
@@ -165,7 +165,7 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 	err.PanicIf(e)
 	for rows.Next() {
 		act := activity.Activity{}
-		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.Action, &act.ItemName, &act.ExtraInfo))
+		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	ctx.SetCacheValue(res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit)

@@ -6,11 +6,12 @@ import (
 )
 
 type Activity struct {
-	OccurredOn time.Time `json:"occurredOn"`
-	Member     id.Id     `json:"member"`
-	Item       id.Id     `json:"item"`
-	ItemType   string    `json:"itemType"`
-	Action     string    `json:"action"`
-	ItemName   *string   `json:"itemName,omitempty"`
-	ExtraInfo  *string   `json:"extraInfo,omitempty"`
+	OccurredOn         time.Time `json:"occurredOn"`
+	Member             id.Id     `json:"member"`
+	Item               id.Id     `json:"item"`
+	ItemType           string    `json:"itemType"`
+	ItemHasBeenDeleted bool      `json:"itemHasBeenDeleted"`
+	Action             string    `json:"action"`
+	ItemName           *string   `json:"itemName,omitempty"`
+	ExtraInfo          *string   `json:"extraInfo,omitempty"`
 }

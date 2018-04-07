@@ -35,6 +35,7 @@ CREATE TABLE accountActivities(
   member BINARY(16) NOT NULL,
   item BINARY(16) NOT NULL,
   itemType VARCHAR(100) NOT NULL,
+  itemHasBeenDeleted BOOL NOT NULL DEFAULT FALSE,
   action VARCHAR(100) NOT NULL,
   itemName VARCHAR(250) NULL,
   extraInfo VARCHAR(1250) NULL,
@@ -70,6 +71,7 @@ CREATE TABLE projectActivities(
   member BINARY(16) NOT NULL,
   item BINARY(16) NOT NULL,
   itemType VARCHAR(100) NOT NULL,
+  itemHasBeenDeleted BOOL NOT NULL DEFAULT FALSE,
   action VARCHAR(100) NOT NULL,
   itemName VARCHAR(250) NULL,
   extraInfo VARCHAR(1250) NULL,
@@ -139,12 +141,14 @@ CREATE TABLE timeLogs(
 	account BINARY(16) NOT NULL,
 	project BINARY(16) NOT NULL,
   task BINARY(16) NOT NULL,
+  id BINARY(16) NOT NULL,
   member BINARY(16) NOT NULL,
   loggedOn DATETIME NOT NULL,
   taskName VARCHAR(250) NOT NULL,
   duration BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NULL,
   PRIMARY KEY(account, project, task, loggedOn, member),
+  UNIQUE INDEX(account, project, task, id),
   UNIQUE INDEX(account, project, member, loggedOn, task),
   UNIQUE INDEX(account, member, loggedOn, project, task)
 );
@@ -332,6 +336,7 @@ BEGIN
 	DELETE FROM tasks WHERE account=_account AND project = _project;
 	DELETE FROM timeLogs WHERE account=_account AND project = _project;
   INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _project, 'project', 'deleted', projName, NULL);
+  UPDATE accountActivities SET itemHasBeenDeleted=TRUE WHERE account=_account AND item=_project;
 END;
 $$
 DELIMITER ;
@@ -629,7 +634,7 @@ DELIMITER ;
 ## Pass NULL in _timeRemaining to not set a new TotalTimeRemaining value, pass NULL or zero to _duration to not log time
 DROP PROCEDURE IF EXISTS setRemainingTimeAndOrLogTime;
 DELIMITER $$
-CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
+CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _timeLog BINARY(16), _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
   DECLARE taskExists BOOL DEFAULT FALSE;
@@ -670,10 +675,15 @@ BEGIN
           SET memberExists=TRUE;
         END IF;
         IF memberExists THEN
-          INSERT INTO timeLogs (account, project, task, member, loggedOn, taskName, duration, note) VALUES (_account, _project, _task, _me, _loggedOn, taskName, _duration, _note);
+          INSERT INTO timeLogs (account, project, task, id, member, loggedOn, taskName, duration, note) VALUES (_account, _project, _task, _timeLog, _me, _loggedOn, taskName, _duration, _note);
           UPDATE projectMembers SET totalLoggedTime=totalLoggedTime+_duration WHERE account = _account AND project = _project AND id = _me;
-          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-            _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'loggedTime', taskName, _note);
+          IF _note IS NULL THEN
+            INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+              _account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'created', taskName, CONCAT('{"duration":', CAST(_duration as char character set utf8), ',"note":null}'));
+          ELSE
+            INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+              _account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'created', taskName, CONCAT('{"duration":', CAST(_duration as char character set utf8), ',"note":"', _note, '"}'));
+          END IF;
         END IF;
       END IF;
 
@@ -834,7 +844,6 @@ BEGIN
   DECLARE originalMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
   DECLARE deleteCount BIGINT UNSIGNED DEFAULT 0;
   DECLARE taskName VARCHAR(250) DEFAULT '';
-  DECLARE changeMade BOOL DEFAULT FALSE;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
   CREATE TEMPORARY TABLE tempUpdatedIds(
     id BINARY(16) NOT NULL,
@@ -894,14 +903,12 @@ BEGIN
           #delete the tasks
           DELETE FROM tasks WHERE account=_account AND project=_project AND id IN (SELECT id FROM tempAllIds);
           INSERT INTO tempUpdatedIds SELECT id FROM tempAllIds tmpAll ON DUPLICATE KEY UPDATE id=tmpAll.id;
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'deleted', taskName, CONCAT('{"totalRemainingTime":', CAST(originalTotalRemainingTime as char character set utf8), ',"totalLoggedTime":', CAST(originalTotalLoggedTime as char character set utf8), ',"descendantCount":', CAST(originalDescendantCount as char character set utf8), '}'));
+          UPDATE projectActivities SET itemHasBeenDeleted=TRUE WHERE account=_account AND project=_project AND item IN (SELECT id FROM tempAllIds);
           CALL _setAncestralChainAggregateValuesFromTask(_account, _project, originalParentId);
-          SET changeMade = TRUE;
         END IF;
       END IF;
     END IF;
-  END IF;
-  IF changeMade THEN
-    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'deleted', taskName, CONCAT('{"totalRemainingTime":', CAST(originalTotalRemainingTime as char character set utf8), ',"totalLoggedTime":', CAST(originalTotalLoggedTime as char character set utf8), ',"descendantCount":', CAST(originalDescendantCount as char character set utf8), '}'));
   END IF;
 
   SELECT COUNT(*) INTO deleteCount FROM tempUpdatedIds;

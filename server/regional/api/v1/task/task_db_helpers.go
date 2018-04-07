@@ -8,7 +8,6 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bytes"
 	"encoding/hex"
-	"time"
 )
 
 func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSibling *id.Id, newTask *task) {
@@ -75,27 +74,6 @@ func dbSetMember(ctx ctx.Ctx, shard int, account, project, task id.Id, member *i
 		if member != nil {
 			cacheKey.ProjectMember(account, project, *member)
 		}
-		if existingMember != nil {
-			cacheKey.ProjectMember(account, project, *existingMember)
-		}
-		ctx.TouchDlms(cacheKey)
-	} else {
-		panic(db.ErrNoChangeMade)
-	}
-}
-
-func dbSetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, loggedOn *time.Time, duration *uint64, note *string) {
-	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, loggedOn, duration, note)
-	err.PanicIf(e)
-	tasks := make([]id.Id, 0, 100)
-	var existingMember *id.Id
-	for rows.Next() {
-		var i id.Id
-		rows.Scan(&i, existingMember)
-		tasks = append(tasks, i)
-	}
-	if len(tasks) > 0 {
-		cacheKey := cachekey.NewDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
 		if existingMember != nil {
 			cacheKey.ProjectMember(account, project, *existingMember)
 		}

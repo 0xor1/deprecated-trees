@@ -6,6 +6,10 @@ import (
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
+	t "bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/task/server/util/timeLog"
+	"bitbucket.org/0xor1/task/server/util/validate"
+	"time"
 )
 
 var (
@@ -83,6 +87,55 @@ func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 	err.PanicIf(row.Scan(&enabled))
 	ctx.SetCacheValue(enabled, cacheKey, shard, account)
 	return enabled
+}
+
+func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog.TimeLog {
+	var timeLogId *id.Id
+	if duration != nil {
+		validate.MemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, account, project, ctx.Me()))
+		i := id.New()
+		timeLogId = &i
+	} else if remainingTime != nil {
+		validate.MemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, shard, account, project, ctx.Me()))
+	} else {
+		panic(err.InvalidArguments)
+	}
+
+	loggedOn := t.Now()
+	setRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, timeLogId, &loggedOn, duration, note)
+	if duration != nil {
+		return &timeLog.TimeLog{
+			Id:       *timeLogId,
+			Project:  project,
+			Task:     task,
+			Member:   ctx.Me(),
+			LoggedOn: loggedOn,
+			Duration: *duration,
+			Note:     note,
+		}
+	}
+	return nil
+}
+
+func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLogId *id.Id, loggedOn *time.Time, duration *uint64, note *string) {
+	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, timeLogId, loggedOn, duration, note)
+	err.PanicIf(e)
+	tasks := make([]id.Id, 0, 100)
+	var existingMember *id.Id
+	for rows.Next() {
+		var i id.Id
+		rows.Scan(&i, existingMember)
+		tasks = append(tasks, i)
+	}
+	if len(tasks) > 0 {
+		cacheKey := cachekey.NewDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
+		if existingMember != nil {
+			cacheKey.ProjectMember(account, project, *existingMember)
+		}
+		ctx.TouchDlms(cacheKey)
+	} else {
+		panic(ErrNoChangeMade)
+	}
 }
 
 func MakeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) {
