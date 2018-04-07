@@ -150,7 +150,8 @@ CREATE TABLE timeLogs(
   PRIMARY KEY(account, project, task, loggedOn, member),
   UNIQUE INDEX(account, project, task, id),
   UNIQUE INDEX(account, project, member, loggedOn, task),
-  UNIQUE INDEX(account, member, loggedOn, project, task)
+  UNIQUE INDEX(account, member, loggedOn, project, task),
+  UNIQUE INDEX(account, project, loggedOn, member, task)
 );
 
 DROP PROCEDURE IF EXISTS registerAccount;

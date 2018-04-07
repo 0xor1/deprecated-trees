@@ -403,7 +403,7 @@ var searchAccounts = &endpoint.Endpoint{
 }
 
 type searchPersonalAccountsArgs struct {
-	NameOrDisplayNameOrEmailStartsWith string `json:"nameOrDisplayNameOrEmailStartsWith"`
+	NameOrDisplayNameStartsWith string `json:"nameOrDisplayNameStartsWith"`
 }
 
 var searchPersonalAccounts = &endpoint.Endpoint{
@@ -416,11 +416,11 @@ var searchPersonalAccounts = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchPersonalAccountsArgs)
-		args.NameOrDisplayNameOrEmailStartsWith = strings.Trim(args.NameOrDisplayNameOrEmailStartsWith, " ")
-		if utf8.RuneCountInString(args.NameOrDisplayNameOrEmailStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameOrEmailStartsWith, "%") {
+		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
+		if utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%") {
 			panic(err.InvalidArguments)
 		}
-		return dbSearchPersonalAccounts(ctx, args.NameOrDisplayNameOrEmailStartsWith)
+		return dbSearchPersonalAccounts(ctx, args.NameOrDisplayNameStartsWith)
 	},
 }
 

@@ -12,6 +12,7 @@ type Client interface {
 	SetDuration(css *clientsession.Store, shard int, account, project, timeLog id.Id, duration uint64)
 	SetNote(css *clientsession.Store, shard int, account, project, timeLog id.Id, note *string)
 	Delete(css *clientsession.Store, shard int, account, project, timeLog id.Id)
+	Get(css *clientsession.Store, shard int, account id.Id, project, task, member, timeLog, after *id.Id, limit int) []*timeLog.TimeLog
 }
 
 func NewClient(host string) Client {

@@ -5,8 +5,6 @@ import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bytes"
-	"github.com/0xor1/isql"
-	"strings"
 )
 
 func dbAccountWithCiNameExists(ctx ctx.Ctx, name string) bool {
@@ -134,17 +132,11 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*accoun
 	return res
 }
 
-func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameOrEmailStartsWith string) []*account {
+func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*account {
 	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	//TODO need to profile these queries to check for best performance
-	var rows isql.Rows
-	var e error
-	if strings.Contains(nameOrDisplayNameOrEmailStartsWith, "@") {
-		rows, e = ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?`, nameOrDisplayNameOrEmailStartsWith, 0, 100)
-	} else {
-		searchTerm := nameOrDisplayNameOrEmailStartsWith + "%"
-		rows, e = ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
-	}
+	searchTerm := nameOrDisplayNameStartsWith + "%"
+	rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
 	if rows != nil {
 		defer rows.Close()
 	}

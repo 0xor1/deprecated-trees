@@ -24,7 +24,7 @@ type Client interface {
 	GetAccount(name string) (*account, error)
 	GetAccounts(accounts []id.Id) ([]*account, error)
 	SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
-	SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) ([]*account, error)
+	SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
 	//requires active session to access
 	GetMe(css *clientsession.Store) (*me, error)
 	SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error
@@ -154,9 +154,9 @@ func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account,
 	return nil, e
 }
 
-func (c *client) SearchPersonalAccounts(nameOrDisplayNameOrEmailStartsWith string) ([]*account, error) {
+func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) {
 	val, e := searchPersonalAccounts.DoRequest(nil, c.host, &searchPersonalAccountsArgs{
-		NameOrDisplayNameOrEmailStartsWith: nameOrDisplayNameOrEmailStartsWith,
+		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
 	}, nil, &[]*account{})
 	if val != nil {
 		return *val.(*[]*account), e
