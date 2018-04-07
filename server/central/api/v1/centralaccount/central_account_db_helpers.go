@@ -31,7 +31,7 @@ func dbCreatePersonalAccount(ctx ctx.Ctx, account *fullPersonalAccountInfo, pwdI
 }
 
 func dbGetPersonalAccountByEmail(ctx ctx.Ctx, email string) *fullPersonalAccountInfo {
-	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode FROM personalAccounts WHERE email = ?`, email)
+	row := ctx.AccountQueryRow(`SELECT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, p.email, p.language, p.theme, p.newEmail, p.activationCode, p.activatedOn, p.newEmailConfirmationCode, p.resetPwdCode FROM accounts a, personalAccounts p WHERE a.id = (SELECT id FROM personalAccounts WHERE email = ?) AND p.email = ?`, email, email)
 	account := fullPersonalAccountInfo{}
 	account.IsPersonal = true
 	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
@@ -41,7 +41,7 @@ func dbGetPersonalAccountByEmail(ctx ctx.Ctx, email string) *fullPersonalAccount
 }
 
 func dbGetPersonalAccountById(ctx ctx.Ctx, id id.Id) *fullPersonalAccountInfo {
-	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode FROM personalAccounts WHERE id = ?`, id)
+	row := ctx.AccountQueryRow(`SELECT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, p.email, p.language, p.theme, p.newEmail, p.activationCode, p.activatedOn, p.newEmailConfirmationCode, p.resetPwdCode FROM accounts a, personalAccounts p WHERE a.id = ? AND p.id = ?`, id, id)
 	account := fullPersonalAccountInfo{}
 	account.IsPersonal = true
 	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&account.Id, &account.Name, &account.DisplayName, &account.CreatedOn, &account.Region, &account.NewRegion, &account.Shard, &account.HasAvatar, &account.Email, &account.Language, &account.Theme, &account.NewEmail, &account.activationCode, &account.activatedOn, &account.newEmailConfirmationCode, &account.resetPwdCode)) {
@@ -133,10 +133,10 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*accoun
 }
 
 func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*account {
-	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE email LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
+	//rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?`, searchTerm, searchTerm, 100)
 	//TODO need to profile these queries to check for best performance
 	searchTerm := nameOrDisplayNameStartsWith + "%"
-	rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
+	rows, e := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND name LIKE ? ORDER BY name ASC LIMIT ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND displayName LIKE ? ORDER BY name ASC LIMIT ?)) AS a ORDER BY name ASC LIMIT ?`, searchTerm, 100, searchTerm, 100, 100)
 	if rows != nil {
 		defer rows.Close()
 	}
@@ -155,12 +155,12 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
 func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 	args := make([]interface{}, 0, len(ids))
 	args = append(args, ids[0])
-	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM personalAccounts WHERE activatedOn IS NOT NULL AND id IN (?`)
+	query := bytes.NewBufferString(` SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE id IN (SELECT id FROM personalAccounts WHERE id IN (?`)
 	for _, i := range ids[1:] {
 		query.WriteString(`,?`)
 		args = append(args, i)
 	}
-	query.WriteString(`)`)
+	query.WriteString(`) AND activatedOn IS NOT NULL)`)
 	rows, e := ctx.AccountQuery(query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
