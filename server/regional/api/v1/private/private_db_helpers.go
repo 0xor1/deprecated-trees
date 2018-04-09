@@ -21,7 +21,7 @@ func dbCreateAccount(ctx ctx.Ctx, account, me id.Id, myName string, myDisplayNam
 func dbDeleteAccount(ctx ctx.Ctx, shard int, account id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountMaster(account))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMaster(account))
 }
 
 func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) []id.Id {
@@ -62,7 +62,7 @@ func dbAddMembers(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddM
 	}
 	_, e := ctx.TreeExec(shard, query.String(), queryArgs...)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountMembersSet(account))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMembersSet(account))
 }
 
 func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddMember) {
@@ -72,7 +72,7 @@ func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members 
 		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?, ?)`, account, mem.Id, mem.Name, mem.DisplayName, mem.HasAvatar, mem.Role)
 		err.PanicIf(e)
 	}
-	ctx.TouchDlms(cachekey.NewDlms().AccountMembers(account, memberIds))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMembers(account, memberIds))
 }
 
 func dbGetTotalOwnerCount(ctx ctx.Ctx, shard int, account id.Id) int {
@@ -106,7 +106,7 @@ func dbGetOwnerCountInSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 }
 
 func dbSetMembersInactive(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) {
-	cacheKey := cachekey.NewDlms().AccountMembers(account, members)
+	cacheKey := cachekey.NewSetDlms().AccountMembers(account, members)
 	for _, mem := range members {
 		rows, e := ctx.TreeQuery(shard, `CALL setAccountMemberInactive(?, ?)`, account, mem)
 		err.PanicIf(e)
@@ -123,19 +123,19 @@ func dbSetMembersInactive(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 func dbSetMemberName(ctx ctx.Ctx, shard int, account id.Id, member id.Id, newName string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, account, member, newName)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member))
 }
 
 func dbSetMemberDisplayName(ctx ctx.Ctx, shard int, account, member id.Id, newDisplayName *string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, account, member, newDisplayName)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member))
 }
 
 func dbSetMemberHasAvatar(ctx ctx.Ctx, shard int, account, member id.Id, hasAvatar bool) {
 	_, e := ctx.TreeExec(shard, `UPDATE accountMembers SET hasAvatar=? WHERE account=? AND id=?`, hasAvatar, account, member)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member))
 }
 
 func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, account, member id.Id, members []id.Id, action string) {
@@ -149,5 +149,5 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, account
 	}
 	_, e := ctx.TreeExec(shard, query.String(), args...)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountActivities(account))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account))
 }

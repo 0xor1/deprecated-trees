@@ -7,7 +7,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	t "bitbucket.org/0xor1/task/server/util/time"
-	"bitbucket.org/0xor1/task/server/util/timeLog"
+	"bitbucket.org/0xor1/task/server/util/timelog"
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"time"
 )
@@ -89,12 +89,12 @@ func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 	return enabled
 }
 
-func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timeLog.TimeLog {
-	var timeLogId *id.Id
+func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timelog.TimeLog {
+	var timeLog *id.Id
 	if duration != nil {
 		validate.MemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, account, project, ctx.Me()))
 		i := id.New()
-		timeLogId = &i
+		timeLog = &i
 	} else if remainingTime != nil {
 		validate.MemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, shard, account, project, ctx.Me()))
 	} else {
@@ -102,10 +102,10 @@ func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 	}
 
 	loggedOn := t.Now()
-	setRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, timeLogId, &loggedOn, duration, note)
+	setRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, timeLog, &loggedOn, duration, note)
 	if duration != nil {
-		return &timeLog.TimeLog{
-			Id:       *timeLogId,
+		return &timelog.TimeLog{
+			Id:       *timeLog,
 			Project:  project,
 			Task:     task,
 			Member:   ctx.Me(),
@@ -117,8 +117,8 @@ func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 	return nil
 }
 
-func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLogId *id.Id, loggedOn *time.Time, duration *uint64, note *string) {
-	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, timeLogId, loggedOn, duration, note)
+func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLog *id.Id, loggedOn *time.Time, duration *uint64, note *string) {
+	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, timeLog, loggedOn, duration, note)
 	err.PanicIf(e)
 	tasks := make([]id.Id, 0, 100)
 	var existingMember *id.Id
@@ -128,9 +128,13 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 		tasks = append(tasks, i)
 	}
 	if len(tasks) > 0 {
-		cacheKey := cachekey.NewDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
+		cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
 		if existingMember != nil {
 			cacheKey.ProjectMember(account, project, *existingMember)
+		}
+		if timeLog != nil {
+			me := ctx.Me()
+			cacheKey.TimeLog(account, project, *timeLog, &task, &me)
 		}
 		ctx.TouchDlms(cacheKey)
 	} else {

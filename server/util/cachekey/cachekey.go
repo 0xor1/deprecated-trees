@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	errInvalidCacheKey = &err.Err{Code: "u_c_ick", Message: "invalid cache key"}
+	errMissingMemberInTimeLogSetDlms = &err.Err{Code: "u_c_mmitlsd", Message: "missing member in set timelog dlms"}
+	errMissingTaskInTimeLogSetDlms = &err.Err{Code: "u_c_mtitlsd", Message: "missing task in set timelog dlms"}
 )
 
 type Key struct {
@@ -23,7 +24,7 @@ func NewGet() *Key {
 	}
 }
 
-func NewDlms() *Key {
+func NewSetDlms() *Key {
 	return &Key{
 		isGet:   false,
 		DlmKeys: make([]string, 0, 10),
@@ -155,6 +156,54 @@ func (k *Key) CombinedTaskAndTaskChildrenSets(account, project id.Id, tasks []id
 		k.Task(account, project, task)
 		k.setKey("tcs", task)
 	}
+	return k
+}
+
+func (k *Key) ProjectTimeLogSet(account, project id.Id) *Key {
+	if k.isGet {
+		k.ProjectMaster(account, project)
+	}
+	k.setKey("ptls", project)
+	return k
+}
+
+func (k *Key) ProjectMemberTimeLogSet(account, project, member id.Id) *Key {
+	if k.isGet {
+		k.ProjectMaster(account, project)
+	} else {
+		k.ProjectTimeLogSet(account, project)
+	}
+	k.setKey("pmtls", member)
+	return k
+}
+
+func (k *Key) TaskTimeLogSet(account, project, task id.Id, member *id.Id) *Key {
+	if k.isGet {
+		k.ProjectMaster(account, project)
+		if member != nil {
+			k.ProjectMemberTimeLogSet(account, project, *member)
+		}
+	} else if member != nil {
+		k.ProjectMemberTimeLogSet(account, project, *member)
+	} else {
+		panic(errMissingMemberInTimeLogSetDlms)
+	}
+	k.setKey("ttls", task)
+	return k
+}
+
+func (k *Key) TimeLog(account, project, timeLog id.Id, task, member *id.Id) *Key {
+	if k.isGet {
+		k.ProjectMaster(account, project)
+		if task != nil {
+			k.TaskTimeLogSet(account, project, *task, member)
+		}
+	} else if task != nil {
+		k.TaskTimeLogSet(account, project, *task, member)
+	} else {
+		panic(errMissingTaskInTimeLogSetDlms)
+	}
+	k.setKey("tl", timeLog)
 	return k
 }
 

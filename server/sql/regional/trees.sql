@@ -148,9 +148,8 @@ CREATE TABLE timeLogs(
   duration BIGINT UNSIGNED NOT NULL,
   note VARCHAR(250) NULL,
   PRIMARY KEY(account, project, task, loggedOn, member),
-  UNIQUE INDEX(account, project, task, id),
+  UNIQUE INDEX(account, project, id),
   UNIQUE INDEX(account, project, member, loggedOn, task),
-  UNIQUE INDEX(account, member, loggedOn, project, task),
   UNIQUE INDEX(account, project, loggedOn, member, task)
 );
 
@@ -671,20 +670,17 @@ BEGIN
 
       IF _me IS NOT NULL AND _duration > 0 THEN
         IF existingMember IS NULL OR existingMember <> _me THEN
+          #we already set the lock and proved it exists as it is the member assigned to the task itself
           SELECT COUNT(*)=1 INTO memberExists FROM projectMembers WHERE account = _account AND project = _project AND id = _me FOR UPDATE;
-        ELSE #we already set the lock and proved it exists as it is the member assigned to the task itself
-          SET memberExists=TRUE;
         END IF;
-        IF memberExists THEN
-          INSERT INTO timeLogs (account, project, task, id, member, loggedOn, taskName, duration, note) VALUES (_account, _project, _task, _timeLog, _me, _loggedOn, taskName, _duration, _note);
-          UPDATE projectMembers SET totalLoggedTime=totalLoggedTime+_duration WHERE account = _account AND project = _project AND id = _me;
-          IF _note IS NULL THEN
-            INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-              _account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'created', taskName, CONCAT('{"duration":', CAST(_duration as char character set utf8), ',"note":null}'));
-          ELSE
-            INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-              _account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'created', taskName, CONCAT('{"duration":', CAST(_duration as char character set utf8), ',"note":"', _note, '"}'));
-          END IF;
+        INSERT INTO timeLogs (account, project, task, id, member, loggedOn, taskName, duration, note) VALUES (_account, _project, _task, _timeLog, _me, _loggedOn, taskName, _duration, _note);
+        UPDATE projectMembers SET totalLoggedTime=totalLoggedTime+_duration WHERE account = _account AND project = _project AND id = _me;
+        IF _note IS NULL THEN
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+            _account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'created', taskName, CONCAT('{"duration":', CAST(_duration as char character set utf8), ',"note":null}'));
+        ELSE
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+            _account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'created', taskName, CONCAT('{"duration":', CAST(_duration as char character set utf8), ',"note":"', _note, '"}'));
         END IF;
       END IF;
 

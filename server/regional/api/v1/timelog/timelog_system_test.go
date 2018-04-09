@@ -1,4 +1,4 @@
-package timeLog
+package timelog
 
 import (
 	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"

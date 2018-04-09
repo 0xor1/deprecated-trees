@@ -17,7 +17,7 @@ import (
 func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicProjectsEnabled bool) {
 	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, account, ctx.Me(), publicProjectsEnabled)
 	err.PanicIf(e)
-	cacheKey := cachekey.NewDlms().Account(account).AccountActivities(account)
+	cacheKey := cachekey.NewSetDlms().Account(account).AccountActivities(account)
 	if !publicProjectsEnabled { //if setting publicProjectsEnabled to false this could have set some projects to not public
 		cacheKey.AccountProjectsSet(account)
 	}
@@ -26,7 +26,7 @@ func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicPro
 
 func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.AccountRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setAccountMemberRole(?, ?, ?, ?)`, account, ctx.Me(), member, role)
-	ctx.TouchDlms(cachekey.NewDlms().AccountMember(account, member).AccountActivities(account))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member).AccountActivities(account))
 }
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {

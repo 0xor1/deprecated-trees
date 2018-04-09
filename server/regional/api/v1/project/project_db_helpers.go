@@ -29,13 +29,13 @@ func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *project) {
 	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountActivities(account).AccountProjectsSet(account))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).AccountProjectsSet(account))
 }
 
 func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, isPublic bool) {
 	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, account, project, ctx.Me(), isPublic)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
 }
 
 func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project {
@@ -65,28 +65,28 @@ func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *strin
 func dbSetProjectIsArchived(ctx ctx.Ctx, shard int, account, project id.Id, isArchived bool) {
 	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, account, project, ctx.Me(), isArchived)
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().Project(account, project).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewSetDlms().Project(account, project).ProjectActivities(account, project))
 }
 
 func dbDeleteProject(ctx ctx.Ctx, shard int, account, project id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, account, project, ctx.Me())
 	err.PanicIf(e)
-	ctx.TouchDlms(cachekey.NewDlms().AccountProjectsSet(account).ProjectMaster(account, project))
+	ctx.TouchDlms(cachekey.NewSetDlms().AccountProjectsSet(account).ProjectMaster(account, project))
 }
 
 func dbAddMemberOrSetActive(ctx ctx.Ctx, shard int, account, project id.Id, member *AddProjectMember) {
 	db.MakeChangeHelper(ctx, shard, `CALL addProjectMemberOrSetActive(?, ?, ?, ?, ?)`, account, project, ctx.Me(), member.Id, member.Role)
-	ctx.TouchDlms(cachekey.NewDlms().ProjectMember(account, project, member.Id).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewSetDlms().ProjectMember(account, project, member.Id).ProjectActivities(account, project))
 }
 
 func dbSetMemberRole(ctx ctx.Ctx, shard int, account, project, member id.Id, role cnst.ProjectRole) {
 	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberRole(?, ?, ?, ?, ?)`, account, project, ctx.Me(), member, role)
-	ctx.TouchDlms(cachekey.NewDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewSetDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }
 
 func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member id.Id) {
 	db.MakeChangeHelper(ctx, shard, `CALL setProjectMemberInactive(?, ?, ?, ?)`, account, project, ctx.Me(), member)
-	ctx.TouchDlms(cachekey.NewDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
+	ctx.TouchDlms(cachekey.NewSetDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
