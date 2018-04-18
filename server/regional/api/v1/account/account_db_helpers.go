@@ -75,10 +75,10 @@ ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
-	fullRes := getMembersResp{}
+	res := getMembersResp{}
 	cacheKey := cachekey.NewGet().Key("account.dbGetMembers").AccountMembersSet(account)
-	if ctx.GetCacheValue(&fullRes, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit) {
-		return &fullRes
+	if ctx.GetCacheValue(&res, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit) {
+		return &res
 	}
 	query := bytes.NewBufferString(`SELECT a1.id, a1.name, a1.displayName, a1.hasAvatar, a1.isActive, a1.role FROM accountMembers a1`)
 	args := make([]interface{}, 0, 7)
@@ -108,21 +108,21 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 		defer rows.Close()
 	}
 	err.PanicIf(e)
-	res := make([]*member, 0, limit+1)
+	memSet := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
 		err.PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.HasAvatar, &mem.IsActive, &mem.Role))
-		res = append(res, &mem)
+		memSet = append(memSet, &mem)
 	}
-	if len(res) == limit+1 {
-		fullRes.Members = res[:limit]
-		fullRes.More = true
+	if len(memSet) == limit+1 {
+		res.Members = memSet[:limit]
+		res.More = true
 	} else {
-		fullRes.Members = res
-		fullRes.More = false
+		res.Members = memSet
+		res.More = false
 	}
-	ctx.SetCacheValue(&fullRes, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit)
-	return &fullRes
+	ctx.SetCacheValue(&res, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit)
+	return &res
 }
 
 func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {

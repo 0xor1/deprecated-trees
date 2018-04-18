@@ -90,10 +90,10 @@ func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member 
 }
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
-	fullRes := getMembersResp{}
+	res := getMembersResp{}
 	cacheKey := cachekey.NewGet().Key("project.dbGetMembers").ProjectMembersSet(account, project)
-	if ctx.GetCacheValue(&fullRes, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit) {
-		return &fullRes
+	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit) {
+		return &res
 	}
 	query := bytes.NewBufferString(`SELECT p1.id, p1.isActive, p1.totalRemainingTime, p1.totalLoggedTime, p1.role FROM projectMembers p1`)
 	args := make([]interface{}, 0, 9)
@@ -123,21 +123,21 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 		defer rows.Close()
 	}
 	err.PanicIf(e)
-	res := make([]*member, 0, limit+1)
+	memSet := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
 		err.PanicIf(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
-		res = append(res, &mem)
+		memSet = append(memSet, &mem)
 	}
-	if len(res) == limit+1 {
-		fullRes.Members = res[:limit]
-		fullRes.More = true
+	if len(memSet) == limit+1 {
+		res.Members = memSet[:limit]
+		res.More = true
 	} else {
-		fullRes.Members = res
-		fullRes.More = false
+		res.Members = memSet
+		res.More = false
 	}
-	ctx.SetCacheValue(&fullRes, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit)
-	return &fullRes
+	ctx.SetCacheValue(&res, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit)
+	return &res
 }
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *member {
@@ -200,10 +200,10 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 }
 
 func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
-	fullRes := getProjectsResp{}
+	res := getProjectsResp{}
 	cacheKey := cachekey.NewGet().Key("project.dbGetProjects").AccountProjectsSet(account)
-	if ctx.GetCacheValue(&fullRes, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) {
-		return &fullRes
+	if ctx.GetCacheValue(&res, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) {
+		return &res
 	}
 	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
 	args := make([]interface{}, 0, 14)
@@ -247,35 +247,35 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 	args = append(args, limit+1)
 	rows, e := ctx.TreeQuery(shard, fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
 	err.PanicIf(e)
-	res := make([]*project, 0, limit+1)
+	projSet := make([]*project, 0, limit+1)
 	idx := 0
 	resIdx := map[string]int{}
 	for rows.Next() {
 		proj := project{}
 		err.PanicIf(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
-		res = append(res, &proj)
+		projSet = append(projSet, &proj)
 		resIdx[proj.Id.String()] = idx
 		idx++
 	}
-	if len(res) > 0 { //populate task properties
+	if len(projSet) > 0 { //populate task properties
 		var i id.Id
 		var description *string
 		var totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount uint64
 		var isParallel bool
 		query.Reset()
-		args = make([]interface{}, 0, len(res)+1)
-		args = append(args, account, res[0].Id)
+		args = make([]interface{}, 0, len(projSet)+1)
+		args = append(args, account, projSet[0].Id)
 		query.WriteString(`SELECT id, description, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel FROM tasks WHERE account=? AND project=id AND project IN (?`)
-		for _, proj := range res[1:] {
+		for _, proj := range projSet[1:] {
 			query.WriteString(`,?`)
 			args = append(args, proj.Id)
 		}
-		query.WriteString(fmt.Sprintf(`) LIMIT %d`, len(res)))
+		query.WriteString(fmt.Sprintf(`) LIMIT %d`, len(projSet)))
 		rows, e := ctx.TreeQuery(shard, query.String(), args...)
 		err.PanicIf(e)
 		for rows.Next() {
 			rows.Scan(&i, &description, &totalRemainingTime, &totalLoggedTime, &minimumRemainingTime, &linkedFileCount, &chatCount, &childCount, &descendantCount, &isParallel)
-			proj := res[resIdx[i.String()]]
+			proj := projSet[resIdx[i.String()]]
 			proj.Description = description
 			proj.TotalRemainingTime = totalRemainingTime
 			proj.TotalLoggedTime = totalLoggedTime
@@ -287,13 +287,13 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 			proj.IsParallel = isParallel
 		}
 	}
-	if len(res) == limit+1 {
-		fullRes.Projects = res[:limit]
-		fullRes.More = true
+	if len(projSet) == limit+1 {
+		res.Projects = projSet[:limit]
+		res.More = true
 	} else {
-		fullRes.Projects = res
-		fullRes.More = false
+		res.Projects = projSet
+		res.More = false
 	}
-	ctx.SetCacheValue(&fullRes, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
-	return &fullRes
+	ctx.SetCacheValue(&res, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
+	return &res
 }

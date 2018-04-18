@@ -8,7 +8,7 @@ import (
 
 var (
 	errMissingMemberInTimeLogSetDlms = &err.Err{Code: "u_c_mmitlsd", Message: "missing member in set timelog dlms"}
-	errMissingTaskInTimeLogSetDlms = &err.Err{Code: "u_c_mtitlsd", Message: "missing task in set timelog dlms"}
+	errMissingTaskInTimeLogSetDlms   = &err.Err{Code: "u_c_mtitlsd", Message: "missing task in set timelog dlms"}
 )
 
 type Key struct {

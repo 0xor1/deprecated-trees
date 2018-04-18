@@ -92,6 +92,9 @@ func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timelog.TimeLog {
 	var timeLog *id.Id
 	if duration != nil {
+		if *duration == 0 {
+			panic(err.InvalidArguments)
+		}
 		validate.MemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, account, project, ctx.Me()))
 		i := id.New()
 		timeLog = &i
@@ -102,29 +105,18 @@ func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 	}
 
 	loggedOn := t.Now()
-	setRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, timeLog, &loggedOn, duration, note)
-	if duration != nil {
-		return &timelog.TimeLog{
-			Id:       *timeLog,
-			Project:  project,
-			Task:     task,
-			Member:   ctx.Me(),
-			LoggedOn: loggedOn,
-			Duration: *duration,
-			Note:     note,
-		}
-	}
-	return nil
+	return setRemainingTimeAndOrLogTime(ctx, shard, account, project, task, remainingTime, timeLog, &loggedOn, duration, note)
 }
 
-func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLog *id.Id, loggedOn *time.Time, duration *uint64, note *string) {
+func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLog *id.Id, loggedOn *time.Time, duration *uint64, note *string) *timelog.TimeLog {
 	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, timeLog, loggedOn, duration, note)
 	err.PanicIf(e)
 	tasks := make([]id.Id, 0, 100)
 	var existingMember *id.Id
+	var taskName string
 	for rows.Next() {
 		var i id.Id
-		rows.Scan(&i, existingMember)
+		rows.Scan(&i, existingMember, &taskName)
 		tasks = append(tasks, i)
 	}
 	if len(tasks) > 0 {
@@ -133,13 +125,26 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 			cacheKey.ProjectMember(account, project, *existingMember)
 		}
 		if timeLog != nil {
-			me := ctx.Me()
-			cacheKey.TimeLog(account, project, *timeLog, &task, &me)
+			cacheKey.TimeLog(account, project, *timeLog, &task, ctx.TryMe())
 		}
 		ctx.TouchDlms(cacheKey)
 	} else {
 		panic(ErrNoChangeMade)
 	}
+	if duration != nil {
+		return &timelog.TimeLog{
+			Id:                 *timeLog,
+			Project:            project,
+			Task:               task,
+			Member:             ctx.Me(),
+			LoggedOn:           *loggedOn,
+			TaskHasBeenDeleted: false,
+			TaskName:           taskName,
+			Duration:           *duration,
+			Note:               note,
+		}
+	}
+	return nil
 }
 
 func MakeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) {

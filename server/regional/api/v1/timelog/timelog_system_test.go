@@ -8,9 +8,9 @@ import (
 	"bitbucket.org/0xor1/task/server/regional/api/v1/task"
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/server"
 	"bitbucket.org/0xor1/task/server/util/static"
+	ti "bitbucket.org/0xor1/task/server/util/time"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
@@ -19,13 +19,13 @@ import (
 
 func Test_system(t *testing.T) {
 	SR := static.Config("", "", private.NewClient)
-	serv := server.New(SR, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, Endpoints)
+	serv := server.New(SR, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, task.Endpoints, Endpoints)
 	testServer := httptest.NewServer(serv)
 	aliCss := clientsession.New()
 	centralClient := centralaccount.NewClient(testServer.URL)
-	accountClient := account.NewClient(testServer.URL)
 	projectClient := project.NewClient(testServer.URL)
 	taskClient := task.NewClient(testServer.URL)
+	client := NewClient(testServer.URL)
 	region := "lcl"
 	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
 		region: testServer.URL,
@@ -102,79 +102,41 @@ func Test_system(t *testing.T) {
 	taskC, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, proj.Id, nil, "C", &desc, true, &trueVal, nil, nil)
 	taskD, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, proj.Id, &taskA.Id, "D", &desc, false, nil, &aliId, &fourVal)
 	taskE, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, "E", &desc, false, nil, &aliId, &twoVal)
-	taskF, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "F", &desc, false, nil, &aliId, &oneVal)
-	taskG, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, "G", &desc, false, nil, &aliId, &fourVal)
-	taskH, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "H", &desc, false, nil, &aliId, &threeVal)
+	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "F", &desc, false, nil, &aliId, &oneVal)
+	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, "G", &desc, false, nil, &aliId, &fourVal)
+	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "H", &desc, false, nil, &aliId, &threeVal)
 	taskI, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, nil, "I", &desc, false, nil, &aliId, &twoVal)
-	taskJ, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "J", &desc, false, nil, &aliId, &oneVal)
-	taskK, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, nil, "K", &desc, false, nil, &aliId, &fourVal)
+	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "J", &desc, false, nil, &aliId, &oneVal)
+	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, nil, "K", &desc, false, nil, &aliId, &fourVal)
 	taskL, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "L", &desc, true, &trueVal, nil, nil)
-	taskM, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskL.Id, nil, "M", &desc, false, nil, &aliId, &threeVal)
+	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskL.Id, nil, "M", &desc, false, nil, &aliId, &threeVal)
 
-	taskClient.SetName(aliCss, 0, org.Id, proj.Id, proj.Id, "PROJ")
-	taskClient.SetName(aliCss, 0, org.Id, proj.Id, taskA.Id, "AAA")
-	taskClient.SetDescription(aliCss, 0, org.Id, proj.Id, taskA.Id, nil)
-	taskClient.SetIsParallel(aliCss, 0, org.Id, proj.Id, taskA.Id, true)
-	taskClient.SetIsParallel(aliCss, 0, org.Id, proj.Id, proj.Id, false)
-	taskClient.SetMember(aliCss, 0, org.Id, proj.Id, taskM.Id, &bob.Id)
-	taskClient.SetMember(aliCss, 0, org.Id, proj.Id, taskM.Id, &cat.Id)
-	taskClient.SetMember(aliCss, 0, org.Id, proj.Id, taskM.Id, nil)
-	taskClient.SetMember(aliCss, 0, org.Id, proj.Id, taskM.Id, &cat.Id)
-	taskClient.SetRemainingTime(catCss, 0, org.Id, proj.Id, taskG.Id, 1)
-	note := "word up!"
-	tl, err := taskClient.SetRemainingTimeAndLogTime(catCss, 0, org.Id, proj.Id, taskG.Id, 30, 40, &note)
-	assert.Equal(t, uint64(40), tl.Duration)
+	aNote := "word up!"
+	timeLog, err := client.Create(aliCss, 0, org.Id, proj.Id, taskD.Id, 30, &aNote)
+	assert.Nil(t, err)
+	assert.True(t, timeLog.Project.Equal(proj.Id))
+	assert.True(t, timeLog.Member.Equal(aliId))
+	assert.True(t, timeLog.Task.Equal(taskD.Id))
+	assert.Equal(t, *timeLog.Note, aNote)
+	assert.Equal(t, uint64(30), timeLog.Duration)
+	assert.InDelta(t, ti.NowUnixMillis()/1000, timeLog.LoggedOn.Unix(), 1)
 
-	taskClient.Move(aliCss, 0, org.Id, proj.Id, taskG.Id, taskA.Id, nil)
-	taskClient.Move(aliCss, 0, org.Id, proj.Id, taskG.Id, taskA.Id, &taskK.Id)
-	taskClient.Move(aliCss, 0, org.Id, proj.Id, taskG.Id, taskA.Id, &taskJ.Id)
-	taskClient.Move(aliCss, 0, org.Id, proj.Id, taskG.Id, taskL.Id, &taskM.Id)
+	timeLog, err = client.CreateAndSetRemainingTime(bobCss, 0, org.Id, proj.Id, taskD.Id, 100, 30, &aNote)
+	assert.Nil(t, err)
+	assert.True(t, timeLog.Project.Equal(proj.Id))
+	assert.True(t, timeLog.Member.Equal(bobId))
+	assert.True(t, timeLog.Task.Equal(taskD.Id))
+	assert.Equal(t, *timeLog.Note, aNote)
+	assert.Equal(t, uint64(30), timeLog.Duration)
+	assert.InDelta(t, ti.NowUnixMillis()/1000, timeLog.LoggedOn.Unix(), 1)
 
-	ancestors, err := taskClient.GetAncestors(aliCss, 0, org.Id, proj.Id, taskM.Id, 100)
-	assert.Equal(t, 3, len(ancestors))
-	assert.True(t, proj.Id.Equal(ancestors[0].Id))
-	assert.True(t, taskA.Id.Equal(ancestors[1].Id))
-	assert.True(t, taskL.Id.Equal(ancestors[2].Id))
-
-	//test setting project as public and try getting info without a session
-	ancestors, err = taskClient.GetAncestors(nil, 0, org.Id, proj.Id, taskM.Id, 100)
-	assert.Equal(t, 0, len(ancestors))
-	assert.NotNil(t, err)
-	accountClient.SetPublicProjectsEnabled(aliCss, 0, org.Id, true)
-	projectClient.SetIsPublic(aliCss, 0, org.Id, proj.Id, true)
-	ancestors, err = taskClient.GetAncestors(nil, 0, org.Id, proj.Id, taskM.Id, 100)
-	assert.Equal(t, 3, len(ancestors))
-	assert.True(t, proj.Id.Equal(ancestors[0].Id))
-	assert.True(t, taskA.Id.Equal(ancestors[1].Id))
-	assert.True(t, taskL.Id.Equal(ancestors[2].Id))
-	projectClient.SetIsPublic(aliCss, 0, org.Id, proj.Id, false)
-	ancestors, err = taskClient.GetAncestors(nil, 0, org.Id, proj.Id, taskM.Id, 100)
-	assert.Equal(t, 0, len(ancestors))
-	assert.NotNil(t, err)
-
-	taskClient.Delete(aliCss, 0, org.Id, proj.Id, taskA.Id)
-	taskClient.Delete(aliCss, 0, org.Id, proj.Id, taskD.Id)
-
-	res, err := taskClient.Get(aliCss, 0, org.Id, proj.Id, []id.Id{taskC.Id, taskH.Id})
-	assert.Equal(t, 2, len(res))
-	res, err = taskClient.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, 100)
-	assert.Equal(t, 3, len(res))
-	res, err = taskClient.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, 2)
-	assert.Equal(t, 2, len(res))
-	res, err = taskClient.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, 100)
-	assert.Equal(t, 2, len(res))
-	res, err = taskClient.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskH.Id, 100)
-	assert.Equal(t, 1, len(res))
-	res, err = taskClient.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskF.Id, 100)
-	assert.Equal(t, 0, len(res))
-
-	centralClient.DeleteAccount(aliCss, org.Id)
-	centralClient.DeleteAccount(aliCss, aliId)
-	centralClient.DeleteAccount(bobCss, bobId)
-	centralClient.DeleteAccount(catCss, catId)
-	centralClient.DeleteAccount(danCss, danId)
-	SR.AvatarClient.DeleteAll()
-	cnn := SR.DlmAndDataRedisPool.Get()
-	defer cnn.Close()
-	cnn.Do("FLUSHALL")
+	//centralClient.DeleteAccount(aliCss, org.Id)
+	//centralClient.DeleteAccount(aliCss, aliId)
+	//centralClient.DeleteAccount(bobCss, bobId)
+	//centralClient.DeleteAccount(catCss, catId)
+	//centralClient.DeleteAccount(danCss, danId)
+	//SR.AvatarClient.DeleteAll()
+	//cnn := SR.DlmAndDataRedisPool.Get()
+	//defer cnn.Close()
+	//cnn.Do("FLUSHALL")
 }

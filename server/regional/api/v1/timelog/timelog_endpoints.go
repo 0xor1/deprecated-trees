@@ -5,10 +5,10 @@ import (
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
 	"bitbucket.org/0xor1/task/server/util/endpoint"
+	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/timelog"
 	"bitbucket.org/0xor1/task/server/util/validate"
-	"bitbucket.org/0xor1/task/server/util/err"
 )
 
 type createArgs struct {
@@ -59,18 +59,17 @@ var createAndSetRemainingTime = &endpoint.Endpoint{
 }
 
 type setDurationArgs struct {
-	Shard    int     `json:"shard"`
-	Account  id.Id   `json:"account"`
-	Project  id.Id   `json:"project"`
-	Task     id.Id   `json:"task"`
-	TimeLog  id.Id   `json:"timeLog"`
-	Duration uint64  `json:"duration"`
+	Shard    int    `json:"shard"`
+	Account  id.Id  `json:"account"`
+	Project  id.Id  `json:"project"`
+	TimeLog  id.Id  `json:"timeLog"`
+	Duration uint64 `json:"duration"`
 }
 
 var setDuration = &endpoint.Endpoint{
-	Method:                   cnst.POST,
-	Path:                     "/api/v1/timeLog/setDuration",
-	RequiresSession:          true,
+	Method:          cnst.POST,
+	Path:            "/api/v1/timeLog/setDuration",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setDurationArgs{}
 	},
@@ -79,83 +78,88 @@ var setDuration = &endpoint.Endpoint{
 		if args.Duration == 0 {
 			panic(err.InvalidArguments)
 		}
-		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.Task, args.TimeLog)
+		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
+		if args.Duration == tl.Duration {
+			return nil
+		}
 		if tl.Member.Equal(ctx.Me()) {
 			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		} else {
 			validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		}
-		dbSetDuration(ctx, args.Shard, args.Account, args.Project, args.Task, tl.Member, args.TimeLog, args.Duration)
+		dbSetDuration(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog, args.Duration)
 		return nil
 	},
 }
 
 type setNoteArgs struct {
-	Shard    int     `json:"shard"`
-	Account  id.Id   `json:"account"`
-	Project  id.Id   `json:"project"`
-	Task     id.Id   `json:"task"`
-	TimeLog  id.Id   `json:"timeLog"`
-	Note 	 *string `json:"note"`
+	Shard   int     `json:"shard"`
+	Account id.Id   `json:"account"`
+	Project id.Id   `json:"project"`
+	TimeLog id.Id   `json:"timeLog"`
+	Note    *string `json:"note"`
 }
 
 var setNote = &endpoint.Endpoint{
-	Method:                   cnst.POST,
-	Path:                     "/api/v1/timeLog/setNote",
-	RequiresSession:          true,
+	Method:          cnst.POST,
+	Path:            "/api/v1/timeLog/setNote",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &setNoteArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setNoteArgs)
-		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.Task, args.TimeLog)
+		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
+		if (args.Note == nil && tl.Note == nil) || (*args.Note == *tl.Note) {
+			return nil
+		}
 		if tl.Member.Equal(ctx.Me()) {
 			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		} else {
 			validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		}
-		dbSetNote(ctx, args.Shard, args.Account, args.Project, args.Task, tl.Member, args.TimeLog, args.Note)
+		dbSetNote(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog, args.Note)
 		return nil
 	},
 }
 
 type deleteArgs struct {
-	Shard    int     `json:"shard"`
-	Account  id.Id   `json:"account"`
-	Project  id.Id   `json:"project"`
-	Task     id.Id   `json:"task"`
-	TimeLog  id.Id   `json:"timeLog"`
+	Shard   int   `json:"shard"`
+	Account id.Id `json:"account"`
+	Project id.Id `json:"project"`
+	TimeLog id.Id `json:"timeLog"`
 }
 
 var delete = &endpoint.Endpoint{
-	Method:                   cnst.POST,
-	Path:                     "/api/v1/timeLog/delete",
-	RequiresSession:          true,
+	Method:          cnst.POST,
+	Path:            "/api/v1/timeLog/delete",
+	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
 		return &deleteArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteArgs)
-		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.Task, args.TimeLog)
+		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
 		if tl.Member.Equal(ctx.Me()) {
 			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		} else {
 			validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		}
-		dbDelete(ctx, args.Shard, args.Account, args.Project, args.Task, tl.Member, args.TimeLog)
+		dbDelete(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog)
 		return nil
 	},
 }
 
 type getArgs struct {
-	Shard    int     `json:"shard"`
-	Account  id.Id   `json:"account"`
-	Project  id.Id   `json:"project"`
-	Task     *id.Id  `json:"task,omitempty"`
-	Member   *id.Id  `json:"member,omitempty"`
-	TimeLog  *id.Id  `json:"timeLog,omitempty"`
-	After    *id.Id  `json:"after,omitempty"`
-	Limit    int	 `json:"limit"`
+	Shard   int          `json:"shard"`
+	Account id.Id        `json:"account"`
+	Project id.Id        `json:"project"`
+	Task    *id.Id       `json:"task,omitempty"`
+	Member  *id.Id       `json:"member,omitempty"`
+	TimeLog *id.Id       `json:"timeLog,omitempty"`
+	SortDir cnst.SortDir `json:"sortDir"`
+	After   *id.Id       `json:"after,omitempty"`
+	Limit   int          `json:"limit"`
 }
 
 var get = &endpoint.Endpoint{
@@ -169,7 +173,7 @@ var get = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
-		return dbGetTimeLogs(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member, args.TimeLog, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		return dbGetTimeLogs(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member, args.TimeLog, args.SortDir, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 

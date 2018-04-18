@@ -34,12 +34,20 @@ func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSi
 }
 
 func dbSetName(ctx ctx.Ctx, shard int, account, project, task id.Id, name string) {
-	row := ctx.TreeQueryRow(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), name)
-	var parent *id.Id
-	err.PanicIf(row.Scan(&parent))
+	rows, e := ctx.TreeQuery(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), name)
+	err.PanicIf(e)
+	var timeLog *id.Id //on the first pass this is the parent (if any)
+	var member *id.Id
+	firstRow := true
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).Task(account, project, task)
-	if parent != nil {
-		cacheKey.TaskChildrenSet(account, project, *parent)
+	for rows.Next() {
+		rows.Scan(&timeLog, &member)
+		if firstRow && timeLog != nil { //timeLog is the parent id on the first row
+			cacheKey.TaskChildrenSet(account, project, *timeLog)
+		} else if timeLog != nil && member != nil {
+			cacheKey.TimeLog(account, project, *timeLog, &task, member)
+		}
+		firstRow = false
 	}
 	ctx.TouchDlms(cacheKey)
 }
@@ -92,17 +100,25 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 	err.PanicIf(e)
 	affectedTasks := make([]id.Id, 0, 100)
 	updatedProjectMembers := make([]id.Id, 0, 100)
+	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project)
 	for rows.Next() {
-		deletedTasksCount := 0
 		var i id.Id
-		rows.Scan(&i, &deletedTasksCount)
-		if len(affectedTasks) < deletedTasksCount {
+		var j id.Id
+		var k id.Id
+		key := ""
+		rows.Scan(&i, &j, &k, &key)
+		switch key {
+		case "t":
 			affectedTasks = append(affectedTasks, i)
-		} else {
+		case "m":
 			updatedProjectMembers = append(updatedProjectMembers, i)
+		case "tl":
+			cacheKey.TimeLog(account, project, i, &j, &k)
+		default:
+			panic(err.InvalidOperation)
 		}
 	}
-	ctx.TouchDlms(cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
+	ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
 }
 
 func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*task {

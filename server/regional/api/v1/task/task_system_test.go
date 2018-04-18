@@ -30,10 +30,8 @@ func Test_system(t *testing.T) {
 		region: testServer.URL,
 	})
 
-
 	aliDisplayName := "Ali O'Mally"
 	//redis seems to be timing out on the first hit but is ok there after which is why this is duplicated
-	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
 	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
 	activationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
