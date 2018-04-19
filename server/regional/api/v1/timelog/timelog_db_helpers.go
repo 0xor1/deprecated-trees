@@ -45,6 +45,8 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 		cacheKey.TaskTimeLogSet(account, project, *task, member)
 	} else if member != nil {
 		cacheKey.ProjectMemberTimeLogSet(account, project, *member)
+	} else {
+		cacheKey.ProjectTimeLogSet(account, project)
 	}
 	timeLogsSet := make([]*tlog.TimeLog, 0, limit)
 	if ctx.GetCacheValue(&timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, after, limit) {

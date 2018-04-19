@@ -1104,7 +1104,7 @@ CREATE PROCEDURE deleteTimeLog(_account BINARY(16), _project BINARY(16), _timeLo
     START TRANSACTION;
     SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
     IF projectExists THEN
-      SELECT task, duration, note INTO taskId, currentDuration FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
+      SELECT task, duration, note INTO taskId, currentDuration, currentNote FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
       DELETE FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
       UPDATE tasks SET totalLoggedTime=totalLoggedTime-currentDuration WHERE account=_account AND project=_project AND id=taskId;
       INSERT INTO tempUpdatedIds VALUES (taskId);

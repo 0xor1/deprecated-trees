@@ -153,6 +153,13 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 
+	assert.Nil(t, client.Delete(aliCss, 0, org.Id, proj.Id, tl1.Id))
+
+	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, cnst.SortDirDesc, nil, 100)
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(tls))
+	assert.True(t, tls[0].Id.Equal(tl2.Id))
+
 	centralClient.DeleteAccount(aliCss, org.Id)
 	centralClient.DeleteAccount(aliCss, aliId)
 	centralClient.DeleteAccount(bobCss, bobId)
