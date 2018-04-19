@@ -62,6 +62,7 @@ func (c *client) SetDuration(css *clientsession.Store, shard int, account, proje
 		Shard:    shard,
 		Account:  account,
 		Project:  project,
+		TimeLog:  timeLog,
 		Duration: duration,
 	}, nil, nil)
 	return e
@@ -72,6 +73,7 @@ func (c *client) SetNote(css *clientsession.Store, shard int, account, project, 
 		Shard:   shard,
 		Account: account,
 		Project: project,
+		TimeLog: timeLog,
 		Note:    note,
 	}, nil, nil)
 	return e

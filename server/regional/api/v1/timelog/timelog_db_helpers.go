@@ -47,7 +47,7 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 		cacheKey.ProjectMemberTimeLogSet(account, project, *member)
 	}
 	timeLogsSet := make([]*tlog.TimeLog, 0, limit)
-	if ctx.GetCacheValue(&timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, limit) {
+	if ctx.GetCacheValue(&timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, after, limit) {
 		return timeLogsSet
 	}
 	query := bytes.NewBufferString(`SELECT project, task, id, member, loggedOn, taskName, duration, note FROM timeLogs WHERE account=? AND project=?`)
@@ -62,10 +62,10 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 		args = append(args, *member)
 	}
 	if after != nil {
-		query.WriteString(fmt.Sprintf(` AND loggedOn %s= (SELECT loggedOn FROM timeLogs WHERE account=? AND project=? AND id=?) AND id > ?`, sortDir.GtLtSymbol()))
+		query.WriteString(fmt.Sprintf(` AND loggedOn %s= (SELECT loggedOn FROM timeLogs WHERE account=? AND project=? AND id=?) AND id %s ?`, sortDir.GtLtSymbol(), sortDir.GtLtSymbol()))
 		args = append(args, account, project, *after, *after)
 	}
-	query.WriteString(fmt.Sprintf(` ORDER BY loggedOn %s, id LIMIT ?`, sortDir.String()))
+	query.WriteString(fmt.Sprintf(` ORDER BY loggedOn %s, id %s LIMIT ?`, sortDir.String(), sortDir.String()))
 	args = append(args, limit)
 	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {
@@ -77,6 +77,6 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 		err.PanicIf(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskName, &tl.Duration, &tl.Note))
 		timeLogsSet = append(timeLogsSet, &tl)
 	}
-	ctx.SetCacheValue(timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, limit)
+	ctx.SetCacheValue(timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, after, limit)
 	return timeLogsSet
 }

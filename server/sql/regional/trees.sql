@@ -488,9 +488,9 @@ BEGIN
 
     CALL _setAncestralChainAggregateValuesFromTask(_account, _project, _parent);
   END IF;
+  COMMIT;
   SELECT * FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-  COMMIT;
 END;
 $$
 DELIMITER ;
@@ -570,9 +570,9 @@ BEGIN
       END IF;
     END IF;
   END IF;
+  COMMIT;
   SELECT * FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-  COMMIT;
 END;
 $$
 DELIMITER ;
@@ -630,8 +630,8 @@ BEGIN
       END IF;
     END IF;
   END IF;
-  SELECT changeMade, taskParent, existingMember;
   COMMIT;
+  SELECT changeMade, taskParent, existingMember;
 END;
 $$
 DELIMITER ;
@@ -695,9 +695,9 @@ BEGIN
       CALL _setAncestralChainAggregateValuesFromTask(_account, _project, nextTask);
     END IF;
   END IF;
+  COMMIT;
   SELECT id, existingMember, taskName FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-  COMMIT;
 END;
 $$
 DELIMITER ;
@@ -776,8 +776,8 @@ BEGIN
               #need to validate that the task being moved is not in the new ancestral chain i.e. make sure we're not trying to make it a descendant of itself
               WHILE idVariable IS NOT NULL DO
                 IF idVariable = _task THEN
-                  SELECT changeMade;
                   COMMIT; #invalid call, exit immediately
+                  SELECT changeMade;
                   LEAVE moveTask;
                 END IF;
                 SELECT parent INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = idVariable;
@@ -819,9 +819,9 @@ BEGIN
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
       _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'move', taskName, NULL);
   END IF;
+  COMMIT;
   SELECT * FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-  COMMIT;
 END;
 $$
 DELIMITER ;
@@ -909,7 +909,7 @@ BEGIN
     END IF;
   END IF;
 
-  SELECT COUNT(*) INTO deleteCount FROM tempUpdatedIds;
+  COMMIT;
   SELECT id, id, id, 't' FROM tempUpdatedIds
   UNION
   SELECT id, id, id, 'm' FROM tempUpdatedMembers
@@ -920,7 +920,6 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tempCurrentIds;
   DROP TEMPORARY TABLE IF EXISTS tempLatestIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedMembers;
-  COMMIT;
 END;
 $$
 DELIMITER ;
@@ -946,10 +945,9 @@ CREATE PROCEDURE getTasks(_account BINARY(16), _project BINARY(16), _taskIdsStr 
         SET offset = offset + 32;
       END WHILE;
     END IF;
-    SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
-                                                                                                                                                                                                                 _account AND project = _project AND id IN (SELECT id FROM tempIds);
-    DROP TEMPORARY TABLE IF EXISTS tempIds;
     COMMIT;
+    SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = _account AND project = _project AND id IN (SELECT id FROM tempIds);
+    DROP TEMPORARY TABLE IF EXISTS tempIds;
   END;
 $$
 DELIMITER ;
@@ -999,9 +997,9 @@ CREATE PROCEDURE getChildTasks(_account BINARY(16), _project BINARY(16), _parent
         SET idx = idx + 1;
       END WHILE;
     END IF;
+    COMMIT;
     SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tempResult ORDER BY selectOrder ASC;
     DROP TEMPORARY TABLE IF EXISTS tempResult;
-    COMMIT;
   END;
 $$
 DELIMITER ;
@@ -1031,9 +1029,9 @@ CREATE PROCEDURE getAncestorTasks(_account BINARY(16), _project BINARY(16), _tas
         SET idx = idx + 1;
       END WHILE;
     END IF;
+    COMMIT;
     SELECT id, name FROM tempResult ORDER BY selectOrder DESC;
     DROP TEMPORARY TABLE IF EXISTS tempResult;
-    COMMIT;
   END;
 $$
 DELIMITER ;
@@ -1055,7 +1053,7 @@ CREATE PROCEDURE setTimeLogDuration(_account BINARY(16), _project BINARY(16), _t
     START TRANSACTION;
     SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
     IF projectExists THEN
-      SELECT task, duration, note INTO taskId, currentDuration FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
+      SELECT task, duration, note INTO taskId, currentDuration, currentNote FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
       IF currentDuration <> _duration AND _duration <> 0 THEN
         UPDATE timeLogs SET duration=_duration WHERE account=_account AND project=_project AND id=_timeLog;
         UPDATE tasks SET totalLoggedTime=totalLoggedTime+_duration-currentDuration WHERE account=_account AND project=_project AND id=taskId;
@@ -1065,9 +1063,9 @@ CREATE PROCEDURE setTimeLogDuration(_account BINARY(16), _project BINARY(16), _t
         CALL _setAncestralChainAggregateValuesFromTask(_account, _project, taskId);
       END IF;
     END IF;
+    COMMIT;
     SELECT * FROM tempUpdatedIds;
     DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-    COMMIT;
   END;
 $$
 DELIMITER ;
@@ -1115,9 +1113,9 @@ CREATE PROCEDURE deleteTimeLog(_account BINARY(16), _project BINARY(16), _timeLo
       SELECT parent INTO taskId FROM tasks WHERE account=_account AND project=_project AND id=taskId;
       CALL _setAncestralChainAggregateValuesFromTask(_account, _project, taskId);
     END IF;
+    COMMIT;
     SELECT * FROM tempUpdatedIds;
     DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-    COMMIT;
   END;
 $$
 DELIMITER ;
