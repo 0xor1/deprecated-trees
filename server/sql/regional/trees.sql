@@ -1148,11 +1148,15 @@ CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_account BINARY(16), 
 
     SELECT totalRemainingTime, totalLoggedTime, minimumRemainingTime, childCount, descendantCount, isParallel, parent INTO originalTotalRemainingTime, originalTotalLoggedTime, preChangeMinimumRemainingTime, originalChildCount, originalDescendantCount, currentIsParallel, nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
     IF currentIsParallel THEN
-      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), MAX(minimumRemainingTime), COUNT(*), SUM(descendantCount)INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
+      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), MAX(minimumRemainingTime), COUNT(*), SUM(descendantCount) INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
     ELSE                                                   #this is the only difference#
-      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), SUM(minimumRemainingTime), COUNT(*), SUM(descendantCount)INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
+      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), SUM(minimumRemainingTime), COUNT(*), SUM(descendantCount) INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
     END IF;
     SET descendantCountChange = descendantCountChange + newChildCount;
+    #if we just deleted the only child node of an abstract task then all these values will be NULL so we need to manually set them to zero here
+    IF totalRemainingTimeChange IS NULL THEN
+      SELECT 0, 0, 0, 0, 0 INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange;
+    END IF;
 
     #the first task updated is special, it could have had a new child added or removed from it, so the childCount can be updated, no other ancestor will have the childCount updated
     UPDATE tasks SET totalRemainingTime = totalRemainingTimeChange, totalLoggedTime = totalLoggedTimeChange, minimumRemainingTime = postChangeMinimumRemainingTime, childCount = newChildCount, descendantCount = descendantCountChange WHERE account = _account AND project = _project AND id = _task;
