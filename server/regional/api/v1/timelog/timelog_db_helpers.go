@@ -18,7 +18,7 @@ func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog
 	if ctx.GetCacheValue(&tl, cacheKey, shard, account, project, timeLog) {
 		return &tl
 	}
-	err.PanicIf(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskName, &tl.Duration, &tl.Note))
+	err.PanicIf(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 	ctx.SetCacheValue(tl, cacheKey, shard, account, project, timeLog)
 	return &tl
 }
@@ -43,16 +43,18 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 	cacheKey := cachekey.NewGet().Key("timelog.dbGetTimeLogs")
 	if task != nil {
 		cacheKey.TaskTimeLogSet(account, project, *task, member)
-	} else if member != nil {
+	}
+	if member != nil {
 		cacheKey.ProjectMemberTimeLogSet(account, project, *member)
-	} else {
+	}
+	if task == nil && member == nil {
 		cacheKey.ProjectTimeLogSet(account, project)
 	}
 	timeLogsSet := make([]*tlog.TimeLog, 0, limit)
 	if ctx.GetCacheValue(&timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, after, limit) {
 		return timeLogsSet
 	}
-	query := bytes.NewBufferString(`SELECT project, task, id, member, loggedOn, taskName, duration, note FROM timeLogs WHERE account=? AND project=?`)
+	query := bytes.NewBufferString(`SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=?`)
 	args := make([]interface{}, 0, 9)
 	args = append(args, account, project)
 	if task != nil {
@@ -76,7 +78,7 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 	err.PanicIf(e)
 	for rows.Next() {
 		tl := tlog.TimeLog{}
-		err.PanicIf(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskName, &tl.Duration, &tl.Note))
+		err.PanicIf(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 		timeLogsSet = append(timeLogsSet, &tl)
 	}
 	ctx.SetCacheValue(timeLogsSet, cacheKey, shard, account, project, task, member, timeLog, sortDir, after, limit)
