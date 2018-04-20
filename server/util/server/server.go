@@ -96,7 +96,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				s.SR.LogError(er)
 			}
 		}
-		s.SR.LogStats(resp.code, req.Method, lowerPath, ctx.requestStartUnixMillis, getQueryInfos(ctx))
+		s.SR.LogStats(resp.code, req.Method, lowerPath, ctx.requestStartUnixMillis, ctx.getQueryInfos())
 	}()
 	//must make sure to close the request body
 	if req != nil && req.Body != nil {
@@ -121,7 +121,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
 				s.ServeHTTP(w, r)
 				responseChan <- &mgetResponse{
-					includeHeaders: queryBoolVal(ctx, "includeHeaders"),
+					includeHeaders: ctx.queryBoolVal("headers", false),
 					Key:            key,
 					Code:           w.code,
 					Header:         w.header,
@@ -235,16 +235,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ctx.session.Save(req, resp)
 		}
 	}
-	if queryBoolVal(ctx, "profile") {
+	ctx.doCacheUpdate()
+	if ctx.doProfile() {
 		writeJsonOk(ctx.resp, &profileResponse{
 			Duration:   t.NowUnixMillis() - ctx.requestStartUnixMillis,
-			QueryInfos: getQueryInfos(ctx),
+			QueryInfos: ctx.getQueryInfos(),
 			Result:     result,
 		})
 	} else {
 		writeJsonOk(ctx.resp, result)
 	}
-	doCacheUpdate(ctx)
 }
 
 func writeJsonOk(w http.ResponseWriter, body interface{}) {

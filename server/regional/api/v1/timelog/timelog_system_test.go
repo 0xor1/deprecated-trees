@@ -15,6 +15,10 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"net/http"
+	"net/url"
+	"github.com/0xor1/json"
+	"fmt"
 )
 
 func Test_system(t *testing.T) {
@@ -166,6 +170,31 @@ func Test_system(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.Equal(t, true, tls[0].TaskHasBeenDeleted)
+
+	//TEMP - test profiling output here for simplicity - TODO delete once working, will write formal tests elsewhere
+	req, err := http.NewRequest("GET", testServer.URL + "/api/v1/timeLog/get?" + url.Values{
+		"args": []string{json.PNew().Set(0,"shard").Set(org.Id, "account").Set(proj.Id, "project").Set(cnst.SortDirDesc, "sortDir").Set(100, "limit").ToString()},
+		"profile": []string{"true"},
+	}.Encode(), nil)
+	for k, v := range aliCss.Cookies {
+		req.AddCookie(&http.Cookie{Name: k, Value: v})
+	}
+	req.Header.Add("X-Client", "go-client")
+	resp, err := http.DefaultClient.Do(req)
+	val := json.PFromReader(resp.Body)
+	fmt.Println(val.ToPrettyString())
+	req, err = http.NewRequest("GET", testServer.URL + "/api/v1/timeLog/get?" + url.Values{
+		"args": []string{json.PNew().Set(0,"shard").Set(org.Id, "account").Set(proj.Id, "project").Set(cnst.SortDirDesc, "sortDir").Set(100, "limit").ToString()},
+		"profile": []string{"true"},
+	}.Encode(), nil)
+	for k, v := range aliCss.Cookies {
+		req.AddCookie(&http.Cookie{Name: k, Value: v})
+	}
+	req.Header.Add("X-Client", "go-client")
+	resp, err = http.DefaultClient.Do(req)
+	val = json.PFromReader(resp.Body)
+	fmt.Println(val.ToPrettyString())
+	//END TEMP
 
 	centralClient.DeleteAccount(aliCss, org.Id)
 	centralClient.DeleteAccount(aliCss, aliId)

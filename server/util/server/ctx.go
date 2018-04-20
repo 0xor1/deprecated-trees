@@ -34,6 +34,8 @@ type _ctx struct {
 	req                    *http.Request
 	queryInfosMtx          *sync.RWMutex
 	queryInfos             []*queryinfo.QueryInfo
+	cache                  *bool
+	profile                *bool
 	retrievedDlms          map[string]int64
 	dlmsToUpdate           map[string]interface{}
 	cacheItemsToUpdate     map[string]interface{}
@@ -56,27 +58,27 @@ func (c *_ctx) Log(err error) {
 }
 
 func (c *_ctx) AccountExec(query string, args ...interface{}) (sql.Result, error) {
-	return sqlExec(c, c.SR.AccountDb, query, args...)
+	return c.sqlExec(c.SR.AccountDb, query, args...)
 }
 
 func (c *_ctx) AccountQuery(query string, args ...interface{}) (isql.Rows, error) {
-	return sqlQuery(c, c.SR.AccountDb, query, args...)
+	return c.sqlQuery(c.SR.AccountDb, query, args...)
 }
 
 func (c *_ctx) AccountQueryRow(query string, args ...interface{}) isql.Row {
-	return sqlQueryRow(c, c.SR.AccountDb, query, args...)
+	return c.sqlQueryRow(c.SR.AccountDb, query, args...)
 }
 
 func (c *_ctx) PwdExec(query string, args ...interface{}) (sql.Result, error) {
-	return sqlExec(c, c.SR.PwdDb, query, args...)
+	return c.sqlExec(c.SR.PwdDb, query, args...)
 }
 
 func (c *_ctx) PwdQuery(query string, args ...interface{}) (isql.Rows, error) {
-	return sqlQuery(c, c.SR.PwdDb, query, args...)
+	return c.sqlQuery(c.SR.PwdDb, query, args...)
 }
 
 func (c *_ctx) PwdQueryRow(query string, args ...interface{}) isql.Row {
-	return sqlQueryRow(c, c.SR.PwdDb, query, args...)
+	return c.sqlQueryRow(c.SR.PwdDb, query, args...)
 }
 
 func (c *_ctx) TreeShardCount() int {
@@ -84,27 +86,27 @@ func (c *_ctx) TreeShardCount() int {
 }
 
 func (c *_ctx) TreeExec(shard int, query string, args ...interface{}) (sql.Result, error) {
-	return sqlExec(c, c.SR.TreeShards[shard], query, args...)
+	return c.sqlExec(c.SR.TreeShards[shard], query, args...)
 }
 
 func (c *_ctx) TreeQuery(shard int, query string, args ...interface{}) (isql.Rows, error) {
-	return sqlQuery(c, c.SR.TreeShards[shard], query, args...)
+	return c.sqlQuery(c.SR.TreeShards[shard], query, args...)
 }
 
 func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.Row {
-	return sqlQueryRow(c, c.SR.TreeShards[shard], query, args...)
+	return c.sqlQueryRow(c.SR.TreeShards[shard], query, args...)
 }
 
 func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool {
-	if !c.SR.CachingEnabled || key.KeyVal == "" || queryBoolVal(c, "skipCache") {
+	if !c.SR.CachingEnabled || key.KeyVal == "" || !c.useCache() {
 		return false
 	}
-	dlm, e := getDlm(c, key.DlmKeys)
+	dlm, e := c.getDlm(key.DlmKeys)
 	if e != nil {
 		c.Log(e)
 		return false
 	}
-	jsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.KeyVal, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
+	argsJsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.KeyVal, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
 	if e != nil {
 		c.Log(e)
 		return false
@@ -112,8 +114,8 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 	cnn := c.SR.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	start := time.NowUnixMillis()
-	jsonBytes, e = redis.Bytes(cnn.Do("GET", string(jsonBytes)))
-	writeQueryInfo(c, "GET", string(jsonBytes), start)
+	jsonBytes, e := redis.Bytes(cnn.Do("GET", string(argsJsonBytes)))
+	c.writeQueryInfo("GET", string(argsJsonBytes), start)
 	if e == redis.ErrNil {
 		return false
 	}
@@ -133,10 +135,10 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 }
 
 func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) {
-	if !c.SR.CachingEnabled {
+	if !c.SR.CachingEnabled || !c.useCache() {
 		return
 	}
-	dlm, e := getDlm(c, key.DlmKeys)
+	dlm, e := c.getDlm(key.DlmKeys)
 	if e != nil {
 		c.Log(e)
 		return
@@ -229,48 +231,67 @@ func (c *_ctx) AvatarClient() avatar.Client {
 
 // helpers
 
-func sqlExec(ctx *_ctx, rs isql.ReplicaSet, query string, args ...interface{}) (sql.Result, error) {
+func (c *_ctx) useCache() bool {
+	if c.cache == nil {
+		val := c.queryBoolVal("cache", true)
+		c.cache = &val
+	}
+	return *c.cache
+}
+
+func (c *_ctx) doProfile() bool {
+	if c.profile == nil {
+		val := c.queryBoolVal("profile", false)
+		c.profile = &val
+	}
+	return *c.profile
+}
+
+func (c *_ctx) sqlExec(rs isql.ReplicaSet, query string, args ...interface{}) (sql.Result, error) {
 	start := time.NowUnixMillis()
 	res, e := rs.Exec(query, args...)
-	writeQueryInfo(ctx, query, args, start)
+	c.writeQueryInfo(query, args, start)
 	return res, e
 }
 
-func sqlQuery(ctx *_ctx, rs isql.ReplicaSet, query string, args ...interface{}) (isql.Rows, error) {
+func (c *_ctx) sqlQuery(rs isql.ReplicaSet, query string, args ...interface{}) (isql.Rows, error) {
 	start := time.NowUnixMillis()
 	rows, e := rs.Query(query, args...)
-	writeQueryInfo(ctx, query, args, start)
+	c.writeQueryInfo(query, args, start)
 	return rows, e
 }
 
-func sqlQueryRow(ctx *_ctx, rs isql.ReplicaSet, query string, args ...interface{}) isql.Row {
+func (c *_ctx) sqlQueryRow(rs isql.ReplicaSet, query string, args ...interface{}) isql.Row {
 	start := time.NowUnixMillis()
 	row := rs.QueryRow(query, args...)
-	writeQueryInfo(ctx, query, args, start)
+	c.writeQueryInfo(query, args, start)
 	return row
 }
 
-func writeQueryInfo(ctx *_ctx, query string, args interface{}, startUnixMillis int64) {
-	ctx.queryInfosMtx.Lock()
-	defer ctx.queryInfosMtx.Unlock()
-	ctx.queryInfos = append(ctx.queryInfos, queryinfo.New(query, args, startUnixMillis))
+func (c *_ctx) writeQueryInfo(query string, args interface{}, startUnixMillis int64) {
+	if !c.doProfile() {
+		return
+	}
+	c.queryInfosMtx.Lock()
+	defer c.queryInfosMtx.Unlock()
+	c.queryInfos = append(c.queryInfos, queryinfo.New(query, args, startUnixMillis))
 }
 
-func getQueryInfos(ctx *_ctx) []*queryinfo.QueryInfo {
-	ctx.queryInfosMtx.RLock()
-	defer ctx.queryInfosMtx.RUnlock()
-	cpy := make([]*queryinfo.QueryInfo, 0, len(ctx.queryInfos))
-	for _, qi := range ctx.queryInfos {
+func (c *_ctx) getQueryInfos() []*queryinfo.QueryInfo {
+	c.queryInfosMtx.RLock()
+	defer c.queryInfosMtx.RUnlock()
+	cpy := make([]*queryinfo.QueryInfo, 0, len(c.queryInfos))
+	for _, qi := range c.queryInfos {
 		cpy = append(cpy, qi)
 	}
 	return cpy
 }
 
-func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
+func (c *_ctx) getDlm(dlmKeys []string) (int64, error) {
 	dlmsToFetch := make([]interface{}, 0, len(dlmKeys))
 	latestDlm := int64(0)
 	for _, dlmKey := range dlmKeys {
-		dlm, exists := ctx.retrievedDlms[dlmKey]
+		dlm, exists := c.retrievedDlms[dlmKey]
 		if !exists {
 			dlmsToFetch = append(dlmsToFetch, dlmKey)
 		} else if exists && dlm > latestDlm {
@@ -278,16 +299,16 @@ func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
 		}
 	}
 	if len(dlmsToFetch) > 0 {
-		cnn := ctx.SR.DlmAndDataRedisPool.Get()
+		cnn := c.SR.DlmAndDataRedisPool.Get()
 		defer cnn.Close()
 		start := time.NowUnixMillis()
 		dlms, e := redis.Int64s(cnn.Do("MGET", dlmsToFetch...))
-		writeQueryInfo(ctx, "MGET", dlmsToFetch, start)
+		c.writeQueryInfo("MGET", dlmsToFetch, start)
 		if e != nil {
 			return 0, e
 		}
 		for i, dlm := range dlms {
-			ctx.retrievedDlms[dlmsToFetch[i].(string)] = dlm
+			c.retrievedDlms[dlmsToFetch[i].(string)] = dlm
 			if dlm > latestDlm {
 				latestDlm = dlm
 			}
@@ -296,25 +317,25 @@ func getDlm(ctx *_ctx, dlmKeys []string) (int64, error) {
 	return latestDlm, nil
 }
 
-func doCacheUpdate(ctx *_ctx) {
-	if !ctx.SR.CachingEnabled || (len(ctx.dlmsToUpdate) == 0 && len(ctx.cacheItemsToUpdate) == 0) {
+func (c *_ctx) doCacheUpdate() {
+	if !c.SR.CachingEnabled || (len(c.dlmsToUpdate) == 0 && len(c.cacheItemsToUpdate) == 0) {
 		return
 	}
-	setArgs := make([]interface{}, 0, (len(ctx.dlmsToUpdate)*2)+(len(ctx.cacheItemsToUpdate)*2))
-	for k := range ctx.dlmsToUpdate {
-		setArgs = append(setArgs, k, ctx.requestStartUnixMillis)
+	setArgs := make([]interface{}, 0, (len(c.dlmsToUpdate)*2)+(len(c.cacheItemsToUpdate)*2))
+	for k := range c.dlmsToUpdate {
+		setArgs = append(setArgs, k, c.requestStartUnixMillis)
 	}
-	for k, v := range ctx.cacheItemsToUpdate {
+	for k, v := range c.cacheItemsToUpdate {
 		setArgs = append(setArgs, k, v)
 	}
-	cnn := ctx.SR.DlmAndDataRedisPool.Get()
+	cnn := c.SR.DlmAndDataRedisPool.Get()
 	defer cnn.Close()
 	if len(setArgs) > 0 {
 		start := time.NowUnixMillis()
 		_, e := cnn.Do("MSET", setArgs...)
-		writeQueryInfo(ctx, "MSET", setArgs, start)
+		c.writeQueryInfo("MSET", setArgs, start)
 		if e != nil {
-			ctx.Log(e)
+			c.Log(e)
 		}
 	}
 }
@@ -327,11 +348,13 @@ type valueCacheKey struct {
 	Args      interface{} `json:"args"`
 }
 
-func queryBoolVal(ctx *_ctx, name string) bool {
-	switch strings.ToLower(ctx.req.URL.Query().Get(name)) {
+func (c *_ctx) queryBoolVal(name string, def bool) bool {
+	switch strings.ToLower(c.req.URL.Query().Get(name)) {
 	case "1", "y", "yes", "t", "true":
 		return true
-	default:
+	case "0", "n", "no", "f", "false":
 		return false
+	default:
+		return def
 	}
 }
