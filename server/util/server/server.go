@@ -21,6 +21,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"os"
+	"path/filepath"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -50,15 +52,19 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 	var e error
 	sr.ApiDocs, e = json.MarshalIndent(routeDocs, "", "    ")
 	err.PanicIf(e)
+	wd, e := os.Getwd()
+	err.PanicIf(e)
 	return &Server{
 		Routes: routes,
 		SR:     sr,
+		FileServer: http.FileServer(http.Dir(filepath.Join(wd, sr.FileServerDir))),
 	}
 }
 
 type Server struct {
 	Routes map[string]*endpoint.Endpoint
 	SR     *static.Resources
+	FileServer http.Handler
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -101,6 +107,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//must make sure to close the request body
 	if req != nil && req.Body != nil {
 		defer req.Body.Close()
+	}
+	//check for none api call
+	if req.Method == cnst.GET && !strings.HasPrefix(req.URL.Path, "/api/") {
+		s.FileServer.ServeHTTP(resp, req)
+		return
 	}
 	//check for special case of api docs first
 	if req.Method == cnst.GET && lowerPath == s.SR.ApiDocsRoute {

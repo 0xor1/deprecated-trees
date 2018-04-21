@@ -35,6 +35,8 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	viper.SetDefault("region", "lcl")
 	// commit sha
 	viper.SetDefault("version", "lcl")
+	// relative path from server executable to static file resource directory
+	viper.SetDefault("fileServerDir", "../../../client")
 	// api docs path
 	viper.SetDefault("apiDocsRoute", "/api/docs")
 	// api mget path
@@ -213,6 +215,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 		Env:                     viper.GetString("env"),
 		Region:                  viper.GetString("region"),
 		Version:                 viper.GetString("version"),
+		FileServerDir:           viper.GetString("fileServerDir"),
 		ApiDocsRoute:            strings.ToLower(viper.GetString("apiDocsRoute")),
 		ApiMGetRoute:            strings.ToLower(viper.GetString("apiMGetRoute")),
 		ApiMGetTimeout:          viper.GetDuration("apiMGetTimeout"),
@@ -261,6 +264,8 @@ type Resources struct {
 	Region string
 	// commit sha
 	Version string
+	// relative path from server executable to static file resource directory
+	FileServerDir string
 	// api docs path
 	ApiDocsRoute string
 	// api mget path
