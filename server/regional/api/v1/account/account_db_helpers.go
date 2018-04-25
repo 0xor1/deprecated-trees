@@ -31,13 +31,13 @@ func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.Ac
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
 	res := member{}
-	cacheKey := cachekey.NewGet().Key("account.dbGetMember").AccountMember(account, mem)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, mem) {
+	cacheKey := cachekey.NewGet("account.dbGetMember", shard, account, mem).AccountMember(account, mem)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT id, name, displayName, hasAvatar, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
 	err.PanicIf(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.HasAvatar, &res.IsActive, &res.Role))
-	ctx.SetCacheValue(res, cacheKey, shard, account, mem)
+	ctx.SetCacheValue(res, cacheKey)
 	return &res
 }
 
@@ -76,8 +76,8 @@ ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	res := getMembersResp{}
-	cacheKey := cachekey.NewGet().Key("account.dbGetMembers").AccountMembersSet(account)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit) {
+	cacheKey := cachekey.NewGet("account.dbGetMembers", shard, account, role, nameOrDisplayNameContains, after, limit).AccountMembersSet(account)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
 	query := bytes.NewBufferString(`SELECT a1.id, a1.name, a1.displayName, a1.hasAvatar, a1.isActive, a1.role FROM accountMembers a1`)
@@ -121,7 +121,7 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 		res.Members = memSet
 		res.More = false
 	}
-	ctx.SetCacheValue(&res, cacheKey, shard, account, role, nameOrDisplayNameContains, after, limit)
+	ctx.SetCacheValue(&res, cacheKey)
 	return &res
 }
 
@@ -130,8 +130,8 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 		panic(err.InvalidArguments)
 	}
 	res := make([]*activity.Activity, 0, limit)
-	cacheKey := cachekey.NewGet().Key("account.dbGetActivities").AccountActivities(account)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit) {
+	cacheKey := cachekey.NewGet("account.dbGetActivities", shard, account, item, member, occurredAfter, occurredBefore, limit).AccountActivities(account)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM accountActivities WHERE account=?`)
@@ -168,6 +168,6 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
-	ctx.SetCacheValue(res, cacheKey, shard, account, item, member, occurredAfter, occurredBefore, limit)
+	ctx.SetCacheValue(res, cacheKey)
 	return res
 }

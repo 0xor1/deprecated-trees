@@ -26,8 +26,8 @@ func dbDeleteAccount(ctx ctx.Ctx, shard int, account id.Id) {
 
 func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) []id.Id {
 	res := make([]id.Id, 0, len(members))
-	cacheKey := cachekey.NewGet().Key("private.dbGetAllInactiveMembersFromInputSet").AccountMembers(account, members)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, members) {
+	cacheKey := cachekey.NewGet("private.dbGetAllInactiveMembersFromInputSet", shard, account, members).AccountMembers(account, members)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
 	queryArgs := make([]interface{}, 0, len(members)+1)
@@ -48,7 +48,7 @@ func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, 
 		rows.Scan(&i)
 		res = append(res, id.Id(i))
 	}
-	ctx.SetCacheValue(res, cacheKey, shard, account, members)
+	ctx.SetCacheValue(res, cacheKey)
 	return res
 }
 
@@ -77,19 +77,19 @@ func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members 
 
 func dbGetTotalOwnerCount(ctx ctx.Ctx, shard int, account id.Id) int {
 	count := 0
-	cacheKey := cachekey.NewGet().Key("private.dbGetTotalOwnerCount").AccountMembersSet(account)
-	if ctx.GetCacheValue(&count, cacheKey, shard, account) {
+	cacheKey := cachekey.NewGet("private.dbGetTotalOwnerCount", shard, account).AccountMembersSet(account)
+	if ctx.GetCacheValue(&count, cacheKey) {
 		return count
 	}
 	err.IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, `SELECT COUNT(*) FROM accountMembers WHERE account=? AND isActive=true AND role=0`, account).Scan(&count))
-	ctx.SetCacheValue(count, cacheKey, shard, account)
+	ctx.SetCacheValue(count, cacheKey)
 	return count
 }
 
 func dbGetOwnerCountInSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id) int {
 	count := 0
-	cacheKey := cachekey.NewGet().Key("private.dbGetOwnerCountInSet").AccountMembers(account, members)
-	if ctx.GetCacheValue(&count, cacheKey, shard, account, members) {
+	cacheKey := cachekey.NewGet("private.dbGetOwnerCountInSet", shard, account, members).AccountMembers(account, members)
+	if ctx.GetCacheValue(&count, cacheKey) {
 		return count
 	}
 	queryArgs := make([]interface{}, 0, len(members)+1)
@@ -101,7 +101,7 @@ func dbGetOwnerCountInSet(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 	}
 	query.WriteString(`)`)
 	err.IsSqlErrNoRowsElsePanicIf(ctx.TreeQueryRow(shard, query.String(), queryArgs...).Scan(&count))
-	ctx.SetCacheValue(count, cacheKey, shard, account, members)
+	ctx.SetCacheValue(count, cacheKey)
 	return count
 }
 

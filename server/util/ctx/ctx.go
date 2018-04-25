@@ -30,8 +30,8 @@ type Ctx interface {
 	TreeQuery(shard int, query string, args ...interface{}) (isql.Rows, error)
 	TreeQueryRow(shard int, query string, args ...interface{}) isql.Row
 	//cache access
-	GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool
-	SetCacheValue(val interface{}, key *cachekey.Key, args ...interface{})
+	GetCacheValue(val interface{}, key *cachekey.Key) bool
+	SetCacheValue(val interface{}, key *cachekey.Key)
 	TouchDlms(cacheKeys *cachekey.Key)
 	//basic static values
 	NameRegexMatchers() []*regexp.Regexp

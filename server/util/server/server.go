@@ -69,6 +69,7 @@ type Server struct {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resp := &responseWrapper{code: 0, w: w}
+	//setup _ctx
 	ctx := &_ctx{
 		requestStartUnixMillis: t.NowUnixMillis(),
 		resp:               resp,
@@ -108,6 +109,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req != nil && req.Body != nil {
 		defer req.Body.Close()
 	}
+	//set common headers
+	resp.Header().Set("Access-Control-Allow-Origin", s.SR.ServerAddress)
+	resp.Header().Set("X-Frame-Options", "DENY")
+	resp.Header().Set("X-XSS-Protection", "1; mode=block")
+	resp.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self';")
+	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
+	resp.Header().Set("X-Version", s.SR.Version)
 	//check for none api call
 	if req.Method == cnst.GET && !strings.HasPrefix(req.URL.Path, "/api/") {
 		s.FileServer.ServeHTTP(resp, req)
@@ -178,7 +186,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			writeJson(resp, http.StatusUnauthorized, unauthorizedErr)
 			return
 		}
-		//setup _ctx
 	}
 	//process args
 	var e error

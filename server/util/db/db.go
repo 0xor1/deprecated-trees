@@ -18,38 +18,38 @@ var (
 
 func GetAccountRole(ctx ctx.Ctx, shard int, account, member id.Id) *cnst.AccountRole {
 	var accRole *cnst.AccountRole
-	cacheKey := cachekey.NewGet().Key("db.GetAccountRole").AccountMember(account, member)
-	if ctx.GetCacheValue(&accRole, cacheKey, shard, account, member) {
+	cacheKey := cachekey.NewGet("db.GetAccountRole", shard, account, member).AccountMember(account, member)
+	if ctx.GetCacheValue(&accRole, cacheKey) {
 		return accRole
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?`, account, member)
 	err.IsSqlErrNoRowsElsePanicIf(row.Scan(&accRole))
-	ctx.SetCacheValue(accRole, cacheKey, shard, account, member)
+	ctx.SetCacheValue(accRole, cacheKey)
 	return accRole
 }
 
 func GetProjectRole(ctx ctx.Ctx, shard int, account, project, member id.Id) *cnst.ProjectRole {
 	var projRole *cnst.ProjectRole
-	cacheKey := cachekey.NewGet().Key("db.GetProjectRole").ProjectMember(account, project, member)
-	if ctx.GetCacheValue(&projRole, cacheKey, shard, account, project, member) {
+	cacheKey := cachekey.NewGet("db.GetProjectRole", shard, account, project, member).ProjectMember(account, project, member)
+	if ctx.GetCacheValue(&projRole, cacheKey) {
 		return projRole
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?`, account, project, member)
 	err.IsSqlErrNoRowsElsePanicIf(row.Scan(&projRole))
-	ctx.SetCacheValue(projRole, cacheKey, shard, account, project, member)
+	ctx.SetCacheValue(projRole, cacheKey)
 	return projRole
 }
 
 func GetAccountAndProjectRoles(ctx ctx.Ctx, shard int, account, project, member id.Id) (*cnst.AccountRole, *cnst.ProjectRole) {
 	var accRole *cnst.AccountRole
 	var projRole *cnst.ProjectRole
-	cacheKey := cachekey.NewGet().Key("db.GetAccountAndProjectRoles").AccountMember(account, member).ProjectMember(account, project, member)
-	if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole}, cacheKey, shard, account, project, member) {
+	cacheKey := cachekey.NewGet("db.GetAccountAndProjectRoles", shard, account, project, member).AccountMember(account, member).ProjectMember(account, project, member)
+	if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole}, cacheKey) {
 		return accRole, projRole
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT role accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM accountMembers WHERE account=? AND isActive=true AND id=?`, account, project, member, account, member)
 	err.IsSqlErrNoRowsElsePanicIf(row.Scan(&accRole, &projRole))
-	ctx.SetCacheValue([]interface{}{accRole, projRole}, cacheKey, shard, account, project, member)
+	ctx.SetCacheValue([]interface{}{accRole, projRole}, cacheKey)
 	return accRole, projRole
 }
 
@@ -57,35 +57,35 @@ func GetAccountAndProjectRolesAndProjectIsPublic(ctx ctx.Ctx, shard int, account
 	var accRole *cnst.AccountRole
 	var projRole *cnst.ProjectRole
 	var isPublic *bool
-	cacheKey := cachekey.NewGet().Key("db.GetAccountAndProjectRolesAndProjectIsPublic").Project(account, project)
+	cacheKey := cachekey.NewGet("db.GetAccountAndProjectRolesAndProjectIsPublic", shard, account, project, member).Project(account, project)
 	if member == nil {
-		if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole, &isPublic}, cacheKey, []interface{}{shard, account, project}...) {
+		if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole, &isPublic}, cacheKey) {
 			return accRole, projRole, isPublic
 		}
 		row := ctx.TreeQueryRow(shard, `SELECT isPublic FROM projects WHERE account=? AND id=?`, account, project)
 		err.IsSqlErrNoRowsElsePanicIf(row.Scan(&isPublic))
-		ctx.SetCacheValue([]interface{}{accRole, projRole, isPublic}, cacheKey, shard, account, project)
+		ctx.SetCacheValue([]interface{}{accRole, projRole, isPublic}, cacheKey)
 	} else {
 		cacheKey.AccountMember(account, *member).ProjectMember(account, project, *member)
-		if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole, &isPublic}, cacheKey, shard, account, project, member) {
+		if ctx.GetCacheValue(&[]interface{}{&accRole, &projRole, &isPublic}, cacheKey) {
 			return accRole, projRole, isPublic
 		}
 		row := ctx.TreeQueryRow(shard, `SELECT isPublic, (SELECT role FROM accountMembers WHERE account=? AND isActive=true AND id=?) accountRole, (SELECT role FROM projectMembers WHERE account=? AND isActive=true AND project=? AND id=?) projectRole FROM projects WHERE account=? AND id=?`, account, member, account, project, member, account, project)
 		err.IsSqlErrNoRowsElsePanicIf(row.Scan(&isPublic, &accRole, &projRole))
-		ctx.SetCacheValue([]interface{}{accRole, projRole, isPublic}, cacheKey, shard, account, project, member)
+		ctx.SetCacheValue([]interface{}{accRole, projRole, isPublic}, cacheKey)
 	}
 	return accRole, projRole, isPublic
 }
 
 func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 	var enabled bool
-	cacheKey := cachekey.NewGet().Key("db.GetPublicProjectsEnabled").Account(account)
-	if ctx.GetCacheValue(&enabled, cacheKey, shard, account) {
+	cacheKey := cachekey.NewGet("db.GetPublicProjectsEnabled", shard, account).Account(account)
+	if ctx.GetCacheValue(&enabled, cacheKey) {
 		return enabled
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled FROM accounts WHERE id=?`, account)
 	err.PanicIf(row.Scan(&enabled))
-	ctx.SetCacheValue(enabled, cacheKey, shard, account)
+	ctx.SetCacheValue(enabled, cacheKey)
 	return enabled
 }
 

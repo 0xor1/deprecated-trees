@@ -13,13 +13,16 @@ var (
 
 type Key struct {
 	isGet   bool
-	KeyVal  string
+	Key     string
+	Args []interface{}
 	DlmKeys []string
 }
 
-func NewGet() *Key {
+func NewGet(key string, args ...interface{}) *Key {
 	return &Key{
 		isGet:   true,
+		Key:     key,
+		Args:    args,
 		DlmKeys: make([]string, 0, 10),
 	}
 }
@@ -29,11 +32,6 @@ func NewSetDlms() *Key {
 		isGet:   false,
 		DlmKeys: make([]string, 0, 10),
 	}
-}
-
-func (k *Key) Key(key string) *Key {
-	k.KeyVal = key
-	return k
 }
 
 func (k *Key) AccountMaster(account id.Id) *Key {

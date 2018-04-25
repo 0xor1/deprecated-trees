@@ -97,8 +97,8 @@ func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.R
 	return c.sqlQueryRow(c.SR.TreeShards[shard], query, args...)
 }
 
-func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) bool {
-	if !c.SR.CachingEnabled || key.KeyVal == "" || !c.useCache() {
+func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key) bool {
+	if !c.SR.CachingEnabled || key.Key == "" || !c.useCache() {
 		return false
 	}
 	dlm, e := c.getDlm(key.DlmKeys)
@@ -106,7 +106,7 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 		c.Log(e)
 		return false
 	}
-	argsJsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.KeyVal, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
+	argsJsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: key.Args})
 	if e != nil {
 		c.Log(e)
 		return false
@@ -134,7 +134,7 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 	return true
 }
 
-func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key, args ...interface{}) {
+func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key) {
 	if !c.SR.CachingEnabled || !c.useCache() {
 		return
 	}
@@ -148,7 +148,7 @@ func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key, args ...interfa
 		c.Log(e)
 		return
 	}
-	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.KeyVal, DlmKeys: key.DlmKeys, Dlm: dlm, Args: args})
+	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: key.Args})
 	if e != nil {
 		c.Log(e)
 		return

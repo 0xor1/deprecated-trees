@@ -16,13 +16,13 @@ import (
 
 func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 	var exists bool
-	cacheKey := cachekey.NewGet().Key("db.GetProjectExists").Project(account, project)
-	if ctx.GetCacheValue(&exists, cacheKey, shard, account, project) {
+	cacheKey := cachekey.NewGet("db.GetProjectExists", shard, account, project).Project(account, project)
+	if ctx.GetCacheValue(&exists, cacheKey) {
 		return exists
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, account, project)
 	err.PanicIf(row.Scan(&exists))
-	ctx.SetCacheValue(exists, cacheKey, shard, account, project)
+	ctx.SetCacheValue(exists, cacheKey)
 	return exists
 }
 
@@ -40,13 +40,13 @@ func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, isPublic bool
 
 func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project {
 	res := project{}
-	cacheKey := cachekey.NewGet().Key("project.dbGetProject").Project(account, proj)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, proj) {
+	cacheKey := cachekey.NewGet("project.dbGetProject", shard, account, proj).Project(account, proj)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, account, proj, account, proj, proj)
 	err.PanicIf(row.Scan(&res.Id, &res.IsArchived, &res.Name, &res.CreatedOn, &res.StartOn, &res.DueOn, &res.FileCount, &res.FileSize, &res.IsPublic, &res.Description, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.LinkedFileCount, &res.ChatCount, &res.ChildCount, &res.DescendantCount, &res.IsParallel))
-	ctx.SetCacheValue(res, cacheKey, shard, account, proj)
+	ctx.SetCacheValue(res, cacheKey)
 	return &res
 }
 
@@ -91,8 +91,8 @@ func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member 
 
 func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
 	res := getMembersResp{}
-	cacheKey := cachekey.NewGet().Key("project.dbGetMembers").ProjectMembersSet(account, project)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit) {
+	cacheKey := cachekey.NewGet("project.dbGetMembers", shard, account, project, role, nameOrDisplayNameContains, after, limit).ProjectMembersSet(account, project)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
 	query := bytes.NewBufferString(`SELECT p1.id, p1.isActive, p1.totalRemainingTime, p1.totalLoggedTime, p1.role FROM projectMembers p1`)
@@ -136,19 +136,19 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 		res.Members = memSet
 		res.More = false
 	}
-	ctx.SetCacheValue(&res, cacheKey, shard, account, project, role, nameOrDisplayNameContains, after, limit)
+	ctx.SetCacheValue(&res, cacheKey)
 	return &res
 }
 
 func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *member {
 	res := member{}
-	cacheKey := cachekey.NewGet().Key("project.dbGetMember").ProjectMember(account, project, mem)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, mem) {
+	cacheKey := cachekey.NewGet("project.dbGetMember", shard, account, project, mem).ProjectMember(account, project, mem)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, account, project, mem)
 	err.PanicIf(row.Scan(&res.Id, &res.IsActive, &res.Role))
-	ctx.SetCacheValue(&res, cacheKey, shard, account, project, mem)
+	ctx.SetCacheValue(&res, cacheKey)
 	return &res
 }
 
@@ -157,8 +157,8 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 		panic(err.InvalidArguments)
 	}
 	res := make([]*activity.Activity, 0, limit)
-	cacheKey := cachekey.NewGet().Key("project.dbGetActivities").ProjectActivities(account, project)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, item, member, occurredAfter, occurredBefore, limit) {
+	cacheKey := cachekey.NewGet("project.dbGetActivities", shard, account, project, item, member, occurredAfter, occurredBefore, limit).ProjectActivities(account, project)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
 	query := bytes.NewBufferString(`SELECT occurredOn, item, member, itemType, itemHasBeenDeleted, action, itemName, extraInfo FROM projectActivities WHERE account=? AND project=?`)
@@ -195,14 +195,14 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
-	ctx.SetCacheValue(res, cacheKey, shard, account, project, item, member, occurredAfter, occurredBefore, limit)
+	ctx.SetCacheValue(res, cacheKey)
 	return res
 }
 
 func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getProjectsResp {
 	res := getProjectsResp{}
-	cacheKey := cachekey.NewGet().Key("project.dbGetProjects").AccountProjectsSet(account)
-	if ctx.GetCacheValue(&res, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) {
+	cacheKey := cachekey.NewGet("project.dbGetProjects", shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit).AccountProjectsSet(account)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
 	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
@@ -294,6 +294,6 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 		res.Projects = projSet
 		res.More = false
 	}
-	ctx.SetCacheValue(&res, cacheKey, shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
+	ctx.SetCacheValue(&res, cacheKey)
 	return &res
 }

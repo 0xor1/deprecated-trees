@@ -123,14 +123,14 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 
 func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*task {
 	ids := bytes.NewBufferString(``)
-	cacheKey := cachekey.NewGet().Key("project.dbGetTasks")
+	cacheKey := cachekey.NewGet("project.dbGetTasks", shard, account, project, tasks)
 	for _, task := range tasks {
 		cacheKey.Task(account, project, task)
 		ids.WriteString(hex.EncodeToString(task))
 	}
 	idsStr := ids.String()
 	res := make([]*task, 0, len(tasks))
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, idsStr) {
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
 	rows, e := ctx.TreeQuery(shard, `CALL getTasks(?, ?, ?)`, account, project, idsStr)
@@ -144,14 +144,14 @@ func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) [
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		res = append(res, &ta)
 	}
-	ctx.SetCacheValue(res, cacheKey, shard, account, project, idsStr)
+	ctx.SetCacheValue(res, cacheKey)
 	return res
 }
 
 func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*task {
 	res := make([]*task, 0, limit)
-	cacheKey := cachekey.NewGet().Key("project.dbGetChildTasks").TaskChildrenSet(account, project, parent)
-	if ctx.GetCacheValue(&res, cacheKey, shard, account, project, parent, fromSibling, limit) {
+	cacheKey := cachekey.NewGet("project.dbGetChildTasks", shard, account, project, parent, fromSibling, limit).TaskChildrenSet(account, project, parent)
+	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
 	rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, account, project, parent, fromSibling, limit)
@@ -165,7 +165,7 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fro
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		res = append(res, &ta)
 	}
-	ctx.SetCacheValue(res, cacheKey, shard, account, project, parent, fromSibling, limit)
+	ctx.SetCacheValue(res, cacheKey)
 	return res
 }
 
