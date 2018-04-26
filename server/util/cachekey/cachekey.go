@@ -14,7 +14,7 @@ var (
 type Key struct {
 	isGet   bool
 	Key     string
-	Args []interface{}
+	Args    []interface{}
 	DlmKeys []string
 }
 

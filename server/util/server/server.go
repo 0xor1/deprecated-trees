@@ -17,12 +17,12 @@ import (
 	"github.com/gorilla/context"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"os"
-	"path/filepath"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -55,15 +55,15 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 	wd, e := os.Getwd()
 	err.PanicIf(e)
 	return &Server{
-		Routes: routes,
-		SR:     sr,
+		Routes:     routes,
+		SR:         sr,
 		FileServer: http.FileServer(http.Dir(filepath.Join(wd, sr.FileServerDir))),
 	}
 }
 
 type Server struct {
-	Routes map[string]*endpoint.Endpoint
-	SR     *static.Resources
+	Routes     map[string]*endpoint.Endpoint
+	SR         *static.Resources
 	FileServer http.Handler
 }
 
