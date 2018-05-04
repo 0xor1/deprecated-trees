@@ -2,6 +2,7 @@ package cnst
 
 import (
 	"bitbucket.org/0xor1/task/server/util/err"
+	"github.com/0xor1/panic"
 	"strconv"
 	"strings"
 )
@@ -40,9 +41,7 @@ var (
 type Theme uint8
 
 func (t *Theme) Validate() {
-	if t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme) {
-		panic(invalidConstantValueErr)
-	}
+	panic.IfTrueWith(t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme), invalidConstantValueErr)
 }
 
 func (t *Theme) String() string {
@@ -65,9 +64,7 @@ func (t *Theme) UnmarshalJSON(raw []byte) error {
 type AccountRole uint8
 
 func (r *AccountRole) Validate() {
-	if r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects) {
-		panic(invalidConstantValueErr)
-	}
+	panic.IfTrueWith(r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects), invalidConstantValueErr)
 }
 
 func (r *AccountRole) String() string {
@@ -78,10 +75,8 @@ func (r *AccountRole) String() string {
 }
 
 func (r *AccountRole) UnmarshalJSON(raw []byte) error {
-	val, err := strconv.ParseUint(string(raw), 10, 8)
-	if err != nil {
-		return err
-	}
+	val, e := strconv.ParseUint(string(raw), 10, 8)
+	panic.If(e)
 	*r = AccountRole(val)
 	r.Validate()
 	return nil
@@ -90,9 +85,7 @@ func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 type ProjectRole uint8
 
 func (r *ProjectRole) Validate() {
-	if r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader) {
-		panic(invalidConstantValueErr)
-	}
+	panic.IfTrueWith(r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader), invalidConstantValueErr)
 }
 
 func (r *ProjectRole) String() string {
@@ -103,10 +96,8 @@ func (r *ProjectRole) String() string {
 }
 
 func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
-	val, err := strconv.ParseUint(string(raw), 10, 8)
-	if err != nil {
-		return err
-	}
+	val, e := strconv.ParseUint(string(raw), 10, 8)
+	panic.If(e)
 	*r = ProjectRole(val)
 	r.Validate()
 	return nil
@@ -115,9 +106,7 @@ func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 type SortDir string
 
 func (sd *SortDir) Validate() {
-	if sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc) {
-		panic(invalidConstantValueErr)
-	}
+	panic.IfTrueWith(sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc), invalidConstantValueErr)
 }
 
 func (sd *SortDir) String() string {
@@ -142,9 +131,7 @@ func (sd *SortDir) GtLtSymbol() string {
 type SortBy string
 
 func (sb *SortBy) Validate() {
-	if sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn) {
-		panic(invalidConstantValueErr)
-	}
+	panic.IfTrueWith(sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn), invalidConstantValueErr)
 }
 
 func (sb *SortBy) String() string {

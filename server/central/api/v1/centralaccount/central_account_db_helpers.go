@@ -5,12 +5,13 @@ import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bytes"
+	"github.com/0xor1/panic"
 )
 
 func dbAccountWithCiNameExists(ctx ctx.Ctx, name string) bool {
 	row := ctx.AccountQueryRow(`SELECT COUNT(*) FROM accounts WHERE name = ?`, name)
 	count := 0
-	err.PanicIf(row.Scan(&count))
+	panic.If(row.Scan(&count))
 	return count != 0
 }
 
@@ -25,9 +26,9 @@ func dbGetAccountByCiName(ctx ctx.Ctx, name string) *account {
 
 func dbCreatePersonalAccount(ctx ctx.Ctx, account *fullPersonalAccountInfo, pwdInfo *pwdInfo) {
 	_, e := ctx.AccountExec(`CALL createPersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.Email, account.Language, account.Theme, account.NewEmail, account.activationCode, account.activatedOn, account.newEmailConfirmationCode, account.resetPwdCode)
-	err.PanicIf(e)
+	panic.If(e)
 	_, e = ctx.PwdExec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?)`, account.Id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbGetPersonalAccountByEmail(ctx ctx.Ctx, email string) *fullPersonalAccountInfo {
@@ -61,24 +62,24 @@ func dbGetPwdInfo(ctx ctx.Ctx, id id.Id) *pwdInfo {
 
 func dbUpdatePersonalAccount(ctx ctx.Ctx, personalAccountInfo *fullPersonalAccountInfo) {
 	_, e := ctx.AccountExec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, personalAccountInfo.Id, personalAccountInfo.Name, personalAccountInfo.DisplayName, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activatedOn, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbUpdateAccount(ctx ctx.Ctx, account *account) {
 	_, e := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbUpdatePwdInfo(ctx ctx.Ctx, id id.Id, pwdInfo *pwdInfo) {
 	_, e := ctx.PwdExec(`UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?`, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, id)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbDeleteAccountAndAllAssociatedMemberships(ctx ctx.Ctx, id id.Id) {
 	_, e := ctx.AccountExec(`CALL deleteAccountAndAllAssociatedMemberships(?)`, id)
-	err.PanicIf(e)
+	panic.If(e)
 	_, e = ctx.PwdExec(`DELETE FROM pwds WHERE id = ?`, id)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbGetAccount(ctx ctx.Ctx, id id.Id) *account {
@@ -103,11 +104,11 @@ func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	res := make([]*account, 0, len(ids))
 	for rows.Next() {
 		a := account{}
-		err.PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
+		panic.If(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	return res
@@ -121,12 +122,12 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*accoun
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 
 	res := make([]*account, 0, 100)
 	for rows.Next() {
 		acc := account{}
-		err.PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
+		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
 		res = append(res, &acc)
 	}
 	return res
@@ -140,13 +141,13 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 
 	res := make([]*account, 0, 100)
 	for rows.Next() {
 		acc := account{}
 		acc.IsPersonal = true
-		err.PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
+		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
 	}
 	return res
@@ -165,12 +166,12 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	res := make([]*account, 0, len(ids))
 	for rows.Next() {
 		acc := account{}
 		acc.IsPersonal = true
-		err.PanicIf(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
+		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
 	}
 	return res
@@ -178,7 +179,7 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 
 func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *account, member id.Id) {
 	_, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, member)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbGetMyGroupAccounts(ctx ctx.Ctx, after *id.Id, limit int) ([]*account, bool) {
@@ -195,11 +196,11 @@ func dbGetMyGroupAccounts(ctx ctx.Ctx, after *id.Id, limit int) ([]*account, boo
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	res := make([]*account, 0, limit+1)
 	for rows.Next() {
 		a := account{}
-		err.PanicIf(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
+		panic.If(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	if len(res) == limit+1 {
@@ -217,7 +218,7 @@ func dbCreateMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
 		args = append(args, account, member)
 	}
 	_, e := ctx.AccountExec(query.String(), args...)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 func dbDeleteMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
@@ -230,5 +231,5 @@ func dbDeleteMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
 	}
 	query.WriteString(`)`)
 	_, e := ctx.AccountExec(query.String(), args...)
-	err.PanicIf(e)
+	panic.If(e)
 }

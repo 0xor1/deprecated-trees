@@ -9,6 +9,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"github.com/0xor1/panic"
 	"time"
 )
 
@@ -72,9 +73,7 @@ var setMemberRole = &endpoint.Endpoint{
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me())
 		validate.MemberHasAccountAdminAccess(accountRole)
 		args.Role.Validate()
-		if args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner {
-			panic(err.InsufficientPermission)
-		}
+		panic.IfTrueWith(args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner, err.InsufficientPermission)
 		dbSetMemberRole(ctx, args.Shard, args.Account, args.Member, args.Role)
 		return nil
 	},
@@ -129,9 +128,7 @@ var getActivities = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
-		if args.OccurredAfter != nil && args.OccurredBefore != nil {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},

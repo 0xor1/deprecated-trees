@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"fmt"
+	"github.com/0xor1/panic"
 	"regexp"
 	"unicode/utf8"
 )
@@ -26,7 +27,7 @@ func (e *invalidErr) Error() string {
 }
 
 func invalidStringArgErrPanic(argName string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) {
-	panic(&invalidErr{
+	panic.If(&invalidErr{
 		Err:           invalidStringArgErr,
 		ArgName:       argName,
 		MinRuneCount:  minRuneCount,
@@ -59,49 +60,33 @@ func Limit(limit, maxLimit int) int {
 }
 
 func EntityCount(entityCount, maxLimit int) {
-	if entityCount < 1 || entityCount > maxLimit {
-		panic(err.InvalidEntityCount)
-	}
+	panic.IfTrueWith(entityCount < 1 || entityCount > maxLimit, err.InvalidEntityCount)
 }
 
 func Exists(exists bool) {
-	if !exists {
-		panic(err.NoSuchEntity)
-	}
+	panic.IfTrueWith(!exists, err.NoSuchEntity)
 }
 
 func MemberHasAccountOwnerAccess(accountRole *cnst.AccountRole) {
-	if accountRole == nil || *accountRole != cnst.AccountOwner {
-		panic(err.InsufficientPermission)
-	}
+	panic.IfTrueWith(accountRole == nil || *accountRole != cnst.AccountOwner, err.InsufficientPermission)
 }
 
 func MemberHasAccountAdminAccess(accountRole *cnst.AccountRole) {
-	if accountRole == nil || (*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) {
-		panic(err.InsufficientPermission)
-	}
+	panic.IfTrueWith(accountRole == nil || (*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin), err.InsufficientPermission)
 }
 
 func MemberHasProjectAdminAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole) {
-	if accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || *projectRole != cnst.ProjectAdmin)) {
-		panic(err.InsufficientPermission)
-	}
+	panic.IfTrueWith(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || *projectRole != cnst.ProjectAdmin)), err.InsufficientPermission)
 }
 
 func MemberHasProjectWriteAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole) {
-	if accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))) {
-		panic(err.InsufficientPermission)
-	}
+	panic.IfTrueWith(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))), err.InsufficientPermission)
 }
 
 func MemberIsAProjectMemberWithWriteAccess(projectRole *cnst.ProjectRole) {
-	if projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter) {
-		panic(err.InsufficientPermission)
-	}
+	panic.IfTrueWith(projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter), err.InsufficientPermission)
 }
 
 func MemberHasProjectReadAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole, projectIsPublic *bool) {
-	if projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter && *projectRole != cnst.ProjectReader))))) {
-		panic(err.InsufficientPermission)
-	}
+	panic.IfTrueWith(projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter && *projectRole != cnst.ProjectReader))))), err.InsufficientPermission)
 }

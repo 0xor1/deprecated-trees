@@ -3,9 +3,9 @@ package centralaccount
 import (
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bytes"
+	"github.com/0xor1/panic"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -217,11 +217,11 @@ func (c *client) SetAccountAvatar(css *clientsession.Store, account id.Id, avata
 		body := bytes.NewBuffer([]byte{})
 		writer := multipart.NewWriter(body)
 		part, e := writer.CreateFormFile("avatar", "avatar")
-		err.PanicIf(e)
+		panic.If(e)
 		_, e = io.Copy(part, avatar)
-		err.PanicIf(e)
-		err.PanicIf(writer.WriteField("account", account.String()))
-		err.PanicIf(writer.Close())
+		panic.If(e)
+		panic.If(writer.WriteField("account", account.String()))
+		panic.If(writer.Close())
 		return ioutil.NopCloser(body), writer.FormDataContentType()
 	}, nil)
 	return e

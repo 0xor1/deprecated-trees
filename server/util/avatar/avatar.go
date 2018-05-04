@@ -2,6 +2,7 @@ package avatar
 
 import (
 	"bitbucket.org/0xor1/task/server/util/err"
+	"github.com/0xor1/panic"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,11 +18,9 @@ type Client interface {
 }
 
 func NewLocalClient(relDirPath string, maxAvatarDim uint) Client {
-	if relDirPath == "" {
-		panic(err.InvalidArguments)
-	}
+	panic.IfTrueWith(relDirPath == "", err.InvalidArguments)
 	wd, e := os.Getwd()
-	err.PanicIf(e)
+	panic.If(e)
 	absDirPath := path.Join(wd, relDirPath)
 	os.MkdirAll(absDirPath, os.ModeDir)
 	return &localClient{
@@ -45,18 +44,18 @@ func (c *localClient) Save(key string, mimeType string, data io.Reader) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	avatarBytes, e := ioutil.ReadAll(data)
-	err.PanicIf(e)
-	err.PanicIf(ioutil.WriteFile(path.Join(c.absDirPath, key), avatarBytes, os.ModePerm))
+	panic.If(e)
+	panic.If(ioutil.WriteFile(path.Join(c.absDirPath, key), avatarBytes, os.ModePerm))
 }
 
 func (c *localClient) Delete(key string) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	err.PanicIf(os.Remove(path.Join(c.absDirPath, key)))
+	panic.If(os.Remove(path.Join(c.absDirPath, key)))
 }
 
 func (c *localClient) DeleteAll() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	err.PanicIf(os.RemoveAll(c.absDirPath))
+	panic.If(os.RemoveAll(c.absDirPath))
 }

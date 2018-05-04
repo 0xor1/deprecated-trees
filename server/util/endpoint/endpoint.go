@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/0xor1/panic"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -42,14 +43,13 @@ type Endpoint struct {
 }
 
 func (ep *Endpoint) ValidateEndpoint() {
-	if (ep.Method != cnst.GET && ep.Method != cnst.POST) || // only GET and POST methods supported for read and write operations respectively
+	panic.IfTrueWith((ep.Method != cnst.GET && ep.Method != cnst.POST) || // only GET and POST methods supported for read and write operations respectively
 		(ep.ProcessForm != nil && ep.Method != cnst.POST) || // if processForm is passed it must be a POST call
 		(ep.ProcessForm != nil && ep.IsPrivate) || // if processForm is passed it must not be a private call, private endpoints dont support forms
 		(ep.ProcessForm != nil && len(ep.FormStruct) == 0) || // if processForm is passed FormStruct must be given for documentation
 		(ep.PermissionCheck != nil || ep.PermissionDlmKeys != nil) && !(ep.PermissionCheck != nil && ep.PermissionDlmKeys != nil) || // if permission dlms are passed, permission check fn must be passed, and vice versa
-		ep.CtxHandler == nil { // every endpoint needs a handler
-		panic(invalidEndpointErr)
-	}
+		ep.CtxHandler == nil, // every endpoint needs a handler
+		invalidEndpointErr)
 }
 
 func (ep *Endpoint) GetEndpointDocumentation() *endpointDocumentation {

@@ -9,6 +9,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/timelog"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"github.com/0xor1/panic"
 )
 
 type createArgs struct {
@@ -75,9 +76,7 @@ var setDuration = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setDurationArgs)
-		if args.Duration == 0 {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(args.Duration == 0, err.InvalidArguments)
 		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
 		if args.Duration == tl.Duration {
 			return nil

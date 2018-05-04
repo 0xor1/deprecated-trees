@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/0xor1/iredis"
 	"github.com/0xor1/isql"
+	"github.com/0xor1/panic"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/spf13/viper"
@@ -115,7 +116,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	if configFile != "" && configPath != "" {
 		viper.SetConfigName(configFile)
 		viper.AddConfigPath(configPath)
-		err.PanicIf(viper.ReadInConfig())
+		panic.If(viper.ReadInConfig())
 	}
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
@@ -125,12 +126,12 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
 	for i := range authKey64s {
 		authBytes, e := base64.RawURLEncoding.DecodeString(authKey64s[i])
-		err.PanicIf(e)
+		panic.If(e)
 		if len(authBytes) != 64 {
 			err.FmtPanic("sessionAuthBytes length is not 64")
 		}
 		encrBytes, e := base64.RawURLEncoding.DecodeString(encrKey32s[i])
-		err.PanicIf(e)
+		panic.If(e)
 		if len(encrBytes) != 32 {
 			err.FmtPanic("sessionEncrBytes length is not 32")
 		}
@@ -167,7 +168,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 		//TODO setup aws s3 avatarStore storage
 		//TODO setup sparkpost/mailgun/somthing mailClient client
 		//TODO setup datadog stats and error logging
-		panic(err.NotImplemented)
+		panic.If(err.NotImplemented)
 	}
 
 	nameRegexMatchers := make([]*regexp.Regexp, 0, len(viper.GetStringSlice("nameRegexMatchers")))
@@ -194,7 +195,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	if treeShards != nil {
 		for k, v := range treeShards {
 			shardId, e := strconv.ParseInt(k, 10, 0)
-			err.PanicIf(e)
+			panic.If(e)
 			treeShardDbs[int(shardId)] = isql.NewReplicaSet("mysql", v[0], v[1:])
 		}
 	}
@@ -210,7 +211,7 @@ func Config(configFile, configPath string, createPrivateV1Client func(map[string
 	}
 
 	regionalV1PrivateClientSecret, e := base64.RawURLEncoding.DecodeString(viper.GetString("regionalV1PrivateClientSecret"))
-	err.PanicIf(e)
+	panic.If(e)
 
 	return &Resources{
 		ServerCreatedOn:               t.NowUnixMillis(),

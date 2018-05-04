@@ -5,6 +5,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/time"
 	"bytes"
 	"encoding/base64"
+	"github.com/0xor1/panic"
 	"github.com/oklog/ulid"
 	"math/rand"
 	"sync"
@@ -26,9 +27,7 @@ func New() Id {
 
 func Parse(id string) Id {
 	b, e := base64.RawURLEncoding.DecodeString(id)
-	if e != nil || len(b) != 16 {
-		panic(parseErr)
-	}
+	panic.IfTrueWith(e != nil || len(b) != 16, parseErr)
 	return Id(b)
 }
 

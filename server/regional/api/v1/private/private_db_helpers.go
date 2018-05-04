@@ -8,19 +8,20 @@ import (
 	"bitbucket.org/0xor1/task/server/util/private"
 	"bitbucket.org/0xor1/task/server/util/time"
 	"bytes"
+	"github.com/0xor1/panic"
 	"math/rand"
 )
 
 func dbCreateAccount(ctx ctx.Ctx, account, me id.Id, myName string, myDisplayName *string, hasAvatar bool) int {
 	shard := rand.Intn(ctx.TreeShardCount())
 	_, e := ctx.TreeExec(shard, `CALL registerAccount(?, ?, ?, ?, ?)`, account, me, myName, myDisplayName, hasAvatar)
-	err.PanicIf(e)
+	panic.If(e)
 	return shard
 }
 
 func dbDeleteAccount(ctx ctx.Ctx, shard int, account id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteAccount(?)`, account)
-	err.PanicIf(e)
+	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMaster(account))
 }
 
@@ -42,7 +43,7 @@ func dbGetAllInactiveMembersFromInputSet(ctx ctx.Ctx, shard int, account id.Id, 
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	for rows.Next() {
 		i := make([]byte, 0, 16)
 		rows.Scan(&i)
@@ -61,7 +62,7 @@ func dbAddMembers(ctx ctx.Ctx, shard int, account id.Id, members []*private.AddM
 		queryArgs = append(queryArgs, account, mem.Id, mem.Name, mem.DisplayName, mem.HasAvatar, mem.Role)
 	}
 	_, e := ctx.TreeExec(shard, query.String(), queryArgs...)
-	err.PanicIf(e)
+	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMembersSet(account))
 }
 
@@ -70,7 +71,7 @@ func dbUpdateMembersAndSetActive(ctx ctx.Ctx, shard int, account id.Id, members 
 	for _, mem := range members {
 		memberIds = append(memberIds, mem.Id)
 		_, e := ctx.TreeExec(shard, `CALL updateMembersAndSetActive(?, ?, ?, ?, ?, ?)`, account, mem.Id, mem.Name, mem.DisplayName, mem.HasAvatar, mem.Role)
-		err.PanicIf(e)
+		panic.If(e)
 	}
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMembers(account, memberIds))
 }
@@ -109,11 +110,11 @@ func dbSetMembersInactive(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 	cacheKey := cachekey.NewSetDlms().AccountMembers(account, members)
 	for _, mem := range members {
 		rows, e := ctx.TreeQuery(shard, `CALL setAccountMemberInactive(?, ?)`, account, mem)
-		err.PanicIf(e)
+		panic.If(e)
 		for rows.Next() {
 			var project id.Id
 			var task id.Id
-			err.PanicIf(rows.Scan(&project, task))
+			panic.If(rows.Scan(&project, task))
 			cacheKey.Task(account, project, task).ProjectMembersSet(account, project).ProjectMember(account, project, mem)
 		}
 	}
@@ -122,19 +123,19 @@ func dbSetMembersInactive(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 
 func dbSetMemberName(ctx ctx.Ctx, shard int, account id.Id, member id.Id, newName string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberName(?, ?, ?)`, account, member, newName)
-	err.PanicIf(e)
+	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member))
 }
 
 func dbSetMemberDisplayName(ctx ctx.Ctx, shard int, account, member id.Id, newDisplayName *string) {
 	_, e := ctx.TreeExec(shard, `CALL setMemberDisplayName(?, ?, ?)`, account, member, newDisplayName)
-	err.PanicIf(e)
+	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member))
 }
 
 func dbSetMemberHasAvatar(ctx ctx.Ctx, shard int, account, member id.Id, hasAvatar bool) {
 	_, e := ctx.TreeExec(shard, `UPDATE accountMembers SET hasAvatar=? WHERE account=? AND id=?`, hasAvatar, account, member)
-	err.PanicIf(e)
+	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member))
 }
 
@@ -148,6 +149,6 @@ func dbLogAccountBatchAddOrRemoveMembersActivity(ctx ctx.Ctx, shard int, account
 		args = append(args, account, now, member, mem, "member", action, nil, nil)
 	}
 	_, e := ctx.TreeExec(shard, query.String(), args...)
-	err.PanicIf(e)
+	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account))
 }

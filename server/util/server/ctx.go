@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/0xor1/isql"
+	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
 	"net/http"
@@ -47,9 +48,7 @@ func (c *_ctx) TryMe() *id.Id {
 }
 
 func (c *_ctx) Me() id.Id {
-	if c.me == nil {
-		panic(unauthorizedErr)
-	}
+	panic.IfTrueWith(c.me == nil, unauthorizedErr)
 	return *c.me
 }
 

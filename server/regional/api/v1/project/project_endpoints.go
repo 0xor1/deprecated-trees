@@ -10,6 +10,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	t "bitbucket.org/0xor1/task/server/util/time"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"github.com/0xor1/panic"
 	"time"
 )
 
@@ -40,9 +41,7 @@ var createProject = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createProjectArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account) {
-			panic(publicProjectsDisabledErr)
-		}
+		panic.IfTrueWith(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 
 		project := &project{}
 		project.Id = id.New()
@@ -91,13 +90,8 @@ var setIsPublic = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setIsPublicArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-
-		if args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account) {
-			panic(publicProjectsDisabledErr)
-		}
-
+		panic.IfTrueWith(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 		dbSetIsPublic(ctx, args.Shard, args.Account, args.Project, args.IsPublic)
-
 		return nil
 	},
 }
@@ -232,9 +226,7 @@ var addMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		if args.Account.Equal(ctx.Me()) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		validate.Exists(dbGetProjectExists(ctx, args.Shard, args.Account, args.Project))
@@ -242,9 +234,7 @@ var addMembers = &endpoint.Endpoint{
 		for _, mem := range args.Members {
 			mem.Role.Validate()
 			accRole := db.GetAccountRole(ctx, args.Shard, args.Account, mem.Id)
-			if accRole == nil {
-				panic(err.InvalidArguments)
-			}
+			panic.IfTrueWith(accRole == nil, err.InvalidArguments)
 			if *accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin {
 				mem.Role = cnst.ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 			}
@@ -271,21 +261,15 @@ var setMemberRole = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
-		if args.Account.Equal(ctx.Me()) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 		args.Role.Validate()
 
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		accRole, projectRole := db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, args.Member)
-		if projectRole == nil {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(projectRole == nil, err.InvalidOperation)
 		if *projectRole != args.Role {
-			if args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin) {
-				panic(err.InvalidArguments) // account owners and admins can only be project admins
-			}
+			panic.IfTrueWith(args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin), err.InvalidArguments) // account owners and admins can only be project admins
 			dbSetMemberRole(ctx, args.Shard, args.Account, args.Project, args.Member, args.Role)
 		}
 		return nil
@@ -309,9 +293,7 @@ var removeMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		if args.Account.Equal(ctx.Me()) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		for _, mem := range args.Members {
@@ -392,9 +374,7 @@ var getActivities = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
-		if args.OccurredAfter != nil && args.OccurredBefore != nil {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Project, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},

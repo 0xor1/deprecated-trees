@@ -9,6 +9,7 @@ import (
 	t "bitbucket.org/0xor1/task/server/util/time"
 	"bitbucket.org/0xor1/task/server/util/timelog"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"github.com/0xor1/panic"
 	"time"
 )
 
@@ -84,7 +85,7 @@ func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 		return enabled
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled FROM accounts WHERE id=?`, account)
-	err.PanicIf(row.Scan(&enabled))
+	panic.If(row.Scan(&enabled))
 	ctx.SetCacheValue(enabled, cacheKey)
 	return enabled
 }
@@ -92,16 +93,14 @@ func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timelog.TimeLog {
 	var timeLog *id.Id
 	if duration != nil {
-		if *duration == 0 {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(*duration == 0, err.InvalidArguments)
 		validate.MemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, account, project, ctx.Me()))
 		i := id.New()
 		timeLog = &i
 	} else if remainingTime != nil {
 		validate.MemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, shard, account, project, ctx.Me()))
 	} else {
-		panic(err.InvalidArguments)
+		panic.If(err.InvalidArguments)
 	}
 
 	loggedOn := t.Now()
@@ -110,7 +109,7 @@ func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 
 func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLog *id.Id, loggedOn *time.Time, duration *uint64, note *string) *timelog.TimeLog {
 	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, timeLog, loggedOn, duration, note)
-	err.PanicIf(e)
+	panic.If(e)
 	tasks := make([]id.Id, 0, 100)
 	var existingMember *id.Id
 	var taskName string
@@ -119,18 +118,16 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 		rows.Scan(&i, existingMember, &taskName)
 		tasks = append(tasks, i)
 	}
-	if len(tasks) > 0 {
-		cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
-		if existingMember != nil {
-			cacheKey.ProjectMember(account, project, *existingMember)
-		}
-		if timeLog != nil {
-			cacheKey.TimeLog(account, project, *timeLog, &task, ctx.TryMe())
-		}
-		ctx.TouchDlms(cacheKey)
-	} else {
-		panic(ErrNoChangeMade)
+	panic.IfTrueWith(len(tasks) == 0, ErrNoChangeMade)
+	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
+	if existingMember != nil {
+		cacheKey.ProjectMember(account, project, *existingMember)
 	}
+	if timeLog != nil {
+		cacheKey.TimeLog(account, project, *timeLog, &task, ctx.TryMe())
+	}
+	ctx.TouchDlms(cacheKey)
+
 	if duration != nil {
 		return &timelog.TimeLog{
 			Id:                 *timeLog,
@@ -150,23 +147,19 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 func MakeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) {
 	row := ctx.TreeQueryRow(shard, sql, args...)
 	changeMade := false
-	err.PanicIf(row.Scan(&changeMade))
-	if !changeMade {
-		panic(ErrNoChangeMade)
-	}
+	panic.If(row.Scan(&changeMade))
+	panic.IfTrueWith(!changeMade, ErrNoChangeMade)
 }
 
 func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) []id.Id {
 	rows, e := ctx.TreeQuery(shard, sql, args...)
-	err.PanicIf(e)
+	panic.If(e)
 	res := make([]id.Id, 0, 100)
 	for rows.Next() {
 		var i id.Id
 		rows.Scan(&i)
 		res = append(res, i)
 	}
-	if len(res) == 0 {
-		panic(ErrNoChangeMade)
-	}
+	panic.IfTrueWith(len(res) == 0, ErrNoChangeMade)
 	return res
 }

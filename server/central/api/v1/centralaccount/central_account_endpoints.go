@@ -11,6 +11,7 @@ import (
 	t "bitbucket.org/0xor1/task/server/util/time"
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"bytes"
+	"github.com/0xor1/panic"
 	"github.com/nfnt/resize"
 	"image"
 	_ "image/gif"
@@ -85,13 +86,8 @@ var register = &endpoint.Endpoint{
 			}
 		}
 
-		if !ctx.RegionalV1PrivateClient().IsValidRegion(args.Region) {
-			panic(err.NoSuchRegion)
-		}
-
-		if exists := dbAccountWithCiNameExists(ctx, args.Name); exists {
-			panic(nameAlreadyInUseErr)
-		}
+		panic.IfTrueWith(!ctx.RegionalV1PrivateClient().IsValidRegion(args.Region), err.NoSuchRegion)
+		panic.IfTrueWith(dbAccountWithCiNameExists(ctx, args.Name), nameAlreadyInUseErr)
 
 		if acc := dbGetPersonalAccountByEmail(ctx, args.Email); acc != nil {
 			emailSendMultipleAccountPolicyNotice(ctx, acc.Email)
@@ -109,12 +105,12 @@ var register = &endpoint.Endpoint{
 			r := recover()
 			if r != nil {
 				dbDeleteAccountAndAllAssociatedMemberships(ctx, acc.Id)
-				panic(r)
+				panic.If(r)
 			}
 		}()
 		var e error
 		acc.Shard, e = ctx.RegionalV1PrivateClient().CreateAccount(acc.Region, acc.Id, acc.Id, acc.Name, acc.DisplayName, acc.HasAvatar)
-		err.PanicIf(e)
+		panic.If(e)
 		acc.IsPersonal = true
 		acc.Email = args.Email
 		acc.Language = args.Language
@@ -175,10 +171,7 @@ var activate = &endpoint.Endpoint{
 		args := a.(*activateArgs)
 		args.ActivationCode = strings.Trim(args.ActivationCode, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
-		if acc == nil || acc.activationCode == nil || args.ActivationCode != *acc.activationCode {
-			panic(invalidActivationAttemptErr)
-		}
-
+		panic.IfTrueWith(acc == nil || acc.activationCode == nil || args.ActivationCode != *acc.activationCode, invalidActivationAttemptErr)
 		acc.activationCode = nil
 		activationTime := t.Now()
 		acc.activatedOn = &activationTime
@@ -205,20 +198,14 @@ var authenticate = &endpoint.Endpoint{
 		args := a.(*authenticateArgs)
 		args.Email = strings.Trim(args.Email, " ")
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
-		if acc == nil {
-			panic(invalidNameOrPwdErr)
-		}
+		panic.IfTrueWith(acc == nil, invalidNameOrPwdErr)
 
 		pwdInfo := dbGetPwdInfo(ctx, acc.Id)
 		scryptPwdTry := crypt.ScryptKey([]byte(args.PwdTry), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
-		if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-			panic(invalidNameOrPwdErr)
-		}
+		panic.IfTrueWith(!pwdsMatch(pwdInfo.pwd, scryptPwdTry), invalidNameOrPwdErr)
 
 		//must do this after checking the acc has the correct pwd otherwise it allows anyone to fish for valid emails on the system
-		if !acc.isActivated() {
-			panic(accountNotActivatedErr)
-		}
+		panic.IfTrueWith(!acc.isActivated(), accountNotActivatedErr)
 
 		//if there was an outstanding password reset on this acc, remove it, they have since remembered their password
 		if acc.resetPwdCode != nil && len(*acc.resetPwdCode) > 0 {
@@ -256,13 +243,10 @@ var confirmNewEmail = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*confirmNewEmailArgs)
 		acc := dbGetPersonalAccountByEmail(ctx, args.CurrentEmail)
-		if acc == nil || acc.NewEmail == nil || args.NewEmail != *acc.NewEmail || acc.newEmailConfirmationCode == nil || args.ConfirmationCode != *acc.newEmailConfirmationCode {
-			panic(invalidNewEmailConfirmationAttemptErr)
-		}
+		panic.IfTrueWith(acc == nil || acc.NewEmail == nil || args.NewEmail != *acc.NewEmail || acc.newEmailConfirmationCode == nil || args.ConfirmationCode != *acc.newEmailConfirmationCode, invalidNewEmailConfirmationAttemptErr)
 
-		if acc := dbGetPersonalAccountByEmail(ctx, args.NewEmail); acc != nil {
-			panic(emailAlreadyInUseErr)
-		}
+		newAcc := dbGetPersonalAccountByEmail(ctx, args.NewEmail)
+		panic.IfTrueWith(newAcc != nil, emailAlreadyInUseErr)
 
 		acc.Email = args.NewEmail
 		acc.NewEmail = nil
@@ -319,9 +303,7 @@ var setNewPwdFromPwdReset = &endpoint.Endpoint{
 		validate.StringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 
 		acc := dbGetPersonalAccountByEmail(ctx, args.Email)
-		if acc == nil || acc.resetPwdCode == nil || args.ResetPwdCode != *acc.resetPwdCode {
-			panic(invalidResetPwdAttemptErr)
-		}
+		panic.IfTrueWith(acc == nil || acc.resetPwdCode == nil || args.ResetPwdCode != *acc.resetPwdCode, invalidResetPwdAttemptErr)
 
 		scryptSalt := crypt.Bytes(ctx.SaltLen())
 		scryptPwd := crypt.ScryptKey([]byte(args.NewPwd), scryptSalt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
@@ -395,9 +377,7 @@ var searchAccounts = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchAccountsArgs)
 		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
-		if utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%") {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%"), err.InvalidArguments)
 		return dbSearchAccounts(ctx, args.NameOrDisplayNameStartsWith)
 	},
 }
@@ -417,9 +397,7 @@ var searchPersonalAccounts = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchPersonalAccountsArgs)
 		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
-		if utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%") {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%"), err.InvalidArguments)
 		return dbSearchPersonalAccounts(ctx, args.NameOrDisplayNameStartsWith)
 	},
 }
@@ -431,9 +409,7 @@ var getMe = &endpoint.Endpoint{
 	ExampleResponseStructure: &me{},
 	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.Me())
-		if acc == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(acc == nil, noSuchAccountErr)
 		return &acc.me
 	},
 }
@@ -455,15 +431,11 @@ var setMyPwd = &endpoint.Endpoint{
 		validate.StringArg("pwd", args.NewPwd, ctx.PwdMinRuneCount(), ctx.PwdMaxRuneCount(), ctx.PwdRegexMatchers())
 
 		pwdInfo := dbGetPwdInfo(ctx, ctx.Me())
-		if pwdInfo == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(pwdInfo == nil, noSuchAccountErr)
 
 		scryptPwdTry := crypt.ScryptKey([]byte(args.OldPwd), pwdInfo.salt, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
 
-		if !pwdsMatch(pwdInfo.pwd, scryptPwdTry) {
-			panic(incorrectPwdErr)
-		}
+		panic.IfTrueWith(!pwdsMatch(pwdInfo.pwd, scryptPwdTry), incorrectPwdErr)
 
 		pwdInfo.salt = crypt.Bytes(ctx.SaltLen())
 		pwdInfo.pwd = crypt.ScryptKey([]byte(args.NewPwd), pwdInfo.salt, ctx.ScryptN(), ctx.ScryptR(), ctx.ScryptP(), ctx.ScryptKeyLen())
@@ -497,9 +469,7 @@ var setMyEmail = &endpoint.Endpoint{
 		}
 
 		acc := dbGetPersonalAccountById(ctx, ctx.Me())
-		if acc == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(acc == nil, noSuchAccountErr)
 
 		confirmationCode := crypt.UrlSafeString(ctx.CryptCodeLen())
 
@@ -517,18 +487,13 @@ var resendMyNewEmailConfirmationEmail = &endpoint.Endpoint{
 	RequiresSession: true,
 	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.Me())
-		if acc == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(acc == nil, noSuchAccountErr)
 
 		// check the acc has actually registered a new email
-		if acc.NewEmail == nil {
-			panic(noNewEmailRegisteredErr)
-		}
+		panic.IfTrueWith(acc.NewEmail == nil, noNewEmailRegisteredErr)
+
 		// just in case something has gone crazy wrong
-		if acc.newEmailConfirmationCode == nil {
-			panic(emailConfirmationCodeErr)
-		}
+		panic.IfTrueWith(acc.newEmailConfirmationCode == nil, emailConfirmationCodeErr)
 
 		emailSendNewEmailConfirmationLink(ctx, acc.Email, *acc.NewEmail, *acc.newEmailConfirmationCode)
 		return nil
@@ -552,25 +517,17 @@ var setAccountName = &endpoint.Endpoint{
 		args.NewName = strings.Trim(args.NewName, " ")
 		validate.StringArg("name", args.NewName, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
 
-		if exists := dbAccountWithCiNameExists(ctx, args.NewName); exists {
-			panic(nameAlreadyInUseErr)
-		}
+		panic.IfTrueWith(dbAccountWithCiNameExists(ctx, args.NewName), nameAlreadyInUseErr)
 
 		acc := dbGetAccount(ctx, args.Account)
-		if acc == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(acc == nil, noSuchAccountErr)
 
 		if !ctx.Me().Equal(args.Account) {
-			if acc.IsPersonal { // can't rename someone else's personal account
-				panic(err.InsufficientPermission)
-			}
+			panic.IfTrueWith(acc.IsPersonal, err.InsufficientPermission) // can't rename someone else's personal account
 
 			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.Account, ctx.Me())
-			err.PanicIf(e)
-			if !isAccountOwner {
-				panic(err.InsufficientPermission)
-			}
+			panic.If(e)
+			panic.IfTrueWith(!isAccountOwner, err.InsufficientPermission)
 		}
 
 		acc.Name = args.NewName
@@ -617,20 +574,14 @@ var setAccountDisplayName = &endpoint.Endpoint{
 		}
 
 		acc := dbGetAccount(ctx, args.Account)
-		if acc == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(acc == nil, noSuchAccountErr)
 
 		if !ctx.Me().Equal(args.Account) {
-			if acc.IsPersonal { // can't rename someone else's personal account
-				panic(err.InsufficientPermission)
-			}
+			panic.IfTrueWith(acc.IsPersonal, err.InsufficientPermission) // can't rename someone else's personal account
 
 			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.Account, ctx.Me())
-			err.PanicIf(e)
-			if !isAccountOwner {
-				panic(err.InsufficientPermission)
-			}
+			panic.If(e)
+			panic.IfTrueWith(!isAccountOwner, err.InsufficientPermission)
 		}
 
 		if (acc.DisplayName == nil && args.NewDisplayName == nil) || (acc.DisplayName != nil && args.NewDisplayName != nil && *acc.DisplayName == *args.NewDisplayName) {
@@ -690,35 +641,27 @@ var setAccountAvatar = &endpoint.Endpoint{
 		}
 
 		account := dbGetAccount(ctx, args.Account)
-		if account == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(account == nil, noSuchAccountErr)
 
 		if !ctx.Me().Equal(args.Account) {
-			if account.IsPersonal { // can't set avatar on someone else's personal account
-				panic(err.InsufficientPermission)
-			}
+			panic.IfTrueWith(account.IsPersonal, err.InsufficientPermission) // can't set avatar on someone else's personal account
 
 			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(account.Region, account.Shard, args.Account, ctx.Me())
-			err.PanicIf(e)
-			if !isAccountOwner {
-				panic(err.InsufficientPermission)
-			}
+			panic.If(e)
+			panic.IfTrueWith(!isAccountOwner, err.InsufficientPermission)
 		}
 
 		hasAvatarStatusChanged := false
 		if args.Avatar != nil {
 			avatarImage, _, e := image.Decode(args.Avatar)
-			err.PanicIf(e)
+			panic.If(e)
 			bounds := avatarImage.Bounds()
-			if bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y { //if it  isn't square, then error
-				panic(invalidAvatarShapeErr)
-			}
-			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() { // if it is larger than allowed then resize
+			panic.IfTrueWith(bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y, invalidAvatarShapeErr) //if it  isn't square, then error
+			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() {                        // if it is larger than allowed then resize
 				avatarImage = resize.Resize(ctx.AvatarClient().MaxAvatarDim(), ctx.AvatarClient().MaxAvatarDim(), avatarImage, resize.NearestNeighbor)
 			}
 			buff := &bytes.Buffer{}
-			err.PanicIf(png.Encode(buff, avatarImage))
+			panic.If(png.Encode(buff, avatarImage))
 			data := buff.Bytes()
 			reader := bytes.NewReader(data)
 			ctx.AvatarClient().Save(ctx.Me().String(), "image/png", reader)
@@ -761,7 +704,7 @@ var migrateAccount = &endpoint.Endpoint{
 		return &migrateAccountArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
-		panic(err.NotImplemented)
+		panic.If(err.NotImplemented)
 		return nil
 	},
 }
@@ -785,13 +728,8 @@ var createAccount = &endpoint.Endpoint{
 		args.Name = strings.Trim(args.Name, " ")
 		validate.StringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
 
-		if !ctx.RegionalV1PrivateClient().IsValidRegion(args.Region) {
-			panic(err.NoSuchRegion)
-		}
-
-		if exists := dbAccountWithCiNameExists(ctx, args.Name); exists {
-			panic(nameAlreadyInUseErr)
-		}
+		panic.IfTrueWith(!ctx.RegionalV1PrivateClient().IsValidRegion(args.Region), err.NoSuchRegion)
+		panic.IfTrueWith(dbAccountWithCiNameExists(ctx, args.Name), nameAlreadyInUseErr)
 
 		account := &account{}
 		account.Id = id.New()
@@ -804,19 +742,17 @@ var createAccount = &endpoint.Endpoint{
 		dbCreateGroupAccountAndMembership(ctx, account, ctx.Me())
 
 		owner := dbGetPersonalAccountById(ctx, ctx.Me())
-		if owner == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(owner == nil, noSuchAccountErr)
 
 		defer func() {
 			r := recover()
 			if r != nil {
 				dbDeleteAccountAndAllAssociatedMemberships(ctx, account.Id)
-				panic(r)
+				panic.If(r)
 			}
 		}()
 		shard, e := ctx.RegionalV1PrivateClient().CreateAccount(args.Region, account.Id, ctx.Me(), owner.Name, owner.DisplayName, owner.HasAvatar)
-		err.PanicIf(e)
+		panic.If(e)
 
 		account.Shard = shard
 		dbUpdateAccount(ctx, account)
@@ -864,20 +800,15 @@ var deleteAccount = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteAccountArgs)
 		acc := dbGetAccount(ctx, args.Account)
-		if acc == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(acc == nil, noSuchAccountErr)
 
 		if !ctx.Me().Equal(args.Account) {
-			if acc.IsPersonal { // can't delete someone else's personal account
-				panic(err.InsufficientPermission)
-			}
+			panic.IfTrueWith(acc.IsPersonal, err.InsufficientPermission) // can't delete someone else's personal account
+
 			//otherwise attempting to delete a group account
 			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.Account, ctx.Me())
-			err.PanicIf(e)
-			if !isAccountOwner {
-				panic(err.InsufficientPermission)
-			}
+			panic.If(e)
+			panic.IfTrueWith(!isAccountOwner, err.InsufficientPermission)
 		}
 
 		ctx.RegionalV1PrivateClient().DeleteAccount(acc.Region, acc.Shard, args.Account, ctx.Me())
@@ -889,10 +820,8 @@ var deleteAccount = &endpoint.Endpoint{
 				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
 				for _, acc := range accs {
 					isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.Me())
-					err.PanicIf(e)
-					if isAccountOwner {
-						panic(onlyOwnerMemberErr)
-					}
+					panic.If(e)
+					panic.IfTrueWith(isAccountOwner, onlyOwnerMemberErr)
 				}
 				for _, acc := range accs {
 					ctx.RegionalV1PrivateClient().RemoveMembers(acc.Region, acc.Shard, acc.Id, ctx.Me(), []id.Id{ctx.Me()})
@@ -922,15 +851,11 @@ var addMembers = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
-		if args.Account.Equal(ctx.Me()) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 		validate.EntityCount(len(args.NewMembers), ctx.MaxProcessEntityCount())
 
 		account := dbGetAccount(ctx, args.Account)
-		if account == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(account == nil, noSuchAccountErr)
 
 		ids := make([]id.Id, 0, len(args.NewMembers))
 		addMembersMap := map[string]*AddMember{}
@@ -974,15 +899,11 @@ var removeMembers = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
-		if args.Account.Equal(ctx.Me()) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 		validate.EntityCount(len(args.ExistingMembers), ctx.MaxProcessEntityCount())
 
 		account := dbGetAccount(ctx, args.Account)
-		if account == nil {
-			panic(noSuchAccountErr)
-		}
+		panic.IfTrueWith(account == nil, noSuchAccountErr)
 
 		ctx.RegionalV1PrivateClient().RemoveMembers(account.Region, account.Shard, args.Account, ctx.Me(), args.ExistingMembers)
 		dbDeleteMemberships(ctx, args.Account, args.ExistingMembers)

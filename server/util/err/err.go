@@ -3,6 +3,7 @@ package err
 import (
 	"database/sql"
 	"fmt"
+	"github.com/0xor1/panic"
 )
 
 var (
@@ -25,20 +26,14 @@ func (e *Err) Error() string {
 	return fmt.Sprintf("code: %q message: %q", e.Code, e.Message)
 }
 
-func PanicIf(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func IsSqlErrNoRowsElsePanicIf(e error) bool {
 	if e == sql.ErrNoRows {
 		return true
 	}
-	PanicIf(e)
+	panic.If(e)
 	return false
 }
 
 func FmtPanic(format string, a ...interface{}) {
-	panic(fmt.Errorf(format, a...))
+	panic.If(fmt.Errorf(format, a...))
 }

@@ -5,11 +5,11 @@ import (
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
-	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	tlog "bitbucket.org/0xor1/task/server/util/timelog"
 	"bytes"
 	"fmt"
+	"github.com/0xor1/panic"
 )
 
 func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog.TimeLog {
@@ -18,7 +18,7 @@ func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog
 	if ctx.GetCacheValue(&tl, cacheKey) {
 		return &tl
 	}
-	err.PanicIf(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
+	panic.If(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 	ctx.SetCacheValue(tl, cacheKey)
 	return &tl
 }
@@ -75,10 +75,10 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	for rows.Next() {
 		tl := tlog.TimeLog{}
-		err.PanicIf(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
+		panic.If(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 		timeLogsSet = append(timeLogsSet, &tl)
 	}
 	ctx.SetCacheValue(timeLogsSet, cacheKey)

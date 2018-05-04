@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/context"
 	"io/ioutil"
@@ -51,9 +52,9 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 	}
 	var e error
 	sr.ApiDocs, e = json.MarshalIndent(routeDocs, "", "    ")
-	err.PanicIf(e)
+	panic.If(e)
 	wd, e := os.Getwd()
-	err.PanicIf(e)
+	panic.If(e)
 	return &Server{
 		Routes:     routes,
 		SR:         sr,
@@ -129,7 +130,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//check for special case of api mget
 	if req.Method == cnst.GET && lowerPath == s.SR.ApiMGetRoute {
 		reqs := map[string]string{}
-		err.PanicIf(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
+		panic.If(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
 		responseChan := make(chan *mgetResponse)
 		for key, reqUrl := range reqs {
 			go func(key, reqUrl string) {
@@ -196,7 +197,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		argsBytes = []byte(reqQueryValues.Get("args"))
 	} else if ep.Method == cnst.POST && ep.GetArgsStruct != nil {
 		argsBytes, e = ioutil.ReadAll(req.Body)
-		err.PanicIf(e)
+		panic.If(e)
 	} else if ep.Method == cnst.POST && ep.ProcessForm != nil {
 		if ep.IsPrivate {
 			// private endpoints dont support post requests with form data
@@ -207,13 +208,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//process private ts and key args
 	if ep.IsPrivate {
 		ts, e := strconv.ParseInt(reqQueryValues.Get("ts"), 10, 64)
-		err.PanicIf(e)
+		panic.If(e)
 		//if the timestamp the req was sent is over a minute ago, reject the request
 		if t.NowUnixMillis()-ts > 60000 {
 			err.FmtPanic("suspicious private request sent over a minute ago")
 		}
 		key, e := base64.RawURLEncoding.DecodeString(reqQueryValues.Get("_"))
-		err.PanicIf(e)
+		panic.If(e)
 		// check the args/timestamp/key are valid
 		if !bytes.Equal(key, ep.PrivateKeyGen(argsBytes, reqQueryValues.Get("ts"))) {
 			err.FmtPanic("invalid private request keys don't match")
@@ -225,7 +226,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		cnn.Send("SETNX", reqQueryValues.Get("_"), "")
 		cnn.Send("EXPIRE", reqQueryValues.Get("_"), 61)
 		vals, e := redis.Ints(cnn.Do("EXEC"))
-		err.PanicIf(e)
+		panic.If(e)
 		if len(vals) != 2 {
 			err.FmtPanic("vals should have exactly two integer values")
 		}
@@ -239,7 +240,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if len(argsBytes) > 0 {
 		args = ep.GetArgsStruct()
-		err.PanicIf(json.Unmarshal(argsBytes, args))
+		panic.If(json.Unmarshal(argsBytes, args))
 	}
 	//if this endpoint is the authentication endpoint it should return just the users id.Id, add it to the session cookie
 	result := ep.CtxHandler(ctx, args)
@@ -271,7 +272,7 @@ func writeJsonOk(w http.ResponseWriter, body interface{}) {
 
 func writeJson(w http.ResponseWriter, code int, body interface{}) {
 	bodyBytes, e := json.Marshal(body)
-	err.PanicIf(e)
+	panic.If(e)
 	writeRawJson(w, code, bodyBytes)
 }
 
@@ -279,7 +280,7 @@ func writeRawJson(w http.ResponseWriter, code int, body []byte) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(code)
 	_, e := w.Write(body)
-	err.PanicIf(e)
+	panic.If(e)
 }
 
 type responseWrapper struct {

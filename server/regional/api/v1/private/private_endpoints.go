@@ -9,6 +9,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"github.com/0xor1/panic"
 )
 
 var (
@@ -77,9 +78,7 @@ var addMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		if args.Account.Equal(args.Me) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(args.Me), err.InvalidOperation)
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
 		validate.MemberHasAccountAdminAccess(accountRole)
 
@@ -135,32 +134,21 @@ var removeMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		if args.Account.Equal(args.Me) {
-			panic(err.InvalidOperation)
-		}
+		panic.IfTrueWith(args.Account.Equal(args.Me), err.InvalidOperation)
 
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
-		if accountRole == nil {
-			panic(err.InsufficientPermission)
-		}
+		panic.IfTrueWith(accountRole == nil, err.InsufficientPermission)
 
 		switch *accountRole {
 		case cnst.AccountOwner:
 			totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.Account)
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.Account, args.Members)
-			if totalOwnerCount == ownerCountInRemoveSet {
-				panic(zeroOwnerCountErr)
-			}
-
+			panic.IfTrueWith(totalOwnerCount == ownerCountInRemoveSet, zeroOwnerCountErr)
 		case cnst.AccountAdmin:
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.Account, args.Members)
-			if ownerCountInRemoveSet > 0 {
-				panic(err.InsufficientPermission)
-			}
+			panic.IfTrueWith(ownerCountInRemoveSet > 0, err.InsufficientPermission)
 		default:
-			if len(args.Members) != 1 || !args.Members[0].Equal(args.Me) { //any member can remove themselves
-				panic(err.InsufficientPermission)
-			}
+			panic.IfTrueWith(len(args.Members) != 1 || !args.Members[0].Equal(args.Me), err.InsufficientPermission)
 		}
 
 		dbSetMembersInactive(ctx, args.Shard, args.Account, args.Members)

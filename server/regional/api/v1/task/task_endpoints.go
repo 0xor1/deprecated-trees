@@ -9,6 +9,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	t "bitbucket.org/0xor1/task/server/util/time"
 	"bitbucket.org/0xor1/task/server/util/validate"
+	"github.com/0xor1/panic"
 	"time"
 )
 
@@ -37,9 +38,7 @@ var create = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createArgs)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-		if (args.IsAbstract && (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)) {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith((args.IsAbstract && (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)), err.InvalidArguments)
 		zeroVal := uint64(0)
 		zeroPtr := &zeroVal
 		if !args.IsAbstract {
@@ -232,9 +231,7 @@ var deleteTask = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteArgs)
-		if args.Project.Equal(args.Task) {
-			panic(err.InvalidArguments)
-		}
+		panic.IfTrueWith(args.Project.Equal(args.Task), err.InvalidArguments)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		dbDeleteTask(ctx, args.Shard, args.Account, args.Project, args.Task)

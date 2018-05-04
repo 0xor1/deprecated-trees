@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/private"
+	"github.com/0xor1/panic"
 	"strings"
 )
 
@@ -23,9 +24,7 @@ type client struct {
 
 func (c *client) getHost(region string) string {
 	host, exists := c.regions[strings.ToLower(region)]
-	if !exists {
-		panic(err.NoSuchRegion)
-	}
+	panic.IfTrueWith(!exists, err.NoSuchRegion)
 	return host
 }
 

@@ -3,6 +3,7 @@ package cachekey
 import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
+	"github.com/0xor1/panic"
 	"sort"
 )
 
@@ -184,7 +185,7 @@ func (k *Key) TaskTimeLogSet(account, project, task id.Id, member *id.Id) *Key {
 	} else if member != nil {
 		k.ProjectMemberTimeLogSet(account, project, *member)
 	} else {
-		panic(errMissingMemberInTimeLogSetDlms)
+		panic.If(errMissingMemberInTimeLogSetDlms)
 	}
 	k.setKey("ttls", task)
 	return k
@@ -199,7 +200,7 @@ func (k *Key) TimeLog(account, project, timeLog id.Id, task, member *id.Id) *Key
 	} else if task != nil {
 		k.TaskTimeLogSet(account, project, *task, member)
 	} else {
-		panic(errMissingTaskInTimeLogSetDlms)
+		panic.If(errMissingTaskInTimeLogSetDlms)
 	}
 	k.setKey("tl", timeLog)
 	return k

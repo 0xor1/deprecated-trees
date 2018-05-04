@@ -10,13 +10,14 @@ import (
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bytes"
 	"fmt"
+	"github.com/0xor1/panic"
 	"strings"
 	"time"
 )
 
 func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicProjectsEnabled bool) {
 	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, account, ctx.Me(), publicProjectsEnabled)
-	err.PanicIf(e)
+	panic.If(e)
 	cacheKey := cachekey.NewSetDlms().Account(account).AccountActivities(account)
 	if !publicProjectsEnabled { //if setting publicProjectsEnabled to false this could have set some projects to not public
 		cacheKey.AccountProjectsSet(account)
@@ -36,7 +37,7 @@ func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
 		return &res
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT id, name, displayName, hasAvatar, isActive, role FROM accountMembers WHERE account=? AND id=?`, account, mem)
-	err.PanicIf(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.HasAvatar, &res.IsActive, &res.Role))
+	panic.If(row.Scan(&res.Id, &res.Name, &res.DisplayName, &res.HasAvatar, &res.IsActive, &res.Role))
 	ctx.SetCacheValue(res, cacheKey)
 	return &res
 }
@@ -107,11 +108,11 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	memSet := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
-		err.PanicIf(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.HasAvatar, &mem.IsActive, &mem.Role))
+		panic.If(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.HasAvatar, &mem.IsActive, &mem.Role))
 		memSet = append(memSet, &mem)
 	}
 	if len(memSet) == limit+1 {
@@ -126,9 +127,7 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 }
 
 func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
-	if occurredAfter != nil && occurredBefore != nil {
-		panic(err.InvalidArguments)
-	}
+	panic.IfTrueWith(occurredAfter != nil && occurredBefore != nil, err.InvalidArguments)
 	res := make([]*activity.Activity, 0, limit)
 	cacheKey := cachekey.NewGet("account.dbGetActivities", shard, account, item, member, occurredAfter, occurredBefore, limit).AccountActivities(account)
 	if ctx.GetCacheValue(&res, cacheKey) {
@@ -162,10 +161,10 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member 
 	if rows != nil {
 		defer rows.Close()
 	}
-	err.PanicIf(e)
+	panic.If(e)
 	for rows.Next() {
 		act := activity.Activity{}
-		err.PanicIf(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
+		panic.If(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	ctx.SetCacheValue(res, cacheKey)
