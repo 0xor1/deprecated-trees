@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	SR := static.Config("config", ".", private.NewClient)
+	SR := static.Config("config.json", private.NewClient)
 	endPointSets := make([][]*endpoint.Endpoint, 0, 20)
 	switch SR.Region {
 	case "lcl", "dev": //onebox environment, all endpoints run in the same service

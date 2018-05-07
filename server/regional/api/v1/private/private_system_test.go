@@ -12,7 +12,7 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	SR := static.Config("", "", NewClient)
+	SR := static.Config("", NewClient)
 	serv := server.New(SR, Endpoints)
 	testServer := httptest.NewServer(serv)
 	region := "lcl"

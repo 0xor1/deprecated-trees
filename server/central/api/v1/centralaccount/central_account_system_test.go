@@ -17,7 +17,7 @@ import (
 )
 
 func Test_system(t *testing.T) {
-	SR := static.Config("", "", private.NewClient)
+	SR := static.Config("", private.NewClient)
 	serv := server.New(SR, Endpoints, private.Endpoints)
 	testServer := httptest.NewServer(serv)
 	aliCss := clientsession.New()
