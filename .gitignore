@@ -1,6 +1,6 @@
 .idea/
 node_modules/
-index.html
+server/index.html
 coverage.out
 *.exe
 _test/
