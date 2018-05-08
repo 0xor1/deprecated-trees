@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"math/rand"
 )
 
 var (
@@ -35,6 +36,8 @@ type _ctx struct {
 	req                    *http.Request
 	queryInfosMtx          *sync.RWMutex
 	queryInfos             []*queryinfo.QueryInfo
+	fixedTreeReadSlaveMtx  *sync.RWMutex
+	fixedTreeReadSlave     isql.DBCore
 	cache                  *bool
 	profile                *bool
 	retrievedDlms          map[string]int64
@@ -89,11 +92,11 @@ func (c *_ctx) TreeExec(shard int, query string, args ...interface{}) (sql.Resul
 }
 
 func (c *_ctx) TreeQuery(shard int, query string, args ...interface{}) (isql.Rows, error) {
-	return c.sqlQuery(c.SR.TreeShards[shard], query, args...)
+	return c.sqlQuery(c.getFixedTreeReadSlave(shard), query, args...)
 }
 
 func (c *_ctx) TreeQueryRow(shard int, query string, args ...interface{}) isql.Row {
-	return c.sqlQueryRow(c.SR.TreeShards[shard], query, args...)
+	return c.sqlQueryRow(c.getFixedTreeReadSlave(shard), query, args...)
 }
 
 func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key) bool {
@@ -246,21 +249,21 @@ func (c *_ctx) doProfile() bool {
 	return *c.profile
 }
 
-func (c *_ctx) sqlExec(rs isql.ReplicaSet, query string, args ...interface{}) (sql.Result, error) {
+func (c *_ctx) sqlExec(rs isql.DBCore, query string, args ...interface{}) (sql.Result, error) {
 	start := time.NowUnixMillis()
 	res, e := rs.Exec(query, args...)
 	c.writeQueryInfo(query, args, start)
 	return res, e
 }
 
-func (c *_ctx) sqlQuery(rs isql.ReplicaSet, query string, args ...interface{}) (isql.Rows, error) {
+func (c *_ctx) sqlQuery(rs isql.DBCore, query string, args ...interface{}) (isql.Rows, error) {
 	start := time.NowUnixMillis()
 	rows, e := rs.Query(query, args...)
 	c.writeQueryInfo(query, args, start)
 	return rows, e
 }
 
-func (c *_ctx) sqlQueryRow(rs isql.ReplicaSet, query string, args ...interface{}) isql.Row {
+func (c *_ctx) sqlQueryRow(rs isql.DBCore, query string, args ...interface{}) isql.Row {
 	start := time.NowUnixMillis()
 	row := rs.QueryRow(query, args...)
 	c.writeQueryInfo(query, args, start)
@@ -337,6 +340,24 @@ func (c *_ctx) doCacheUpdate() {
 			c.Log(e)
 		}
 	}
+}
+
+func (c *_ctx) getFixedTreeReadSlave(shard int) isql.DBCore {
+	c.fixedTreeReadSlaveMtx.RLock()
+	if c.fixedTreeReadSlave == nil {
+		c.fixedTreeReadSlaveMtx.RUnlock()
+		c.fixedTreeReadSlaveMtx.Lock()
+		defer c.fixedTreeReadSlaveMtx.Unlock()
+		slaves := c.SR.TreeShards[shard].Slaves()
+		if len(slaves) == 0 {
+			c.fixedTreeReadSlave = c.SR.TreeShards[shard].Primary()
+		} else {
+			c.fixedTreeReadSlave = slaves[rand.Intn(len(slaves))]
+		}
+	} else {
+		c.fixedTreeReadSlaveMtx.RUnlock()
+	}
+	return c.fixedTreeReadSlave
 }
 
 type valueCacheKey struct {
