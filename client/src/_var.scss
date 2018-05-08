@@ -1,0 +1,70 @@
+/**
+ * START CONSTANTS
+ */
+$background1: #222326;
+$background2: #121314;
+$backgroundSelected: #2E2F33;
+$color1: #7A7B7E;
+$color2: #D3D5DB;
+$highlight1: #1E90FF;
+$highlight1Hover: #2Ea5FF;
+$errorHighlight: #c23b22;
+$successHighlight: #03C03C;
+$colorSelected: #fff;
+$linkColor: #A0D8F4;
+$scrollbarThumbColor: #323438;
+$scrollbarTrackColor: #1c1c1f;
+
+$fontFamily: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+$border1: 1px solid $background2;
+
+$thumbnailWidth: 196px;
+
+/**
+ * END CONSTANTS
+ */
+
+/**
+ * START MIXINS
+ */
+@mixin default($position: relative, $display: flex, $flexDirection: column, $margin: 0, $padding: 0, $overflow: hidden){
+  position: $position;
+  display: $display;
+  flex-direction: $flexDirection;
+  margin: $margin;
+  padding: $padding;
+  overflow: $overflow;
+}
+
+@mixin fill($width: 100%, $height: 100%){
+  width: $width;
+  height: $height;
+}
+
+@mixin theme($color: $color1, $background: $background1, $fontFamily: $fontFamily, $fontSize: 14px, $fontWeight: normal){
+  color: $color;
+  background: $background;
+  font-family: $fontFamily;
+  font-size: $fontSize;
+  font-weight: $fontWeight;
+}
+
+@mixin ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@mixin IEScrollbars(){
+  scrollbar-arrow-color: $scrollbarThumbColor;
+  scrollbar-track-color: $scrollbarTrackColor;
+  scrollbar-face-color: $scrollbarThumbColor;
+  scrollbar-highlight-color: $scrollbarTrackColor;
+  scrollbar-3dlight-color: $scrollbarTrackColor;
+  scrollbar-shadow-color: $scrollbarTrackColor;
+  scrollbar-darkshadow-color: $scrollbarTrackColor;
+}
+/**
+ * END MIXINS
+ */
