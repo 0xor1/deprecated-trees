@@ -26,7 +26,7 @@ $thumbnailWidth: 196px;
  */
 
 /**
- * START MIXINS
+ * START MIXINS/EXTENSIONS
  */
 @mixin default($position: relative, $display: flex, $flexDirection: column, $margin: 0, $padding: 0, $overflow: hidden){
   position: $position;
@@ -37,9 +37,17 @@ $thumbnailWidth: 196px;
   overflow: $overflow;
 }
 
+%default{
+  @include default();
+}
+
 @mixin fill($width: 100%, $height: 100%){
   width: $width;
   height: $height;
+}
+
+%fill{
+  @include fill();
 }
 
 @mixin theme($color: $color1, $background: $background1, $fontFamily: $fontFamily, $fontSize: 14px, $fontWeight: normal){
@@ -50,20 +58,18 @@ $thumbnailWidth: 196px;
   font-weight: $fontWeight;
 }
 
+%theme{
+  @include theme();
+}
+
 @mixin ellipsis {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-@mixin IEScrollbars(){
-  scrollbar-arrow-color: $scrollbarThumbColor;
-  scrollbar-track-color: $scrollbarTrackColor;
-  scrollbar-face-color: $scrollbarThumbColor;
-  scrollbar-highlight-color: $scrollbarTrackColor;
-  scrollbar-3dlight-color: $scrollbarTrackColor;
-  scrollbar-shadow-color: $scrollbarTrackColor;
-  scrollbar-darkshadow-color: $scrollbarTrackColor;
+%ellipsis{
+  @include ellipsis();
 }
 /**
  * END MIXINS

@@ -45,7 +45,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// commit sha
 	config.SetDefault("version", "lcl")
 	// relative path from server executable to static file resource directory
-	config.SetDefault("fileServerDir", "../client")
+	config.SetDefault("fileServerDir", "../client/dist")
 	// api docs path
 	config.SetDefault("apiDocsRoute", "/api/docs")
 	// api mget path

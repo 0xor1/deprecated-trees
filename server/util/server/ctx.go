@@ -16,11 +16,11 @@ import (
 	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
-	"math/rand"
 )
 
 var (

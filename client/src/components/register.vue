@@ -1,6 +1,6 @@
 <template>
   <div>
-
+    <span>register</span>
   </div>
 </template>
 

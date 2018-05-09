@@ -73,15 +73,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//setup _ctx
 	ctx := &_ctx{
 		requestStartUnixMillis: t.NowUnixMillis(),
-		resp:                   resp,
-		req:                    req,
-		retrievedDlms:          map[string]int64{},
-		dlmsToUpdate:           map[string]interface{}{},
-		cacheItemsToUpdate:     map[string]interface{}{},
-		queryInfosMtx:          &sync.RWMutex{},
-		queryInfos:             make([]*queryinfo.QueryInfo, 0, 10),
-		fixedTreeReadSlaveMtx:  &sync.RWMutex{},
-		SR:                     s.SR,
+		resp:                  resp,
+		req:                   req,
+		retrievedDlms:         map[string]int64{},
+		dlmsToUpdate:          map[string]interface{}{},
+		cacheItemsToUpdate:    map[string]interface{}{},
+		queryInfosMtx:         &sync.RWMutex{},
+		queryInfos:            make([]*queryinfo.QueryInfo, 0, 10),
+		fixedTreeReadSlaveMtx: &sync.RWMutex{},
+		SR: s.SR,
 	}
 	//always do case insensitive path routing
 	lowerPath := strings.ToLower(req.URL.Path)

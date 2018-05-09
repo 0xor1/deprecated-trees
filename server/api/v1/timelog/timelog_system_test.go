@@ -1,11 +1,11 @@
 package timelog
 
 import (
-	"bitbucket.org/0xor1/task/server/central/api/v1/centralaccount"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/account"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/private"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/project"
-	"bitbucket.org/0xor1/task/server/regional/api/v1/task"
+	"bitbucket.org/0xor1/task/server/api/v1/account"
+	"bitbucket.org/0xor1/task/server/api/v1/centralaccount"
+	"bitbucket.org/0xor1/task/server/api/v1/private"
+	"bitbucket.org/0xor1/task/server/api/v1/project"
+	"bitbucket.org/0xor1/task/server/api/v1/task"
 	"bitbucket.org/0xor1/task/server/util/clientsession"
 	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/server"
