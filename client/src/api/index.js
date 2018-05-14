@@ -1,3 +1,7 @@
+/**
+ * IMPORTANT: this file should only be altered by backend api developers
+ * **/
+
 import axios from 'axios'
 
 let newApi
@@ -36,6 +40,14 @@ newApi = (opts) => {
     } else {
       throw new Error('invalid get call, use the default api object or a new mget instance from api.newMGetApi()')
     }
+  }
+
+  let post = (path, data) => {
+    doReq({
+      method: 'post',
+      url: path,
+      data: data
+    })
   }
 
   return {
@@ -90,6 +102,9 @@ newApi = (opts) => {
       centralAccount: {
         getRegions: () => {
           return get('/api/v1/centralAccount/getRegions')
+        },
+        register: (name, email, pwd, region, language, displayName, theme) => {
+          return post('/api/v1/centralAccount/register', {name: name, email: email, pwd: pwd, region: region, language: language, displayName: displayName, theme: theme})
         }
       },
       account: {},

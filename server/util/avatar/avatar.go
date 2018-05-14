@@ -22,7 +22,6 @@ func NewLocalClient(relDirPath string, maxAvatarDim uint) Client {
 	wd, e := os.Getwd()
 	panic.If(e)
 	absDirPath := path.Join(wd, relDirPath)
-	os.MkdirAll(absDirPath, os.ModeDir)
 	return &localClient{
 		mtx:          &sync.Mutex{},
 		maxAvatarDim: maxAvatarDim,
@@ -45,6 +44,7 @@ func (c *localClient) Save(key string, mimeType string, data io.Reader) {
 	defer c.mtx.Unlock()
 	avatarBytes, e := ioutil.ReadAll(data)
 	panic.If(e)
+	os.MkdirAll(c.absDirPath, os.ModeDir)
 	panic.If(ioutil.WriteFile(path.Join(c.absDirPath, key), avatarBytes, os.ModePerm))
 }
 
