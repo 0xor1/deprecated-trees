@@ -115,7 +115,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resp.Header().Set("Access-Control-Allow-Origin", s.SR.ServerAddress)
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
-	resp.Header().Set("Content-Security-Policy", "default-src 'self'; connect-src 'self';")
+	resp.Header().Set("Content-Security-Policy", "default-src 'self'")
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
 	//check for none api call
@@ -143,7 +143,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				s.ServeHTTP(w, r)
 				responseChan <- &mgetResponse{
 					includeHeaders: ctx.queryBoolVal("headers", false),
-					Key:            key,
+					key:            key,
 					Code:           w.code,
 					Header:         w.header,
 					Body:           w.body.Bytes(),
@@ -156,7 +156,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		for !(len(reqs) == len(fullMGetResponse) || timedOut) {
 			select {
 			case resp := <-responseChan:
-				fullMGetResponse[resp.Key] = resp
+				fullMGetResponse[resp.key] = resp
 			case <-timeoutChan:
 				timedOut = true
 			}
@@ -322,7 +322,7 @@ func (r *mgetResponseWriter) WriteHeader(code int) {
 
 type mgetResponse struct {
 	includeHeaders bool
-	Key            string      `json:"key"`
+	key            string
 	Code           int         `json:"code"`
 	Header         http.Header `json:"header"`
 	Body           []byte      `json:"body"`

@@ -1,18 +1,40 @@
 <template>
-  <div>
+  <button v-on:click="click()">
     init
-  </div>
+  </button>
 </template>
 
 <script>
-  import router from '@/router'
+  import api from '@/api'
   export default {
     name: 'init',
     data () {
       return {
         click: () => {
-          console.log('hello')
-          console.log(router)
+          console.log('clicked')
+          let mgetApi = api.newMGetApi()
+          mgetApi.v1.centralAccount.getRegions().then((val) => {
+            console.log(1)
+            console.log(val)
+          }).catch((error) => {
+            console.log(1)
+            console.log(error)
+          })
+          mgetApi.v1.centralAccount.getRegions().then((val) => {
+            console.log(2)
+            console.log(val)
+          }).catch((error) => {
+            console.log(2)
+            console.log(error)
+          })
+          mgetApi.v1.centralAccount.getRegions().then((val) => {
+            console.log(3)
+            console.log(val)
+          }).catch((error) => {
+            console.log(3)
+            console.log(error)
+          })
+          mgetApi.sendMGet()
         }
       }
     }
