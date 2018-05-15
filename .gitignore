@@ -4,3 +4,4 @@ server/index.html
 coverage.out
 *.exe
 _test/
+avatar/

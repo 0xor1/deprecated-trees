@@ -938,7 +938,7 @@ CREATE PROCEDURE getTasks(_account BINARY(16), _project BINARY(16), _taskIdsStr 
     );
     START TRANSACTION;
 
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project LOCK IN SHARE MODE;
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project;# LOCK IN SHARE MODE; I dont think this is required
     IF projectExists AND taskIdsStrLen > 0 AND taskIdsStrLen % 32 = 0 THEN
       WHILE offset < taskIdsStrLen DO
         INSERT INTO tempIds VALUE (UNHEX(SUBSTRING(_taskIdsStr, offset + 1, 32)));
@@ -983,7 +983,7 @@ CREATE PROCEDURE getChildTasks(_account BINARY(16), _project BINARY(16), _parent
     );
     START TRANSACTION;
 
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project LOCK IN SHARE MODE;
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project; #LOCK IN SHARE MODE; I dont think this is required
     IF projectExists THEN
       IF _fromSibling IS NOT NULL THEN
         SELECT nextSibling INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = _fromSibling AND parent = _parent;
@@ -1020,7 +1020,7 @@ CREATE PROCEDURE getAncestorTasks(_account BINARY(16), _project BINARY(16), _tas
     );
     START TRANSACTION;
 
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project LOCK IN SHARE MODE;
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project;# LOCK IN SHARE MODE; I dont think this is required
     IF projectExists THEN
       SELECT parent INTO _task FROM tasks WHERE account = _account AND project = _project AND id = _task;
       WHILE _task IS NOT NULL AND idx < _limit DO

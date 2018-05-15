@@ -105,6 +105,36 @@ newApi = (opts) => {
         },
         register: (name, email, pwd, region, language, displayName, theme) => {
           return post('/api/v1/centralAccount/register', {name: name, email: email, pwd: pwd, region: region, language: language, displayName: displayName, theme: theme})
+        },
+        resendActivationEmail: (email) => {
+          return post('/api/v1/centralAccount/resendActivationEmail', {email: email})
+        },
+        activate: (email, activationCode) => {
+          return post('/api/v1/centralAccount/activate', {email: email, activationCode: activationCode})
+        },
+        authenticate: (email, pwd) => {
+          return post('/api/v1/centralAccount/authenticate', {email: email, pwd: pwd})
+        },
+        confirmNewEmail: (currentEmail, newEmail, confirmationCode) => {
+          return post('/api/v1/centralAccount/confirmNewEmail', {currentEmail: currentEmail, newEmail: newEmail, confirmationCode: confirmationCode})
+        },
+        resetPwd: (email) => {
+          return post('/api/v1/centralAccount/resetPwd', {email: email})
+        },
+        setNewPwdFromPwdReset: (newPwd, email, resetPwdCode) => {
+          return post('/api/v1/centralAccount/setNewPwdFromPwdReset', {newPwd: newPwd, email: email, resetPwdCode: resetPwdCode})
+        },
+        getAccount: (name) => {
+          return get('/api/v1/centralAccount/getAccount', {name: name})
+        },
+        getAccounts: (accounts) => {
+          return get('/api/v1/centralAccount/getAccounts', {accounts: accounts})
+        },
+        searchAccounts: (nameOrDisplayNameStartsWith) => {
+          return get('/api/v1/centralAccount/searchAccounts', {nameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith})
+        },
+        searchPersonalAccounts: (nameOrDisplayNameStartsWith) => {
+          return get('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith})
         }
       },
       account: {},

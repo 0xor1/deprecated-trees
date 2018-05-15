@@ -7,7 +7,6 @@ import (
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bytes"
-	"encoding/hex"
 	"github.com/0xor1/panic"
 )
 
@@ -120,18 +119,20 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 }
 
 func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*task {
-	ids := bytes.NewBufferString(``)
 	cacheKey := cachekey.NewGet("project.dbGetTasks", shard, account, project, tasks)
-	for _, task := range tasks {
-		cacheKey.Task(account, project, task)
-		ids.WriteString(hex.EncodeToString(task))
-	}
-	idsStr := ids.String()
 	res := make([]*task, 0, len(tasks))
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
-	rows, e := ctx.TreeQuery(shard, `CALL getTasks(?, ?, ?)`, account, project, idsStr)
+	query := bytes.NewBufferString(`SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id IN (?`)
+	queryArgs := make([]interface{}, 0, 2 + len(tasks))
+	queryArgs = append(queryArgs, account, project, tasks[0])
+	for _, task := range tasks[1:] {
+		query.WriteString(`,?`)
+		queryArgs = append(queryArgs, task)
+	}
+	query.WriteString(`)`)
+	rows, e := ctx.TreeQuery(shard, query.String(), queryArgs...)
 	if rows != nil {
 		defer rows.Close()
 	}
