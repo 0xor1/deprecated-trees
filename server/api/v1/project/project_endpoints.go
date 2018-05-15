@@ -304,13 +304,13 @@ var removeMembers = &endpoint.Endpoint{
 }
 
 type getMembersArgs struct {
-	Shard        int               `json:"shard"`
-	Account      id.Id             `json:"account"`
-	Project      id.Id             `json:"project"`
-	Role         *cnst.ProjectRole `json:"role,omitempty"`
-	NameContains *string           `json:"nameContains,omitempty"`
-	After        *id.Id            `json:"after,omitempty"`
-	Limit        int               `json:"limit"`
+	Shard                     int               `json:"shard"`
+	Account                   id.Id             `json:"account"`
+	Project                   id.Id             `json:"project"`
+	Role                      *cnst.ProjectRole `json:"role,omitempty"`
+	NameOrDisplayNameContains *string           `json:"nameorDisplayNameContains,omitempty"`
+	After                     *id.Id            `json:"after,omitempty"`
+	Limit                     int               `json:"limit"`
 }
 
 type getMembersResp struct {
@@ -329,7 +329,7 @@ var getMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
-		return dbGetMembers(ctx, args.Shard, args.Account, args.Project, args.Role, args.NameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		return dbGetMembers(ctx, args.Shard, args.Account, args.Project, args.Role, args.NameOrDisplayNameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 

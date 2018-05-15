@@ -28,7 +28,7 @@ type Client interface {
 	//must be account owner/admin or project admin
 	RemoveMembers(css *clientsession.Store, shard int, account, project id.Id, members []id.Id) error
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
-	GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error)
+	GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*getMembersResp, error)
 	//for anyone
 	GetMe(css *clientsession.Store, shard int, account, project id.Id) (*member, error)
 	//either one or both of OccurredAfter/Before must be nil
@@ -158,15 +158,15 @@ func (c *client) RemoveMembers(css *clientsession.Store, shard int, account, pro
 	return e
 }
 
-func (c *client) GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
+func (c *client) GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
 	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
-		Shard:        shard,
-		Account:      account,
-		Project:      project,
-		Role:         role,
-		NameContains: nameContains,
-		After:        after,
-		Limit:        limit,
+		Shard:                     shard,
+		Account:                   account,
+		Project:                   project,
+		Role:                      role,
+		NameOrDisplayNameContains: nameOrDisplayNameContains,
+		After:                     after,
+		Limit:                     limit,
 	}, nil, &getMembersResp{})
 	if val != nil {
 		return val.(*getMembersResp), e

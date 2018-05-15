@@ -104,45 +104,145 @@ newApi = (opts) => {
           return get('/api/v1/centralAccount/getRegions')
         },
         register: (name, email, pwd, region, language, displayName, theme) => {
-          return post('/api/v1/centralAccount/register', {name: name, email: email, pwd: pwd, region: region, language: language, displayName: displayName, theme: theme})
+          return post('/api/v1/centralAccount/register', {name, email, pwd, region, language, displayName, theme})
         },
         resendActivationEmail: (email) => {
-          return post('/api/v1/centralAccount/resendActivationEmail', {email: email})
+          return post('/api/v1/centralAccount/resendActivationEmail', {email})
         },
         activate: (email, activationCode) => {
-          return post('/api/v1/centralAccount/activate', {email: email, activationCode: activationCode})
+          return post('/api/v1/centralAccount/activate', {email, activationCode})
         },
         authenticate: (email, pwd) => {
-          return post('/api/v1/centralAccount/authenticate', {email: email, pwd: pwd})
+          return post('/api/v1/centralAccount/authenticate', {email, pwd})
         },
         confirmNewEmail: (currentEmail, newEmail, confirmationCode) => {
-          return post('/api/v1/centralAccount/confirmNewEmail', {currentEmail: currentEmail, newEmail: newEmail, confirmationCode: confirmationCode})
+          return post('/api/v1/centralAccount/confirmNewEmail', {currentEmail, newEmail, confirmationCode})
         },
         resetPwd: (email) => {
-          return post('/api/v1/centralAccount/resetPwd', {email: email})
+          return post('/api/v1/centralAccount/resetPwd', {email})
         },
         setNewPwdFromPwdReset: (newPwd, email, resetPwdCode) => {
-          return post('/api/v1/centralAccount/setNewPwdFromPwdReset', {newPwd: newPwd, email: email, resetPwdCode: resetPwdCode})
+          return post('/api/v1/centralAccount/setNewPwdFromPwdReset', {newPwd, email, resetPwdCode})
         },
         getAccount: (name) => {
-          return get('/api/v1/centralAccount/getAccount', {name: name})
+          return get('/api/v1/centralAccount/getAccount', {name})
         },
         getAccounts: (accounts) => {
-          return get('/api/v1/centralAccount/getAccounts', {accounts: accounts})
+          return get('/api/v1/centralAccount/getAccounts', {accounts})
         },
         searchAccounts: (nameOrDisplayNameStartsWith) => {
-          return get('/api/v1/centralAccount/searchAccounts', {nameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith})
+          return get('/api/v1/centralAccount/searchAccounts', {nameOrDisplayNameStartsWith})
         },
         searchPersonalAccounts: (nameOrDisplayNameStartsWith) => {
-          return get('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith})
+          return get('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
+        },
+        getMe: () => {
+          return get('/api/v1/centralAccount/getMe')
+        },
+        setMyPwd: (oldPwd, newPwd) => {
+          return post('/api/v1/centralAccount/setMyPwd', {oldPwd, newPwd})
+        },
+        setMyEmail: (newEmail) => {
+          return post('/api/v1/centralAccount/setMyEmail', {newEmail})
+        },
+        resendMyNewEmailConfirmationEmail: () => {
+          return post('/api/v1/centralAccount/resendMyNewEmailConfirmationEmail')
+        },
+        setAccountName: (account, newName) => {
+          return post('/api/v1/centralAccount/setAccountName', {account, newName})
+        },
+        setAccountDisplayName: (account, newDisplayName) => {
+          return post('/api/v1/centralAccount/setAccountDisplayName', {account, newDisplayName})
+        },
+        setAccountAvatar: (account, avatar) => {
+          let data = new FormData()
+          data.append('account', account)
+          if (avatar) {
+            data.append('avatar', avatar, '')
+          }
+          return post('/api/v1/centralAccount/setAccountAvatar', data)
+        },
+        migrateAccount: (account, newRegion) => {
+          return post('/api/v1/centralAccount/migrateAccount', {account, newRegion})
+        },
+        createAccount: (name, region, displayName) => {
+          return post('/api/v1/centralAccount/createAccount', {name, region, displayName})
+        },
+        getMyAccounts: (after, limit) => {
+          return get('/api/v1/centralAccount/getMyAccounts', {after, limit})
+        },
+        deleteAccount: (account) => {
+          return post('/api/v1/centralAccount/deleteAccount', {account})
+        },
+        addMembers: (account, newMembers) => {
+          return post('/api/v1/centralAccount/addMembers', {account, newMembers})
+        },
+        removeMembers: (account, existingMembers) => {
+          return post('/api/v1/centralAccount/removeMembers', {account, existingMembers})
         }
       },
-      account: {},
-      project: {},
+      account: {
+        setPublicProjectsEnabled: (account, publicProjectsEnabled) => {
+          return post('/api/v1/account/setPublicProjectsEnabled', {account, publicProjectsEnabled})
+        },
+        getPublicProjectsEnabled: (account) => {
+          return get('/api/v1/account/getPublicProjectsEnabled', {account})
+        },
+        setMemberRole: (account, member, role) => {
+          return post('/api/v1/account/setMemberRole', {account, member, role})
+        },
+        getMembers: (account, role, nameContains, after, limit) => {
+          return get('/api/v1/account/getMembers', {account, role, nameContains, after, limit})
+        },
+        getActivities: (account, item, member, occurredAfter, occurredBefore, limit) => {
+          return get('/api/v1/account/getActivities', {account, item, member, occurredAfter, occurredBefore, limit})
+        },
+        getMe: (account) => {
+          return get('/api/v1/account/getMe', {account})
+        }
+      },
+      project: {
+        createProject: (account, name, description, startOn, dueOn, isParallel, isPublic, members) => {
+          return post('/api/v1/project/createProject', {account, name, description, startOn, dueOn, isParallel, isPublic, members})
+        },
+        setIsPublic: (account, project, isPublic) => {
+          return post('/api/v1/project/setIsPublic', {account, project, isPublic})
+        },
+        setIsArchived: (account, project, isArchived) => {
+          return post('/api/v1/project/setIsArchived', {account, project, isArchived})
+        },
+        getProject: (account, project) => {
+          return get('/api/v1/project/getProject', {account, project})
+        },
+        getProjects: (account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) => {
+          return get('/api/v1/project/getProjects', {account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit})
+        },
+        deleteProject: (account, project) => {
+          return post('/api/v1/project/deleteProject', {account, project})
+        },
+        addMembers: (account, project, members) => {
+          return post('/api/v1/project/addMembers', {account, project, members})
+        },
+        setMemberRole: (account, project, member, role) => {
+          return post('/api/v1/project/setMemberRole', {account, project, member, role})
+        },
+        removeMembers: (account, project, members) => {
+          return post('/api/v1/project/removeMembers', {account, project, members})
+        },
+        getMembers: (account, project, role, nameOrDisplayNameContains, after, limit) => {
+          return get('/api/v1/project/getMembers', {account, project, role, nameOrDisplayNameContains, after, limit})
+        },
+        getMe: (account, project) => {
+          return get('/api/v1/project/getMembers', {account, project})
+        },
+        getActivities: (account, project, item, member, occurredAfter, occurredBefore, limit) => {
+          return get('/api/v1/project/getActivities', {account, project, item, member, occurredAfter, occurredBefore, limit})
+        }
+      },
       task: {},
       timeLog: {}
     }
   }
 }
 
-export default newApi({isMGetApi: false})
+export default newApi({false})
