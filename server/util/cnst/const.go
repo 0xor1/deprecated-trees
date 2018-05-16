@@ -13,9 +13,6 @@ const (
 	StgEnv = "stg"
 	ProEnv = "pro"
 
-	GET  = "GET"
-	POST = "POST"
-
 	LightTheme      = Theme(0)
 	DarkTheme       = Theme(1)
 	ColorBlindTheme = Theme(2)

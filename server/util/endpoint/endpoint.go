@@ -2,7 +2,6 @@ package endpoint
 
 import (
 	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/time"
@@ -43,8 +42,8 @@ type Endpoint struct {
 }
 
 func (ep *Endpoint) ValidateEndpoint() {
-	panic.IfTrueWith((ep.Method != cnst.GET && ep.Method != cnst.POST) || // only GET and POST methods supported for read and write operations respectively
-		(ep.ProcessForm != nil && ep.Method != cnst.POST) || // if processForm is passed it must be a POST call
+	panic.IfTrueWith((ep.Method != http.MethodGet && ep.Method != http.MethodPost) || // only GET and POST methods supported for read and write operations respectively
+		(ep.ProcessForm != nil && ep.Method != http.MethodPost) || // if processForm is passed it must be a POST call
 		(ep.ProcessForm != nil && ep.IsPrivate) || // if processForm is passed it must not be a private call, private endpoints dont support forms
 		(ep.ProcessForm != nil && len(ep.FormStruct) == 0) || // if processForm is passed FormStruct must be given for documentation
 		(ep.PermissionCheck != nil || ep.PermissionDlmKeys != nil) && !(ep.PermissionCheck != nil && ep.PermissionDlmKeys != nil) || // if permission dlms are passed, permission check fn must be passed, and vice versa
@@ -62,7 +61,7 @@ func (ep *Endpoint) GetEndpointDocumentation() *endpointDocumentation {
 	if ep.GetArgsStruct != nil {
 		argsStruct = ep.GetArgsStruct()
 		argsLocation = &queryString
-		if ep.Method == cnst.POST {
+		if ep.Method == http.MethodPost {
 			argsLocation = &body
 		}
 	} else if ep.ProcessForm != nil {
@@ -105,7 +104,7 @@ func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func(
 	var body io.ReadCloser
 	var contentType string
 	if buildForm != nil {
-		if ep.Method != cnst.POST {
+		if ep.Method != http.MethodPost {
 			return nil, invalidEndpointErr
 		}
 		if ep.IsPrivate {
@@ -123,9 +122,9 @@ func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func(
 			urlVals.Set("_", base64.RawURLEncoding.EncodeToString(key))
 			urlVals.Set("ts", ts)
 		}
-		if ep.Method == cnst.GET {
+		if ep.Method == http.MethodGet {
 			urlVals.Set("args", string(argsBytes))
-		} else if ep.Method == cnst.POST {
+		} else if ep.Method == http.MethodPost {
 			body = ioutil.NopCloser(bytes.NewBuffer(argsBytes))
 		} else {
 			return nil, invalidEndpointErr

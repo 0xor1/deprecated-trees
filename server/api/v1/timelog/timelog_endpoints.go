@@ -10,6 +10,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/timelog"
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"github.com/0xor1/panic"
+	"net/http"
 )
 
 type createArgs struct {
@@ -22,7 +23,7 @@ type createArgs struct {
 }
 
 var create = &endpoint.Endpoint{
-	Method:                   cnst.POST,
+	Method:                   http.MethodPost,
 	Path:                     "/api/v1/timeLog/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &timelog.TimeLog{},
@@ -46,7 +47,7 @@ type createAndSetRemainingTimeArgs struct {
 }
 
 var createAndSetRemainingTime = &endpoint.Endpoint{
-	Method:                   cnst.POST,
+	Method:                   http.MethodPost,
 	Path:                     "/api/v1/timeLog/createAndSetRemainingTime",
 	RequiresSession:          true,
 	ExampleResponseStructure: &timelog.TimeLog{},
@@ -68,7 +69,7 @@ type setDurationArgs struct {
 }
 
 var setDuration = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/timeLog/setDuration",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -100,7 +101,7 @@ type setNoteArgs struct {
 }
 
 var setNote = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/timeLog/setNote",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -130,7 +131,7 @@ type deleteArgs struct {
 }
 
 var delete = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/timeLog/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -162,7 +163,7 @@ type getArgs struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/timeLog/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*timelog.TimeLog{{}},

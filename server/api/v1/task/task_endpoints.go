@@ -1,7 +1,6 @@
 package task
 
 import (
-	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/ctx"
 	"bitbucket.org/0xor1/task/server/util/db"
 	"bitbucket.org/0xor1/task/server/util/endpoint"
@@ -11,6 +10,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"github.com/0xor1/panic"
 	"time"
+	"net/http"
 )
 
 type createArgs struct {
@@ -28,7 +28,7 @@ type createArgs struct {
 }
 
 var create = &endpoint.Endpoint{
-	Method:                   cnst.POST,
+	Method:                   http.MethodPost,
 	Path:                     "/api/v1/task/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &task{},
@@ -76,7 +76,7 @@ type setNameArgs struct {
 }
 
 var setName = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -104,7 +104,7 @@ type setDescriptionArgs struct {
 }
 
 var setDescription = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setDescription",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -128,7 +128,7 @@ type setIsParallelArgs struct {
 }
 
 var setIsParallel = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setIsParallel",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -152,7 +152,7 @@ type setMemberArgs struct {
 }
 
 var setMember = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setMember",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -178,7 +178,7 @@ type setRemainingTimeArgs struct {
 }
 
 var setRemainingTime = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setRemainingTime",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -200,7 +200,7 @@ type moveArgs struct {
 }
 
 var move = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/move",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -223,7 +223,7 @@ type deleteArgs struct {
 }
 
 var deleteTask = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/task/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -247,7 +247,7 @@ type getArgs struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*task{{}},
@@ -272,7 +272,7 @@ type getChildrenArgs struct {
 }
 
 var getChildren = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getChildren",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*task{{}},
@@ -296,7 +296,7 @@ type getAncestorTasksArgs struct {
 }
 
 var getAncestorTasks = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getAncestorTasks",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*ancestor{{}},

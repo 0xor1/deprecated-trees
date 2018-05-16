@@ -44,7 +44,7 @@ var (
 //endpoints
 
 var getRegions = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getRegions",
 	RequiresSession:          false,
 	ExampleResponseStructure: []string{"use", "usw", "eu"},
@@ -64,7 +64,7 @@ type registerArgs struct {
 }
 
 var register = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/register",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
@@ -137,7 +137,7 @@ type resendActivationEmailArgs struct {
 }
 
 var resendActivationEmail = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/resendActivationEmail",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
@@ -161,7 +161,7 @@ type activateArgs struct {
 }
 
 var activate = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/activate",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
@@ -186,7 +186,7 @@ type authenticateArgs struct {
 }
 
 var authenticate = &endpoint.Endpoint{
-	Method:                   cnst.POST,
+	Method:                   http.MethodPost,
 	Path:                     "/api/v1/centralAccount/authenticate",
 	RequiresSession:          false,
 	ExampleResponseStructure: id.New(),
@@ -234,7 +234,7 @@ type confirmNewEmailArgs struct {
 }
 
 var confirmNewEmail = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/confirmNewEmail",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
@@ -261,7 +261,7 @@ type resetPwdArgs struct {
 }
 
 var resetPwd = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/resetPwd",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
@@ -292,7 +292,7 @@ type setNewPwdFromPwdResetArgs struct {
 }
 
 var setNewPwdFromPwdReset = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/setNewPwdFromPwdReset",
 	RequiresSession: false,
 	GetArgsStruct: func() interface{} {
@@ -329,7 +329,7 @@ type getAccountArgs struct {
 }
 
 var getAccount = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getAccount",
 	RequiresSession:          false,
 	ExampleResponseStructure: &account{},
@@ -347,7 +347,7 @@ type getAccountsArgs struct {
 }
 
 var getAccounts = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getAccounts",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*account{{}},
@@ -367,7 +367,7 @@ type searchAccountsArgs struct {
 }
 
 var searchAccounts = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/searchAccounts",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*account{{}},
@@ -387,7 +387,7 @@ type searchPersonalAccountsArgs struct {
 }
 
 var searchPersonalAccounts = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/searchPersonalAccounts",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*account{{}},
@@ -403,7 +403,7 @@ var searchPersonalAccounts = &endpoint.Endpoint{
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getMe",
 	RequiresSession:          true,
 	ExampleResponseStructure: &me{},
@@ -420,7 +420,7 @@ type setMyPwdArgs struct {
 }
 
 var setMyPwd = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/setMyPwd",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -453,7 +453,7 @@ type setMyEmailArgs struct {
 }
 
 var setMyEmail = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/setMyEmail",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -482,7 +482,7 @@ var setMyEmail = &endpoint.Endpoint{
 }
 
 var resendMyNewEmailConfirmationEmail = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/resendMyNewEmailConfirmationEmail",
 	RequiresSession: true,
 	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
@@ -506,7 +506,7 @@ type setAccountNameArgs struct {
 }
 
 var setAccountName = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/setAccountName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -558,7 +558,7 @@ type setAccountDisplayNameArgs struct {
 }
 
 var setAccountDisplayName = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/setAccountDisplayName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -616,7 +616,7 @@ type setAccountAvatarArgs struct {
 }
 
 var setAccountAvatar = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/setAccountAvatar",
 	RequiresSession: true,
 	FormStruct: map[string]string{
@@ -697,7 +697,7 @@ type migrateAccountArgs struct {
 }
 
 var migrateAccount = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/migrateAccount",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -716,7 +716,7 @@ type createAccountArgs struct {
 }
 
 var createAccount = &endpoint.Endpoint{
-	Method:                   cnst.POST,
+	Method:                   http.MethodPost,
 	Path:                     "/api/v1/centralAccount/createAccount",
 	RequiresSession:          true,
 	ExampleResponseStructure: &account{},
@@ -771,7 +771,7 @@ type getMyAccountsResp struct {
 }
 
 var getMyAccounts = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getMyAccounts",
 	RequiresSession:          true,
 	ExampleResponseStructure: &getMyAccountsResp{Accounts: []*account{{}}},
@@ -791,7 +791,7 @@ type deleteAccountArgs struct {
 }
 
 var deleteAccount = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/deleteAccount",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -843,7 +843,7 @@ type addMembersArgs struct {
 }
 
 var addMembers = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/addMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -891,7 +891,7 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/centralAccount/removeMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {

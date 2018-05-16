@@ -11,6 +11,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"github.com/0xor1/panic"
 	"time"
+	"net/http"
 )
 
 type setPublicProjectsEnabledArgs struct {
@@ -20,7 +21,7 @@ type setPublicProjectsEnabledArgs struct {
 }
 
 var setPublicProjectsEnabled = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/account/setPublicProjectsEnabled",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -40,7 +41,7 @@ type getPublicProjectsEnabledArgs struct {
 }
 
 var getPublicProjectsEnabled = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getPublicProjectsEnabled",
 	RequiresSession:          true,
 	ExampleResponseStructure: false,
@@ -62,7 +63,7 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/account/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -94,7 +95,7 @@ type getMembersResp struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getMembers",
 	RequiresSession:          true,
 	ExampleResponseStructure: &getMembersResp{Members: []*member{{}}},
@@ -119,7 +120,7 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getActivities",
 	RequiresSession:          true,
 	ExampleResponseStructure: []*activity.Activity{{}},
@@ -140,7 +141,7 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getMe",
 	RequiresSession:          true,
 	ExampleResponseStructure: &member{},

@@ -10,6 +10,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/private"
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"github.com/0xor1/panic"
+	"net/http"
 )
 
 var (
@@ -25,7 +26,7 @@ type createAccountArgs struct {
 }
 
 var createAccount = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/createAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -44,7 +45,7 @@ type deleteAccountArgs struct {
 }
 
 var deleteAccount = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/deleteAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -69,7 +70,7 @@ type addMembersArgs struct {
 }
 
 var addMembers = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/addMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -125,7 +126,7 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/removeMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -164,7 +165,7 @@ type memberIsOnlyAccountOwnerArgs struct {
 }
 
 var memberIsOnlyAccountOwner = &endpoint.Endpoint{
-	Method:    cnst.GET,
+	Method:    http.MethodGet,
 	Path:      "/api/v1/private/memberIsOnlyAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -189,7 +190,7 @@ type setMemberNameArgs struct {
 }
 
 var setMemberName = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/setMemberName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -210,7 +211,7 @@ type setMemberDisplayNameArgs struct {
 }
 
 var setMemberDisplayName = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/setMemberDisplayName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -231,7 +232,7 @@ type setMemberHasAvatarArgs struct {
 }
 
 var setMemberHasAvatar = &endpoint.Endpoint{
-	Method:    cnst.POST,
+	Method:    http.MethodPost,
 	Path:      "/api/v1/private/setMemberHasAvatar",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -251,7 +252,7 @@ type memberIsAccountOwnerArgs struct {
 }
 
 var memberIsAccountOwner = &endpoint.Endpoint{
-	Method:    cnst.GET,
+	Method:    http.MethodGet,
 	Path:      "/api/v1/private/memberIsAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {

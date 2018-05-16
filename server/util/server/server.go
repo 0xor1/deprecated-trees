@@ -113,7 +113,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	//set common headers
 	if s.SR.Env == cnst.LclEnv {
-		resp.Header().Set("Access-Control-Allow-Origin", "*")
+		resp.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+		if req.Method == http.MethodOptions {
+			resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
+			return
+		}
 	}
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
@@ -121,23 +125,23 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
 	//check for none api call
-	if req.Method == cnst.GET && !strings.HasPrefix(req.URL.Path, "/api/") {
+	if req.Method == http.MethodGet && !strings.HasPrefix(req.URL.Path, "/api/") {
 		s.FileServer.ServeHTTP(resp, req)
 		return
 	}
 	//check for special case of api docs first
-	if req.Method == cnst.GET && lowerPath == s.SR.ApiDocsRoute {
+	if req.Method == http.MethodGet && lowerPath == s.SR.ApiDocsRoute {
 		writeRawJson(resp, 200, s.SR.ApiDocs)
 		return
 	}
 	//check for special case of api mget
-	if req.Method == cnst.GET && lowerPath == s.SR.ApiMGetRoute {
+	if req.Method == http.MethodGet && lowerPath == s.SR.ApiMGetRoute {
 		reqs := map[string]string{}
 		panic.If(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
 		responseChan := make(chan *mgetResponse)
 		for key, reqUrl := range reqs {
 			go func(key, reqUrl string) {
-				r, _ := http.NewRequest(cnst.GET, reqUrl, nil)
+				r, _ := http.NewRequest(http.MethodGet, reqUrl, nil)
 				for _, c := range req.Cookies() {
 					r.AddCookie(c)
 				}
@@ -186,7 +190,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 		//check for valid me value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
-		if ep.RequiresSession && ctx.me == nil || req.Method == cnst.POST && req.Header.Get("X-Client") == "" {
+		if ep.RequiresSession && ctx.me == nil || req.Method == http.MethodPost && req.Header.Get("X-Client") == "" {
 			writeJson(resp, http.StatusUnauthorized, unauthorizedErr)
 			return
 		}
@@ -196,12 +200,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var argsBytes []byte
 	var args interface{}
 	reqQueryValues := req.URL.Query()
-	if ep.Method == cnst.GET && ep.GetArgsStruct != nil {
+	if ep.Method == http.MethodGet && ep.GetArgsStruct != nil {
 		argsBytes = []byte(reqQueryValues.Get("args"))
-	} else if ep.Method == cnst.POST && ep.GetArgsStruct != nil {
+	} else if ep.Method == http.MethodPost && ep.GetArgsStruct != nil {
 		argsBytes, e = ioutil.ReadAll(req.Body)
 		panic.If(e)
-	} else if ep.Method == cnst.POST && ep.ProcessForm != nil {
+	} else if ep.Method == http.MethodPost && ep.ProcessForm != nil {
 		if ep.IsPrivate {
 			// private endpoints dont support post requests with form data
 			err.FmtPanic("private endpoints don't support POST Form data")

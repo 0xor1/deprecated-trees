@@ -12,6 +12,7 @@ import (
 	"bitbucket.org/0xor1/task/server/util/validate"
 	"github.com/0xor1/panic"
 	"time"
+	"net/http"
 )
 
 var (
@@ -31,7 +32,7 @@ type createArgs struct {
 }
 
 var create = &endpoint.Endpoint{
-	Method:                   cnst.POST,
+	Method:                   http.MethodPost,
 	Path:                     "/api/v1/project/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &project{},
@@ -81,7 +82,7 @@ type setIsPublicArgs struct {
 }
 
 var setIsPublic = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/project/setIsPublic",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -104,7 +105,7 @@ type setIsArchivedArgs struct {
 }
 
 var setIsArchived = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/project/setIsArchived",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -125,7 +126,7 @@ type getArgs struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: &project{},
@@ -163,7 +164,7 @@ type getSetResp struct {
 }
 
 var getSet = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getSet",
 	RequiresSession:          false,
 	ExampleResponseStructure: &getSetResp{Projects: []*project{{}}},
@@ -194,7 +195,7 @@ type deleteArgs struct {
 }
 
 var delete = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/project/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -217,7 +218,7 @@ type addMembersArgs struct {
 }
 
 var addMembers = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/project/addMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -253,7 +254,7 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/project/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -284,7 +285,7 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &endpoint.Endpoint{
-	Method:          cnst.POST,
+	Method:          http.MethodPost,
 	Path:            "/api/v1/project/removeMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -319,7 +320,7 @@ type getMembersResp struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getMembers",
 	RequiresSession:          false,
 	ExampleResponseStructure: &getMembersResp{Members: []*member{{}}},
@@ -340,7 +341,7 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getMe",
 	RequiresSession:          true,
 	ExampleResponseStructure: &member{},
@@ -365,7 +366,7 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method:                   cnst.GET,
+	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getActivities",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*activity.Activity{{}},
