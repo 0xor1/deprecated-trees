@@ -75,7 +75,7 @@ func Test_system(t *testing.T) {
 	start := time.Now()
 	end := start.Add(5 * 24 * time.Hour)
 	desc := "desc"
-	proj, err := projectClient.CreateProject(aliCss, 0, org.Id, "proj", &desc, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
+	proj, err := projectClient.Create(aliCss, 0, org.Id, "proj", &desc, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
 
 	oneVal := uint64(1)
 	twoVal := uint64(2)

@@ -18,7 +18,7 @@ var (
 	publicProjectsDisabledErr = &err.Err{Code: "r_v1_p_ppd", Message: "public projects disabled"}
 )
 
-type createProjectArgs struct {
+type createArgs struct {
 	Shard       int                 `json:"shard"`
 	Account     id.Id               `json:"account"`
 	Name        string              `json:"name"`
@@ -30,16 +30,16 @@ type createProjectArgs struct {
 	Members     []*AddProjectMember `json:"members"`
 }
 
-var createProject = &endpoint.Endpoint{
+var create = &endpoint.Endpoint{
 	Method:                   cnst.POST,
-	Path:                     "/api/v1/project/createProject",
+	Path:                     "/api/v1/project/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &project{},
 	GetArgsStruct: func() interface{} {
-		return &createProjectArgs{}
+		return &createArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*createProjectArgs)
+		args := a.(*createArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		panic.IfTrueWith(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 
@@ -118,29 +118,29 @@ var setIsArchived = &endpoint.Endpoint{
 	},
 }
 
-type getProjectArgs struct {
+type getArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
 	Project id.Id `json:"project"`
 }
 
-var getProject = &endpoint.Endpoint{
+var get = &endpoint.Endpoint{
 	Method:                   cnst.GET,
-	Path:                     "/api/v1/project/getProject",
+	Path:                     "/api/v1/project/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: &project{},
 	GetArgsStruct: func() interface{} {
-		return &getProjectArgs{}
+		return &getArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*getProjectArgs)
+		args := a.(*getArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 
 		return dbGetProject(ctx, args.Shard, args.Account, args.Project)
 	},
 }
 
-type getProjectsArgs struct {
+type getSetArgs struct {
 	Shard           int          `json:"shard"`
 	Account         id.Id        `json:"account"`
 	NameContains    *string      `json:"nameContains"`
@@ -157,21 +157,21 @@ type getProjectsArgs struct {
 	Limit           int          `json:"limit"`
 }
 
-type getProjectsResp struct {
+type getSetResp struct {
 	Projects []*project `json:"projects"`
 	More     bool       `json:"more"`
 }
 
-var getProjects = &endpoint.Endpoint{
+var getSet = &endpoint.Endpoint{
 	Method:                   cnst.GET,
-	Path:                     "/api/v1/project/getProjects",
+	Path:                     "/api/v1/project/getSet",
 	RequiresSession:          false,
-	ExampleResponseStructure: &getProjectsResp{Projects: []*project{{}}},
+	ExampleResponseStructure: &getSetResp{Projects: []*project{{}}},
 	GetArgsStruct: func() interface{} {
-		return &getProjectsArgs{}
+		return &getSetArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*getProjectsArgs)
+		args := a.(*getSetArgs)
 		var myAccountRole *cnst.AccountRole
 		if ctx.TryMe() != nil {
 			myAccountRole = db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me())
@@ -187,21 +187,21 @@ var getProjects = &endpoint.Endpoint{
 	},
 }
 
-type deleteProjectArgs struct {
+type deleteArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
 	Project id.Id `json:"project"`
 }
 
-var deleteProject = &endpoint.Endpoint{
+var delete = &endpoint.Endpoint{
 	Method:          cnst.POST,
-	Path:            "/api/v1/project/deleteProject",
+	Path:            "/api/v1/project/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &deleteProjectArgs{}
+		return &deleteArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*deleteProjectArgs)
+		args := a.(*deleteArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		dbDeleteProject(ctx, args.Shard, args.Account, args.Project)
 		//TODO delete s3 data, uploaded files etc
@@ -381,12 +381,12 @@ var getActivities = &endpoint.Endpoint{
 }
 
 var Endpoints = []*endpoint.Endpoint{
-	createProject,
+	create,
 	setIsPublic,
 	setIsArchived,
-	getProject,
-	getProjects,
-	deleteProject,
+	get,
+	getSet,
+	delete,
 	addMembers,
 	setMemberRole,
 	removeMembers,

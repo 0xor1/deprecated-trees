@@ -4,6 +4,36 @@
 
 import axios from 'axios'
 
+export const cnst = {
+  theme: {
+    light: 0,
+    dark: 1,
+    colorblind: 2
+  },
+  accountRole: {
+    owner: 0,
+    admin: 1,
+    memberOfAll: 2,
+    memberOfOnlySpecificProjects: 3
+  },
+  projectRole: {
+    admin: 0,
+    writer: 1,
+    reader: 2
+  },
+  sortBy: {
+    name: 'name',
+    displayName: 'displayname',
+    createdOn: 'createdon',
+    startOn: 'starton',
+    dueOn: 'dueon'
+  },
+  sortDir: {
+    asc: 'asc',
+    desc: 'desc'
+  }
+}
+
 let newApi
 newApi = (opts) => {
   let isMGetApi = opts.isMGetApi
@@ -202,8 +232,8 @@ newApi = (opts) => {
         }
       },
       project: {
-        createProject: (account, name, description, startOn, dueOn, isParallel, isPublic, members) => {
-          return post('/api/v1/project/createProject', {account, name, description, startOn, dueOn, isParallel, isPublic, members})
+        create: (account, name, description, startOn, dueOn, isParallel, isPublic, members) => {
+          return post('/api/v1/project/create', {account, name, description, startOn, dueOn, isParallel, isPublic, members})
         },
         setIsPublic: (account, project, isPublic) => {
           return post('/api/v1/project/setIsPublic', {account, project, isPublic})
@@ -211,14 +241,14 @@ newApi = (opts) => {
         setIsArchived: (account, project, isArchived) => {
           return post('/api/v1/project/setIsArchived', {account, project, isArchived})
         },
-        getProject: (account, project) => {
-          return get('/api/v1/project/getProject', {account, project})
+        get: (account, project) => {
+          return get('/api/v1/project/get', {account, project})
         },
-        getProjects: (account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) => {
-          return get('/api/v1/project/getProjects', {account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit})
+        getSet: (account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) => {
+          return get('/api/v1/project/getSet', {account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit})
         },
-        deleteProject: (account, project) => {
-          return post('/api/v1/project/deleteProject', {account, project})
+        delete: (account, project) => {
+          return post('/api/v1/project/delete', {account, project})
         },
         addMembers: (account, project, members) => {
           return post('/api/v1/project/addMembers', {account, project, members})
@@ -239,10 +269,63 @@ newApi = (opts) => {
           return get('/api/v1/project/getActivities', {account, project, item, member, occurredAfter, occurredBefore, limit})
         }
       },
-      task: {},
-      timeLog: {}
+      task: {
+        create: (account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime) => {
+          return post('/api/v1/task/create', {account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime})
+        },
+        setName: (account, project, task, name) => {
+          return post('/api/v1/task/setName', {account, project, task, name})
+        },
+        setDescription: (account, project, task, description) => {
+          return post('/api/v1/task/setDescription', {account, project, task, description})
+        },
+        setIsParallel: (account, project, task, isParallel) => {
+          return post('/api/v1/task/setDescription', {account, project, task, isParallel})
+        },
+        setMember: (account, project, task, member) => {
+          return post('/api/v1/task/setMember', {account, project, task, member})
+        },
+        setRemainingTime: (account, project, task, remainingTime) => {
+          return post('/api/v1/task/setremainingTime', {account, project, task, remainingTime})
+        },
+        move: (account, project, task, parent, nextSibling) => {
+          return post('/api/v1/task/move', {account, project, task, parent, nextSibling})
+        },
+        delete: (account, project, task) => {
+          return post('/api/v1/task/delete', {account, project, task})
+        },
+        get: (account, project, tasks) => {
+          return get('/api/v1/task/get', {account, project, tasks})
+        },
+        getChildren: (account, project, parent, fromSibling, limit) => {
+          return get('/api/v1/task/getChildren', {account, project, parent, fromSibling, limit})
+        },
+        getAncestors: (account, project, child, limit) => {
+          return get('/api/v1/task/getAncestors', {account, project, parent, child, limit})
+        }
+      },
+      timeLog: {
+        create: (account, project, task, duration, note) => {
+          return post('/api/v1/task/create', {account, project, task, duration, note})
+        },
+        createAndSetTimeRemaining: (account, project, task, timeRemaining, duration, note) => {
+          return post('/api/v1/task/createAndSetTimeRemaining', {account, project, task, timeRemaining, duration, note})
+        },
+        setDuration: (account, project, timeLog, duration) => {
+          return post('/api/v1/task/setDuration', {account, project, timeLog, duration})
+        },
+        setNote: (account, project, timeLog, note) => {
+          return post('/api/v1/task/setNote', {account, project, timeLog, note})
+        },
+        delete: (account, project, timeLog) => {
+          return post('/api/v1/task/delete', {account, project, timeLog})
+        },
+        get: (account, project, task, member, timeLog, sortDir, after, limit) => {
+          return get('/api/v1/task/get', {account, project, task, member, timeLog, sortDir, after, limit})
+        }
+      }
     }
   }
 }
 
-export default newApi({false})
+export default newApi({isMGetApi: false})

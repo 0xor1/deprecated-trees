@@ -125,7 +125,7 @@ func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) [
 		return res
 	}
 	query := bytes.NewBufferString(`SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id IN (?`)
-	queryArgs := make([]interface{}, 0, 2 + len(tasks))
+	queryArgs := make([]interface{}, 0, 2+len(tasks))
 	queryArgs = append(queryArgs, account, project, tasks[0])
 	for _, task := range tasks[1:] {
 		query.WriteString(`,?`)
