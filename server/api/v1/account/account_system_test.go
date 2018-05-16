@@ -19,7 +19,7 @@ func Test_System(t *testing.T) {
 	aliCss := clientsession.New()
 	centralClient := centralaccount.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
-	region := "lcl"
+	region := cnst.LclEnv
 	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
 		region: testServer.URL,
 	})

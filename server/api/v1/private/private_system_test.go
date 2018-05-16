@@ -15,7 +15,7 @@ func Test_system(t *testing.T) {
 	SR := static.Config("", NewClient)
 	serv := server.New(SR, Endpoints)
 	testServer := httptest.NewServer(serv)
-	region := "lcl"
+	region := cnst.LclEnv
 	SR.RegionalV1PrivateClient = NewClient(map[string]string{
 		region: testServer.URL,
 	})

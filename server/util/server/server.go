@@ -112,7 +112,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 	}
 	//set common headers
-	resp.Header().Set("Access-Control-Allow-Origin", s.SR.ServerAddress)
+	if s.SR.Env == cnst.LclEnv {
+		resp.Header().Set("Access-Control-Allow-Origin", "*")
+	}
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
 	resp.Header().Set("Content-Security-Policy", "default-src 'self'")

@@ -8,6 +8,11 @@ import (
 )
 
 const (
+	LclEnv = "lcl"
+	DevEnv = "dev"
+	StgEnv = "stg"
+	ProEnv = "pro"
+
 	GET  = "GET"
 	POST = "POST"
 

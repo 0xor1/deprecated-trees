@@ -5,15 +5,21 @@
 import axios from 'axios'
 
 export const cnst = {
+  env: {
+    lcl: 'lcl',
+    dev: 'dev',
+    stg: 'stg',
+    pro: 'pro'
+  },
   theme: {
     light: 0,
     dark: 1,
-    colorblind: 2
+    colorBlind: 2
   },
   accountRole: {
     owner: 0,
     admin: 1,
-    memberOfAll: 2,
+    memberOfAllProjects: 2,
     memberOfOnlySpecificProjects: 3
   },
   projectRole: {
@@ -23,8 +29,9 @@ export const cnst = {
   },
   sortBy: {
     name: 'name',
-    displayName: 'displayname',
+    displayName: 'displayname', // only used for users
     createdOn: 'createdon',
+    // only used for projects
     startOn: 'starton',
     dueOn: 'dueon'
   },
@@ -42,6 +49,9 @@ newApi = (opts) => {
   let awaitingMGetList = []
 
   let doReq = (axiosConfig) => {
+    if (document.location.origin === 'http://localhost:8080') {
+      axiosConfig.url = 'http://localhost:8787' + axiosConfig.url // send to local api server
+    }
     axiosConfig['X-Client'] = 'web'
     return axios(axiosConfig)
   }

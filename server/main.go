@@ -7,6 +7,7 @@ import (
 	"bitbucket.org/0xor1/task/server/api/v1/project"
 	"bitbucket.org/0xor1/task/server/api/v1/task"
 	"bitbucket.org/0xor1/task/server/api/v1/timelog"
+	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/endpoint"
 	"bitbucket.org/0xor1/task/server/util/server"
 	"bitbucket.org/0xor1/task/server/util/static"
@@ -18,7 +19,7 @@ func main() {
 	SR := static.Config("config.json", private.NewClient)
 	endPointSets := make([][]*endpoint.Endpoint, 0, 20)
 	switch SR.Region {
-	case "lcl", "dev": //onebox environment, all endpoints run in the same service
+	case cnst.LclEnv, cnst.DevEnv: //onebox environment, all endpoints run in the same service
 		endPointSets = append(endPointSets, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, task.Endpoints, timelog.Endpoints)
 	case "central": //central api box, only centralAccount endpoints
 		endPointSets = append(endPointSets, centralaccount.Endpoints)

@@ -2,6 +2,7 @@ package static
 
 import (
 	"bitbucket.org/0xor1/task/server/util/avatar"
+	"bitbucket.org/0xor1/task/server/util/cnst"
 	"bitbucket.org/0xor1/task/server/util/err"
 	"bitbucket.org/0xor1/task/server/util/id"
 	"bitbucket.org/0xor1/task/server/util/mail"
@@ -39,11 +40,11 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// server address eg "127.0.0.1:8787"
 	config.SetDefault("serverAddress", "127.0.0.1:8787")
 	// must be one of "lcl", "dev", "stg", "prd"
-	config.SetDefault("env", "lcl")
+	config.SetDefault("env", cnst.LclEnv)
 	// must be one of "lcl", "dev", "central", "use", "usw", "euw"
-	config.SetDefault("region", "lcl")
+	config.SetDefault("region", cnst.LclEnv)
 	// commit sha
-	config.SetDefault("version", "lcl")
+	config.SetDefault("version", cnst.LclEnv)
 	// relative path from server executable to static file resource directory
 	config.SetDefault("fileServerDir", "../client/dist")
 	// api docs path
@@ -99,7 +100,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		"lcl": "http//127.0.0.1:8787",
+		cnst.LclEnv: "http//127.0.0.1:8787",
 	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)
@@ -150,7 +151,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	var avatarClient avatar.Client
 	var mailClient mail.Client
 
-	if config.GetString("env") == "lcl" {
+	if config.GetString("env") == cnst.LclEnv {
 		//setup local environment interfaces
 		logError = func(err error) {
 			fmt.Println(err)
