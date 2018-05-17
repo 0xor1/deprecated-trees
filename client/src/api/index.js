@@ -3,8 +3,12 @@
  * **/
 
 import axios from 'axios'
+import config from '@/config'
 
 export const cnst = {
+  regions: {
+    central: 'central'
+  },
   env: {
     lcl: 'lcl',
     dev: 'dev',
@@ -44,20 +48,32 @@ export const cnst = {
 let newApi
 newApi = (opts) => {
   let isMGetApi = opts.isMGetApi
+  let mGetApiRegion = opts.mGetApiRegion
   let mGetSending = false
   let mGetSent = false
   let awaitingMGetList = []
-
+  let centralHost = config.hosts.central
+  let regionalHosts = config.hosts.regions
   let doReq = (axiosConfig) => {
-    if (document.location.origin === 'http://localhost:8080') {
-      axiosConfig.url = 'http://localhost:8787' + axiosConfig.url // send to local api server
-    }
     axiosConfig['X-Client'] = 'web'
     return axios(axiosConfig)
   }
+  let buildUrl = (region, path) => {
+    if (region === cnst.regions.central) {
+      return centralHost + path
+    } else {
+      return regionalHosts[region] + path
+    }
+  }
+  let getCentral = (path, data) => {
+    return get(cnst.regions.central, path, data)
+  }
+  let postCentral = (path, data) => {
+    return post(cnst.regions.central, path, data)
+  }
 
-  let get = (path, data) => {
-    let url = path
+  let get = (region, path, data) => {
+    let url = buildUrl(region, path)
     if (typeof data === 'object') {
       url = url + '?args=' + encodeURIComponent(JSON.stringify(data))
     }
@@ -67,6 +83,9 @@ newApi = (opts) => {
         url: url
       })
     } else if (isMGetApi && !mGetSending && !mGetSent) {
+      if (region !== mGetApiRegion) {
+        throw new Error('invalid mget call, all get calls must be to teh same region')
+      }
       let awaitingMGetObj = {
         url: url,
         resolve: null,
@@ -82,17 +101,17 @@ newApi = (opts) => {
     }
   }
 
-  let post = (path, data) => {
+  let post = (region, path, data) => {
     doReq({
       method: 'post',
-      url: path,
+      url: buildUrl(region, path),
       data: data
     })
   }
 
   return {
-    newMGetApi: () => {
-      return newApi({isMGetApi: true})
+    newMGetApi: (region) => {
+      return newApi({isMGetApi: true, mGetApiRegion: region})
     },
     sendMGet: () => {
       if (!isMGetApi) {
@@ -118,7 +137,7 @@ newApi = (opts) => {
           let key = '' + i
           mgetObj[key] = awaitingMGetList[i].url
         }
-        get('/api/mget', mgetObj).then((res) => {
+        get(mGetApiRegion, '/api/mget', mgetObj).then((res) => {
           mGetSending = false
           mGetSent = true
           for (let i = 0, l = awaitingMGetList.length; i < l; i++) {
@@ -141,58 +160,58 @@ newApi = (opts) => {
     v1: {
       centralAccount: {
         getRegions: () => {
-          return get('/api/v1/centralAccount/getRegions')
+          return getCentral('/api/v1/centralAccount/getRegions')
         },
         register: (name, email, pwd, region, language, displayName, theme) => {
-          return post('/api/v1/centralAccount/register', {name, email, pwd, region, language, displayName, theme})
+          return postCentral('/api/v1/centralAccount/register', {name, email, pwd, region, language, displayName, theme})
         },
         resendActivationEmail: (email) => {
-          return post('/api/v1/centralAccount/resendActivationEmail', {email})
+          return postCentral('/api/v1/centralAccount/resendActivationEmail', {email})
         },
         activate: (email, activationCode) => {
-          return post('/api/v1/centralAccount/activate', {email, activationCode})
+          return postCentral('/api/v1/centralAccount/activate', {email, activationCode})
         },
         authenticate: (email, pwd) => {
-          return post('/api/v1/centralAccount/authenticate', {email, pwd})
+          return postCentral('/api/v1/centralAccount/authenticate', {email, pwd})
         },
         confirmNewEmail: (currentEmail, newEmail, confirmationCode) => {
-          return post('/api/v1/centralAccount/confirmNewEmail', {currentEmail, newEmail, confirmationCode})
+          return postCentral('/api/v1/centralAccount/confirmNewEmail', {currentEmail, newEmail, confirmationCode})
         },
         resetPwd: (email) => {
-          return post('/api/v1/centralAccount/resetPwd', {email})
+          return postCentral('/api/v1/centralAccount/resetPwd', {email})
         },
         setNewPwdFromPwdReset: (newPwd, email, resetPwdCode) => {
-          return post('/api/v1/centralAccount/setNewPwdFromPwdReset', {newPwd, email, resetPwdCode})
+          return postCentral('/api/v1/centralAccount/setNewPwdFromPwdReset', {newPwd, email, resetPwdCode})
         },
         getAccount: (name) => {
-          return get('/api/v1/centralAccount/getAccount', {name})
+          return getCentral('/api/v1/centralAccount/getAccount', {name})
         },
         getAccounts: (accounts) => {
-          return get('/api/v1/centralAccount/getAccounts', {accounts})
+          return getCentral('/api/v1/centralAccount/getAccounts', {accounts})
         },
         searchAccounts: (nameOrDisplayNameStartsWith) => {
-          return get('/api/v1/centralAccount/searchAccounts', {nameOrDisplayNameStartsWith})
+          return getCentral('/api/v1/centralAccount/searchAccounts', {nameOrDisplayNameStartsWith})
         },
         searchPersonalAccounts: (nameOrDisplayNameStartsWith) => {
-          return get('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
+          return getCentral('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
         },
         getMe: () => {
-          return get('/api/v1/centralAccount/getMe')
+          return getCentral('/api/v1/centralAccount/getMe')
         },
         setMyPwd: (oldPwd, newPwd) => {
-          return post('/api/v1/centralAccount/setMyPwd', {oldPwd, newPwd})
+          return postCentral('/api/v1/centralAccount/setMyPwd', {oldPwd, newPwd})
         },
         setMyEmail: (newEmail) => {
-          return post('/api/v1/centralAccount/setMyEmail', {newEmail})
+          return postCentral('/api/v1/centralAccount/setMyEmail', {newEmail})
         },
         resendMyNewEmailConfirmationEmail: () => {
-          return post('/api/v1/centralAccount/resendMyNewEmailConfirmationEmail')
+          return postCentral('/api/v1/centralAccount/resendMyNewEmailConfirmationEmail')
         },
         setAccountName: (account, newName) => {
-          return post('/api/v1/centralAccount/setAccountName', {account, newName})
+          return postCentral('/api/v1/centralAccount/setAccountName', {account, newName})
         },
         setAccountDisplayName: (account, newDisplayName) => {
-          return post('/api/v1/centralAccount/setAccountDisplayName', {account, newDisplayName})
+          return postCentral('/api/v1/centralAccount/setAccountDisplayName', {account, newDisplayName})
         },
         setAccountAvatar: (account, avatar) => {
           let data = new FormData()
@@ -200,138 +219,138 @@ newApi = (opts) => {
           if (avatar) {
             data.append('avatar', avatar, '')
           }
-          return post('/api/v1/centralAccount/setAccountAvatar', data)
+          return postCentral('/api/v1/centralAccount/setAccountAvatar', data)
         },
         migrateAccount: (account, newRegion) => {
-          return post('/api/v1/centralAccount/migrateAccount', {account, newRegion})
+          return postCentral('/api/v1/centralAccount/migrateAccount', {account, newRegion})
         },
         createAccount: (name, region, displayName) => {
-          return post('/api/v1/centralAccount/createAccount', {name, region, displayName})
+          return postCentral('/api/v1/centralAccount/createAccount', {name, region, displayName})
         },
         getMyAccounts: (after, limit) => {
-          return get('/api/v1/centralAccount/getMyAccounts', {after, limit})
+          return getCentral('/api/v1/centralAccount/getMyAccounts', {after, limit})
         },
         deleteAccount: (account) => {
-          return post('/api/v1/centralAccount/deleteAccount', {account})
+          return postCentral('/api/v1/centralAccount/deleteAccount', {account})
         },
         addMembers: (account, newMembers) => {
-          return post('/api/v1/centralAccount/addMembers', {account, newMembers})
+          return postCentral('/api/v1/centralAccount/addMembers', {account, newMembers})
         },
         removeMembers: (account, existingMembers) => {
-          return post('/api/v1/centralAccount/removeMembers', {account, existingMembers})
+          return postCentral('/api/v1/centralAccount/removeMembers', {account, existingMembers})
         }
       },
       account: {
-        setPublicProjectsEnabled: (account, publicProjectsEnabled) => {
-          return post('/api/v1/account/setPublicProjectsEnabled', {account, publicProjectsEnabled})
+        setPublicProjectsEnabled: (region, shard, account, publicProjectsEnabled) => {
+          return post(region, '/api/v1/account/setPublicProjectsEnabled', {shard, account, publicProjectsEnabled})
         },
-        getPublicProjectsEnabled: (account) => {
-          return get('/api/v1/account/getPublicProjectsEnabled', {account})
+        getPublicProjectsEnabled: (region, shard, account) => {
+          return get(region, '/api/v1/account/getPublicProjectsEnabled', {shard, account})
         },
-        setMemberRole: (account, member, role) => {
-          return post('/api/v1/account/setMemberRole', {account, member, role})
+        setMemberRole: (region, shard, account, member, role) => {
+          return post(region, '/api/v1/account/setMemberRole', {shard, account, member, role})
         },
-        getMembers: (account, role, nameContains, after, limit) => {
-          return get('/api/v1/account/getMembers', {account, role, nameContains, after, limit})
+        getMembers: (region, shard, account, role, nameContains, after, limit) => {
+          return get(region, '/api/v1/account/getMembers', {shard, account, role, nameContains, after, limit})
         },
-        getActivities: (account, item, member, occurredAfter, occurredBefore, limit) => {
-          return get('/api/v1/account/getActivities', {account, item, member, occurredAfter, occurredBefore, limit})
+        getActivities: (region, shard, account, item, member, occurredAfter, occurredBefore, limit) => {
+          return get(region, '/api/v1/account/getActivities', {shard, account, item, member, occurredAfter, occurredBefore, limit})
         },
-        getMe: (account) => {
-          return get('/api/v1/account/getMe', {account})
+        getMe: (region, shard, account) => {
+          return get(region, '/api/v1/account/getMe', {shard, account})
         }
       },
       project: {
-        create: (account, name, description, startOn, dueOn, isParallel, isPublic, members) => {
-          return post('/api/v1/project/create', {account, name, description, startOn, dueOn, isParallel, isPublic, members})
+        create: (region, shard, account, name, description, startOn, dueOn, isParallel, isPublic, members) => {
+          return post(region, '/api/v1/project/create', {shard, account, name, description, startOn, dueOn, isParallel, isPublic, members})
         },
-        setIsPublic: (account, project, isPublic) => {
-          return post('/api/v1/project/setIsPublic', {account, project, isPublic})
+        setIsPublic: (region, shard, account, project, isPublic) => {
+          return post(region, '/api/v1/project/setIsPublic', {shard, account, project, isPublic})
         },
-        setIsArchived: (account, project, isArchived) => {
-          return post('/api/v1/project/setIsArchived', {account, project, isArchived})
+        setIsArchived: (region, shard, account, project, isArchived) => {
+          return post(region, '/api/v1/project/setIsArchived', {shard, account, project, isArchived})
         },
-        get: (account, project) => {
-          return get('/api/v1/project/get', {account, project})
+        get: (region, shard, account, project) => {
+          return get(region, '/api/v1/project/get', {shard, account, project})
         },
-        getSet: (account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) => {
-          return get('/api/v1/project/getSet', {account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit})
+        getSet: (region, shard, account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) => {
+          return get(region, '/api/v1/project/getSet', {shard, account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit})
         },
-        delete: (account, project) => {
-          return post('/api/v1/project/delete', {account, project})
+        delete: (region, shard, account, project) => {
+          return post(region, '/api/v1/project/delete', {shard, account, project})
         },
-        addMembers: (account, project, members) => {
-          return post('/api/v1/project/addMembers', {account, project, members})
+        addMembers: (region, shard, account, project, members) => {
+          return post(region, '/api/v1/project/addMembers', {shard, account, project, members})
         },
-        setMemberRole: (account, project, member, role) => {
-          return post('/api/v1/project/setMemberRole', {account, project, member, role})
+        setMemberRole: (region, shard, account, project, member, role) => {
+          return post(region, '/api/v1/project/setMemberRole', {shard, account, project, member, role})
         },
-        removeMembers: (account, project, members) => {
-          return post('/api/v1/project/removeMembers', {account, project, members})
+        removeMembers: (region, shard, account, project, members) => {
+          return post(region, '/api/v1/project/removeMembers', {shard, account, project, members})
         },
-        getMembers: (account, project, role, nameOrDisplayNameContains, after, limit) => {
-          return get('/api/v1/project/getMembers', {account, project, role, nameOrDisplayNameContains, after, limit})
+        getMembers: (region, shard, account, project, role, nameOrDisplayNameContains, after, limit) => {
+          return get(region, '/api/v1/project/getMembers', {shard, account, project, role, nameOrDisplayNameContains, after, limit})
         },
-        getMe: (account, project) => {
-          return get('/api/v1/project/getMembers', {account, project})
+        getMe: (region, shard, account, project) => {
+          return get(region, '/api/v1/project/getMembers', {shard, account, project})
         },
-        getActivities: (account, project, item, member, occurredAfter, occurredBefore, limit) => {
-          return get('/api/v1/project/getActivities', {account, project, item, member, occurredAfter, occurredBefore, limit})
+        getActivities: (region, shard, account, project, item, member, occurredAfter, occurredBefore, limit) => {
+          return get(region, '/api/v1/project/getActivities', {shard, account, project, item, member, occurredAfter, occurredBefore, limit})
         }
       },
       task: {
-        create: (account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime) => {
-          return post('/api/v1/task/create', {account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime})
+        create: (region, shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime) => {
+          return post(region, '/api/v1/task/create', {shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime})
         },
-        setName: (account, project, task, name) => {
-          return post('/api/v1/task/setName', {account, project, task, name})
+        setName: (region, shard, account, project, task, name) => {
+          return post(region, '/api/v1/task/setName', {shard, account, project, task, name})
         },
-        setDescription: (account, project, task, description) => {
-          return post('/api/v1/task/setDescription', {account, project, task, description})
+        setDescription: (region, shard, account, project, task, description) => {
+          return post(region, '/api/v1/task/setDescription', {shard, account, project, task, description})
         },
-        setIsParallel: (account, project, task, isParallel) => {
-          return post('/api/v1/task/setDescription', {account, project, task, isParallel})
+        setIsParallel: (region, shard, account, project, task, isParallel) => {
+          return post(region, '/api/v1/task/setDescription', {shard, account, project, task, isParallel})
         },
-        setMember: (account, project, task, member) => {
-          return post('/api/v1/task/setMember', {account, project, task, member})
+        setMember: (region, shard, account, project, task, member) => {
+          return post(region, '/api/v1/task/setMember', {shard, account, project, task, member})
         },
-        setRemainingTime: (account, project, task, remainingTime) => {
-          return post('/api/v1/task/setremainingTime', {account, project, task, remainingTime})
+        setRemainingTime: (region, shard, account, project, task, remainingTime) => {
+          return post(region, '/api/v1/task/setremainingTime', {shard, account, project, task, remainingTime})
         },
-        move: (account, project, task, parent, nextSibling) => {
-          return post('/api/v1/task/move', {account, project, task, parent, nextSibling})
+        move: (region, shard, account, project, task, parent, nextSibling) => {
+          return post(region, '/api/v1/task/move', {shard, account, project, task, parent, nextSibling})
         },
-        delete: (account, project, task) => {
-          return post('/api/v1/task/delete', {account, project, task})
+        delete: (region, shard, account, project, task) => {
+          return post(region, '/api/v1/task/delete', {shard, account, project, task})
         },
-        get: (account, project, tasks) => {
-          return get('/api/v1/task/get', {account, project, tasks})
+        get: (region, shard, account, project, tasks) => {
+          return get(region, '/api/v1/task/get', {shard, account, project, tasks})
         },
-        getChildren: (account, project, parent, fromSibling, limit) => {
-          return get('/api/v1/task/getChildren', {account, project, parent, fromSibling, limit})
+        getChildren: (region, shard, account, project, parent, fromSibling, limit) => {
+          return get(region, '/api/v1/task/getChildren', {shard, account, project, parent, fromSibling, limit})
         },
-        getAncestors: (account, project, child, limit) => {
-          return get('/api/v1/task/getAncestors', {account, project, parent, child, limit})
+        getAncestors: (region, shard, account, project, child, limit) => {
+          return get(region, '/api/v1/task/getAncestors', {shard, account, project, parent, child, limit})
         }
       },
       timeLog: {
-        create: (account, project, task, duration, note) => {
-          return post('/api/v1/task/create', {account, project, task, duration, note})
+        create: (region, shard, account, project, task, duration, note) => {
+          return post(region, '/api/v1/task/create', {shard, account, project, task, duration, note})
         },
-        createAndSetTimeRemaining: (account, project, task, timeRemaining, duration, note) => {
-          return post('/api/v1/task/createAndSetTimeRemaining', {account, project, task, timeRemaining, duration, note})
+        createAndSetTimeRemaining: (region, shard, account, project, task, timeRemaining, duration, note) => {
+          return post(region, '/api/v1/task/createAndSetTimeRemaining', {shard, account, project, task, timeRemaining, duration, note})
         },
-        setDuration: (account, project, timeLog, duration) => {
-          return post('/api/v1/task/setDuration', {account, project, timeLog, duration})
+        setDuration: (region, shard, account, project, timeLog, duration) => {
+          return post(region, '/api/v1/task/setDuration', {shard, account, project, timeLog, duration})
         },
-        setNote: (account, project, timeLog, note) => {
-          return post('/api/v1/task/setNote', {account, project, timeLog, note})
+        setNote: (region, shard, account, project, timeLog, note) => {
+          return post(region, '/api/v1/task/setNote', {shard, account, project, timeLog, note})
         },
-        delete: (account, project, timeLog) => {
-          return post('/api/v1/task/delete', {account, project, timeLog})
+        delete: (region, shard, account, project, timeLog) => {
+          return post(region, '/api/v1/task/delete', {shard, account, project, timeLog})
         },
-        get: (account, project, task, member, timeLog, sortDir, after, limit) => {
-          return get('/api/v1/task/get', {account, project, task, member, timeLog, sortDir, after, limit})
+        get: (region, shard, account, project, task, member, timeLog, sortDir, after, limit) => {
+          return get(region, '/api/v1/task/get', {shard, account, project, task, member, timeLog, sortDir, after, limit})
         }
       }
     }
