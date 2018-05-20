@@ -182,10 +182,10 @@ func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *account, member id.
 	panic.If(e)
 }
 
-func dbGetMyGroupAccounts(ctx ctx.Ctx, after *id.Id, limit int) ([]*account, bool) {
+func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*account, bool) {
 	args := make([]interface{}, 0, 3)
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
-	args = append(args, ctx.Me())
+	args = append(args, member)
 	if after != nil {
 		query.WriteString(` AND name > (SELECT name FROM accounts WHERE id = ?)`)
 		args = append(args, *after)

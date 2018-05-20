@@ -185,11 +185,20 @@ type authenticateArgs struct {
 	PwdTry string `json:"pwdTry"`
 }
 
+type authenticateResp struct{
+	Me *me `json:"me"`
+	MyAccounts *getMyAccountsResp `json:"myAccounts"`
+}
+
+func (ar *authenticateResp) Id() id.Id {
+	return ar.Me.Id
+}
+
 var authenticate = &endpoint.Endpoint{
 	Method:                   http.MethodPost,
 	Path:                     "/api/v1/centralAccount/authenticate",
 	RequiresSession:          false,
-	ExampleResponseStructure: id.New(),
+	ExampleResponseStructure: &me{},
 	IsAuthentication:         true,
 	GetArgsStruct: func() interface{} {
 		return &authenticateArgs{}
@@ -223,7 +232,14 @@ var authenticate = &endpoint.Endpoint{
 			dbUpdatePwdInfo(ctx, acc.Id, pwdInfo)
 		}
 
-		return acc.Id
+		myAccounts, more := dbGetGroupAccounts(ctx, acc.Id, nil, 100)
+		return &authenticateResp{
+			Me: &acc.me,
+			MyAccounts: &getMyAccountsResp{
+				Accounts: myAccounts,
+				More: more,
+			},
+		}
 	},
 }
 
@@ -537,7 +553,7 @@ var setAccountName = &endpoint.Endpoint{
 			ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName) //first rename myself in my personal org
 			var after *id.Id
 			for {
-				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
 					ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName)
 				}
@@ -595,7 +611,7 @@ var setAccountDisplayName = &endpoint.Endpoint{
 			ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName) //first set my display name in my personal org
 			var after *id.Id
 			for {
-				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
 					ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName)
 				}
@@ -676,7 +692,7 @@ var setAccountAvatar = &endpoint.Endpoint{
 			ctx.RegionalV1PrivateClient().SetMemberHasAvatar(account.Region, account.Shard, account.Id, ctx.Me(), account.HasAvatar) //first set hasAvatar in my personal org
 			var after *id.Id
 			for {
-				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
 					ctx.RegionalV1PrivateClient().SetMemberHasAvatar(acc.Region, acc.Shard, acc.Id, ctx.Me(), account.HasAvatar)
 				}
@@ -781,7 +797,7 @@ var getMyAccounts = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMyAccountsArgs)
 		res := &getMyAccountsResp{}
-		res.Accounts, res.More = dbGetMyGroupAccounts(ctx, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.Me(), args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 		return res
 	},
 }
@@ -817,7 +833,7 @@ var deleteAccount = &endpoint.Endpoint{
 		if ctx.Me().Equal(args.Account) {
 			var after *id.Id
 			for {
-				accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
 					isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.Me())
 					panic.If(e)

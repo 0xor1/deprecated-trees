@@ -1,23 +1,21 @@
 /**
  * START CONSTANTS
  */
-$background1: #222326;
-$background2: #121314;
-$backgroundSelected: #2E2F33;
-$color1: #7A7B7E;
-$color2: #D3D5DB;
+$darkBG1: #222326;
+$darkBG2: #121314;
+$darkBG3: #2E2F33;
+$darkC1: #7A7B7E;
+$darkC2: #D3D5DB;
 $highlight1: #1E90FF;
-$highlight1Hover: #2Ea5FF;
-$errorHighlight: #c23b22;
-$successHighlight: #03C03C;
-$colorSelected: #fff;
-$linkColor: #A0D8F4;
-$scrollbarThumbColor: #323438;
-$scrollbarTrackColor: #1c1c1f;
+$highlight2: #2Ea5FF;
+$error: #c23b22;
+$success: #03C03C;
+$selected: #fff;
+$link: #A0D8F4;
 
 $fontFamily: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
-$border1: 1px solid $background2;
+$darkB1: 1px solid $darkBG2;
 
 $thumbnailWidth: 196px;
 
@@ -50,7 +48,7 @@ $thumbnailWidth: 196px;
   @include fill();
 }
 
-@mixin theme($color: $color1, $background: $background1, $fontFamily: $fontFamily, $fontSize: 14px, $fontWeight: normal){
+@mixin theme($color: $darkC1, $background: $darkBG1, $fontFamily: $fontFamily, $fontSize: 14px, $fontWeight: normal){
   color: $color;
   background: $background;
   font-family: $fontFamily;
@@ -58,8 +56,16 @@ $thumbnailWidth: 196px;
   font-weight: $fontWeight;
 }
 
-%theme{
+%lightTheme{
+  @include theme(); //TODO light colors
+}
+
+%darkTheme{
   @include theme();
+}
+
+%colorblindTheme{
+  @include theme(); //TODO colorblind colors
 }
 
 @mixin ellipsis {

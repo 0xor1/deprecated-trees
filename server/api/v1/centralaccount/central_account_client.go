@@ -17,7 +17,7 @@ type Client interface {
 	Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) error
-	Authenticate(css *clientsession.Store, email, pwd string) (id.Id, error)
+	Authenticate(css *clientsession.Store, email, pwd string) (*authenticateResp, error)
 	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
@@ -88,13 +88,13 @@ func (c *client) Activate(email, activationCode string) error {
 	return e
 }
 
-func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (id.Id, error) {
+func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (*authenticateResp, error) {
 	val, e := authenticate.DoRequest(css, c.host, &authenticateArgs{
 		Email:  email,
 		PwdTry: pwdTry,
-	}, nil, &id.Id{})
+	}, nil, &authenticateResp{})
 	if val != nil {
-		return *val.(*id.Id), e
+		return val.(*authenticateResp), e
 	}
 	return nil, e
 }

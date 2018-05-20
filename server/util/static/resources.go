@@ -37,8 +37,8 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	}
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
-	// server address eg "127.0.0.1:8787"
-	config.SetDefault("serverAddress", "127.0.0.1:8787")
+	// server address eg "localhost:8787"
+	config.SetDefault("serverAddress", "localhost:8787")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
 	// must be one of "lcl", "dev", "central", "use", "usw", "euw"
@@ -56,7 +56,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// session cookie name
 	config.SetDefault("sessionCookieName", "t")
 	// cookie session domain
-	config.SetDefault("sessionDomain", "127.0.0.1")
+	config.SetDefault("sessionDomain", "localhost")
 	// session cookie store
 	config.SetDefault("sessionAuthKey64s", []interface{}{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
@@ -100,28 +100,28 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		cnst.LclEnv: "http//127.0.0.1:8787",
+		cnst.LclEnv: "http://localhost:8787",
 	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)
 	// local avatar storage directory, relative
 	config.SetDefault("lclAvatarDir", "avatar")
 	// account primary sql connection
-	config.SetDefault("accountDbPrimary", "t_c_accounts:T@sk-@cc-0unt5@tcp(127.0.0.1:3307)/accounts?parseTime=true&loc=UTC&multiStatements=true")
+	config.SetDefault("accountDbPrimary", "t_c_accounts:T@sk-@cc-0unt5@tcp(localhost:3307)/accounts?parseTime=true&loc=UTC&multiStatements=true")
 	// account slave sql connections
 	config.SetDefault("accountDbSlaves", []interface{}{})
 	// pwd primary sql connection
-	config.SetDefault("pwdDbPrimary", "t_c_pwds:T@sk-Pwd5@tcp(127.0.0.1:3307)/pwds?parseTime=true&loc=UTC&multiStatements=true")
+	config.SetDefault("pwdDbPrimary", "t_c_pwds:T@sk-Pwd5@tcp(localhost:3307)/pwds?parseTime=true&loc=UTC&multiStatements=true")
 	// account slave sql connections
 	config.SetDefault("pwdDbSlaves", []interface{}{})
 	// tree shard sql connections
 	config.SetDefault("treeShards", map[string]interface{}{
-		"0": []interface{}{"t_r_trees:T@sk-Tr335@tcp(127.0.0.1:3307)/trees?parseTime=true&loc=UTC&multiStatements=true"},
+		"0": []interface{}{"t_r_trees:T@sk-Tr335@tcp(localhost:3307)/trees?parseTime=true&loc=UTC&multiStatements=true"},
 	})
 	// redis pool for caching layer
-	config.SetDefault("dlmAndDataRedisPool", "127.0.0.1:6379")
+	config.SetDefault("dlmAndDataRedisPool", "localhost:6379")
 	// redis pool for private request keys to check for replay attacks
-	config.SetDefault("privateKeyRedisPool", "127.0.0.1:6379")
+	config.SetDefault("privateKeyRedisPool", "localhost:6379")
 
 	authKey64s := config.GetStringSlice("sessionAuthKey64s")
 	encrKey32s := config.GetStringSlice("sessionEncrKey32s")
@@ -264,7 +264,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 type Resources struct {
 	// server created on unix millisecs
 	ServerCreatedOn int64
-	// server address eg "127.0.0.1:8787"
+	// server address eg "localhost:8787"
 	ServerAddress string
 	// must be one of "lcl", "dev", "stg", "prd"
 	Env string

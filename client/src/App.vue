@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :class="{dark: useDark}">
     <router-view></router-view>
   </div>
 </template>
@@ -7,8 +7,10 @@
 <script>
 export default {
   name: 'app',
-  data: {
-
+  data () {
+    return {
+      useDark: true
+    }
   }
 }
 </script>
@@ -17,6 +19,15 @@ export default {
   @import "var";
   html, body, div, .fill {
     @extend %fill;
+  }
+  html, body, div, .def {
     @extend %default;
+  }
+  .center-children {
+    justify-content: center;
+    align-items: center;
+  }
+  .dark {
+    @extend %darkTheme;
   }
 </style>

@@ -252,10 +252,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//if this endpoint is the authentication endpoint it should return just the users id.Id, add it to the session cookie
 	result := ep.CtxHandler(ctx, args)
 	if ep.IsAuthentication {
-		if me, ok := result.(id.Id); !ok {
-			err.FmtPanic("isAuthentication did not return id.Id type")
+		if me, ok := result.(id.Identifiable); !ok {
+			err.FmtPanic("isAuthentication did not return id.Identifiable type")
 		} else {
-			ctx.me = &me //set me on _ctx for logging info in defer above
+			i := me.Id()
+			ctx.me = &i //set me on _ctx for logging info in defer above
 			ctx.session.Values["me"] = me
 			ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
 			ctx.session.Save(req, resp)

@@ -1,42 +1,16 @@
 <template>
-  <button v-on:click="click()">
-    init
-  </button>
+  <div class="center-children">
+    <fingerprint-spinner :animation-duration="2000" :size="200" :color="'white'"></fingerprint-spinner>
+  </div>
 </template>
 
 <script>
-  import api, {cnst} from '@/api'
+  import {FingerprintSpinner} from 'epic-spinners'
   export default {
     name: 'init',
+    components: {FingerprintSpinner},
     data () {
-      return {
-        click: () => {
-          console.log('clicked')
-          let mgetApi = api.newMGetApi(cnst.regions.central)
-          mgetApi.v1.centralAccount.getRegions().then((val) => {
-            console.log(1)
-            console.log(val)
-          }).catch((error) => {
-            console.log(1)
-            console.log(error)
-          })
-          mgetApi.v1.centralAccount.getRegions().then((val) => {
-            console.log(2)
-            console.log(val)
-          }).catch((error) => {
-            console.log(2)
-            console.log(error)
-          })
-          mgetApi.v1.centralAccount.getRegions().then((val) => {
-            console.log(3)
-            console.log(val)
-          }).catch((error) => {
-            console.log(3)
-            console.log(error)
-          })
-          mgetApi.sendMGet()
-        }
-      }
+      return {}
     }
   }
 </script>
