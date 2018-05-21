@@ -66,7 +66,7 @@
 				
 				<option value="file5">bitbucket.org\0xor1\task\server\api\v1\centralaccount\central_account_email_helpers.go (75.0%)</option>
 				
-				<option value="file6">bitbucket.org\0xor1\task\server\api\v1\centralaccount\central_account_endpoints.go (84.9%)</option>
+				<option value="file6">bitbucket.org\0xor1\task\server\api\v1\centralaccount\central_account_endpoints.go (85.0%)</option>
 				
 				<option value="file7">bitbucket.org\0xor1\task\server\api\v1\private\private_client.go (72.5%)</option>
 				
@@ -80,11 +80,23 @@
 				
 				<option value="file12">bitbucket.org\0xor1\task\server\api\v1\project\project_endpoints.go (92.9%)</option>
 				
-				<option value="file13">bitbucket.org\0xor1\task\server\util\crypt\crypt.go (100.0%)</option>
+				<option value="file13">bitbucket.org\0xor1\task\server\api\v1\task\task_client.go (90.3%)</option>
 				
-				<option value="file14">bitbucket.org\0xor1\task\server\util\id\id.go (46.2%)</option>
+				<option value="file14">bitbucket.org\0xor1\task\server\api\v1\task\task_db_helpers.go (95.9%)</option>
 				
-				<option value="file15">bitbucket.org\0xor1\task\server\util\validate\validate.go (45.0%)</option>
+				<option value="file15">bitbucket.org\0xor1\task\server\api\v1\task\task_endpoints.go (100.0%)</option>
+				
+				<option value="file16">bitbucket.org\0xor1\task\server\api\v1\timelog\timelog_client.go (84.2%)</option>
+				
+				<option value="file17">bitbucket.org\0xor1\task\server\api\v1\timelog\timelog_db_helpers.go (83.0%)</option>
+				
+				<option value="file18">bitbucket.org\0xor1\task\server\api\v1\timelog\timelog_endpoints.go (87.2%)</option>
+				
+				<option value="file19">bitbucket.org\0xor1\task\server\util\crypt\crypt.go (100.0%)</option>
+				
+				<option value="file20">bitbucket.org\0xor1\task\server\util\id\id.go (46.2%)</option>
+				
+				<option value="file21">bitbucket.org\0xor1\task\server\util\validate\validate.go (45.0%)</option>
 				
 				</select>
 			</div>
@@ -116,11 +128,11 @@ type Client interface {
         //must be account owner/admin
         SetMemberRole(css *clientsession.Store, shard int, account, member id.Id, role cnst.AccountRole) error
         //pointers are optional filters
-        GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error)
+        GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error)
         //either one or both of OccurredAfter/Before must be nil
         GetActivities(css *clientsession.Store, shard int, account id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
         //for anyone
-        GetMe(css *clientsession.Store, shard int, account id.Id) (*member, error)
+        GetMe(css *clientsession.Store, shard int, account id.Id) (*Member, error)
 }
 
 func NewClient(host string) Client <span class="cov8" title="1">{
@@ -164,7 +176,7 @@ func (c *client) SetMemberRole(css *clientsession.Store, shard int, account, mem
         return e
 }</span>
 
-func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error) <span class="cov8" title="1">{
+func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error) <span class="cov8" title="1">{
         val, e := getMembers.DoRequest(css, c.host, &amp;getMembersArgs{
                 Shard:        shard,
                 Account:      account,
@@ -172,9 +184,9 @@ func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, 
                 NameContains: nameContains,
                 After:        after,
                 Limit:        limit,
-        }, nil, &amp;getMembersResp{})
+        }, nil, &amp;GetMembersResp{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*getMembersResp), e
+                return val.(*GetMembersResp), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -195,13 +207,13 @@ func (c *client) GetActivities(css *clientsession.Store, shard int, account id.I
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*member, error) <span class="cov8" title="1">{
+func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*Member, error) <span class="cov8" title="1">{
         val, e := getMe.DoRequest(css, c.host, &amp;getMeArgs{
                 Shard:   shard,
                 Account: account,
-        }, nil, &amp;member{})
+        }, nil, &amp;Member{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*member), e
+                return val.(*Member), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -239,8 +251,8 @@ func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.Ac
         ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member).AccountActivities(account))
 }</span>
 
-func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member <span class="cov8" title="1">{
-        res := member{}
+func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *Member <span class="cov8" title="1">{
+        res := Member{}
         cacheKey := cachekey.NewGet("account.dbGetMember", shard, account, mem).AccountMember(account, mem)
         if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
                 return &amp;res
@@ -284,8 +296,8 @@ AND (
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
-func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp <span class="cov8" title="1">{
-        res := getMembersResp{}
+func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *GetMembersResp <span class="cov8" title="1">{
+        res := GetMembersResp{}
         cacheKey := cachekey.NewGet("account.dbGetMembers", shard, account, role, nameOrDisplayNameContains, after, limit).AccountMembersSet(account)
         if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
                 return &amp;res
@@ -318,9 +330,9 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
                 defer rows.Close()
         }</span>
         <span class="cov8" title="1">panic.If(e)
-        memSet := make([]*member, 0, limit+1)
+        memSet := make([]*Member, 0, limit+1)
         for rows.Next() </span><span class="cov8" title="1">{
-                mem := member{}
+                mem := Member{}
                 panic.If(rows.Scan(&amp;mem.Id, &amp;mem.Name, &amp;mem.DisplayName, &amp;mem.HasAvatar, &amp;mem.IsActive, &amp;mem.Role))
                 memSet = append(memSet, &amp;mem)
         }</span>
@@ -394,6 +406,7 @@ import (
         "bitbucket.org/0xor1/task/server/util/validate"
         "github.com/0xor1/panic"
         "time"
+        "net/http"
 )
 
 type setPublicProjectsEnabledArgs struct {
@@ -403,7 +416,7 @@ type setPublicProjectsEnabledArgs struct {
 }
 
 var setPublicProjectsEnabled = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/account/setPublicProjectsEnabled",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -423,7 +436,7 @@ type getPublicProjectsEnabledArgs struct {
 }
 
 var getPublicProjectsEnabled = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/account/getPublicProjectsEnabled",
         RequiresSession:          true,
         ExampleResponseStructure: false,
@@ -445,7 +458,7 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/account/setMemberRole",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -471,16 +484,16 @@ type getMembersArgs struct {
         Limit        int               `json:"limit"`
 }
 
-type getMembersResp struct {
-        Members []*member `json:"members"`
+type GetMembersResp struct {
+        Members []*Member `json:"members"`
         More    bool      `json:"more"`
 }
 
 var getMembers = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/account/getMembers",
         RequiresSession:          true,
-        ExampleResponseStructure: &amp;getMembersResp{Members: []*member{{}}},
+        ExampleResponseStructure: &amp;GetMembersResp{Members: []*Member{{}}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getMembersArgs{}
         }</span>,
@@ -502,7 +515,7 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/account/getActivities",
         RequiresSession:          true,
         ExampleResponseStructure: []*activity.Activity{{}},
@@ -523,10 +536,10 @@ type getMeArgs struct {
 }
 
 var getMe = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/account/getMe",
         RequiresSession:          true,
-        ExampleResponseStructure: &amp;member{},
+        ExampleResponseStructure: &amp;Member{},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getMeArgs{}
         }</span>,
@@ -545,7 +558,7 @@ var Endpoints = []*endpoint.Endpoint{
         getMe,
 }
 
-type member struct {
+type Member struct {
         Id          id.Id            `json:"id"`
         Name        string           `json:"name"`
         DisplayName *string          `json:"displayName,omitempty"`
@@ -574,16 +587,16 @@ type Client interface {
         Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error
         ResendActivationEmail(email string) error
         Activate(email, activationCode string) error
-        Authenticate(css *clientsession.Store, email, pwd string) (id.Id, error)
+        Authenticate(css *clientsession.Store, email, pwd string) (*AuthenticateResult, error)
         ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error
         ResetPwd(email string) error
         SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
-        GetAccount(name string) (*account, error)
-        GetAccounts(accounts []id.Id) ([]*account, error)
-        SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
-        SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
+        GetAccount(name string) (*Account, error)
+        GetAccounts(accounts []id.Id) ([]*Account, error)
+        SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error)
+        SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error)
         //requires active session to access
-        GetMe(css *clientsession.Store) (*me, error)
+        GetMe(css *clientsession.Store) (*Me, error)
         SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error
         SetMyEmail(css *clientsession.Store, newEmail string) error
         ResendMyNewEmailConfirmationEmail(css *clientsession.Store) error
@@ -591,8 +604,8 @@ type Client interface {
         SetAccountDisplayName(css *clientsession.Store, account id.Id, newDisplayName *string) error
         SetAccountAvatar(css *clientsession.Store, account id.Id, avatar io.ReadCloser) error
         MigrateAccount(css *clientsession.Store, account id.Id, newRegion string) error
-        CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*account, error)
-        GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*getMyAccountsResp, error)
+        CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error)
+        GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*GetMyAccountsResult, error)
         DeleteAccount(css *clientsession.Store, account id.Id) error
         //member centric - must be an owner or admin
         AddMembers(css *clientsession.Store, account id.Id, newMembers []*AddMember) error
@@ -645,13 +658,13 @@ func (c *client) Activate(email, activationCode string) error <span class="cov8"
         return e
 }</span>
 
-func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (id.Id, error) <span class="cov8" title="1">{
+func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (*AuthenticateResult, error) <span class="cov8" title="1">{
         val, e := authenticate.DoRequest(css, c.host, &amp;authenticateArgs{
                 Email:  email,
                 PwdTry: pwdTry,
-        }, nil, &amp;id.Id{})
+        }, nil, &amp;AuthenticateResult{})
         if val != nil </span><span class="cov8" title="1">{
-                return *val.(*id.Id), e
+                return val.(*AuthenticateResult), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -681,50 +694,50 @@ func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
         return e
 }</span>
 
-func (c *client) GetAccount(name string) (*account, error) <span class="cov8" title="1">{
+func (c *client) GetAccount(name string) (*Account, error) <span class="cov8" title="1">{
         val, e := getAccount.DoRequest(nil, c.host, &amp;getAccountArgs{
                 Name: name,
-        }, nil, &amp;account{})
+        }, nil, &amp;Account{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*account), e
+                return val.(*Account), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) GetAccounts(accounts []id.Id) ([]*account, error) <span class="cov8" title="1">{
+func (c *client) GetAccounts(accounts []id.Id) ([]*Account, error) <span class="cov8" title="1">{
         val, e := getAccounts.DoRequest(nil, c.host, &amp;getAccountsArgs{
                 Accounts: accounts,
-        }, nil, &amp;[]*account{})
+        }, nil, &amp;[]*Account{})
         if val != nil </span><span class="cov8" title="1">{
-                return *val.(*[]*account), e
+                return *val.(*[]*Account), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) <span class="cov8" title="1">{
+func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) <span class="cov8" title="1">{
         val, e := searchAccounts.DoRequest(nil, c.host, &amp;searchAccountsArgs{
                 NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
-        }, nil, &amp;[]*account{})
+        }, nil, &amp;[]*Account{})
         if val != nil </span><span class="cov8" title="1">{
-                return *val.(*[]*account), e
+                return *val.(*[]*Account), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) <span class="cov8" title="1">{
+func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) <span class="cov8" title="1">{
         val, e := searchPersonalAccounts.DoRequest(nil, c.host, &amp;searchPersonalAccountsArgs{
                 NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
-        }, nil, &amp;[]*account{})
+        }, nil, &amp;[]*Account{})
         if val != nil </span><span class="cov8" title="1">{
-                return *val.(*[]*account), e
+                return *val.(*[]*Account), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) GetMe(css *clientsession.Store) (*me, error) <span class="cov8" title="1">{
-        val, e := getMe.DoRequest(css, c.host, nil, nil, &amp;me{})
+func (c *client) GetMe(css *clientsession.Store) (*Me, error) <span class="cov8" title="1">{
+        val, e := getMe.DoRequest(css, c.host, nil, nil, &amp;Me{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*me), e
+                return val.(*Me), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -792,25 +805,25 @@ func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegi
         return e
 }</span>
 
-func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*account, error) <span class="cov8" title="1">{
+func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error) <span class="cov8" title="1">{
         val, e := createAccount.DoRequest(css, c.host, &amp;createAccountArgs{
                 Name:        name,
                 Region:      region,
                 DisplayName: displayName,
-        }, nil, &amp;account{})
+        }, nil, &amp;Account{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*account), e
+                return val.(*Account), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*getMyAccountsResp, error) <span class="cov8" title="1">{
+func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*GetMyAccountsResult, error) <span class="cov8" title="1">{
         val, e := getMyAccounts.DoRequest(css, c.host, &amp;getMyAccountsArgs{
                 After: after,
                 Limit: limit,
-        }, nil, &amp;getMyAccountsResp{})
+        }, nil, &amp;GetMyAccountsResult{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*getMyAccountsResp), e
+                return val.(*GetMyAccountsResult), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -856,9 +869,9 @@ func dbAccountWithCiNameExists(ctx ctx.Ctx, name string) bool <span class="cov8"
         return count != 0
 }</span>
 
-func dbGetAccountByCiName(ctx ctx.Ctx, name string) *account <span class="cov8" title="1">{
+func dbGetAccountByCiName(ctx ctx.Ctx, name string) *Account <span class="cov8" title="1">{
         row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name = ?`, name)
-        acc := account{}
+        acc := Account{}
         if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&amp;acc.Id, &amp;acc.Name, &amp;acc.DisplayName, &amp;acc.CreatedOn, &amp;acc.Region, &amp;acc.NewRegion, &amp;acc.Shard, &amp;acc.HasAvatar, &amp;acc.IsPersonal)) </span><span class="cov0" title="0">{
                 return nil
         }</span>
@@ -906,7 +919,7 @@ func dbUpdatePersonalAccount(ctx ctx.Ctx, personalAccountInfo *fullPersonalAccou
         panic.If(e)
 }</span>
 
-func dbUpdateAccount(ctx ctx.Ctx, account *account) <span class="cov8" title="1">{
+func dbUpdateAccount(ctx ctx.Ctx, account *Account) <span class="cov8" title="1">{
         _, e := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
         panic.If(e)
 }</span>
@@ -923,16 +936,16 @@ func dbDeleteAccountAndAllAssociatedMemberships(ctx ctx.Ctx, id id.Id) <span cla
         panic.If(e)
 }</span>
 
-func dbGetAccount(ctx ctx.Ctx, id id.Id) *account <span class="cov8" title="1">{
+func dbGetAccount(ctx ctx.Ctx, id id.Id) *Account <span class="cov8" title="1">{
         row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id = ?`, id)
-        a := account{}
+        a := Account{}
         if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&amp;a.Id, &amp;a.Name, &amp;a.DisplayName, &amp;a.CreatedOn, &amp;a.Region, &amp;a.NewRegion, &amp;a.Shard, &amp;a.HasAvatar, &amp;a.IsPersonal)) </span><span class="cov0" title="0">{
                 return nil
         }</span>
         <span class="cov8" title="1">return &amp;a</span>
 }
 
-func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*account <span class="cov8" title="1">{
+func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*Account <span class="cov8" title="1">{
         args := make([]interface{}, 0, len(ids))
         args = append(args, ids[0])
         query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (?`)
@@ -946,16 +959,16 @@ func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*account <span class="cov8" title
                 defer rows.Close()
         }</span>
         <span class="cov8" title="1">panic.If(e)
-        res := make([]*account, 0, len(ids))
+        res := make([]*Account, 0, len(ids))
         for rows.Next() </span><span class="cov8" title="1">{
-                a := account{}
+                a := Account{}
                 panic.If(rows.Scan(&amp;a.Id, &amp;a.Name, &amp;a.DisplayName, &amp;a.CreatedOn, &amp;a.Region, &amp;a.NewRegion, &amp;a.Shard, &amp;a.HasAvatar, &amp;a.IsPersonal))
                 res = append(res, &amp;a)
         }</span>
         <span class="cov8" title="1">return res</span>
 }
 
-func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*account <span class="cov8" title="1">{
+func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Account <span class="cov8" title="1">{
         searchTerm := nameOrDisplayNameStartsWith + "%"
         //rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
         //TODO need to profile these queries to check for best performance
@@ -965,16 +978,16 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*accoun
         }</span>
         <span class="cov8" title="1">panic.If(e)
 
-        res := make([]*account, 0, 100)
+        res := make([]*Account, 0, 100)
         for rows.Next() </span><span class="cov8" title="1">{
-                acc := account{}
+                acc := Account{}
                 panic.If(rows.Scan(&amp;acc.Id, &amp;acc.Name, &amp;acc.DisplayName, &amp;acc.CreatedOn, &amp;acc.Region, &amp;acc.NewRegion, &amp;acc.Shard, &amp;acc.HasAvatar, &amp;acc.IsPersonal))
                 res = append(res, &amp;acc)
         }</span>
         <span class="cov8" title="1">return res</span>
 }
 
-func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*account <span class="cov8" title="1">{
+func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Account <span class="cov8" title="1">{
         //rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?`, searchTerm, searchTerm, 100)
         //TODO need to profile these queries to check for best performance
         searchTerm := nameOrDisplayNameStartsWith + "%"
@@ -984,9 +997,9 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
         }</span>
         <span class="cov8" title="1">panic.If(e)
 
-        res := make([]*account, 0, 100)
+        res := make([]*Account, 0, 100)
         for rows.Next() </span><span class="cov8" title="1">{
-                acc := account{}
+                acc := Account{}
                 acc.IsPersonal = true
                 panic.If(rows.Scan(&amp;acc.Id, &amp;acc.Name, &amp;acc.DisplayName, &amp;acc.CreatedOn, &amp;acc.Region, &amp;acc.NewRegion, &amp;acc.Shard, &amp;acc.HasAvatar))
                 res = append(res, &amp;acc)
@@ -994,7 +1007,7 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
         <span class="cov8" title="1">return res</span>
 }
 
-func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account <span class="cov8" title="1">{
+func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*Account <span class="cov8" title="1">{
         args := make([]interface{}, 0, len(ids))
         args = append(args, ids[0])
         query := bytes.NewBufferString(` SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE id IN (SELECT id FROM personalAccounts WHERE id IN (?`)
@@ -1008,9 +1021,9 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account <span class="cov
                 defer rows.Close()
         }</span>
         <span class="cov8" title="1">panic.If(e)
-        res := make([]*account, 0, len(ids))
+        res := make([]*Account, 0, len(ids))
         for rows.Next() </span><span class="cov8" title="1">{
-                acc := account{}
+                acc := Account{}
                 acc.IsPersonal = true
                 panic.If(rows.Scan(&amp;acc.Id, &amp;acc.Name, &amp;acc.DisplayName, &amp;acc.CreatedOn, &amp;acc.Region, &amp;acc.NewRegion, &amp;acc.Shard, &amp;acc.HasAvatar))
                 res = append(res, &amp;acc)
@@ -1018,15 +1031,15 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account <span class="cov
         <span class="cov8" title="1">return res</span>
 }
 
-func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *account, member id.Id) <span class="cov8" title="1">{
+func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *Account, member id.Id) <span class="cov8" title="1">{
         _, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, member)
         panic.If(e)
 }</span>
 
-func dbGetMyGroupAccounts(ctx ctx.Ctx, after *id.Id, limit int) ([]*account, bool) <span class="cov8" title="1">{
+func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*Account, bool) <span class="cov8" title="1">{
         args := make([]interface{}, 0, 3)
         query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
-        args = append(args, ctx.Me())
+        args = append(args, member)
         if after != nil </span><span class="cov8" title="1">{
                 query.WriteString(` AND name &gt; (SELECT name FROM accounts WHERE id = ?)`)
                 args = append(args, *after)
@@ -1038,9 +1051,9 @@ func dbGetMyGroupAccounts(ctx ctx.Ctx, after *id.Id, limit int) ([]*account, boo
                 defer rows.Close()
         }</span>
         <span class="cov8" title="1">panic.If(e)
-        res := make([]*account, 0, limit+1)
+        res := make([]*Account, 0, limit+1)
         for rows.Next() </span><span class="cov8" title="1">{
-                a := account{}
+                a := Account{}
                 panic.If(rows.Scan(&amp;a.Id, &amp;a.Name, &amp;a.DisplayName, &amp;a.CreatedOn, &amp;a.Region, &amp;a.NewRegion, &amp;a.Shard, &amp;a.HasAvatar, &amp;a.IsPersonal))
                 res = append(res, &amp;a)
         }</span>
@@ -1146,7 +1159,7 @@ var (
 //endpoints
 
 var getRegions = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/getRegions",
         RequiresSession:          false,
         ExampleResponseStructure: []string{"use", "usw", "eu"},
@@ -1166,7 +1179,7 @@ type registerArgs struct {
 }
 
 var register = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/register",
         RequiresSession: false,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1239,7 +1252,7 @@ type resendActivationEmailArgs struct {
 }
 
 var resendActivationEmail = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/resendActivationEmail",
         RequiresSession: false,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1263,7 +1276,7 @@ type activateArgs struct {
 }
 
 var activate = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/activate",
         RequiresSession: false,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1287,11 +1300,20 @@ type authenticateArgs struct {
         PwdTry string `json:"pwdTry"`
 }
 
+type AuthenticateResult struct{
+        Me *Me                          `json:"me"`
+        MyAccounts *GetMyAccountsResult `json:"myAccounts"`
+}
+
+func (ar *AuthenticateResult) Id() id.Id <span class="cov8" title="1">{
+        return ar.Me.Id
+}</span>
+
 var authenticate = &amp;endpoint.Endpoint{
-        Method:                   cnst.POST,
+        Method:                   http.MethodPost,
         Path:                     "/api/v1/centralAccount/authenticate",
         RequiresSession:          false,
-        ExampleResponseStructure: id.New(),
+        ExampleResponseStructure: &amp;Me{},
         IsAuthentication:         true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;authenticateArgs{}
@@ -1325,7 +1347,14 @@ var authenticate = &amp;endpoint.Endpoint{
                         dbUpdatePwdInfo(ctx, acc.Id, pwdInfo)
                 }</span>
 
-                <span class="cov8" title="1">return acc.Id</span>
+                <span class="cov8" title="1">myAccounts, more := dbGetGroupAccounts(ctx, acc.Id, nil, 100)
+                return &amp;AuthenticateResult{
+                        Me: &amp;acc.Me,
+                        MyAccounts: &amp;GetMyAccountsResult{
+                                Accounts: myAccounts,
+                                More: more,
+                        },
+                }</span>
         },
 }
 
@@ -1336,7 +1365,7 @@ type confirmNewEmailArgs struct {
 }
 
 var confirmNewEmail = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/confirmNewEmail",
         RequiresSession: false,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1363,7 +1392,7 @@ type resetPwdArgs struct {
 }
 
 var resetPwd = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/resetPwd",
         RequiresSession: false,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1394,7 +1423,7 @@ type setNewPwdFromPwdResetArgs struct {
 }
 
 var setNewPwdFromPwdReset = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/setNewPwdFromPwdReset",
         RequiresSession: false,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1431,10 +1460,10 @@ type getAccountArgs struct {
 }
 
 var getAccount = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/getAccount",
         RequiresSession:          false,
-        ExampleResponseStructure: &amp;account{},
+        ExampleResponseStructure: &amp;Account{},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getAccountArgs{}
         }</span>,
@@ -1449,10 +1478,10 @@ type getAccountsArgs struct {
 }
 
 var getAccounts = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/getAccounts",
         RequiresSession:          false,
-        ExampleResponseStructure: []*account{{}},
+        ExampleResponseStructure: []*Account{{}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getAccountsArgs{}
         }</span>,
@@ -1469,10 +1498,10 @@ type searchAccountsArgs struct {
 }
 
 var searchAccounts = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/searchAccounts",
         RequiresSession:          false,
-        ExampleResponseStructure: []*account{{}},
+        ExampleResponseStructure: []*Account{{}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;searchAccountsArgs{}
         }</span>,
@@ -1489,10 +1518,10 @@ type searchPersonalAccountsArgs struct {
 }
 
 var searchPersonalAccounts = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/searchPersonalAccounts",
         RequiresSession:          false,
-        ExampleResponseStructure: []*account{{}},
+        ExampleResponseStructure: []*Account{{}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;searchPersonalAccountsArgs{}
         }</span>,
@@ -1505,14 +1534,14 @@ var searchPersonalAccounts = &amp;endpoint.Endpoint{
 }
 
 var getMe = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/getMe",
         RequiresSession:          true,
-        ExampleResponseStructure: &amp;me{},
+        ExampleResponseStructure: &amp;Me{},
         CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} <span class="cov8" title="1">{
                 acc := dbGetPersonalAccountById(ctx, ctx.Me())
                 panic.IfTrueWith(acc == nil, noSuchAccountErr)
-                return &amp;acc.me
+                return &amp;acc.Me
         }</span>,
 }
 
@@ -1522,7 +1551,7 @@ type setMyPwdArgs struct {
 }
 
 var setMyPwd = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/setMyPwd",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1555,7 +1584,7 @@ type setMyEmailArgs struct {
 }
 
 var setMyEmail = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/setMyEmail",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1584,7 +1613,7 @@ var setMyEmail = &amp;endpoint.Endpoint{
 }
 
 var resendMyNewEmailConfirmationEmail = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/resendMyNewEmailConfirmationEmail",
         RequiresSession: true,
         CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} <span class="cov8" title="1">{
@@ -1608,7 +1637,7 @@ type setAccountNameArgs struct {
 }
 
 var setAccountName = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/setAccountName",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1639,7 +1668,7 @@ var setAccountName = &amp;endpoint.Endpoint{
                         ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName) //first rename myself in my personal org
                         var after *id.Id
                         for </span><span class="cov8" title="1">{
-                                accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+                                accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
                                 for _, acc := range accs </span><span class="cov0" title="0">{
                                         ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName)
                                 }</span>
@@ -1660,7 +1689,7 @@ type setAccountDisplayNameArgs struct {
 }
 
 var setAccountDisplayName = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/setAccountDisplayName",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1697,7 +1726,7 @@ var setAccountDisplayName = &amp;endpoint.Endpoint{
                         ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName) //first set my display name in my personal org
                         var after *id.Id
                         for </span><span class="cov8" title="1">{
-                                accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+                                accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
                                 for _, acc := range accs </span><span class="cov0" title="0">{
                                         ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName)
                                 }</span>
@@ -1718,7 +1747,7 @@ type setAccountAvatarArgs struct {
 }
 
 var setAccountAvatar = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/setAccountAvatar",
         RequiresSession: true,
         FormStruct: map[string]string{
@@ -1778,7 +1807,7 @@ var setAccountAvatar = &amp;endpoint.Endpoint{
                         ctx.RegionalV1PrivateClient().SetMemberHasAvatar(account.Region, account.Shard, account.Id, ctx.Me(), account.HasAvatar) //first set hasAvatar in my personal org
                         var after *id.Id
                         for </span><span class="cov8" title="1">{
-                                accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+                                accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
                                 for _, acc := range accs </span><span class="cov0" title="0">{
                                         ctx.RegionalV1PrivateClient().SetMemberHasAvatar(acc.Region, acc.Shard, acc.Id, ctx.Me(), account.HasAvatar)
                                 }</span>
@@ -1799,7 +1828,7 @@ type migrateAccountArgs struct {
 }
 
 var migrateAccount = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/migrateAccount",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1818,10 +1847,10 @@ type createAccountArgs struct {
 }
 
 var createAccount = &amp;endpoint.Endpoint{
-        Method:                   cnst.POST,
+        Method:                   http.MethodPost,
         Path:                     "/api/v1/centralAccount/createAccount",
         RequiresSession:          true,
-        ExampleResponseStructure: &amp;account{},
+        ExampleResponseStructure: &amp;Account{},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;createAccountArgs{}
         }</span>,
@@ -1833,7 +1862,7 @@ var createAccount = &amp;endpoint.Endpoint{
                 panic.IfTrueWith(!ctx.RegionalV1PrivateClient().IsValidRegion(args.Region), err.NoSuchRegion)
                 panic.IfTrueWith(dbAccountWithCiNameExists(ctx, args.Name), nameAlreadyInUseErr)
 
-                account := &amp;account{}
+                account := &amp;Account{}
                 account.Id = id.New()
                 account.Name = args.Name
                 account.DisplayName = args.DisplayName
@@ -1867,23 +1896,23 @@ type getMyAccountsArgs struct {
         Limit int    `json:"limit"`
 }
 
-type getMyAccountsResp struct {
-        Accounts []*account `json:"accounts"`
+type GetMyAccountsResult struct {
+        Accounts []*Account `json:"accounts"`
         More     bool       `json:"more"`
 }
 
 var getMyAccounts = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/centralAccount/getMyAccounts",
         RequiresSession:          true,
-        ExampleResponseStructure: &amp;getMyAccountsResp{Accounts: []*account{{}}},
+        ExampleResponseStructure: &amp;GetMyAccountsResult{Accounts: []*Account{{}}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getMyAccountsArgs{}
         }</span>,
         CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
                 args := a.(*getMyAccountsArgs)
-                res := &amp;getMyAccountsResp{}
-                res.Accounts, res.More = dbGetMyGroupAccounts(ctx, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+                res := &amp;GetMyAccountsResult{}
+                res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.Me(), args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
                 return res
         }</span>,
 }
@@ -1893,7 +1922,7 @@ type deleteAccountArgs struct {
 }
 
 var deleteAccount = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/deleteAccount",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1919,7 +1948,7 @@ var deleteAccount = &amp;endpoint.Endpoint{
                 if ctx.Me().Equal(args.Account) </span><span class="cov8" title="1">{
                         var after *id.Id
                         for </span><span class="cov8" title="1">{
-                                accs, more := dbGetMyGroupAccounts(ctx, after, 100)
+                                accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
                                 for _, acc := range accs </span><span class="cov0" title="0">{
                                         isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.Me())
                                         panic.If(e)
@@ -1945,7 +1974,7 @@ type addMembersArgs struct {
 }
 
 var addMembers = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/addMembers",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -1993,7 +2022,7 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/centralAccount/removeMembers",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2042,7 +2071,7 @@ var Endpoints = []*endpoint.Endpoint{
 }
 
 //structs
-type account struct {
+type Account struct {
         Id          id.Id     `json:"id"`
         Name        string    `json:"name"`
         DisplayName *string   `json:"displayName"`
@@ -2054,12 +2083,12 @@ type account struct {
         IsPersonal  bool      `json:"isPersonal"`
 }
 
-func (a *account) isMigrating() bool <span class="cov0" title="0">{
+func (a *Account) isMigrating() bool <span class="cov0" title="0">{
         return a.NewRegion != nil
 }</span>
 
-type me struct {
-        account
+type Me struct {
+        Account
         Email    string     `json:"email"`
         Language string     `json:"language"`
         Theme    cnst.Theme `json:"theme"`
@@ -2067,7 +2096,7 @@ type me struct {
 }
 
 type fullPersonalAccountInfo struct {
-        me
+        Me
         activationCode           *string
         activatedOn              *time.Time
         newEmailConfirmationCode *string
@@ -2409,6 +2438,7 @@ import (
         "bitbucket.org/0xor1/task/server/util/private"
         "bitbucket.org/0xor1/task/server/util/validate"
         "github.com/0xor1/panic"
+        "net/http"
 )
 
 var (
@@ -2424,7 +2454,7 @@ type createAccountArgs struct {
 }
 
 var createAccount = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/createAccount",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2443,7 +2473,7 @@ type deleteAccountArgs struct {
 }
 
 var deleteAccount = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/deleteAccount",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2468,7 +2498,7 @@ type addMembersArgs struct {
 }
 
 var addMembers = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/addMembers",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2524,7 +2554,7 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/removeMembers",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2563,7 +2593,7 @@ type memberIsOnlyAccountOwnerArgs struct {
 }
 
 var memberIsOnlyAccountOwner = &amp;endpoint.Endpoint{
-        Method:    cnst.GET,
+        Method:    http.MethodGet,
         Path:      "/api/v1/private/memberIsOnlyAccountOwner",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2588,7 +2618,7 @@ type setMemberNameArgs struct {
 }
 
 var setMemberName = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/setMemberName",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2609,7 +2639,7 @@ type setMemberDisplayNameArgs struct {
 }
 
 var setMemberDisplayName = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/setMemberDisplayName",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov0" title="0">{
@@ -2630,7 +2660,7 @@ type setMemberHasAvatarArgs struct {
 }
 
 var setMemberHasAvatar = &amp;endpoint.Endpoint{
-        Method:    cnst.POST,
+        Method:    http.MethodPost,
         Path:      "/api/v1/private/setMemberHasAvatar",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2650,7 +2680,7 @@ type memberIsAccountOwnerArgs struct {
 }
 
 var memberIsAccountOwner = &amp;endpoint.Endpoint{
-        Method:    cnst.GET,
+        Method:    http.MethodGet,
         Path:      "/api/v1/private/memberIsAccountOwner",
         IsPrivate: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -2695,15 +2725,15 @@ import (
 
 type Client interface {
         //must be account owner/admin
-        Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error)
+        Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*Project, error)
         //must be account owner/admin and account.publicProjectsEnabled must be true
         SetIsPublic(css *clientsession.Store, shard int, account, project id.Id, isPublic bool) error
         //must be account owner/admin
         SetIsArchived(css *clientsession.Store, shard int, account, project id.Id, isArchived bool) error
         //check project access permission per user
-        Get(css *clientsession.Store, shard int, account, project id.Id) (*project, error)
+        Get(css *clientsession.Store, shard int, account, project id.Id) (*Project, error)
         //check project access permission per user
-        GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*getSetResp, error)
+        GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*GetSetResult, error)
         //must be account owner/admin
         Delete(css *clientsession.Store, shard int, account, project id.Id) error
         //must be account owner/admin or project admin
@@ -2713,7 +2743,7 @@ type Client interface {
         //must be account owner/admin or project admin
         RemoveMembers(css *clientsession.Store, shard int, account, project id.Id, members []id.Id) error
         //pointers are optional filters, anyone who can see a project can see all the member info for that project
-        GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*getMembersResp, error)
+        GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error)
         //for anyone
         GetMe(css *clientsession.Store, shard int, account, project id.Id) (*member, error)
         //either one or both of OccurredAfter/Before must be nil
@@ -2730,7 +2760,7 @@ type client struct {
         host string
 }
 
-func (c *client) Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error) <span class="cov8" title="1">{
+func (c *client) Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*Project, error) <span class="cov8" title="1">{
         val, e := create.DoRequest(css, c.host, &amp;createArgs{
                 Shard:       shard,
                 Account:     account,
@@ -2741,9 +2771,9 @@ func (c *client) Create(css *clientsession.Store, shard int, account id.Id, name
                 IsParallel:  isParallel,
                 IsPublic:    isPublic,
                 Members:     members,
-        }, nil, &amp;project{})
+        }, nil, &amp;Project{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*project), e
+                return val.(*Project), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -2768,19 +2798,19 @@ func (c *client) SetIsArchived(css *clientsession.Store, shard int, account, pro
         return e
 }</span>
 
-func (c *client) Get(css *clientsession.Store, shard int, account, proj id.Id) (*project, error) <span class="cov8" title="1">{
+func (c *client) Get(css *clientsession.Store, shard int, account, proj id.Id) (*Project, error) <span class="cov8" title="1">{
         val, e := get.DoRequest(css, c.host, &amp;getArgs{
                 Shard:   shard,
                 Account: account,
                 Project: proj,
-        }, nil, &amp;project{})
+        }, nil, &amp;Project{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*project), e
+                return val.(*Project), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
 
-func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*getSetResp, error) <span class="cov8" title="1">{
+func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*GetSetResult, error) <span class="cov8" title="1">{
         val, e := getSet.DoRequest(css, c.host, &amp;getSetArgs{
                 Shard:           shard,
                 Account:         account,
@@ -2796,9 +2826,9 @@ func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, name
                 SortDir:         sortDir,
                 After:           after,
                 Limit:           limit,
-        }, nil, &amp;getSetResp{})
+        }, nil, &amp;GetSetResult{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*getSetResp), e
+                return val.(*GetSetResult), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -2843,18 +2873,18 @@ func (c *client) RemoveMembers(css *clientsession.Store, shard int, account, pro
         return e
 }</span>
 
-func (c *client) GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*getMembersResp, error) <span class="cov8" title="1">{
+func (c *client) GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error) <span class="cov8" title="1">{
         val, e := getMembers.DoRequest(css, c.host, &amp;getMembersArgs{
-                Shard:                     shard,
-                Account:                   account,
-                Project:                   project,
-                Role:                      role,
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Role:    role,
                 NameOrDisplayNameContains: nameOrDisplayNameContains,
-                After:                     after,
-                Limit:                     limit,
-        }, nil, &amp;getMembersResp{})
+                After: after,
+                Limit: limit,
+        }, nil, &amp;GetMembersResult{})
         if val != nil </span><span class="cov8" title="1">{
-                return val.(*getMembersResp), e
+                return val.(*GetMembersResult), e
         }</span>
         <span class="cov0" title="0">return nil, e</span>
 }
@@ -2918,7 +2948,7 @@ func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool <sp
         return exists</span>
 }
 
-func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *project) <span class="cov8" title="1">{
+func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *Project) <span class="cov8" title="1">{
         _, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
         panic.If(e)
         ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).AccountProjectsSet(account))
@@ -2930,8 +2960,8 @@ func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, isPublic bool
         ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
 }</span>
 
-func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project <span class="cov8" title="1">{
-        res := project{}
+func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *Project <span class="cov8" title="1">{
+        res := Project{}
         cacheKey := cachekey.NewGet("project.dbGetProject", shard, account, proj).Project(account, proj)
         if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
                 return &amp;res
@@ -2944,15 +2974,15 @@ func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project <span cl
         return &amp;res</span>
 }
 
-func dbGetPublicProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp <span class="cov0" title="0">{
+func dbGetPublicProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult <span class="cov0" title="0">{
         return dbGetProjects(ctx, shard, `AND isPublic=true`, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }</span>
 
-func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, account, me id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp <span class="cov0" title="0">{
+func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, account, me id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult <span class="cov0" title="0">{
         return dbGetProjects(ctx, shard, `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, account, &amp;me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }</span>
 
-func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp <span class="cov8" title="1">{
+func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult <span class="cov8" title="1">{
         return dbGetProjects(ctx, shard, ``, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }</span>
 
@@ -2983,8 +3013,8 @@ func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member 
         ctx.TouchDlms(cachekey.NewSetDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }</span>
 
-func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp <span class="cov8" title="1">{
-        res := getMembersResp{}
+func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *GetMembersResult <span class="cov8" title="1">{
+        res := GetMembersResult{}
         cacheKey := cachekey.NewGet("project.dbGetMembers", shard, account, project, role, nameOrDisplayNameContains, after, limit).ProjectMembersSet(account, project)
         if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
                 return &amp;res
@@ -3091,8 +3121,8 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
         return res</span>
 }
 
-func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp <span class="cov8" title="1">{
-        res := getSetResp{}
+func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult <span class="cov8" title="1">{
+        res := GetSetResult{}
         cacheKey := cachekey.NewGet("project.dbGetProjectsSet", shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit).AccountProjectsSet(account)
         if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
                 return &amp;res
@@ -3139,11 +3169,11 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
         args = append(args, limit+1)
         rows, e := ctx.TreeQuery(shard, fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
         panic.If(e)
-        projSet := make([]*project, 0, limit+1)
+        projSet := make([]*Project, 0, limit+1)
         idx := 0
         resIdx := map[string]int{}
         for rows.Next() </span><span class="cov8" title="1">{
-                proj := project{}
+                proj := Project{}
                 panic.If(rows.Scan(&amp;proj.Id, &amp;proj.IsArchived, &amp;proj.Name, &amp;proj.CreatedOn, &amp;proj.StartOn, &amp;proj.DueOn, &amp;proj.FileCount, &amp;proj.FileSize, &amp;proj.IsPublic))
                 projSet = append(projSet, &amp;proj)
                 resIdx[proj.Id.String()] = idx
@@ -3205,6 +3235,7 @@ import (
         "bitbucket.org/0xor1/task/server/util/validate"
         "github.com/0xor1/panic"
         "time"
+        "net/http"
 )
 
 var (
@@ -3224,10 +3255,10 @@ type createArgs struct {
 }
 
 var create = &amp;endpoint.Endpoint{
-        Method:                   cnst.POST,
+        Method:                   http.MethodPost,
         Path:                     "/api/v1/project/create",
         RequiresSession:          true,
-        ExampleResponseStructure: &amp;project{},
+        ExampleResponseStructure: &amp;Project{},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;createArgs{}
         }</span>,
@@ -3236,7 +3267,7 @@ var create = &amp;endpoint.Endpoint{
                 validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
                 panic.IfTrueWith(args.IsPublic &amp;&amp; !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 
-                project := &amp;project{}
+                project := &amp;Project{}
                 project.Id = id.New()
                 project.Name = args.Name
                 project.Description = args.Description
@@ -3274,7 +3305,7 @@ type setIsPublicArgs struct {
 }
 
 var setIsPublic = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/project/setIsPublic",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -3297,7 +3328,7 @@ type setIsArchivedArgs struct {
 }
 
 var setIsArchived = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/project/setIsArchived",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -3318,10 +3349,10 @@ type getArgs struct {
 }
 
 var get = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/project/get",
         RequiresSession:          false,
-        ExampleResponseStructure: &amp;project{},
+        ExampleResponseStructure: &amp;Project{},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getArgs{}
         }</span>,
@@ -3350,16 +3381,16 @@ type getSetArgs struct {
         Limit           int          `json:"limit"`
 }
 
-type getSetResp struct {
-        Projects []*project `json:"projects"`
+type GetSetResult struct {
+        Projects []*Project `json:"projects"`
         More     bool       `json:"more"`
 }
 
 var getSet = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/project/getSet",
         RequiresSession:          false,
-        ExampleResponseStructure: &amp;getSetResp{Projects: []*project{{}}},
+        ExampleResponseStructure: &amp;GetSetResult{Projects: []*Project{{}}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getSetArgs{}
         }</span>,
@@ -3387,7 +3418,7 @@ type deleteArgs struct {
 }
 
 var delete = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/project/delete",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -3410,7 +3441,7 @@ type addMembersArgs struct {
 }
 
 var addMembers = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/project/addMembers",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -3446,7 +3477,7 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/project/setMemberRole",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -3477,7 +3508,7 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &amp;endpoint.Endpoint{
-        Method:          cnst.POST,
+        Method:          http.MethodPost,
         Path:            "/api/v1/project/removeMembers",
         RequiresSession: true,
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
@@ -3506,16 +3537,16 @@ type getMembersArgs struct {
         Limit                     int               `json:"limit"`
 }
 
-type getMembersResp struct {
+type GetMembersResult struct {
         Members []*member `json:"members"`
         More    bool      `json:"more"`
 }
 
 var getMembers = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/project/getMembers",
         RequiresSession:          false,
-        ExampleResponseStructure: &amp;getMembersResp{Members: []*member{{}}},
+        ExampleResponseStructure: &amp;GetMembersResult{Members: []*member{{}}},
         GetArgsStruct: func() interface{} <span class="cov8" title="1">{
                 return &amp;getMembersArgs{}
         }</span>,
@@ -3533,7 +3564,7 @@ type getMeArgs struct {
 }
 
 var getMe = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/project/getMe",
         RequiresSession:          true,
         ExampleResponseStructure: &amp;member{},
@@ -3558,7 +3589,7 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &amp;endpoint.Endpoint{
-        Method:                   cnst.GET,
+        Method:                   http.MethodGet,
         Path:                     "/api/v1/project/getActivities",
         RequiresSession:          false,
         ExampleResponseStructure: []*activity.Activity{{}},
@@ -3596,7 +3627,7 @@ type member struct {
         Role               cnst.ProjectRole `json:"role"`
 }
 
-type project struct {
+type Project struct {
         Id                   id.Id      `json:"id"`
         IsArchived           bool       `json:"isArchived"`
         Name                 string     `json:"name"`
@@ -3623,7 +3654,1117 @@ type AddProjectMember struct {
 }
 </pre>
 		
-		<pre class="file" id="file13" style="display: none">package crypt
+		<pre class="file" id="file13" style="display: none">package task
+
+import (
+        "bitbucket.org/0xor1/task/server/util/clientsession"
+        "bitbucket.org/0xor1/task/server/util/id"
+)
+
+type Client interface {
+        Create(css *clientsession.Store, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, remainingTime *uint64) (*Task, error)
+        SetName(css *clientsession.Store, shard int, account, project, task id.Id, name string) error
+        SetDescription(css *clientsession.Store, shard int, account, project, task id.Id, description *string) error
+        SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error         //only applies to abstract tasks
+        SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error               //only applies to tasks
+        SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error //only applies to tasks
+        Move(css *clientsession.Store, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
+        Delete(css *clientsession.Store, shard int, account, project, task id.Id) error
+        Get(css *clientsession.Store, shard int, account, project id.Id, tasks []id.Id) ([]*Task, error)
+        GetChildren(css *clientsession.Store, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) ([]*Task, error)
+        GetAncestors(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*Ancestor, error)
+}
+
+func NewClient(host string) Client <span class="cov8" title="1">{
+        return &amp;client{
+                host: host,
+        }
+}</span>
+
+type client struct {
+        host string
+}
+
+func (c *client) Create(css *clientsession.Store, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, totalRemainingTime *uint64) (*Task, error) <span class="cov8" title="1">{
+        val, e := create.DoRequest(css, c.host, &amp;createArgs{
+                Shard:              shard,
+                Account:            account,
+                Project:            project,
+                Parent:             parent,
+                PreviousSibling:    previousSibling,
+                Name:               name,
+                Description:        description,
+                IsAbstract:         isAbstract,
+                IsParallel:         isParallel,
+                Member:             member,
+                TotalRemainingTime: totalRemainingTime,
+        }, nil, &amp;Task{})
+        if val != nil </span><span class="cov8" title="1">{
+                return val.(*Task), e
+        }</span>
+        <span class="cov0" title="0">return nil, e</span>
+}
+
+func (c *client) SetName(css *clientsession.Store, shard int, account, project, task id.Id, name string) error <span class="cov8" title="1">{
+        _, e := setName.DoRequest(css, c.host, &amp;setNameArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Task:    task,
+                Name:    name,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) SetDescription(css *clientsession.Store, shard int, account, project, task id.Id, description *string) error <span class="cov8" title="1">{
+        _, e := setDescription.DoRequest(css, c.host, &amp;setDescriptionArgs{
+                Shard:       shard,
+                Account:     account,
+                Project:     project,
+                Task:        task,
+                Description: description,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error <span class="cov8" title="1">{
+        _, e := setIsParallel.DoRequest(css, c.host, &amp;setIsParallelArgs{
+                Shard:      shard,
+                Account:    account,
+                Project:    project,
+                Task:       task,
+                IsParallel: isParallel,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error <span class="cov8" title="1">{
+        _, e := setMember.DoRequest(css, c.host, &amp;setMemberArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Task:    task,
+                Member:  member,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error <span class="cov8" title="1">{
+        _, e := setRemainingTime.DoRequest(css, c.host, &amp;setRemainingTimeArgs{
+                Shard:         shard,
+                Account:       account,
+                Project:       project,
+                Task:          task,
+                RemainingTime: remainingTime,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) Move(css *clientsession.Store, shard int, account, project, task, newParent id.Id, newPreviousSibling *id.Id) error <span class="cov8" title="1">{
+        _, e := move.DoRequest(css, c.host, &amp;moveArgs{
+                Shard:              shard,
+                Account:            account,
+                Project:            project,
+                Task:               task,
+                NewParent:          newParent,
+                NewPreviousSibling: newPreviousSibling,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) Delete(css *clientsession.Store, shard int, account, project, task id.Id) error <span class="cov8" title="1">{
+        _, e := deleteTask.DoRequest(css, c.host, &amp;deleteArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Task:    task,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, tasks []id.Id) ([]*Task, error) <span class="cov8" title="1">{
+        val, e := get.DoRequest(css, c.host, &amp;getArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Tasks:   tasks,
+        }, nil, &amp;[]*Task{})
+        if val != nil </span><span class="cov8" title="1">{
+                return *val.(*[]*Task), e
+        }</span>
+        <span class="cov0" title="0">return nil, e</span>
+}
+
+func (c *client) GetChildren(css *clientsession.Store, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) ([]*Task, error) <span class="cov8" title="1">{
+        val, e := getChildren.DoRequest(css, c.host, &amp;getChildrenArgs{
+                Shard:       shard,
+                Account:     account,
+                Project:     project,
+                Parent:      parent,
+                FromSibling: fromSibling,
+                Limit:       limit,
+        }, nil, &amp;[]*Task{})
+        if val != nil </span><span class="cov8" title="1">{
+                return *val.(*[]*Task), e
+        }</span>
+        <span class="cov0" title="0">return nil, e</span>
+}
+
+func (c *client) GetAncestors(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*Ancestor, error) <span class="cov8" title="1">{
+        val, e := getAncestorTasks.DoRequest(css, c.host, &amp;getAncestorTasksArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Task:    child,
+                Limit:   limit,
+        }, nil, &amp;[]*Ancestor{})
+        if val != nil </span><span class="cov8" title="1">{
+                return *val.(*[]*Ancestor), e
+        }</span>
+        <span class="cov8" title="1">return nil, e</span>
+}
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package task
+
+import (
+        "bitbucket.org/0xor1/task/server/util/cachekey"
+        "bitbucket.org/0xor1/task/server/util/ctx"
+        "bitbucket.org/0xor1/task/server/util/db"
+        "bitbucket.org/0xor1/task/server/util/err"
+        "bitbucket.org/0xor1/task/server/util/id"
+        "bytes"
+        "github.com/0xor1/panic"
+)
+
+func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSibling *id.Id, newTask *Task) <span class="cov8" title="1">{
+        args := make([]interface{}, 0, 18)
+        args = append(args, account, project, parent, ctx.Me())
+        if nextSibling != nil </span><span class="cov8" title="1">{
+                args = append(args, *nextSibling)
+        }</span><span class="cov8" title="1"> else {
+                args = append(args, nil)
+        }</span>
+        <span class="cov8" title="1">args = append(args, newTask.Id)
+        args = append(args, newTask.IsAbstract)
+        args = append(args, newTask.Name)
+        args = append(args, newTask.Description)
+        args = append(args, newTask.CreatedOn)
+        args = append(args, newTask.TotalRemainingTime)
+        args = append(args, newTask.IsParallel)
+        if newTask.Member != nil </span><span class="cov8" title="1">{
+                args = append(args, *newTask.Member)
+        }</span><span class="cov8" title="1"> else {
+                args = append(args, nil)
+        }</span>
+        <span class="cov8" title="1">ctx.TouchDlms(cachekey.NewSetDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL createTask(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, args...)))</span>
+}
+
+func dbSetName(ctx ctx.Ctx, shard int, account, project, task id.Id, name string) <span class="cov8" title="1">{
+        rows, e := ctx.TreeQuery(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), name)
+        panic.If(e)
+        var timeLog *id.Id //on the first pass this is the parent (if any)
+        var member *id.Id
+        firstRow := true
+        cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).Task(account, project, task)
+        for rows.Next() </span><span class="cov8" title="1">{
+                rows.Scan(&amp;timeLog, &amp;member)
+                if firstRow &amp;&amp; timeLog != nil </span><span class="cov8" title="1">{ //timeLog is the parent id on the first row
+                        cacheKey.TaskChildrenSet(account, project, *timeLog)
+                }</span><span class="cov8" title="1"> else if timeLog != nil &amp;&amp; member != nil </span><span class="cov0" title="0">{
+                        cacheKey.TimeLog(account, project, *timeLog, &amp;task, member)
+                }</span>
+                <span class="cov8" title="1">firstRow = false</span>
+        }
+        <span class="cov8" title="1">ctx.TouchDlms(cacheKey)</span>
+}
+
+func dbSetDescription(ctx ctx.Ctx, shard int, account, project, task id.Id, description *string) <span class="cov8" title="1">{
+        row := ctx.TreeQueryRow(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), description)
+        var parent *id.Id
+        panic.If(row.Scan(&amp;parent))
+        cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).Task(account, project, task)
+        if parent != nil </span><span class="cov8" title="1">{
+                cacheKey.TaskChildrenSet(account, project, *parent)
+        }</span>
+        <span class="cov8" title="1">ctx.TouchDlms(cacheKey)</span>
+}
+
+func dbSetIsParallel(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id, isParallel bool) <span class="cov8" title="1">{
+        cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project)
+        ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), isParallel)))
+}</span>
+
+func dbSetMember(ctx ctx.Ctx, shard int, account, project, task id.Id, member *id.Id) <span class="cov8" title="1">{
+        var memArg []byte
+        if member != nil </span><span class="cov8" title="1">{
+                memArg = *member
+        }</span>
+        <span class="cov8" title="1">changeMade := false
+        var parent id.Id
+        var existingMember *id.Id
+        panic.If(ctx.TreeQueryRow(shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), memArg).Scan(&amp;changeMade, &amp;parent, &amp;existingMember))
+        panic.IfTrueWith(!changeMade, db.ErrNoChangeMade)
+        cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).Task(account, project, task)
+        if member != nil </span><span class="cov8" title="1">{
+                cacheKey.ProjectMember(account, project, *member)
+        }</span>
+        <span class="cov8" title="1">if existingMember != nil </span><span class="cov8" title="1">{
+                cacheKey.ProjectMember(account, project, *existingMember)
+        }</span>
+        <span class="cov8" title="1">ctx.TouchDlms(cacheKey)</span>
+}
+
+func dbMoveTask(ctx ctx.Ctx, shard int, account, project, task, newParent id.Id, newPreviousSibling *id.Id) <span class="cov8" title="1">{
+        ctx.TouchDlms(cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL moveTask(?, ?, ?, ?, ?, ?)`, account, project, task, newParent, ctx.Me(), newPreviousSibling)))
+}</span>
+
+func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) <span class="cov8" title="1">{
+        rows, e := ctx.TreeQuery(shard, `CALL deleteTask(?, ?, ?, ?)`, account, project, task, ctx.Me())
+        panic.If(e)
+        affectedTasks := make([]id.Id, 0, 100)
+        updatedProjectMembers := make([]id.Id, 0, 100)
+        cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project)
+        for rows.Next() </span><span class="cov8" title="1">{
+                var i id.Id
+                var j id.Id
+                var k id.Id
+                key := ""
+                rows.Scan(&amp;i, &amp;j, &amp;k, &amp;key)
+                switch key </span>{
+                case "t":<span class="cov8" title="1">
+                        affectedTasks = append(affectedTasks, i)</span>
+                case "m":<span class="cov8" title="1">
+                        updatedProjectMembers = append(updatedProjectMembers, i)</span>
+                case "tl":<span class="cov0" title="0">
+                        cacheKey.TimeLog(account, project, i, &amp;j, &amp;k)</span>
+                default:<span class="cov0" title="0">
+                        panic.If(err.InvalidOperation)</span>
+                }
+        }
+        <span class="cov8" title="1">ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))</span>
+}
+
+func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*Task <span class="cov8" title="1">{
+        cacheKey := cachekey.NewGet("project.dbGetTasks", shard, account, project, tasks)
+        res := make([]*Task, 0, len(tasks))
+        if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
+                return res
+        }</span>
+        <span class="cov8" title="1">query := bytes.NewBufferString(`SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id IN (?`)
+        queryArgs := make([]interface{}, 0, 2+len(tasks))
+        queryArgs = append(queryArgs, account, project, tasks[0])
+        for _, task := range tasks[1:] </span><span class="cov8" title="1">{
+                query.WriteString(`,?`)
+                queryArgs = append(queryArgs, task)
+        }</span>
+        <span class="cov8" title="1">query.WriteString(`)`)
+        rows, e := ctx.TreeQuery(shard, query.String(), queryArgs...)
+        if rows != nil </span><span class="cov8" title="1">{
+                defer rows.Close()
+        }</span>
+        <span class="cov8" title="1">panic.If(e)
+        for rows.Next() </span><span class="cov8" title="1">{
+                ta := Task{}
+                panic.If(rows.Scan(&amp;ta.Id, &amp;ta.Parent, &amp;ta.FirstChild, &amp;ta.NextSibling, &amp;ta.IsAbstract, &amp;ta.Name, &amp;ta.Description, &amp;ta.CreatedOn, &amp;ta.TotalRemainingTime, &amp;ta.TotalLoggedTime, &amp;ta.MinimumRemainingTime, &amp;ta.LinkedFileCount, &amp;ta.ChatCount, &amp;ta.ChildCount, &amp;ta.DescendantCount, &amp;ta.IsParallel, &amp;ta.Member))
+                nilOutPropertiesThatAreNotNilInTheDb(&amp;ta)
+                res = append(res, &amp;ta)
+        }</span>
+        <span class="cov8" title="1">ctx.SetCacheValue(res, cacheKey)
+        return res</span>
+}
+
+func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*Task <span class="cov8" title="1">{
+        res := make([]*Task, 0, limit)
+        cacheKey := cachekey.NewGet("project.dbGetChildTasks", shard, account, project, parent, fromSibling, limit).TaskChildrenSet(account, project, parent)
+        if ctx.GetCacheValue(&amp;res, cacheKey) </span><span class="cov0" title="0">{
+                return res
+        }</span>
+        <span class="cov8" title="1">rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, account, project, parent, fromSibling, limit)
+        if rows != nil </span><span class="cov8" title="1">{
+                defer rows.Close()
+        }</span>
+        <span class="cov8" title="1">panic.If(e)
+        for rows.Next() </span><span class="cov8" title="1">{
+                ta := Task{}
+                panic.If(rows.Scan(&amp;ta.Id, &amp;ta.Parent, &amp;ta.FirstChild, &amp;ta.NextSibling, &amp;ta.IsAbstract, &amp;ta.Name, &amp;ta.Description, &amp;ta.CreatedOn, &amp;ta.TotalRemainingTime, &amp;ta.TotalLoggedTime, &amp;ta.MinimumRemainingTime, &amp;ta.LinkedFileCount, &amp;ta.ChatCount, &amp;ta.ChildCount, &amp;ta.DescendantCount, &amp;ta.IsParallel, &amp;ta.Member))
+                nilOutPropertiesThatAreNotNilInTheDb(&amp;ta)
+                res = append(res, &amp;ta)
+        }</span>
+        <span class="cov8" title="1">ctx.SetCacheValue(res, cacheKey)
+        return res</span>
+}
+
+func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) []*Ancestor <span class="cov8" title="1">{
+        // note to future dan:
+        // I believe this is uncachable, the cache system is based on breaking dlms for entities higher up the entity tree,
+        // so we can only cache moving down the entity tree, but this operation goes up the tree, and is therefore uncachable
+        rows, e := ctx.TreeQuery(shard, `CALL getAncestorTasks(?, ?, ?, ?)`, account, project, child, limit)
+        if rows != nil </span><span class="cov8" title="1">{
+                defer rows.Close()
+        }</span>
+        <span class="cov8" title="1">panic.If(e)
+        res := make([]*Ancestor, 0, limit)
+        for rows.Next() </span><span class="cov8" title="1">{
+                an := Ancestor{}
+                panic.If(rows.Scan(&amp;an.Id, &amp;an.Name))
+                res = append(res, &amp;an)
+        }</span>
+        <span class="cov8" title="1">return res</span>
+}
+
+func nilOutPropertiesThatAreNotNilInTheDb(ta *Task) <span class="cov8" title="1">{
+        if !ta.IsAbstract </span><span class="cov8" title="1">{
+                ta.MinimumRemainingTime = nil
+                ta.ChildCount = nil
+                ta.DescendantCount = nil
+                ta.IsParallel = nil
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package task
+
+import (
+        "bitbucket.org/0xor1/task/server/util/ctx"
+        "bitbucket.org/0xor1/task/server/util/db"
+        "bitbucket.org/0xor1/task/server/util/endpoint"
+        "bitbucket.org/0xor1/task/server/util/err"
+        "bitbucket.org/0xor1/task/server/util/id"
+        t "bitbucket.org/0xor1/task/server/util/time"
+        "bitbucket.org/0xor1/task/server/util/validate"
+        "github.com/0xor1/panic"
+        "time"
+        "net/http"
+)
+
+type createArgs struct {
+        Shard              int     `json:"shard"`
+        Account            id.Id   `json:"account"`
+        Project            id.Id   `json:"project"`
+        Parent             id.Id   `json:"parent"`
+        PreviousSibling    *id.Id  `json:"previousSibling,omitempty"`
+        Name               string  `json:"name"`
+        Description        *string `json:"description,omitempty"`
+        IsAbstract         bool    `json:"isAbstract"`
+        IsParallel         *bool   `json:"isParallel,omitempty"`
+        Member             *id.Id  `json:"member,omitempty"`
+        TotalRemainingTime *uint64 `json:"totalRemainingTime,omitempty"`
+}
+
+var create = &amp;endpoint.Endpoint{
+        Method:                   http.MethodPost,
+        Path:                     "/api/v1/task/create",
+        RequiresSession:          true,
+        ExampleResponseStructure: &amp;Task{},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;createArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*createArgs)
+                validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                panic.IfTrueWith((args.IsAbstract &amp;&amp; (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract &amp;&amp; (args.IsParallel != nil || args.TotalRemainingTime == nil)), err.InvalidArguments)
+                zeroVal := uint64(0)
+                zeroPtr := &amp;zeroVal
+                if !args.IsAbstract </span><span class="cov8" title="1">{
+                        zeroPtr = nil
+                }</span><span class="cov8" title="1"> else {
+                        args.TotalRemainingTime = zeroPtr
+                }</span>
+                <span class="cov8" title="1">if args.Member != nil </span><span class="cov8" title="1">{ //if a member is being assigned to the task then we need to check they have project write access
+                        validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.Account, args.Project, *args.Member))
+                }</span>
+                <span class="cov8" title="1">newTask := &amp;Task{
+                        Id:                   id.New(),
+                        IsAbstract:           args.IsAbstract,
+                        Name:                 args.Name,
+                        Description:          args.Description,
+                        CreatedOn:            t.Now(),
+                        TotalRemainingTime:   *args.TotalRemainingTime,
+                        MinimumRemainingTime: zeroPtr,
+                        ChildCount:           zeroPtr,
+                        DescendantCount:      zeroPtr,
+                        IsParallel:           args.IsParallel,
+                        Member:               args.Member,
+                }
+                dbCreateTask(ctx, args.Shard, args.Account, args.Project, args.Parent, args.PreviousSibling, newTask)
+                return newTask</span>
+        },
+}
+
+type setNameArgs struct {
+        Shard   int    `json:"shard"`
+        Account id.Id  `json:"account"`
+        Project id.Id  `json:"project"`
+        Task    id.Id  `json:"task"`
+        Name    string `json:"name"`
+}
+
+var setName = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/setName",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setNameArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setNameArgs)
+                if args.Project.Equal(args.Task) </span><span class="cov8" title="1">{
+                        validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
+                }</span><span class="cov8" title="1"> else {
+                        validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span>
+
+                <span class="cov8" title="1">dbSetName(ctx, args.Shard, args.Account, args.Project, args.Task, args.Name)
+                return nil</span>
+        },
+}
+
+type setDescriptionArgs struct {
+        Shard       int     `json:"shard"`
+        Account     id.Id   `json:"account"`
+        Project     id.Id   `json:"project"`
+        Task        id.Id   `json:"task"`
+        Description *string `json:"description,omitempty"`
+}
+
+var setDescription = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/setDescription",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setDescriptionArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setDescriptionArgs)
+                validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+
+                dbSetDescription(ctx, args.Shard, args.Account, args.Project, args.Task, args.Description)
+                return nil
+        }</span>,
+}
+
+type setIsParallelArgs struct {
+        Shard      int   `json:"shard"`
+        Account    id.Id `json:"account"`
+        Project    id.Id `json:"project"`
+        Task       id.Id `json:"task"`
+        IsParallel bool  `json:"isParallel"`
+}
+
+var setIsParallel = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/setIsParallel",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setIsParallelArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setIsParallelArgs)
+                validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+
+                dbSetIsParallel(ctx, args.Shard, args.Account, args.Project, args.Task, args.IsParallel)
+                return nil
+        }</span>,
+}
+
+type setMemberArgs struct {
+        Shard   int    `json:"shard"`
+        Account id.Id  `json:"account"`
+        Project id.Id  `json:"project"`
+        Task    id.Id  `json:"task"`
+        Member  *id.Id `json:"member,omitempty"`
+}
+
+var setMember = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/setMember",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setMemberArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setMemberArgs)
+                validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                if args.Member != nil </span><span class="cov8" title="1">{
+                        validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.Account, args.Project, *args.Member))
+                }</span>
+                <span class="cov8" title="1">dbSetMember(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member)
+                return nil</span>
+        },
+}
+
+type setRemainingTimeArgs struct {
+        Shard         int    `json:"shard"`
+        Account       id.Id  `json:"account"`
+        Project       id.Id  `json:"project"`
+        Task          id.Id  `json:"task"`
+        RemainingTime uint64 `json:"remainingTime"`
+}
+
+var setRemainingTime = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/setRemainingTime",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setRemainingTimeArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setRemainingTimeArgs)
+                return db.SetRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &amp;args.RemainingTime, nil, nil)
+        }</span>,
+}
+
+type moveArgs struct {
+        Shard              int    `json:"shard"`
+        Account            id.Id  `json:"account"`
+        Project            id.Id  `json:"project"`
+        Task               id.Id  `json:"task"`
+        NewParent          id.Id  `json:"newParent"`
+        NewPreviousSibling *id.Id `json:"newPreviousSibling"`
+}
+
+var move = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/move",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;moveArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*moveArgs)
+                validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+
+                dbMoveTask(ctx, args.Shard, args.Account, args.Project, args.Task, args.NewParent, args.NewPreviousSibling)
+                return nil
+        }</span>,
+}
+
+type deleteArgs struct {
+        Shard   int   `json:"shard"`
+        Account id.Id `json:"account"`
+        Project id.Id `json:"project"`
+        Task    id.Id `json:"task"`
+}
+
+var deleteTask = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/task/delete",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;deleteArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*deleteArgs)
+                panic.IfTrueWith(args.Project.Equal(args.Task), err.InvalidArguments)
+                validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+
+                dbDeleteTask(ctx, args.Shard, args.Account, args.Project, args.Task)
+                return nil
+        }</span>,
+}
+
+type getArgs struct {
+        Shard   int     `json:"shard"`
+        Account id.Id   `json:"account"`
+        Project id.Id   `json:"project"`
+        Tasks   []id.Id `json:"tasks"`
+}
+
+var get = &amp;endpoint.Endpoint{
+        Method:                   http.MethodGet,
+        Path:                     "/api/v1/task/get",
+        RequiresSession:          false,
+        ExampleResponseStructure: []*Task{{}},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;getArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*getArgs)
+                validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
+                validate.EntityCount(len(args.Tasks), ctx.MaxProcessEntityCount())
+                return dbGetTasks(ctx, args.Shard, args.Account, args.Project, args.Tasks)
+        }</span>,
+}
+
+type getChildrenArgs struct {
+        Shard       int    `json:"shard"`
+        Account     id.Id  `json:"account"`
+        Project     id.Id  `json:"project"`
+        Parent      id.Id  `json:"parent"`
+        FromSibling *id.Id `json:"fromSibling,omitempty"`
+        Limit       int    `json:"limit"`
+}
+
+var getChildren = &amp;endpoint.Endpoint{
+        Method:                   http.MethodGet,
+        Path:                     "/api/v1/task/getChildren",
+        RequiresSession:          false,
+        ExampleResponseStructure: []*Task{{}},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;getChildrenArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*getChildrenArgs)
+                validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
+                validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
+                return dbGetChildTasks(ctx, args.Shard, args.Account, args.Project, args.Parent, args.FromSibling, args.Limit)
+        }</span>,
+}
+
+type getAncestorTasksArgs struct {
+        Shard   int   `json:"shard"`
+        Account id.Id `json:"account"`
+        Project id.Id `json:"project"`
+        Task    id.Id `json:"task"`
+        Limit   int   `json:"limit"`
+}
+
+var getAncestorTasks = &amp;endpoint.Endpoint{
+        Method:                   http.MethodGet,
+        Path:                     "/api/v1/task/getAncestorTasks",
+        RequiresSession:          false,
+        ExampleResponseStructure: []*Ancestor{{}},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;getAncestorTasksArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*getAncestorTasksArgs)
+                validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
+                validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
+                return dbGetAncestorTasks(ctx, args.Shard, args.Account, args.Project, args.Task, args.Limit)
+        }</span>,
+}
+
+var Endpoints = []*endpoint.Endpoint{
+        create,
+        setName,
+        setDescription,
+        setIsParallel,
+        setMember,
+        setRemainingTime,
+        move,
+        deleteTask,
+        get,
+        getChildren,
+        getAncestorTasks,
+}
+
+type Task struct {
+        Id                   id.Id     `json:"id"`
+        Parent               *id.Id    `json:"parent,omitempty"`
+        FirstChild           *id.Id    `json:"firstChild,omitempty"`
+        NextSibling          *id.Id    `json:"nextSibling,omitempty"`
+        IsAbstract           bool      `json:"isAbstract"`
+        Name                 string    `json:"name"`
+        Description          *string   `json:"description"`
+        CreatedOn            time.Time `json:"createdOn"`
+        TotalRemainingTime   uint64    `json:"totalRemainingTime"`
+        TotalLoggedTime      uint64    `json:"totalLoggedTime"`
+        MinimumRemainingTime *uint64   `json:"minimumRemainingTime,omitempty"` //only abstract tasks
+        LinkedFileCount      uint64    `json:"linkedFileCount"`
+        ChatCount            uint64    `json:"chatCount"`
+        ChildCount           *uint64   `json:"childCount,omitempty"`      //only abstract tasks
+        DescendantCount      *uint64   `json:"descendantCount,omitempty"` //only abstract tasks
+        IsParallel           *bool     `json:"isParallel,omitempty"`      //only abstract tasks
+        Member               *id.Id    `json:"member,omitempty"`          //only task tasks
+}
+
+type Ancestor struct {
+        Id   id.Id  `json:"id"`
+        Name string `json:"name"`
+        //may want to add on time values here to render progress bars within breadcrumb ui component
+}
+</pre>
+		
+		<pre class="file" id="file16" style="display: none">package timelog
+
+import (
+        "bitbucket.org/0xor1/task/server/util/clientsession"
+        "bitbucket.org/0xor1/task/server/util/cnst"
+        "bitbucket.org/0xor1/task/server/util/id"
+        tlog "bitbucket.org/0xor1/task/server/util/timelog"
+)
+
+type Client interface {
+        Create(css *clientsession.Store, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error)                                          //only applys to task tasks
+        CreateAndSetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) //only applys to task tasks
+        SetDuration(css *clientsession.Store, shard int, account, project, timeLog id.Id, duration uint64) error
+        SetNote(css *clientsession.Store, shard int, account, project, timeLog id.Id, note *string) error
+        Delete(css *clientsession.Store, shard int, account, project, timeLog id.Id) error
+        Get(css *clientsession.Store, shard int, account, project id.Id, task, member, timeLog *id.Id, sortDir cnst.SortDir, after *id.Id, limit int) ([]*tlog.TimeLog, error)
+}
+
+func NewClient(host string) Client <span class="cov8" title="1">{
+        return &amp;client{
+                host: host,
+        }
+}</span>
+
+type client struct {
+        host string
+}
+
+func (c *client) Create(css *clientsession.Store, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error) <span class="cov8" title="1">{
+        val, e := create.DoRequest(css, c.host, &amp;createArgs{
+                Shard:    shard,
+                Account:  account,
+                Project:  project,
+                Task:     task,
+                Duration: duration,
+                Note:     note,
+        }, nil, &amp;tlog.TimeLog{})
+        if val != nil </span><span class="cov8" title="1">{
+                return val.(*tlog.TimeLog), e
+        }</span>
+        <span class="cov0" title="0">return nil, e</span>
+}
+
+func (c *client) CreateAndSetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) <span class="cov8" title="1">{
+        val, e := createAndSetRemainingTime.DoRequest(css, c.host, &amp;createAndSetRemainingTimeArgs{
+                Shard:         shard,
+                Account:       account,
+                Project:       project,
+                Task:          task,
+                RemainingTime: remainingTime,
+                Duration:      duration,
+                Note:          note,
+        }, nil, &amp;tlog.TimeLog{})
+        if val != nil </span><span class="cov8" title="1">{
+                return val.(*tlog.TimeLog), e
+        }</span>
+        <span class="cov0" title="0">return nil, e</span>
+}
+
+func (c *client) SetDuration(css *clientsession.Store, shard int, account, project, timeLog id.Id, duration uint64) error <span class="cov8" title="1">{
+        _, e := setDuration.DoRequest(css, c.host, &amp;setDurationArgs{
+                Shard:    shard,
+                Account:  account,
+                Project:  project,
+                TimeLog:  timeLog,
+                Duration: duration,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) SetNote(css *clientsession.Store, shard int, account, project, timeLog id.Id, note *string) error <span class="cov8" title="1">{
+        _, e := setNote.DoRequest(css, c.host, &amp;setNoteArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                TimeLog: timeLog,
+                Note:    note,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) Delete(css *clientsession.Store, shard int, account, project, timeLog id.Id) error <span class="cov8" title="1">{
+        _, e := delete.DoRequest(css, c.host, &amp;deleteArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                TimeLog: timeLog,
+        }, nil, nil)
+        return e
+}</span>
+
+func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, task, member, timeLog *id.Id, sortDir cnst.SortDir, after *id.Id, limit int) ([]*tlog.TimeLog, error) <span class="cov8" title="1">{
+        val, e := get.DoRequest(css, c.host, &amp;getArgs{
+                Shard:   shard,
+                Account: account,
+                Project: project,
+                Task:    task,
+                Member:  member,
+                TimeLog: timeLog,
+                SortDir: sortDir,
+                After:   after,
+                Limit:   limit,
+        }, nil, &amp;[]*tlog.TimeLog{})
+        if val != nil </span><span class="cov8" title="1">{
+                return *val.(*[]*tlog.TimeLog), e
+        }</span>
+        <span class="cov0" title="0">return nil, e</span>
+}
+</pre>
+		
+		<pre class="file" id="file17" style="display: none">package timelog
+
+import (
+        "bitbucket.org/0xor1/task/server/util/cachekey"
+        "bitbucket.org/0xor1/task/server/util/cnst"
+        "bitbucket.org/0xor1/task/server/util/ctx"
+        "bitbucket.org/0xor1/task/server/util/db"
+        "bitbucket.org/0xor1/task/server/util/id"
+        tlog "bitbucket.org/0xor1/task/server/util/timelog"
+        "bytes"
+        "fmt"
+        "github.com/0xor1/panic"
+)
+
+func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog.TimeLog <span class="cov8" title="1">{
+        cacheKey := cachekey.NewGet("timelog.dbGetTimeLog", shard, account, project, timeLog).TimeLog(account, project, timeLog, nil, nil)
+        tl := tlog.TimeLog{}
+        if ctx.GetCacheValue(&amp;tl, cacheKey) </span><span class="cov0" title="0">{
+                return &amp;tl
+        }</span>
+        <span class="cov8" title="1">panic.If(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&amp;tl.Project, &amp;tl.Task, &amp;tl.Id, &amp;tl.Member, &amp;tl.LoggedOn, &amp;tl.TaskHasBeenDeleted, &amp;tl.TaskName, &amp;tl.Duration, &amp;tl.Note))
+        ctx.SetCacheValue(tl, cacheKey)
+        return &amp;tl</span>
+}
+
+func dbSetDuration(ctx ctx.Ctx, shard int, account, project, task, member, timeLog id.Id, duration uint64) <span class="cov8" title="1">{
+        ctx.TouchDlms(cachekey.NewSetDlms().CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL setTimeLogDuration(?, ?, ?, ?, ?)`, account, project, timeLog, ctx.Me(), duration)).TimeLog(account, project, timeLog, &amp;task, &amp;member).ProjectActivities(account, project))
+}</span>
+
+func dbSetNote(ctx ctx.Ctx, shard int, account, project, task, member, timeLog id.Id, note *string) <span class="cov8" title="1">{
+        db.MakeChangeHelper(ctx, shard, `CALL setTimeLogNote(?, ?, ?, ?, ?)`, account, project, timeLog, ctx.Me(), note)
+        ctx.TouchDlms(cachekey.NewSetDlms().TimeLog(account, project, timeLog, &amp;task, &amp;member).ProjectActivities(account, project))
+}</span>
+
+func dbDelete(ctx ctx.Ctx, shard int, account, project, task, member, timeLog id.Id) <span class="cov8" title="1">{
+        ctx.TouchDlms(cachekey.NewSetDlms().CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL deleteTimeLog(?, ?, ?, ?)`, account, project, timeLog, ctx.Me())).TimeLog(account, project, timeLog, &amp;task, &amp;member).ProjectActivities(account, project))
+}</span>
+
+func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortDir cnst.SortDir, after *id.Id, limit int) []*tlog.TimeLog <span class="cov8" title="1">{
+        if timeLog != nil </span><span class="cov8" title="1">{
+                return []*tlog.TimeLog{dbGetTimeLog(ctx, shard, account, project, *timeLog)}
+        }</span>
+        <span class="cov8" title="1">cacheKey := cachekey.NewGet("timelog.dbGetTimeLogs", shard, account, project, task, member, timeLog, sortDir, after, limit)
+        if task != nil </span><span class="cov0" title="0">{
+                cacheKey.TaskTimeLogSet(account, project, *task, member)
+        }</span>
+        <span class="cov8" title="1">if member != nil </span><span class="cov0" title="0">{
+                cacheKey.ProjectMemberTimeLogSet(account, project, *member)
+        }</span>
+        <span class="cov8" title="1">if task == nil &amp;&amp; member == nil </span><span class="cov8" title="1">{
+                cacheKey.ProjectTimeLogSet(account, project)
+        }</span>
+        <span class="cov8" title="1">timeLogsSet := make([]*tlog.TimeLog, 0, limit)
+        if ctx.GetCacheValue(&amp;timeLogsSet, cacheKey) </span><span class="cov0" title="0">{
+                return timeLogsSet
+        }</span>
+        <span class="cov8" title="1">query := bytes.NewBufferString(`SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=?`)
+        args := make([]interface{}, 0, 9)
+        args = append(args, account, project)
+        if task != nil </span><span class="cov0" title="0">{
+                query.WriteString(` AND task=?`)
+                args = append(args, *task)
+        }</span>
+        <span class="cov8" title="1">if member != nil </span><span class="cov0" title="0">{
+                query.WriteString(` AND member=?`)
+                args = append(args, *member)
+        }</span>
+        <span class="cov8" title="1">if after != nil </span><span class="cov8" title="1">{
+                query.WriteString(fmt.Sprintf(` AND loggedOn %s= (SELECT loggedOn FROM timeLogs WHERE account=? AND project=? AND id=?) AND id %s ?`, sortDir.GtLtSymbol(), sortDir.GtLtSymbol()))
+                args = append(args, account, project, *after, *after)
+        }</span>
+        <span class="cov8" title="1">query.WriteString(fmt.Sprintf(` ORDER BY loggedOn %s, id %s LIMIT ?`, sortDir.String(), sortDir.String()))
+        args = append(args, limit)
+        rows, e := ctx.TreeQuery(shard, query.String(), args...)
+        if rows != nil </span><span class="cov8" title="1">{
+                defer rows.Close()
+        }</span>
+        <span class="cov8" title="1">panic.If(e)
+        for rows.Next() </span><span class="cov8" title="1">{
+                tl := tlog.TimeLog{}
+                panic.If(rows.Scan(&amp;tl.Project, &amp;tl.Task, &amp;tl.Id, &amp;tl.Member, &amp;tl.LoggedOn, &amp;tl.TaskHasBeenDeleted, &amp;tl.TaskName, &amp;tl.Duration, &amp;tl.Note))
+                timeLogsSet = append(timeLogsSet, &amp;tl)
+        }</span>
+        <span class="cov8" title="1">ctx.SetCacheValue(timeLogsSet, cacheKey)
+        return timeLogsSet</span>
+}
+</pre>
+		
+		<pre class="file" id="file18" style="display: none">package timelog
+
+import (
+        "bitbucket.org/0xor1/task/server/util/cnst"
+        "bitbucket.org/0xor1/task/server/util/ctx"
+        "bitbucket.org/0xor1/task/server/util/db"
+        "bitbucket.org/0xor1/task/server/util/endpoint"
+        "bitbucket.org/0xor1/task/server/util/err"
+        "bitbucket.org/0xor1/task/server/util/id"
+        "bitbucket.org/0xor1/task/server/util/timelog"
+        "bitbucket.org/0xor1/task/server/util/validate"
+        "github.com/0xor1/panic"
+        "net/http"
+)
+
+type createArgs struct {
+        Shard    int     `json:"shard"`
+        Account  id.Id   `json:"account"`
+        Project  id.Id   `json:"project"`
+        Task     id.Id   `json:"task"`
+        Duration uint64  `json:"duration"`
+        Note     *string `json:"note,omitempty"`
+}
+
+var create = &amp;endpoint.Endpoint{
+        Method:                   http.MethodPost,
+        Path:                     "/api/v1/timeLog/create",
+        RequiresSession:          true,
+        ExampleResponseStructure: &amp;timelog.TimeLog{},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;createArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*createArgs)
+                return db.SetRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, nil, &amp;args.Duration, args.Note)
+        }</span>,
+}
+
+type createAndSetRemainingTimeArgs struct {
+        Shard         int     `json:"shard"`
+        Account       id.Id   `json:"account"`
+        Project       id.Id   `json:"project"`
+        Task          id.Id   `json:"task"`
+        RemainingTime uint64  `json:"remainingTime"`
+        Duration      uint64  `json:"duration"`
+        Note          *string `json:"note,omitempty"`
+}
+
+var createAndSetRemainingTime = &amp;endpoint.Endpoint{
+        Method:                   http.MethodPost,
+        Path:                     "/api/v1/timeLog/createAndSetRemainingTime",
+        RequiresSession:          true,
+        ExampleResponseStructure: &amp;timelog.TimeLog{},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;createAndSetRemainingTimeArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*createAndSetRemainingTimeArgs)
+                return db.SetRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &amp;args.RemainingTime, &amp;args.Duration, args.Note)
+        }</span>,
+}
+
+type setDurationArgs struct {
+        Shard    int    `json:"shard"`
+        Account  id.Id  `json:"account"`
+        Project  id.Id  `json:"project"`
+        TimeLog  id.Id  `json:"timeLog"`
+        Duration uint64 `json:"duration"`
+}
+
+var setDuration = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/timeLog/setDuration",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setDurationArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setDurationArgs)
+                panic.IfTrueWith(args.Duration == 0, err.InvalidArguments)
+                tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
+                if args.Duration == tl.Duration </span><span class="cov0" title="0">{
+                        return nil
+                }</span>
+                <span class="cov8" title="1">if tl.Member.Equal(ctx.Me()) </span><span class="cov0" title="0">{
+                        validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span><span class="cov8" title="1"> else {
+                        validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span>
+                <span class="cov8" title="1">dbSetDuration(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog, args.Duration)
+                return nil</span>
+        },
+}
+
+type setNoteArgs struct {
+        Shard   int     `json:"shard"`
+        Account id.Id   `json:"account"`
+        Project id.Id   `json:"project"`
+        TimeLog id.Id   `json:"timeLog"`
+        Note    *string `json:"note"`
+}
+
+var setNote = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/timeLog/setNote",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;setNoteArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*setNoteArgs)
+                tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
+                if (args.Note == nil &amp;&amp; tl.Note == nil) || (*args.Note == *tl.Note) </span><span class="cov0" title="0">{
+                        return nil
+                }</span>
+                <span class="cov8" title="1">if tl.Member.Equal(ctx.Me()) </span><span class="cov0" title="0">{
+                        validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span><span class="cov8" title="1"> else {
+                        validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span>
+                <span class="cov8" title="1">dbSetNote(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog, args.Note)
+                return nil</span>
+        },
+}
+
+type deleteArgs struct {
+        Shard   int   `json:"shard"`
+        Account id.Id `json:"account"`
+        Project id.Id `json:"project"`
+        TimeLog id.Id `json:"timeLog"`
+}
+
+var delete = &amp;endpoint.Endpoint{
+        Method:          http.MethodPost,
+        Path:            "/api/v1/timeLog/delete",
+        RequiresSession: true,
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;deleteArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*deleteArgs)
+                tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
+                if tl.Member.Equal(ctx.Me()) </span><span class="cov8" title="1">{
+                        validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span><span class="cov0" title="0"> else {
+                        validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+                }</span>
+                <span class="cov8" title="1">dbDelete(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog)
+                return nil</span>
+        },
+}
+
+type getArgs struct {
+        Shard   int          `json:"shard"`
+        Account id.Id        `json:"account"`
+        Project id.Id        `json:"project"`
+        Task    *id.Id       `json:"task,omitempty"`
+        Member  *id.Id       `json:"member,omitempty"`
+        TimeLog *id.Id       `json:"timeLog,omitempty"`
+        SortDir cnst.SortDir `json:"sortDir"`
+        After   *id.Id       `json:"after,omitempty"`
+        Limit   int          `json:"limit"`
+}
+
+var get = &amp;endpoint.Endpoint{
+        Method:                   http.MethodGet,
+        Path:                     "/api/v1/timeLog/get",
+        RequiresSession:          false,
+        ExampleResponseStructure: []*timelog.TimeLog{{}},
+        GetArgsStruct: func() interface{} <span class="cov8" title="1">{
+                return &amp;getArgs{}
+        }</span>,
+        CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} <span class="cov8" title="1">{
+                args := a.(*getArgs)
+                validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
+                return dbGetTimeLogs(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member, args.TimeLog, args.SortDir, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+        }</span>,
+}
+
+var Endpoints = []*endpoint.Endpoint{
+        create,
+        createAndSetRemainingTime,
+        setDuration,
+        setNote,
+        delete,
+        get,
+}
+</pre>
+		
+		<pre class="file" id="file19" style="display: none">package crypt
 
 import (
         "crypto/rand"
@@ -3660,7 +4801,7 @@ func ScryptKey(password, salt []byte, N, r, p, keyLen int) []byte <span class="c
 }</span>
 </pre>
 		
-		<pre class="file" id="file14" style="display: none">package id
+		<pre class="file" id="file20" style="display: none">package id
 
 import (
         "bitbucket.org/0xor1/task/server/util/err"
@@ -3715,9 +4856,12 @@ func (id Id) Equal(other Id) bool <span class="cov8" title="1">{
 func (id Id) Copy() Id <span class="cov8" title="1">{
         return Id(append(make([]byte, 0, 16), id...))
 }</span>
-</pre>
+
+type Identifiable interface{
+        Id() Id
+}</pre>
 		
-		<pre class="file" id="file15" style="display: none">package validate
+		<pre class="file" id="file21" style="display: none">package validate
 
 import (
         "bitbucket.org/0xor1/task/server/util/cnst"

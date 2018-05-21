@@ -31,7 +31,7 @@ var create = &endpoint.Endpoint{
 	Method:                   http.MethodPost,
 	Path:                     "/api/v1/task/create",
 	RequiresSession:          true,
-	ExampleResponseStructure: &task{},
+	ExampleResponseStructure: &Task{},
 	GetArgsStruct: func() interface{} {
 		return &createArgs{}
 	},
@@ -49,7 +49,7 @@ var create = &endpoint.Endpoint{
 		if args.Member != nil { //if a member is being assigned to the task then we need to check they have project write access
 			validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.Account, args.Project, *args.Member))
 		}
-		newTask := &task{
+		newTask := &Task{
 			Id:                   id.New(),
 			IsAbstract:           args.IsAbstract,
 			Name:                 args.Name,
@@ -250,7 +250,7 @@ var get = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/get",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*task{{}},
+	ExampleResponseStructure: []*Task{{}},
 	GetArgsStruct: func() interface{} {
 		return &getArgs{}
 	},
@@ -275,7 +275,7 @@ var getChildren = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getChildren",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*task{{}},
+	ExampleResponseStructure: []*Task{{}},
 	GetArgsStruct: func() interface{} {
 		return &getChildrenArgs{}
 	},
@@ -299,7 +299,7 @@ var getAncestorTasks = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getAncestorTasks",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*ancestor{{}},
+	ExampleResponseStructure: []*Ancestor{{}},
 	GetArgsStruct: func() interface{} {
 		return &getAncestorTasksArgs{}
 	},
@@ -325,7 +325,7 @@ var Endpoints = []*endpoint.Endpoint{
 	getAncestorTasks,
 }
 
-type task struct {
+type Task struct {
 	Id                   id.Id     `json:"id"`
 	Parent               *id.Id    `json:"parent,omitempty"`
 	FirstChild           *id.Id    `json:"firstChild,omitempty"`
@@ -345,7 +345,7 @@ type task struct {
 	Member               *id.Id    `json:"member,omitempty"`          //only task tasks
 }
 
-type ancestor struct {
+type Ancestor struct {
 	Id   id.Id  `json:"id"`
 	Name string `json:"name"`
 	//may want to add on time values here to render progress bars within breadcrumb ui component

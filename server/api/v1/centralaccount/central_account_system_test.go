@@ -39,7 +39,8 @@ func Test_system(t *testing.T) {
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 
 	client.Activate("ali@ali.com", activationCode)
-	aliId, err := client.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliInitInfo, err := client.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliId := aliInitInfo.Me.Id
 
 	err = client.SetMyEmail(aliCss, "aliNew@aliNew.com")
 
@@ -91,7 +92,8 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, "en", me.Language)
 
 	client.SetMyPwd(aliCss, "al1-Pwd-W00-2", "al1-Pwd-W00")
-	aliId2, err := client.Authenticate(aliCss, "aliNew@aliNew.com", "al1-Pwd-W00")
+	aliInitInfo2, err := client.Authenticate(aliCss, "aliNew@aliNew.com", "al1-Pwd-W00")
+	aliId2 := aliInitInfo2.Me.Id
 	assert.True(t, aliId.Equal(aliId2))
 
 	err = client.SetAccountName(aliCss, aliId, "aliNew")
@@ -156,12 +158,14 @@ func Test_system(t *testing.T) {
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	client.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
-	bobId, err := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobInitInfo, err := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	client.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
-	catId, err := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catInitInfo, err := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catId := catInitInfo.Me.Id
 
 	addBob := AddMember{}
 	addBob.Id = bobId

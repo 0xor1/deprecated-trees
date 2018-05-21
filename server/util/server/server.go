@@ -257,7 +257,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		} else {
 			i := me.Id()
 			ctx.me = &i //set me on _ctx for logging info in defer above
-			ctx.session.Values["me"] = me
+			ctx.session.Values["me"] = i
 			ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
 			ctx.session.Save(req, resp)
 		}

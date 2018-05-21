@@ -17,16 +17,16 @@ type Client interface {
 	Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) error
-	Authenticate(css *clientsession.Store, email, pwd string) (*authenticateResp, error)
+	Authenticate(css *clientsession.Store, email, pwd string) (*AuthenticateResult, error)
 	ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error
 	ResetPwd(email string) error
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
-	GetAccount(name string) (*account, error)
-	GetAccounts(accounts []id.Id) ([]*account, error)
-	SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
-	SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*account, error)
+	GetAccount(name string) (*Account, error)
+	GetAccounts(accounts []id.Id) ([]*Account, error)
+	SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error)
+	SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error)
 	//requires active session to access
-	GetMe(css *clientsession.Store) (*me, error)
+	GetMe(css *clientsession.Store) (*Me, error)
 	SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error
 	SetMyEmail(css *clientsession.Store, newEmail string) error
 	ResendMyNewEmailConfirmationEmail(css *clientsession.Store) error
@@ -34,8 +34,8 @@ type Client interface {
 	SetAccountDisplayName(css *clientsession.Store, account id.Id, newDisplayName *string) error
 	SetAccountAvatar(css *clientsession.Store, account id.Id, avatar io.ReadCloser) error
 	MigrateAccount(css *clientsession.Store, account id.Id, newRegion string) error
-	CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*account, error)
-	GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*getMyAccountsResp, error)
+	CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error)
+	GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*GetMyAccountsResult, error)
 	DeleteAccount(css *clientsession.Store, account id.Id) error
 	//member centric - must be an owner or admin
 	AddMembers(css *clientsession.Store, account id.Id, newMembers []*AddMember) error
@@ -88,13 +88,13 @@ func (c *client) Activate(email, activationCode string) error {
 	return e
 }
 
-func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (*authenticateResp, error) {
+func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (*AuthenticateResult, error) {
 	val, e := authenticate.DoRequest(css, c.host, &authenticateArgs{
 		Email:  email,
 		PwdTry: pwdTry,
-	}, nil, &authenticateResp{})
+	}, nil, &AuthenticateResult{})
 	if val != nil {
-		return val.(*authenticateResp), e
+		return val.(*AuthenticateResult), e
 	}
 	return nil, e
 }
@@ -124,50 +124,50 @@ func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
 	return e
 }
 
-func (c *client) GetAccount(name string) (*account, error) {
+func (c *client) GetAccount(name string) (*Account, error) {
 	val, e := getAccount.DoRequest(nil, c.host, &getAccountArgs{
 		Name: name,
-	}, nil, &account{})
+	}, nil, &Account{})
 	if val != nil {
-		return val.(*account), e
+		return val.(*Account), e
 	}
 	return nil, e
 }
 
-func (c *client) GetAccounts(accounts []id.Id) ([]*account, error) {
+func (c *client) GetAccounts(accounts []id.Id) ([]*Account, error) {
 	val, e := getAccounts.DoRequest(nil, c.host, &getAccountsArgs{
 		Accounts: accounts,
-	}, nil, &[]*account{})
+	}, nil, &[]*Account{})
 	if val != nil {
-		return *val.(*[]*account), e
+		return *val.(*[]*Account), e
 	}
 	return nil, e
 }
 
-func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) {
+func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) {
 	val, e := searchAccounts.DoRequest(nil, c.host, &searchAccountsArgs{
 		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
-	}, nil, &[]*account{})
+	}, nil, &[]*Account{})
 	if val != nil {
-		return *val.(*[]*account), e
+		return *val.(*[]*Account), e
 	}
 	return nil, e
 }
 
-func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*account, error) {
+func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) {
 	val, e := searchPersonalAccounts.DoRequest(nil, c.host, &searchPersonalAccountsArgs{
 		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
-	}, nil, &[]*account{})
+	}, nil, &[]*Account{})
 	if val != nil {
-		return *val.(*[]*account), e
+		return *val.(*[]*Account), e
 	}
 	return nil, e
 }
 
-func (c *client) GetMe(css *clientsession.Store) (*me, error) {
-	val, e := getMe.DoRequest(css, c.host, nil, nil, &me{})
+func (c *client) GetMe(css *clientsession.Store) (*Me, error) {
+	val, e := getMe.DoRequest(css, c.host, nil, nil, &Me{})
 	if val != nil {
-		return val.(*me), e
+		return val.(*Me), e
 	}
 	return nil, e
 }
@@ -235,25 +235,25 @@ func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegi
 	return e
 }
 
-func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*account, error) {
+func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error) {
 	val, e := createAccount.DoRequest(css, c.host, &createAccountArgs{
 		Name:        name,
 		Region:      region,
 		DisplayName: displayName,
-	}, nil, &account{})
+	}, nil, &Account{})
 	if val != nil {
-		return val.(*account), e
+		return val.(*Account), e
 	}
 	return nil, e
 }
 
-func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*getMyAccountsResp, error) {
+func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*GetMyAccountsResult, error) {
 	val, e := getMyAccounts.DoRequest(css, c.host, &getMyAccountsArgs{
 		After: after,
 		Limit: limit,
-	}, nil, &getMyAccountsResp{})
+	}, nil, &GetMyAccountsResult{})
 	if val != nil {
-		return val.(*getMyAccountsResp), e
+		return val.(*GetMyAccountsResult), e
 	}
 	return nil, e
 }

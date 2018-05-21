@@ -27,7 +27,7 @@ func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 	return exists
 }
 
-func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *project) {
+func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *Project) {
 	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).AccountProjectsSet(account))
@@ -39,8 +39,8 @@ func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, isPublic bool
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
 }
 
-func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project {
-	res := project{}
+func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *Project {
+	res := Project{}
 	cacheKey := cachekey.NewGet("project.dbGetProject", shard, account, proj).Project(account, proj)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -53,15 +53,15 @@ func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *project {
 	return &res
 }
 
-func dbGetPublicProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp {
+func dbGetPublicProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult {
 	return dbGetProjects(ctx, shard, `AND isPublic=true`, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, account, me id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp {
+func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, account, me id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult {
 	return dbGetProjects(ctx, shard, `AND (isPublic=true OR id IN (SELECT project FROM projectMembers WHERE account=? AND isActive=true AND id=?))`, account, &me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
-func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp {
+func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult {
 	return dbGetProjects(ctx, shard, ``, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit)
 }
 
@@ -92,8 +92,8 @@ func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member 
 	ctx.TouchDlms(cachekey.NewSetDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }
 
-func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
-	res := getMembersResp{}
+func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *GetMembersResult {
+	res := GetMembersResult{}
 	cacheKey := cachekey.NewGet("project.dbGetMembers", shard, account, project, role, nameOrDisplayNameContains, after, limit).ProjectMembersSet(account, project)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -200,8 +200,8 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 	return res
 }
 
-func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *getSetResp {
-	res := getSetResp{}
+func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) *GetSetResult {
+	res := GetSetResult{}
 	cacheKey := cachekey.NewGet("project.dbGetProjectsSet", shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit).AccountProjectsSet(account)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -248,11 +248,11 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 	args = append(args, limit+1)
 	rows, e := ctx.TreeQuery(shard, fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
 	panic.If(e)
-	projSet := make([]*project, 0, limit+1)
+	projSet := make([]*Project, 0, limit+1)
 	idx := 0
 	resIdx := map[string]int{}
 	for rows.Next() {
-		proj := project{}
+		proj := Project{}
 		panic.If(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
 		projSet = append(projSet, &proj)
 		resIdx[proj.Id.String()] = idx

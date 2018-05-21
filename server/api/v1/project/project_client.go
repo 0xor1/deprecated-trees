@@ -10,15 +10,15 @@ import (
 
 type Client interface {
 	//must be account owner/admin
-	Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error)
+	Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*Project, error)
 	//must be account owner/admin and account.publicProjectsEnabled must be true
 	SetIsPublic(css *clientsession.Store, shard int, account, project id.Id, isPublic bool) error
 	//must be account owner/admin
 	SetIsArchived(css *clientsession.Store, shard int, account, project id.Id, isArchived bool) error
 	//check project access permission per user
-	Get(css *clientsession.Store, shard int, account, project id.Id) (*project, error)
+	Get(css *clientsession.Store, shard int, account, project id.Id) (*Project, error)
 	//check project access permission per user
-	GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*getSetResp, error)
+	GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*GetSetResult, error)
 	//must be account owner/admin
 	Delete(css *clientsession.Store, shard int, account, project id.Id) error
 	//must be account owner/admin or project admin
@@ -28,7 +28,7 @@ type Client interface {
 	//must be account owner/admin or project admin
 	RemoveMembers(css *clientsession.Store, shard int, account, project id.Id, members []id.Id) error
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
-	GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*getMembersResp, error)
+	GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error)
 	//for anyone
 	GetMe(css *clientsession.Store, shard int, account, project id.Id) (*member, error)
 	//either one or both of OccurredAfter/Before must be nil
@@ -45,7 +45,7 @@ type client struct {
 	host string
 }
 
-func (c *client) Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*project, error) {
+func (c *client) Create(css *clientsession.Store, shard int, account id.Id, name string, description *string, startOn, dueOn *time.Time, isParallel, isPublic bool, members []*AddProjectMember) (*Project, error) {
 	val, e := create.DoRequest(css, c.host, &createArgs{
 		Shard:       shard,
 		Account:     account,
@@ -56,9 +56,9 @@ func (c *client) Create(css *clientsession.Store, shard int, account id.Id, name
 		IsParallel:  isParallel,
 		IsPublic:    isPublic,
 		Members:     members,
-	}, nil, &project{})
+	}, nil, &Project{})
 	if val != nil {
-		return val.(*project), e
+		return val.(*Project), e
 	}
 	return nil, e
 }
@@ -83,19 +83,19 @@ func (c *client) SetIsArchived(css *clientsession.Store, shard int, account, pro
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, shard int, account, proj id.Id) (*project, error) {
+func (c *client) Get(css *clientsession.Store, shard int, account, proj id.Id) (*Project, error) {
 	val, e := get.DoRequest(css, c.host, &getArgs{
 		Shard:   shard,
 		Account: account,
 		Project: proj,
-	}, nil, &project{})
+	}, nil, &Project{})
 	if val != nil {
-		return val.(*project), e
+		return val.(*Project), e
 	}
 	return nil, e
 }
 
-func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*getSetResp, error) {
+func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*GetSetResult, error) {
 	val, e := getSet.DoRequest(css, c.host, &getSetArgs{
 		Shard:           shard,
 		Account:         account,
@@ -111,9 +111,9 @@ func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, name
 		SortDir:         sortDir,
 		After:           after,
 		Limit:           limit,
-	}, nil, &getSetResp{})
+	}, nil, &GetSetResult{})
 	if val != nil {
-		return val.(*getSetResp), e
+		return val.(*GetSetResult), e
 	}
 	return nil, e
 }
@@ -158,7 +158,7 @@ func (c *client) RemoveMembers(css *clientsession.Store, shard int, account, pro
 	return e
 }
 
-func (c *client) GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
+func (c *client) GetMembers(css *clientsession.Store, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error) {
 	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
 		Shard:   shard,
 		Account: account,
@@ -167,9 +167,9 @@ func (c *client) GetMembers(css *clientsession.Store, shard int, account, projec
 		NameOrDisplayNameContains: nameOrDisplayNameContains,
 		After: after,
 		Limit: limit,
-	}, nil, &getMembersResp{})
+	}, nil, &GetMembersResult{})
 	if val != nil {
-		return val.(*getMembersResp), e
+		return val.(*GetMembersResult), e
 	}
 	return nil, e
 }

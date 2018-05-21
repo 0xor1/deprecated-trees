@@ -30,8 +30,8 @@ func dbSetMemberRole(ctx ctx.Ctx, shard int, account, member id.Id, role cnst.Ac
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountMember(account, member).AccountActivities(account))
 }
 
-func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *member {
-	res := member{}
+func dbGetMember(ctx ctx.Ctx, shard int, account, mem id.Id) *Member {
+	res := Member{}
 	cacheKey := cachekey.NewGet("account.dbGetMember", shard, account, mem).AccountMember(account, mem)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -75,8 +75,8 @@ AND (
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
-func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *getMembersResp {
-	res := getMembersResp{}
+func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *GetMembersResp {
+	res := GetMembersResp{}
 	cacheKey := cachekey.NewGet("account.dbGetMembers", shard, account, role, nameOrDisplayNameContains, after, limit).AccountMembersSet(account)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -109,9 +109,9 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 		defer rows.Close()
 	}
 	panic.If(e)
-	memSet := make([]*member, 0, limit+1)
+	memSet := make([]*Member, 0, limit+1)
 	for rows.Next() {
-		mem := member{}
+		mem := Member{}
 		panic.If(rows.Scan(&mem.Id, &mem.Name, &mem.DisplayName, &mem.HasAvatar, &mem.IsActive, &mem.Role))
 		memSet = append(memSet, &mem)
 	}

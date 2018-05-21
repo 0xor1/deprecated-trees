@@ -89,8 +89,8 @@ type getMembersArgs struct {
 	Limit        int               `json:"limit"`
 }
 
-type getMembersResp struct {
-	Members []*member `json:"members"`
+type GetMembersResp struct {
+	Members []*Member `json:"members"`
 	More    bool      `json:"more"`
 }
 
@@ -98,7 +98,7 @@ var getMembers = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getMembers",
 	RequiresSession:          true,
-	ExampleResponseStructure: &getMembersResp{Members: []*member{{}}},
+	ExampleResponseStructure: &GetMembersResp{Members: []*Member{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
@@ -144,7 +144,7 @@ var getMe = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getMe",
 	RequiresSession:          true,
-	ExampleResponseStructure: &member{},
+	ExampleResponseStructure: &Member{},
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
@@ -163,7 +163,7 @@ var Endpoints = []*endpoint.Endpoint{
 	getMe,
 }
 
-type member struct {
+type Member struct {
 	Id          id.Id            `json:"id"`
 	Name        string           `json:"name"`
 	DisplayName *string          `json:"displayName,omitempty"`

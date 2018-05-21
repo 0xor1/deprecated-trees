@@ -15,9 +15,9 @@ func dbAccountWithCiNameExists(ctx ctx.Ctx, name string) bool {
 	return count != 0
 }
 
-func dbGetAccountByCiName(ctx ctx.Ctx, name string) *account {
+func dbGetAccountByCiName(ctx ctx.Ctx, name string) *Account {
 	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name = ?`, name)
-	acc := account{}
+	acc := Account{}
 	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal)) {
 		return nil
 	}
@@ -65,7 +65,7 @@ func dbUpdatePersonalAccount(ctx ctx.Ctx, personalAccountInfo *fullPersonalAccou
 	panic.If(e)
 }
 
-func dbUpdateAccount(ctx ctx.Ctx, account *account) {
+func dbUpdateAccount(ctx ctx.Ctx, account *Account) {
 	_, e := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
 	panic.If(e)
 }
@@ -82,16 +82,16 @@ func dbDeleteAccountAndAllAssociatedMemberships(ctx ctx.Ctx, id id.Id) {
 	panic.If(e)
 }
 
-func dbGetAccount(ctx ctx.Ctx, id id.Id) *account {
+func dbGetAccount(ctx ctx.Ctx, id id.Id) *Account {
 	row := ctx.AccountQueryRow(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id = ?`, id)
-	a := account{}
+	a := Account{}
 	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal)) {
 		return nil
 	}
 	return &a
 }
 
-func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
+func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*Account {
 	args := make([]interface{}, 0, len(ids))
 	args = append(args, ids[0])
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (?`)
@@ -105,16 +105,16 @@ func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 		defer rows.Close()
 	}
 	panic.If(e)
-	res := make([]*account, 0, len(ids))
+	res := make([]*Account, 0, len(ids))
 	for rows.Next() {
-		a := account{}
+		a := Account{}
 		panic.If(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	return res
 }
 
-func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*account {
+func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Account {
 	searchTerm := nameOrDisplayNameStartsWith + "%"
 	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	//TODO need to profile these queries to check for best performance
@@ -124,16 +124,16 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*accoun
 	}
 	panic.If(e)
 
-	res := make([]*account, 0, 100)
+	res := make([]*Account, 0, 100)
 	for rows.Next() {
-		acc := account{}
+		acc := Account{}
 		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
 		res = append(res, &acc)
 	}
 	return res
 }
 
-func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*account {
+func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Account {
 	//rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?`, searchTerm, searchTerm, 100)
 	//TODO need to profile these queries to check for best performance
 	searchTerm := nameOrDisplayNameStartsWith + "%"
@@ -143,9 +143,9 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
 	}
 	panic.If(e)
 
-	res := make([]*account, 0, 100)
+	res := make([]*Account, 0, 100)
 	for rows.Next() {
-		acc := account{}
+		acc := Account{}
 		acc.IsPersonal = true
 		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
@@ -153,7 +153,7 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
 	return res
 }
 
-func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
+func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*Account {
 	args := make([]interface{}, 0, len(ids))
 	args = append(args, ids[0])
 	query := bytes.NewBufferString(` SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE id IN (SELECT id FROM personalAccounts WHERE id IN (?`)
@@ -167,9 +167,9 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 		defer rows.Close()
 	}
 	panic.If(e)
-	res := make([]*account, 0, len(ids))
+	res := make([]*Account, 0, len(ids))
 	for rows.Next() {
-		acc := account{}
+		acc := Account{}
 		acc.IsPersonal = true
 		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
@@ -177,12 +177,12 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*account {
 	return res
 }
 
-func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *account, member id.Id) {
+func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *Account, member id.Id) {
 	_, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, member)
 	panic.If(e)
 }
 
-func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*account, bool) {
+func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*Account, bool) {
 	args := make([]interface{}, 0, 3)
 	query := bytes.NewBufferString(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE id IN (SELECT account FROM memberships WHERE member = ?)`)
 	args = append(args, member)
@@ -197,9 +197,9 @@ func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*
 		defer rows.Close()
 	}
 	panic.If(e)
-	res := make([]*account, 0, limit+1)
+	res := make([]*Account, 0, limit+1)
 	for rows.Next() {
-		a := account{}
+		a := Account{}
 		panic.If(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}

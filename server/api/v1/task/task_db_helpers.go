@@ -10,7 +10,7 @@ import (
 	"github.com/0xor1/panic"
 )
 
-func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSibling *id.Id, newTask *task) {
+func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSibling *id.Id, newTask *Task) {
 	args := make([]interface{}, 0, 18)
 	args = append(args, account, project, parent, ctx.Me())
 	if nextSibling != nil {
@@ -118,9 +118,9 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 	ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
 }
 
-func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*task {
+func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*Task {
 	cacheKey := cachekey.NewGet("project.dbGetTasks", shard, account, project, tasks)
-	res := make([]*task, 0, len(tasks))
+	res := make([]*Task, 0, len(tasks))
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
 	}
@@ -138,7 +138,7 @@ func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) [
 	}
 	panic.If(e)
 	for rows.Next() {
-		ta := task{}
+		ta := Task{}
 		panic.If(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		res = append(res, &ta)
@@ -147,8 +147,8 @@ func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) [
 	return res
 }
 
-func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*task {
-	res := make([]*task, 0, limit)
+func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*Task {
+	res := make([]*Task, 0, limit)
 	cacheKey := cachekey.NewGet("project.dbGetChildTasks", shard, account, project, parent, fromSibling, limit).TaskChildrenSet(account, project, parent)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return res
@@ -159,7 +159,7 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fro
 	}
 	panic.If(e)
 	for rows.Next() {
-		ta := task{}
+		ta := Task{}
 		panic.If(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		res = append(res, &ta)
@@ -168,7 +168,7 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fro
 	return res
 }
 
-func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) []*ancestor {
+func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) []*Ancestor {
 	// note to future dan:
 	// I believe this is uncachable, the cache system is based on breaking dlms for entities higher up the entity tree,
 	// so we can only cache moving down the entity tree, but this operation goes up the tree, and is therefore uncachable
@@ -177,16 +177,16 @@ func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, l
 		defer rows.Close()
 	}
 	panic.If(e)
-	res := make([]*ancestor, 0, limit)
+	res := make([]*Ancestor, 0, limit)
 	for rows.Next() {
-		an := ancestor{}
+		an := Ancestor{}
 		panic.If(rows.Scan(&an.Id, &an.Name))
 		res = append(res, &an)
 	}
 	return res
 }
 
-func nilOutPropertiesThatAreNotNilInTheDb(ta *task) {
+func nilOutPropertiesThatAreNotNilInTheDb(ta *Task) {
 	if !ta.IsAbstract {
 		ta.MinimumRemainingTime = nil
 		ta.ChildCount = nil

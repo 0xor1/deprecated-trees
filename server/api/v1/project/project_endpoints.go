@@ -35,7 +35,7 @@ var create = &endpoint.Endpoint{
 	Method:                   http.MethodPost,
 	Path:                     "/api/v1/project/create",
 	RequiresSession:          true,
-	ExampleResponseStructure: &project{},
+	ExampleResponseStructure: &Project{},
 	GetArgsStruct: func() interface{} {
 		return &createArgs{}
 	},
@@ -44,7 +44,7 @@ var create = &endpoint.Endpoint{
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		panic.IfTrueWith(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 
-		project := &project{}
+		project := &Project{}
 		project.Id = id.New()
 		project.Name = args.Name
 		project.Description = args.Description
@@ -129,7 +129,7 @@ var get = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/get",
 	RequiresSession:          false,
-	ExampleResponseStructure: &project{},
+	ExampleResponseStructure: &Project{},
 	GetArgsStruct: func() interface{} {
 		return &getArgs{}
 	},
@@ -158,8 +158,8 @@ type getSetArgs struct {
 	Limit           int          `json:"limit"`
 }
 
-type getSetResp struct {
-	Projects []*project `json:"projects"`
+type GetSetResult struct {
+	Projects []*Project `json:"projects"`
 	More     bool       `json:"more"`
 }
 
@@ -167,7 +167,7 @@ var getSet = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getSet",
 	RequiresSession:          false,
-	ExampleResponseStructure: &getSetResp{Projects: []*project{{}}},
+	ExampleResponseStructure: &GetSetResult{Projects: []*Project{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getSetArgs{}
 	},
@@ -314,7 +314,7 @@ type getMembersArgs struct {
 	Limit                     int               `json:"limit"`
 }
 
-type getMembersResp struct {
+type GetMembersResult struct {
 	Members []*member `json:"members"`
 	More    bool      `json:"more"`
 }
@@ -323,7 +323,7 @@ var getMembers = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getMembers",
 	RequiresSession:          false,
-	ExampleResponseStructure: &getMembersResp{Members: []*member{{}}},
+	ExampleResponseStructure: &GetMembersResult{Members: []*member{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
@@ -404,7 +404,7 @@ type member struct {
 	Role               cnst.ProjectRole `json:"role"`
 }
 
-type project struct {
+type Project struct {
 	Id                   id.Id      `json:"id"`
 	IsArchived           bool       `json:"isArchived"`
 	Name                 string     `json:"name"`

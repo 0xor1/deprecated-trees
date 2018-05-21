@@ -31,12 +31,12 @@ func Test_system(t *testing.T) {
 	})
 
 	aliDisplayName := "Ali O'Mally"
-	//redis seems to be timing out on the first hit but is ok there after which is why this is duplicated
 	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
 	activationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 	centralClient.Activate("ali@ali.com", activationCode)
-	aliId, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliInitInfo, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliId := aliInitInfo.Me.Id
 	assert.Nil(t, err)
 	bobDisplayName := "Fat Bob"
 	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, cnst.LightTheme)
@@ -48,17 +48,20 @@ func Test_system(t *testing.T) {
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
-	bobId, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobInitInfo, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	centralClient.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
-	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catInitInfo, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catId := catInitInfo.Me.Id
 	danActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "dan@dan.com").Scan(&danActivationCode)
 	centralClient.Activate("dan@dan.com", danActivationCode)
 	danCss := clientsession.New()
-	danId, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
+	danInitInfo, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
+	danId := danInitInfo.Me.Id
 
 	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
 	bob := centralaccount.AddMember{}

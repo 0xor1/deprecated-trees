@@ -16,11 +16,11 @@ type Client interface {
 	//must be account owner/admin
 	SetMemberRole(css *clientsession.Store, shard int, account, member id.Id, role cnst.AccountRole) error
 	//pointers are optional filters
-	GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error)
+	GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error)
 	//either one or both of OccurredAfter/Before must be nil
 	GetActivities(css *clientsession.Store, shard int, account id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
 	//for anyone
-	GetMe(css *clientsession.Store, shard int, account id.Id) (*member, error)
+	GetMe(css *clientsession.Store, shard int, account id.Id) (*Member, error)
 }
 
 func NewClient(host string) Client {
@@ -64,7 +64,7 @@ func (c *client) SetMemberRole(css *clientsession.Store, shard int, account, mem
 	return e
 }
 
-func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*getMembersResp, error) {
+func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error) {
 	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
 		Shard:        shard,
 		Account:      account,
@@ -72,9 +72,9 @@ func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, 
 		NameContains: nameContains,
 		After:        after,
 		Limit:        limit,
-	}, nil, &getMembersResp{})
+	}, nil, &GetMembersResp{})
 	if val != nil {
-		return val.(*getMembersResp), e
+		return val.(*GetMembersResp), e
 	}
 	return nil, e
 }
@@ -95,13 +95,13 @@ func (c *client) GetActivities(css *clientsession.Store, shard int, account id.I
 	return nil, e
 }
 
-func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*member, error) {
+func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*Member, error) {
 	val, e := getMe.DoRequest(css, c.host, &getMeArgs{
 		Shard:   shard,
 		Account: account,
-	}, nil, &member{})
+	}, nil, &Member{})
 	if val != nil {
-		return val.(*member), e
+		return val.(*Member), e
 	}
 	return nil, e
 }

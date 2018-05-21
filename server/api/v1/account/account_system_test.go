@@ -29,7 +29,8 @@ func Test_System(t *testing.T) {
 	activationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 	centralClient.Activate("ali@ali.com", activationCode)
-	aliId, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliInitInfo, err := centralClient.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliId := aliInitInfo.Me.Id
 	bobDisplayName := "Fat Bob"
 	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, cnst.LightTheme)
 	catDisplayName := "Lap Cat"
@@ -38,12 +39,14 @@ func Test_System(t *testing.T) {
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
-	bobId, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobInitInfo, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	centralClient.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
-	catId, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catInitInfo, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catId := catInitInfo.Me.Id
 
 	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
 	bob := centralaccount.AddMember{}

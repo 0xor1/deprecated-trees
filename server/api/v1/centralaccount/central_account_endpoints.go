@@ -185,12 +185,12 @@ type authenticateArgs struct {
 	PwdTry string `json:"pwdTry"`
 }
 
-type authenticateResp struct{
-	Me *me `json:"me"`
-	MyAccounts *getMyAccountsResp `json:"myAccounts"`
+type AuthenticateResult struct{
+	Me *Me                          `json:"me"`
+	MyAccounts *GetMyAccountsResult `json:"myAccounts"`
 }
 
-func (ar *authenticateResp) Id() id.Id {
+func (ar *AuthenticateResult) Id() id.Id {
 	return ar.Me.Id
 }
 
@@ -198,7 +198,7 @@ var authenticate = &endpoint.Endpoint{
 	Method:                   http.MethodPost,
 	Path:                     "/api/v1/centralAccount/authenticate",
 	RequiresSession:          false,
-	ExampleResponseStructure: &me{},
+	ExampleResponseStructure: &Me{},
 	IsAuthentication:         true,
 	GetArgsStruct: func() interface{} {
 		return &authenticateArgs{}
@@ -233,9 +233,9 @@ var authenticate = &endpoint.Endpoint{
 		}
 
 		myAccounts, more := dbGetGroupAccounts(ctx, acc.Id, nil, 100)
-		return &authenticateResp{
-			Me: &acc.me,
-			MyAccounts: &getMyAccountsResp{
+		return &AuthenticateResult{
+			Me: &acc.Me,
+			MyAccounts: &GetMyAccountsResult{
 				Accounts: myAccounts,
 				More: more,
 			},
@@ -348,7 +348,7 @@ var getAccount = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getAccount",
 	RequiresSession:          false,
-	ExampleResponseStructure: &account{},
+	ExampleResponseStructure: &Account{},
 	GetArgsStruct: func() interface{} {
 		return &getAccountArgs{}
 	},
@@ -366,7 +366,7 @@ var getAccounts = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getAccounts",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*account{{}},
+	ExampleResponseStructure: []*Account{{}},
 	GetArgsStruct: func() interface{} {
 		return &getAccountsArgs{}
 	},
@@ -386,7 +386,7 @@ var searchAccounts = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/searchAccounts",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*account{{}},
+	ExampleResponseStructure: []*Account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchAccountsArgs{}
 	},
@@ -406,7 +406,7 @@ var searchPersonalAccounts = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/searchPersonalAccounts",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*account{{}},
+	ExampleResponseStructure: []*Account{{}},
 	GetArgsStruct: func() interface{} {
 		return &searchPersonalAccountsArgs{}
 	},
@@ -422,11 +422,11 @@ var getMe = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getMe",
 	RequiresSession:          true,
-	ExampleResponseStructure: &me{},
+	ExampleResponseStructure: &Me{},
 	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
 		acc := dbGetPersonalAccountById(ctx, ctx.Me())
 		panic.IfTrueWith(acc == nil, noSuchAccountErr)
-		return &acc.me
+		return &acc.Me
 	},
 }
 
@@ -735,7 +735,7 @@ var createAccount = &endpoint.Endpoint{
 	Method:                   http.MethodPost,
 	Path:                     "/api/v1/centralAccount/createAccount",
 	RequiresSession:          true,
-	ExampleResponseStructure: &account{},
+	ExampleResponseStructure: &Account{},
 	GetArgsStruct: func() interface{} {
 		return &createAccountArgs{}
 	},
@@ -747,7 +747,7 @@ var createAccount = &endpoint.Endpoint{
 		panic.IfTrueWith(!ctx.RegionalV1PrivateClient().IsValidRegion(args.Region), err.NoSuchRegion)
 		panic.IfTrueWith(dbAccountWithCiNameExists(ctx, args.Name), nameAlreadyInUseErr)
 
-		account := &account{}
+		account := &Account{}
 		account.Id = id.New()
 		account.Name = args.Name
 		account.DisplayName = args.DisplayName
@@ -781,8 +781,8 @@ type getMyAccountsArgs struct {
 	Limit int    `json:"limit"`
 }
 
-type getMyAccountsResp struct {
-	Accounts []*account `json:"accounts"`
+type GetMyAccountsResult struct {
+	Accounts []*Account `json:"accounts"`
 	More     bool       `json:"more"`
 }
 
@@ -790,13 +790,13 @@ var getMyAccounts = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/centralAccount/getMyAccounts",
 	RequiresSession:          true,
-	ExampleResponseStructure: &getMyAccountsResp{Accounts: []*account{{}}},
+	ExampleResponseStructure: &GetMyAccountsResult{Accounts: []*Account{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getMyAccountsArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMyAccountsArgs)
-		res := &getMyAccountsResp{}
+		res := &GetMyAccountsResult{}
 		res.Accounts, res.More = dbGetGroupAccounts(ctx, ctx.Me(), args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 		return res
 	},
@@ -956,7 +956,7 @@ var Endpoints = []*endpoint.Endpoint{
 }
 
 //structs
-type account struct {
+type Account struct {
 	Id          id.Id     `json:"id"`
 	Name        string    `json:"name"`
 	DisplayName *string   `json:"displayName"`
@@ -968,12 +968,12 @@ type account struct {
 	IsPersonal  bool      `json:"isPersonal"`
 }
 
-func (a *account) isMigrating() bool {
+func (a *Account) isMigrating() bool {
 	return a.NewRegion != nil
 }
 
-type me struct {
-	account
+type Me struct {
+	Account
 	Email    string     `json:"email"`
 	Language string     `json:"language"`
 	Theme    cnst.Theme `json:"theme"`
@@ -981,7 +981,7 @@ type me struct {
 }
 
 type fullPersonalAccountInfo struct {
-	me
+	Me
 	activationCode           *string
 	activatedOn              *time.Time
 	newEmailConfirmationCode *string
