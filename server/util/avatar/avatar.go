@@ -1,7 +1,7 @@
 package avatar
 
 import (
-	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/trees/server/util/err"
 	"github.com/0xor1/panic"
 	"io"
 	"io/ioutil"

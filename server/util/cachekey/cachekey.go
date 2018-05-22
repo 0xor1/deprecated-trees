@@ -1,8 +1,8 @@
 package cachekey
 
 import (
-	"bitbucket.org/0xor1/task/server/util/err"
-	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/err"
+	"bitbucket.org/0xor1/trees/server/util/id"
 	"github.com/0xor1/panic"
 	"sort"
 )

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/0xor1/task/server/util/crypt"
+	"bitbucket.org/0xor1/trees/server/util/crypt"
 	"encoding/base64"
 	"flag"
 	"fmt"

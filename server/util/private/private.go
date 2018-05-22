@@ -1,8 +1,8 @@
 package private
 
 import (
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/id"
 )
 
 type V1Client interface {

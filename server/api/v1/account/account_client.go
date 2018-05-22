@@ -1,10 +1,10 @@
 package account
 
 import (
-	"bitbucket.org/0xor1/task/server/util/activity"
-	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/activity"
+	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/id"
 	"time"
 )
 

@@ -1,12 +1,12 @@
 package timelog
 
 import (
-	"bitbucket.org/0xor1/task/server/util/cachekey"
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/ctx"
-	"bitbucket.org/0xor1/task/server/util/db"
-	"bitbucket.org/0xor1/task/server/util/id"
-	tlog "bitbucket.org/0xor1/task/server/util/timelog"
+	"bitbucket.org/0xor1/trees/server/util/cachekey"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/ctx"
+	"bitbucket.org/0xor1/trees/server/util/db"
+	"bitbucket.org/0xor1/trees/server/util/id"
+	tlog "bitbucket.org/0xor1/trees/server/util/timelog"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"

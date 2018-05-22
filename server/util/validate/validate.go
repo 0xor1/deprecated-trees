@@ -1,8 +1,8 @@
 package validate
 
 import (
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/err"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/err"
 	"fmt"
 	"github.com/0xor1/panic"
 	"regexp"

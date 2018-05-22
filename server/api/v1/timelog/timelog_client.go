@@ -1,10 +1,10 @@
 package timelog
 
 import (
-	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/id"
-	tlog "bitbucket.org/0xor1/task/server/util/timelog"
+	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/id"
+	tlog "bitbucket.org/0xor1/trees/server/util/timelog"
 )
 
 type Client interface {

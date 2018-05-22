@@ -1,9 +1,9 @@
 package private
 
 import (
-	"bitbucket.org/0xor1/task/server/util/err"
-	"bitbucket.org/0xor1/task/server/util/id"
-	"bitbucket.org/0xor1/task/server/util/private"
+	"bitbucket.org/0xor1/trees/server/util/err"
+	"bitbucket.org/0xor1/trees/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/private"
 	"github.com/0xor1/panic"
 	"strings"
 )

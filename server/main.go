@@ -1,16 +1,16 @@
 package main
 
 import (
-	"bitbucket.org/0xor1/task/server/api/v1/account"
-	"bitbucket.org/0xor1/task/server/api/v1/centralaccount"
-	"bitbucket.org/0xor1/task/server/api/v1/private"
-	"bitbucket.org/0xor1/task/server/api/v1/project"
-	"bitbucket.org/0xor1/task/server/api/v1/task"
-	"bitbucket.org/0xor1/task/server/api/v1/timelog"
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/endpoint"
-	"bitbucket.org/0xor1/task/server/util/server"
-	"bitbucket.org/0xor1/task/server/util/static"
+	"bitbucket.org/0xor1/trees/server/api/v1/account"
+	"bitbucket.org/0xor1/trees/server/api/v1/centralaccount"
+	"bitbucket.org/0xor1/trees/server/api/v1/private"
+	"bitbucket.org/0xor1/trees/server/api/v1/project"
+	"bitbucket.org/0xor1/trees/server/api/v1/task"
+	"bitbucket.org/0xor1/trees/server/api/v1/timelog"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/endpoint"
+	"bitbucket.org/0xor1/trees/server/util/server"
+	"bitbucket.org/0xor1/trees/server/util/static"
 	"fmt"
 	"net/http"
 )

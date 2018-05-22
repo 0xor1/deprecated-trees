@@ -1,10 +1,10 @@
 package endpoint
 
 import (
-	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/ctx"
-	"bitbucket.org/0xor1/task/server/util/err"
-	"bitbucket.org/0xor1/task/server/util/time"
+	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/ctx"
+	"bitbucket.org/0xor1/trees/server/util/err"
+	"bitbucket.org/0xor1/trees/server/util/time"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"

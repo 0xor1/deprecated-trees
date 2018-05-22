@@ -1,11 +1,11 @@
 package ctx
 
 import (
-	"bitbucket.org/0xor1/task/server/util/avatar"
-	"bitbucket.org/0xor1/task/server/util/cachekey"
-	"bitbucket.org/0xor1/task/server/util/id"
-	"bitbucket.org/0xor1/task/server/util/mail"
-	"bitbucket.org/0xor1/task/server/util/private"
+	"bitbucket.org/0xor1/trees/server/util/avatar"
+	"bitbucket.org/0xor1/trees/server/util/cachekey"
+	"bitbucket.org/0xor1/trees/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/mail"
+	"bitbucket.org/0xor1/trees/server/util/private"
 	"database/sql"
 	"github.com/0xor1/isql"
 	"regexp"

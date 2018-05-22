@@ -1,8 +1,8 @@
 package task
 
 import (
-	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/id"
 )
 
 type Client interface {

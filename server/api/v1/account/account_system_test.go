@@ -1,12 +1,12 @@
 package account
 
 import (
-	"bitbucket.org/0xor1/task/server/api/v1/centralaccount"
-	"bitbucket.org/0xor1/task/server/api/v1/private"
-	"bitbucket.org/0xor1/task/server/util/clientsession"
-	"bitbucket.org/0xor1/task/server/util/cnst"
-	"bitbucket.org/0xor1/task/server/util/server"
-	"bitbucket.org/0xor1/task/server/util/static"
+	"bitbucket.org/0xor1/trees/server/api/v1/centralaccount"
+	"bitbucket.org/0xor1/trees/server/api/v1/private"
+	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/server"
+	"bitbucket.org/0xor1/trees/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
