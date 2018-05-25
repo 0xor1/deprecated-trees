@@ -116,6 +116,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		resp.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
 		if req.Method == http.MethodOptions {
 			resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
+			resp.Header().Set("Access-Control-Allow-Headers", "X-Client,Content-Type")
 			return
 		}
 	}

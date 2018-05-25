@@ -1,7 +1,3 @@
-/**
- * IMPORTANT: this file should only be altered by backend api developers
- * **/
-
 import axios from 'axios'
 import config from '@/config'
 
@@ -55,7 +51,8 @@ newApi = (opts) => {
   let centralHost = config.hosts.central
   let regionalHosts = config.hosts.regions
   let doReq = (axiosConfig) => {
-    axiosConfig['X-Client'] = 'web'
+    axiosConfig.headers = axiosConfig.headers || {}
+    axiosConfig.headers['X-Client'] = 'web'
     return axios(axiosConfig)
   }
   let buildUrl = (region, path) => {
@@ -145,7 +142,7 @@ newApi = (opts) => {
             if (res.data[key].code === 200) {
               awaitingMGetList[i].resolve(res.data[key].body)
             } else {
-              awaitingMGetList[i].reject(res.data[key].body)
+              awaitingMGetList[i].reject(res.data[key])
             }
           }
         }).catch((error) => {
