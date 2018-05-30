@@ -93,7 +93,7 @@ func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
 func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timelog.TimeLog {
 	var timeLog *id.Id
 	if duration != nil {
-		panic.IfTrueWith(*duration == 0, err.InvalidArguments)
+		panic.IfTrue(*duration == 0, err.InvalidArguments)
 		validate.MemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, account, project, ctx.Me()))
 		i := id.New()
 		timeLog = &i
@@ -118,7 +118,7 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 		rows.Scan(&i, existingMember, &taskName)
 		tasks = append(tasks, i)
 	}
-	panic.IfTrueWith(len(tasks) == 0, ErrNoChangeMade)
+	panic.IfTrue(len(tasks) == 0, ErrNoChangeMade)
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
 	if existingMember != nil {
 		cacheKey.ProjectMember(account, project, *existingMember)
@@ -148,7 +148,7 @@ func MakeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) {
 	row := ctx.TreeQueryRow(shard, sql, args...)
 	changeMade := false
 	panic.If(row.Scan(&changeMade))
-	panic.IfTrueWith(!changeMade, ErrNoChangeMade)
+	panic.IfTrue(!changeMade, ErrNoChangeMade)
 }
 
 func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) []id.Id {
@@ -160,6 +160,6 @@ func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) [
 		rows.Scan(&i)
 		res = append(res, i)
 	}
-	panic.IfTrueWith(len(res) == 0, ErrNoChangeMade)
+	panic.IfTrue(len(res) == 0, ErrNoChangeMade)
 	return res
 }

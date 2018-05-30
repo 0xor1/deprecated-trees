@@ -51,7 +51,7 @@ func (c *_ctx) TryMe() *id.Id {
 }
 
 func (c *_ctx) Me() id.Id {
-	panic.IfTrueWith(c.me == nil, unauthorizedErr)
+	panic.IfTrue(c.me == nil, unauthorizedErr)
 	return *c.me
 }
 

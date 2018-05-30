@@ -77,7 +77,7 @@ func dbSetMember(ctx ctx.Ctx, shard int, account, project, task id.Id, member *i
 	var parent id.Id
 	var existingMember *id.Id
 	panic.If(ctx.TreeQueryRow(shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), memArg).Scan(&changeMade, &parent, &existingMember))
-	panic.IfTrueWith(!changeMade, db.ErrNoChangeMade)
+	panic.IfTrue(!changeMade, db.ErrNoChangeMade)
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).Task(account, project, task)
 	if member != nil {
 		cacheKey.ProjectMember(account, project, *member)
@@ -169,20 +169,33 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fro
 }
 
 func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) []*Ancestor {
-	// note to future dan:
-	// I believe this is uncachable, the cache system is based on breaking dlms for entities higher up the entity tree,
-	// so we can only cache moving down the entity tree, but this operation goes up the tree, and is therefore uncachable
+	res := make([]*Ancestor, 0, limit)
+	cacheKey := cachekey.NewGet("project.dbGetAncestorTasks", shard, account, project, child, limit).Task(account, project, child)
+	innerCacheKey := cachekey.NewGet("project.dbGetAncestorTasks-inner", shard, account, project, child, limit)
+	innerRes := true
+	if ctx.GetCacheValue(&res, cacheKey) {
+		for _, a := range res { //we have to check each task dlm here to ensure the upwards ancestor tree structure is unchanged since the result was cached
+			innerCacheKey.Task(account, project, a.Id)
+		}
+		if ctx.GetCacheValue(&innerRes, innerCacheKey) {
+			return res
+		}
+		innerCacheKey.DlmKeys = make([]string, 0, 10)
+		res = make([]*Ancestor, 0, limit)
+	}
 	rows, e := ctx.TreeQuery(shard, `CALL getAncestorTasks(?, ?, ?, ?)`, account, project, child, limit)
 	if rows != nil {
 		defer rows.Close()
 	}
 	panic.If(e)
-	res := make([]*Ancestor, 0, limit)
 	for rows.Next() {
 		an := Ancestor{}
 		panic.If(rows.Scan(&an.Id, &an.Name))
+		innerCacheKey.Task(account, project, an.Id)
 		res = append(res, &an)
 	}
+	ctx.SetCacheValue(res, cacheKey)
+	ctx.SetCacheValue(true, innerCacheKey)
 	return res
 }
 

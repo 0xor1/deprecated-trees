@@ -60,33 +60,33 @@ func Limit(limit, maxLimit int) int {
 }
 
 func EntityCount(entityCount, maxLimit int) {
-	panic.IfTrueWith(entityCount < 1 || entityCount > maxLimit, err.InvalidEntityCount)
+	panic.IfTrue(entityCount < 1 || entityCount > maxLimit, err.InvalidEntityCount)
 }
 
 func Exists(exists bool) {
-	panic.IfTrueWith(!exists, err.NoSuchEntity)
+	panic.IfTrue(!exists, err.NoSuchEntity)
 }
 
 func MemberHasAccountOwnerAccess(accountRole *cnst.AccountRole) {
-	panic.IfTrueWith(accountRole == nil || *accountRole != cnst.AccountOwner, err.InsufficientPermission)
+	panic.IfTrue(accountRole == nil || *accountRole != cnst.AccountOwner, err.InsufficientPermission)
 }
 
 func MemberHasAccountAdminAccess(accountRole *cnst.AccountRole) {
-	panic.IfTrueWith(accountRole == nil || (*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin), err.InsufficientPermission)
+	panic.IfTrue(accountRole == nil || (*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin), err.InsufficientPermission)
 }
 
 func MemberHasProjectAdminAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole) {
-	panic.IfTrueWith(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || *projectRole != cnst.ProjectAdmin)), err.InsufficientPermission)
+	panic.IfTrue(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || *projectRole != cnst.ProjectAdmin)), err.InsufficientPermission)
 }
 
 func MemberHasProjectWriteAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole) {
-	panic.IfTrueWith(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))), err.InsufficientPermission)
+	panic.IfTrue(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))), err.InsufficientPermission)
 }
 
 func MemberIsAProjectMemberWithWriteAccess(projectRole *cnst.ProjectRole) {
-	panic.IfTrueWith(projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter), err.InsufficientPermission)
+	panic.IfTrue(projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter), err.InsufficientPermission)
 }
 
 func MemberHasProjectReadAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole, projectIsPublic *bool) {
-	panic.IfTrueWith(projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter && *projectRole != cnst.ProjectReader))))), err.InsufficientPermission)
+	panic.IfTrue(projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter && *projectRole != cnst.ProjectReader))))), err.InsufficientPermission)
 }

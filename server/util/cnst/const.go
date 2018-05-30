@@ -43,7 +43,7 @@ var (
 type Theme uint8
 
 func (t *Theme) Validate() {
-	panic.IfTrueWith(t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme), invalidConstantValueErr)
+	panic.IfTrue(t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme), invalidConstantValueErr)
 }
 
 func (t *Theme) String() string {
@@ -66,7 +66,7 @@ func (t *Theme) UnmarshalJSON(raw []byte) error {
 type AccountRole uint8
 
 func (r *AccountRole) Validate() {
-	panic.IfTrueWith(r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects), invalidConstantValueErr)
+	panic.IfTrue(r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects), invalidConstantValueErr)
 }
 
 func (r *AccountRole) String() string {
@@ -87,7 +87,7 @@ func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 type ProjectRole uint8
 
 func (r *ProjectRole) Validate() {
-	panic.IfTrueWith(r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader), invalidConstantValueErr)
+	panic.IfTrue(r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader), invalidConstantValueErr)
 }
 
 func (r *ProjectRole) String() string {
@@ -108,7 +108,7 @@ func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 type SortDir string
 
 func (sd *SortDir) Validate() {
-	panic.IfTrueWith(sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc), invalidConstantValueErr)
+	panic.IfTrue(sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc), invalidConstantValueErr)
 }
 
 func (sd *SortDir) String() string {
@@ -133,7 +133,7 @@ func (sd *SortDir) GtLtSymbol() string {
 type SortBy string
 
 func (sb *SortBy) Validate() {
-	panic.IfTrueWith(sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn), invalidConstantValueErr)
+	panic.IfTrue(sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn), invalidConstantValueErr)
 }
 
 func (sb *SortBy) String() string {

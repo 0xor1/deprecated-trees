@@ -74,7 +74,7 @@ var setMemberRole = &endpoint.Endpoint{
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me())
 		validate.MemberHasAccountAdminAccess(accountRole)
 		args.Role.Validate()
-		panic.IfTrueWith(args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner, err.InsufficientPermission)
+		panic.IfTrue(args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner, err.InsufficientPermission)
 		dbSetMemberRole(ctx, args.Shard, args.Account, args.Member, args.Role)
 		return nil
 	},
@@ -129,7 +129,7 @@ var getActivities = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
-		panic.IfTrueWith(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
+		panic.IfTrue(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},

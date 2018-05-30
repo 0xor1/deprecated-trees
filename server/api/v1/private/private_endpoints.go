@@ -79,7 +79,7 @@ var addMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrueWith(args.Account.Equal(args.Me), err.InvalidOperation)
+		panic.IfTrue(args.Account.Equal(args.Me), err.InvalidOperation)
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
 		validate.MemberHasAccountAdminAccess(accountRole)
 
@@ -135,21 +135,21 @@ var removeMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrueWith(args.Account.Equal(args.Me), err.InvalidOperation)
+		panic.IfTrue(args.Account.Equal(args.Me), err.InvalidOperation)
 
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
-		panic.IfTrueWith(accountRole == nil, err.InsufficientPermission)
+		panic.IfTrue(accountRole == nil, err.InsufficientPermission)
 
 		switch *accountRole {
 		case cnst.AccountOwner:
 			totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.Account)
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.Account, args.Members)
-			panic.IfTrueWith(totalOwnerCount == ownerCountInRemoveSet, zeroOwnerCountErr)
+			panic.IfTrue(totalOwnerCount == ownerCountInRemoveSet, zeroOwnerCountErr)
 		case cnst.AccountAdmin:
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.Account, args.Members)
-			panic.IfTrueWith(ownerCountInRemoveSet > 0, err.InsufficientPermission)
+			panic.IfTrue(ownerCountInRemoveSet > 0, err.InsufficientPermission)
 		default:
-			panic.IfTrueWith(len(args.Members) != 1 || !args.Members[0].Equal(args.Me), err.InsufficientPermission)
+			panic.IfTrue(len(args.Members) != 1 || !args.Members[0].Equal(args.Me), err.InsufficientPermission)
 		}
 
 		dbSetMembersInactive(ctx, args.Shard, args.Account, args.Members)

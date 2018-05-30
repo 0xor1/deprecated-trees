@@ -42,7 +42,7 @@ var create = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		panic.IfTrueWith(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
+		panic.IfTrue(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 
 		project := &Project{}
 		project.Id = id.New()
@@ -91,7 +91,7 @@ var setIsPublic = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setIsPublicArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		panic.IfTrueWith(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
+		panic.IfTrue(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
 		dbSetIsPublic(ctx, args.Shard, args.Account, args.Project, args.IsPublic)
 		return nil
 	},
@@ -227,7 +227,7 @@ var addMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
+		panic.IfTrue(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		validate.Exists(dbGetProjectExists(ctx, args.Shard, args.Account, args.Project))
@@ -235,7 +235,7 @@ var addMembers = &endpoint.Endpoint{
 		for _, mem := range args.Members {
 			mem.Role.Validate()
 			accRole := db.GetAccountRole(ctx, args.Shard, args.Account, mem.Id)
-			panic.IfTrueWith(accRole == nil, err.InvalidArguments)
+			panic.IfTrue(accRole == nil, err.InvalidArguments)
 			if *accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin {
 				mem.Role = cnst.ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 			}
@@ -262,15 +262,15 @@ var setMemberRole = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
-		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
+		panic.IfTrue(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 		args.Role.Validate()
 
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		accRole, projectRole := db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, args.Member)
-		panic.IfTrueWith(projectRole == nil, err.InvalidOperation)
+		panic.IfTrue(projectRole == nil, err.InvalidOperation)
 		if *projectRole != args.Role {
-			panic.IfTrueWith(args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin), err.InvalidArguments) // account owners and admins can only be project admins
+			panic.IfTrue(args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin), err.InvalidArguments) // account owners and admins can only be project admins
 			dbSetMemberRole(ctx, args.Shard, args.Account, args.Project, args.Member, args.Role)
 		}
 		return nil
@@ -294,7 +294,7 @@ var removeMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrueWith(args.Account.Equal(ctx.Me()), err.InvalidOperation)
+		panic.IfTrue(args.Account.Equal(ctx.Me()), err.InvalidOperation)
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		for _, mem := range args.Members {
@@ -375,7 +375,7 @@ var getActivities = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
-		panic.IfTrueWith(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
+		panic.IfTrue(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Project, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},

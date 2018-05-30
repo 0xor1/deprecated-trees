@@ -77,7 +77,7 @@ var setDuration = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setDurationArgs)
-		panic.IfTrueWith(args.Duration == 0, err.InvalidArguments)
+		panic.IfTrue(args.Duration == 0, err.InvalidArguments)
 		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
 		if args.Duration == tl.Duration {
 			return nil

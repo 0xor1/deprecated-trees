@@ -42,7 +42,7 @@ type Endpoint struct {
 }
 
 func (ep *Endpoint) ValidateEndpoint() {
-	panic.IfTrueWith((ep.Method != http.MethodGet && ep.Method != http.MethodPost) || // only GET and POST methods supported for read and write operations respectively
+	panic.IfTrue((ep.Method != http.MethodGet && ep.Method != http.MethodPost) || // only GET and POST methods supported for read and write operations respectively
 		(ep.ProcessForm != nil && ep.Method != http.MethodPost) || // if processForm is passed it must be a POST call
 		(ep.ProcessForm != nil && ep.IsPrivate) || // if processForm is passed it must not be a private call, private endpoints dont support forms
 		(ep.ProcessForm != nil && len(ep.FormStruct) == 0) || // if processForm is passed FormStruct must be given for documentation

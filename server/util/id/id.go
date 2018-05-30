@@ -27,7 +27,7 @@ func New() Id {
 
 func Parse(id string) Id {
 	b, e := base64.RawURLEncoding.DecodeString(id)
-	panic.IfTrueWith(e != nil || len(b) != 16, parseErr)
+	panic.IfTrue(e != nil || len(b) != 16, parseErr)
 	return Id(b)
 }
 

@@ -18,7 +18,7 @@ type Client interface {
 }
 
 func NewLocalClient(relDirPath string, maxAvatarDim uint) Client {
-	panic.IfTrueWith(relDirPath == "", err.InvalidArguments)
+	panic.IfTrue(relDirPath == "", err.InvalidArguments)
 	wd, e := os.Getwd()
 	panic.If(e)
 	absDirPath := path.Join(wd, relDirPath)

@@ -24,7 +24,7 @@ type client struct {
 
 func (c *client) getHost(region string) string {
 	host, exists := c.regions[strings.ToLower(region)]
-	panic.IfTrueWith(!exists, err.NoSuchRegion)
+	panic.IfTrue(!exists, err.NoSuchRegion)
 	return host
 }
 

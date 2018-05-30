@@ -38,7 +38,7 @@ var create = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createArgs)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-		panic.IfTrueWith((args.IsAbstract && (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)), err.InvalidArguments)
+		panic.IfTrue((args.IsAbstract && (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)), err.InvalidArguments)
 		zeroVal := uint64(0)
 		zeroPtr := &zeroVal
 		if !args.IsAbstract {
@@ -231,7 +231,7 @@ var deleteTask = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteArgs)
-		panic.IfTrueWith(args.Project.Equal(args.Task), err.InvalidArguments)
+		panic.IfTrue(args.Project.Equal(args.Task), err.InvalidArguments)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		dbDeleteTask(ctx, args.Shard, args.Account, args.Project, args.Task)

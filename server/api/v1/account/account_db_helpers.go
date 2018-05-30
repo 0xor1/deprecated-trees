@@ -127,7 +127,7 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 }
 
 func dbGetActivities(ctx ctx.Ctx, shard int, account id.Id, item *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
-	panic.IfTrueWith(occurredAfter != nil && occurredBefore != nil, err.InvalidArguments)
+	panic.IfTrue(occurredAfter != nil && occurredBefore != nil, err.InvalidArguments)
 	res := make([]*activity.Activity, 0, limit)
 	cacheKey := cachekey.NewGet("account.dbGetActivities", shard, account, item, member, occurredAfter, occurredBefore, limit).AccountActivities(account)
 	if ctx.GetCacheValue(&res, cacheKey) {
