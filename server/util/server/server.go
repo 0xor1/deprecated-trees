@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -139,36 +138,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodGet && lowerPath == s.SR.ApiMGetRoute {
 		reqs := map[string]string{}
 		panic.If(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
-		responseChan := make(chan *mgetResponse)
-		for key, reqUrl := range reqs {
-			go func(key, reqUrl string) {
-				r, _ := http.NewRequest(http.MethodGet, reqUrl, nil)
-				for _, c := range req.Cookies() {
-					r.AddCookie(c)
-				}
-				w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
-				s.ServeHTTP(w, r)
-				responseChan <- &mgetResponse{
-					includeHeaders: ctx.queryBoolVal("headers", false),
-					key:            key,
-					Code:           w.code,
-					Header:         w.header,
-					Body:           w.body.Bytes(),
-				}
-			}(key, reqUrl)
-		}
-		timeoutChan := time.After(s.SR.ApiMGetTimeout)
-		timedOut := false
 		fullMGetResponse := map[string]*mgetResponse{}
-		for !(len(reqs) == len(fullMGetResponse) || timedOut) {
-			select {
-			case resp := <-responseChan:
-				fullMGetResponse[resp.key] = resp
-			case <-timeoutChan:
-				timedOut = true
-			}
+		fullMGetResponseMtx := &sync.Mutex{}
+		includeHeaders := ctx.queryBoolVal("headers", false)
+		gets := make([]func(), 0, len(reqs))
+		for key, reqUrl := range reqs {
+			gets = append(gets, func(key, reqUrl string) func() {
+				return func() {
+					r, _ := http.NewRequest(http.MethodGet, reqUrl, nil)
+					for _, c := range req.Cookies() {
+						r.AddCookie(c)
+					}
+					w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
+					s.ServeHTTP(w, r)
+					fullMGetResponseMtx.Lock()
+					defer fullMGetResponseMtx.Unlock()
+					fullMGetResponse[key] = &mgetResponse{
+						includeHeaders: includeHeaders,
+						Code:           w.code,
+						Header:         w.header,
+						Body:           w.body.Bytes(),
+					}
+				}
+			}(key, reqUrl))
 		}
-
+		panic.If(panic.SafeGoGroup(s.SR.ApiMGetTimeout, gets...))
 		writeJsonOk(ctx.resp, fullMGetResponse)
 		return
 	}
@@ -330,7 +324,6 @@ func (r *mgetResponseWriter) WriteHeader(code int) {
 
 type mgetResponse struct {
 	includeHeaders bool
-	key            string
 	Code           int         `json:"code"`
 	Header         http.Header `json:"header"`
 	Body           []byte      `json:"body"`
