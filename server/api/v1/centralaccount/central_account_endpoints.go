@@ -185,8 +185,8 @@ type authenticateArgs struct {
 	PwdTry string `json:"pwdTry"`
 }
 
-type AuthenticateResult struct{
-	Me *Me                          `json:"me"`
+type AuthenticateResult struct {
+	Me         *Me                  `json:"me"`
 	MyAccounts *GetMyAccountsResult `json:"myAccounts"`
 }
 
@@ -237,7 +237,7 @@ var authenticate = &endpoint.Endpoint{
 			Me: &acc.Me,
 			MyAccounts: &GetMyAccountsResult{
 				Accounts: myAccounts,
-				More: more,
+				More:     more,
 			},
 		}
 	},
@@ -673,7 +673,7 @@ var setAccountAvatar = &endpoint.Endpoint{
 			panic.If(e)
 			bounds := avatarImage.Bounds()
 			panic.IfTrue(bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y, invalidAvatarShapeErr) //if it  isn't square, then error
-			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() {                        // if it is larger than allowed then resize
+			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() {                    // if it is larger than allowed then resize
 				avatarImage = resize.Resize(ctx.AvatarClient().MaxAvatarDim(), ctx.AvatarClient().MaxAvatarDim(), avatarImage, resize.NearestNeighbor)
 			}
 			buff := &bytes.Buffer{}

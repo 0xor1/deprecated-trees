@@ -54,6 +54,6 @@ func (id Id) Copy() Id {
 	return Id(append(make([]byte, 0, 16), id...))
 }
 
-type Identifiable interface{
+type Identifiable interface {
 	Id() Id
 }

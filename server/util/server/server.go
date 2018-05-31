@@ -18,7 +18,6 @@ import (
 	"github.com/gorilla/context"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -52,12 +51,12 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 	var e error
 	sr.ApiDocs, e = json.MarshalIndent(routeDocs, "", "    ")
 	panic.If(e)
-	wd, e := os.Getwd()
+	fileServerDir, e := filepath.Abs(sr.FileServerDir)
 	panic.If(e)
 	return &Server{
 		Routes:     routes,
 		SR:         sr,
-		FileServer: http.FileServer(http.Dir(filepath.Join(wd, sr.FileServerDir))),
+		FileServer: http.FileServer(http.Dir(fileServerDir)),
 	}
 }
 

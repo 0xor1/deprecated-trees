@@ -19,8 +19,6 @@ import (
 	"github.com/0xor1/panic"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
-	"os"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -30,11 +28,6 @@ import (
 
 // pass in empty strings for no config file
 func Config(configFile string, createPrivateV1Client func(map[string]string) private.V1Client) *Resources {
-	if configFile != "" {
-		wd, e := os.Getwd()
-		panic.If(e)
-		configFile = filepath.Join(wd, configFile)
-	}
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "localhost:8787"

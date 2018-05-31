@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 )
 
@@ -17,22 +18,21 @@ type Client interface {
 	DeleteAll()
 }
 
-func NewLocalClient(relDirPath string, maxAvatarDim uint) Client {
-	panic.IfTrue(relDirPath == "", err.InvalidArguments)
-	wd, e := os.Getwd()
+func NewLocalClient(dir string, maxAvatarDim uint) Client {
+	panic.IfTrue(dir == "", err.InvalidArguments)
+	dir, e := filepath.Abs(dir)
 	panic.If(e)
-	absDirPath := path.Join(wd, relDirPath)
 	return &localClient{
 		mtx:          &sync.Mutex{},
 		maxAvatarDim: maxAvatarDim,
-		absDirPath:   absDirPath,
+		dir:          dir,
 	}
 }
 
 type localClient struct {
 	mtx          *sync.Mutex
 	maxAvatarDim uint
-	absDirPath   string
+	dir          string
 }
 
 func (c *localClient) MaxAvatarDim() uint {
@@ -44,18 +44,18 @@ func (c *localClient) Save(key string, mimeType string, data io.Reader) {
 	defer c.mtx.Unlock()
 	avatarBytes, e := ioutil.ReadAll(data)
 	panic.If(e)
-	os.MkdirAll(c.absDirPath, os.ModeDir)
-	panic.If(ioutil.WriteFile(path.Join(c.absDirPath, key), avatarBytes, os.ModePerm))
+	os.MkdirAll(c.dir, os.ModeDir)
+	panic.If(ioutil.WriteFile(path.Join(c.dir, key), avatarBytes, os.ModePerm))
 }
 
 func (c *localClient) Delete(key string) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	panic.If(os.Remove(path.Join(c.absDirPath, key)))
+	panic.If(os.Remove(path.Join(c.dir, key)))
 }
 
 func (c *localClient) DeleteAll() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	panic.If(os.RemoveAll(c.absDirPath))
+	panic.If(os.RemoveAll(c.dir))
 }

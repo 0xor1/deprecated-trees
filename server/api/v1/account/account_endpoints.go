@@ -10,8 +10,8 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/validate"
 	"github.com/0xor1/panic"
-	"time"
 	"net/http"
+	"time"
 )
 
 type setPublicProjectsEnabledArgs struct {
