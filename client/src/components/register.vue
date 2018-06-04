@@ -17,6 +17,13 @@
                   <v-text-field v-model="displayName" prepend-icon="person" name="displayName" label="Display Name" type="text"></v-text-field>
                   <v-text-field v-model="email" prepend-icon="person" name="email" label="Email" type="email"></v-text-field>
                   <v-text-field v-model="pwd" prepend-icon="lock" name="pwd" label="Password" id="pwd" type="password"></v-text-field>
+                  <v-select
+                    prepend-icon="location_on"
+                    :items="regions"
+                    v-model="region"
+                    label="Region"
+                    single-line
+                  ></v-select>
                 </v-form>
               </v-card-text>
               <v-card-actions>
@@ -32,7 +39,7 @@
 </template>
 
 <script>
-  import api from '@/api'
+  import api, {cnst} from '@/api'
   import router from '@/router'
   export default {
     name: 'register',
@@ -41,7 +48,15 @@
         name: '',
         displayName: '',
         email: '',
-        pwd: ''
+        pwd: '',
+        region: null,
+        regions: [
+          {text: 'US West', value: cnst.regions.usw},
+          {text: 'US East', value: cnst.regions.use},
+          {text: 'EU West', value: cnst.regions.euw},
+          {text: 'Asia Pacific', value: cnst.regions.asp},
+          {text: 'Australia', value: cnst.regions.aus}
+        ]
       }
     },
     methods: {
@@ -49,12 +64,10 @@
         router.push('/login')
       },
       register () {
-        console.log(this)
-        api.v1.centralAccount.register(this.name, this.email, this.pwd, this.region, api.env())
+        api.v1.centralAccount.register(this.name, this.email, this.pwd, this.region, 'en', this.displayName, cnst.theme.light).then(() => {
+          router.push('/confirmEmail')
+        })
       }
-    },
-    props: {
-      source: String
     }
   }
 </script>

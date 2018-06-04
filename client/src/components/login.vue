@@ -13,14 +13,13 @@
               <v-card-media src="/static/img/icons/logo.svg" class="mt-3" height=200 contain></v-card-media>
               <v-card-text>
                 <v-form>
-                  <v-text-field prepend-icon="person" name="email" label="Email" type="email"></v-text-field>
-                  <v-text-field prepend-icon="lock" name="pwd" label="Password" id="pwd" type="password"></v-text-field>
+                  <v-text-field prepend-icon="person" name="email" label="Email" type="email" v-model="email"></v-text-field>
+                  <v-text-field prepend-icon="lock" name="pwd" label="Password" id="pwd" type="password" v-model="pwdTry"></v-text-field>
                 </v-form>
               </v-card-text>
               <v-card-actions>
                 <v-spacer></v-spacer>
-
-                <v-btn color="accent">Login</v-btn>
+                <v-btn color="accent" v-on:click="login">Login</v-btn>
               </v-card-actions>
             </v-card>
           </v-flex>
@@ -36,11 +35,14 @@
   export default {
     name: 'login',
     data () {
-      return {}
+      return {
+        email: '',
+        pwdTry: ''
+      }
     },
     methods: {
       login () {
-        api.v1.centralAccount.authenticate(this.email, this.pwd).then((res) => {
+        api.v1.centralAccount.authenticate(this.email, this.pwdTry).then((res) => {
           console.log(res)
         }).catch(() => {
           this.err = 'login failed'
@@ -49,9 +51,6 @@
       register () {
         router.push('/register')
       }
-    },
-    props: {
-      source: String
     }
   }
 </script>

@@ -34,8 +34,8 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("serverAddress", "localhost:8787")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
-	// must be one of "lcl", "dev", "central", "use", "usw", "euw"
-	config.SetDefault("region", cnst.LclEnv)
+	// must be one of "central", "use", "usw", "euw", "asp", "aus"
+	config.SetDefault("region", "")
 	// commit sha
 	config.SetDefault("version", cnst.LclEnv)
 	// relative path from server executable to static file resource directory
@@ -93,7 +93,11 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		cnst.LclEnv: "http://localhost:8787",
+		cnst.USWRegion: "http://localhost:8787",
+		cnst.USERegion: "http://localhost:8787",
+		cnst.EUWRegion: "http://localhost:8787",
+		cnst.ASPRegion: "http://localhost:8787",
+		cnst.AUSRegion: "http://localhost:8787",
 	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)

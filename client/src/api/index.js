@@ -161,7 +161,7 @@ newApi = (opts) => {
   }
 
   let post = (region, path, data) => {
-    doReq({
+    return doReq({
       method: 'post',
       url: buildUrl(region, path),
       data: data
@@ -233,8 +233,8 @@ newApi = (opts) => {
         activate: (email, activationCode) => {
           return postCentral('/api/v1/centralAccount/activate', {email, activationCode})
         },
-        authenticate: (email, pwd) => {
-          return postCentral('/api/v1/centralAccount/authenticate', {email, pwd})
+        authenticate: (email, pwdTry) => {
+          return postCentral('/api/v1/centralAccount/authenticate', {email, pwdTry})
         },
         confirmNewEmail: (currentEmail, newEmail, confirmationCode) => {
           return postCentral('/api/v1/centralAccount/confirmNewEmail', {currentEmail, newEmail, confirmationCode})
