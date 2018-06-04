@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
 )
 
 var (
@@ -165,6 +166,31 @@ func (c *_ctx) TouchDlms(cacheKeys *cachekey.Key) {
 	for _, key := range cacheKeys.DlmKeys {
 		c.dlmsToUpdate[key] = nil
 	}
+}
+
+func (c *_ctx) EnvClientScheme() string {
+	switch c.SR.Env {
+	case cnst.LclEnv:
+		return "http://"
+	default:
+		return "https://"
+	}
+}
+
+func (c *_ctx) EnvClientHost() string {
+	switch c.SR.Env {
+	case cnst.LclEnv:
+		return "localhost:8080"
+	case cnst.DevEnv:
+		return "dev.project-trees.com"
+	case cnst.StgEnv:
+		return "stg.project-trees.com"
+	case cnst.ProEnv:
+		return "project-trees.com"
+	default:
+		panic.If(err.UnknownEnv)
+	}
+	return ""
 }
 
 func (c *_ctx) NameRegexMatchers() []*regexp.Regexp {

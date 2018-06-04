@@ -34,6 +34,8 @@ type Ctx interface {
 	SetCacheValue(val interface{}, key *cachekey.Key)
 	TouchDlms(cacheKeys *cachekey.Key)
 	//basic static values
+	EnvClientScheme() string
+	EnvClientHost() string
 	NameRegexMatchers() []*regexp.Regexp
 	PwdRegexMatchers() []*regexp.Regexp
 	NameMinRuneCount() int

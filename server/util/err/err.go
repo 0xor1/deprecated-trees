@@ -14,6 +14,7 @@ var (
 	InvalidOperation       = &Err{Code: "u_e_io", Message: "invalid operation"}
 	InvalidEntityCount     = &Err{Code: "u_e_iec", Message: "invalid entity count"}
 	NoSuchEntity           = &Err{Code: "u_e_nse", Message: "no such entity"}
+	UnknownEnv             = &Err{Code: "u_e_ue", Message: "unknown env"}
 	External               = &Err{Code: "u_e_e", Message: "external error occurred"}
 )
 
