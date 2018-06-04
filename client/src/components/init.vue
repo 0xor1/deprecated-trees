@@ -1,7 +1,13 @@
 <template>
-  <div class="c-c">
-    <fingerprint-spinner :animation-duration="2000" :size="200" :color="color"></fingerprint-spinner>
-  </div>
+  <v-app id="inspire">
+    <v-content>
+      <v-container fluid fill-height style="background-color: #9FC657;">
+        <v-layout align-center justify-center>
+          <fingerprint-spinner :animation-duration="2000" :size="200" :color="'#405A0F'"></fingerprint-spinner>
+        </v-layout>
+      </v-container>
+    </v-content>
+  </v-app>
 </template>
 
 <script>
@@ -17,9 +23,7 @@
       }).catch(() => {
         router.push('/login')
       })
-      return {
-        color: 'white'
-      }
+      return {}
     }
   }
 </script>

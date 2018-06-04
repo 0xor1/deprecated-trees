@@ -1,15 +1,62 @@
 import axios from 'axios'
-import config from '@/config'
+
+const config = {
+  lcl: {
+    central: 'http://localhost:8787',
+    regions: {
+      use: 'http://localhost:8787',
+      usw: 'http://localhost:8787',
+      euw: 'http://localhost:8787',
+      asp: 'http://localhost:8787',
+      aus: 'http://localhost:8787'
+    }
+  },
+  dev: {
+    central: 'https://dev-api.project-trees.com',
+    regions: {
+      use: 'https://dev-api.project-trees.com',
+      usw: 'https://dev-api.project-trees.com',
+      euw: 'https://dev-api.project-trees.com',
+      asp: 'https://dev-api.project-trees.com',
+      aus: 'https://dev-api.project-trees.com'
+    }
+  },
+  stg: {
+    central: 'https://stg-central-api.project-trees.com',
+    regions: {
+      use: 'https://stg-use-api.project-trees.com',
+      usw: 'https://stg-usw-api.project-trees.com',
+      euw: 'https://stg-euw-api.project-trees.com',
+      asp: 'https://stg-asp-api.project-trees.com',
+      aus: 'https://stg-aus-api.project-trees.com'
+    }
+  },
+  pro: {
+    central: 'https://pro-central-api.project-trees.com',
+    regions: {
+      use: 'https://pro-use-api.project-trees.com',
+      usw: 'https://pro-usw-api.project-trees.com',
+      euw: 'https://pro-euw-api.project-trees.com',
+      asp: 'https://pro-asp-api.project-trees.com',
+      aus: 'https://pro-aus-api.project-trees.com'
+    }
+  }
+}
 
 export const cnst = {
+  central: 'central',
   regions: {
-    central: 'central'
+    use: 'use', // US East
+    usw: 'usw', // US West
+    euw: 'euw', // EU West
+    asp: 'asp', // Asia Pacific
+    aus: 'aus' // Australia
   },
   env: {
-    lcl: 'lcl',
-    dev: 'dev',
-    stg: 'stg',
-    pro: 'pro'
+    lcl: 'lcl', // local
+    dev: 'dev', // develop
+    stg: 'stg', // staging
+    pro: 'pro' // production
   },
   theme: {
     light: 0,
@@ -41,6 +88,21 @@ export const cnst = {
   }
 }
 
+let getEnv = () => {
+  switch (location.origin) {
+    case 'http://localhost:8080':
+      return cnst.env.lcl
+    case 'https://dev.project-trees.com':
+      return cnst.env.dev
+    case 'https://stg.project-trees.com':
+      return cnst.env.stg
+    case 'https://project-trees.com':
+      return cnst.env.pro
+    default:
+      throw new Error('unknown origin')
+  }
+}
+
 let newApi
 newApi = (opts) => {
   let isMGetApi = opts.isMGetApi
@@ -48,8 +110,8 @@ newApi = (opts) => {
   let mGetSending = false
   let mGetSent = false
   let awaitingMGetList = []
-  let centralHost = config.hosts.central
-  let regionalHosts = config.hosts.regions
+  let centralHost = config[getEnv()].central
+  let regionalHosts = config[getEnv()].regions
   let doReq = (axiosConfig) => {
     axiosConfig.headers = axiosConfig.headers || {}
     axiosConfig.headers['X-Client'] = 'web'
@@ -81,7 +143,7 @@ newApi = (opts) => {
       })
     } else if (isMGetApi && !mGetSending && !mGetSent) {
       if (region !== mGetApiRegion) {
-        throw new Error('invalid mget call, all get calls must be to teh same region')
+        throw new Error('invalid mget call, all get calls must be to the same region')
       }
       let awaitingMGetObj = {
         url: url,
@@ -107,6 +169,9 @@ newApi = (opts) => {
   }
 
   return {
+    env: () => {
+      return config.env
+    },
     newMGetApi: (region) => {
       return newApi({isMGetApi: true, mGetApiRegion: region})
     },
