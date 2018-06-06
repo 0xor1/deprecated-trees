@@ -111,7 +111,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	//set common headers
 	if s.SR.Env == cnst.LclEnv {
-		resp.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+		resp.Header().Set("Access-Control-Allow-Origin", ctx.EnvClientScheme() + ctx.EnvClientHost())
 		if req.Method == http.MethodOptions {
 			resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
 			resp.Header().Set("Access-Control-Allow-Headers", "X-Client,Content-Type")
@@ -124,13 +124,22 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
 	//check for none api call
-	if req.Method == http.MethodGet && !strings.HasPrefix(req.URL.Path, "/api/") {
+	if req.Method == http.MethodGet && !strings.HasPrefix(lowerPath, "/api/") {
 		s.FileServer.ServeHTTP(resp, req)
 		return
 	}
 	//check for special case of api docs first
 	if req.Method == http.MethodGet && lowerPath == s.SR.ApiDocsRoute {
 		writeRawJson(resp, 200, s.SR.ApiDocs)
+		return
+	}
+	//check for special case of api logout
+	if req.Method == http.MethodPost && lowerPath == s.SR.ApiLogoutRoute {
+		http.SetCookie(resp, &http.Cookie{
+			Name: s.SR.SessionCookieName,
+			Value: "",
+			MaxAge: -1,
+		})
 		return
 	}
 	//check for special case of api mget

@@ -6,6 +6,8 @@ import register from '@/components/register'
 import confirmEmail from '@/components/confirmEmail'
 import activate from '@/components/activate'
 import app from '@/components/app'
+import projects from '@/components/projects'
+import task from '@/components/task'
 
 Vue.use(Router)
 
@@ -37,9 +39,21 @@ export default new Router({
       component: activate
     },
     {
-      path: '/app',
+      path: '/app/region/:region/shard/:shard/account/:account',
       name: 'app',
-      component: app
+      component: app,
+      children: [
+        {
+          path: 'projects',
+          name: 'projects',
+          component: projects
+        },
+        {
+          path: 'task/:task',
+          name: 'task',
+          component: task
+        }
+      ]
     }
   ]
 })

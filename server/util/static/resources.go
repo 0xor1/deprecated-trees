@@ -31,7 +31,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "localhost:8787"
-	config.SetDefault("serverAddress", "localhost:8787")
+	config.SetDefault("serverAddress", "0.0.0.0:8787")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
 	// must be one of "central", "use", "usw", "euw", "asp", "aus"
@@ -44,12 +44,14 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("apiDocsRoute", "/api/docs")
 	// api mget path
 	config.SetDefault("apiMGetRoute", "/api/mget")
+	// api logout path
+	config.SetDefault("apiLogoutRoute", "/api/logout")
 	// api mget timeout
 	config.SetDefault("apiMGetTimeout", "2s")
 	// session cookie name
 	config.SetDefault("sessionCookieName", "t")
 	// cookie session domain
-	config.SetDefault("sessionDomain", "localhost")
+	config.SetDefault("sessionDomain", ".project-trees.com")
 	// session cookie store
 	config.SetDefault("sessionAuthKey64s", []interface{}{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
@@ -93,11 +95,11 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		cnst.USWRegion: "http://localhost:8787",
-		cnst.USERegion: "http://localhost:8787",
-		cnst.EUWRegion: "http://localhost:8787",
-		cnst.ASPRegion: "http://localhost:8787",
-		cnst.AUSRegion: "http://localhost:8787",
+		cnst.USWRegion: "http://lcl.project-trees.com:8787",
+		cnst.USERegion: "http://lcl.project-trees.com:8787",
+		cnst.EUWRegion: "http://lcl.project-trees.com:8787",
+		cnst.ASPRegion: "http://lcl.project-trees.com:8787",
+		cnst.AUSRegion: "http://lcl.project-trees.com:8787",
 	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)
@@ -139,7 +141,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	sessionStore := sessions.NewCookieStore(sessionAuthEncrKeyPairs...)
 	sessionStore.Options.MaxAge = 0
 	sessionStore.Options.HttpOnly = true
-	sessionStore.Options.Secure = true
+	sessionStore.Options.Secure = config.GetString("env") != cnst.LclEnv
 	sessionStore.Options.Domain = config.GetString("sessionDomain")
 	gob.Register(id.New()) //register Id type for sessionCookie
 
@@ -222,6 +224,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		FileServerDir:                 config.GetString("fileServerDir"),
 		ApiDocsRoute:                  strings.ToLower(config.GetString("apiDocsRoute")),
 		ApiMGetRoute:                  strings.ToLower(config.GetString("apiMGetRoute")),
+		ApiLogoutRoute:                  strings.ToLower(config.GetString("apiLogoutRoute")),
 		ApiMGetTimeout:                config.GetDuration("apiMGetTimeout"),
 		SessionCookieName:             config.GetString("sessionCookieName"),
 		SessionStore:                  sessionStore,
@@ -275,6 +278,8 @@ type Resources struct {
 	ApiDocsRoute string
 	// api mget path
 	ApiMGetRoute string
+	// api logout path
+	ApiLogoutRoute string
 	// api mget path
 	ApiMGetTimeout time.Duration
 	// session cookie name

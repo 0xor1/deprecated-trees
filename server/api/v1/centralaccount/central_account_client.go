@@ -13,7 +13,6 @@ import (
 
 type Client interface {
 	//accessible outside of active session
-	GetRegions() ([]string, error)
 	Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) error
@@ -50,14 +49,6 @@ func NewClient(host string) Client {
 
 type client struct {
 	host string
-}
-
-func (c *client) GetRegions() ([]string, error) {
-	val, e := getRegions.DoRequest(nil, c.host, nil, nil, &[]string{})
-	if val != nil {
-		return *(val.(*[]string)), e
-	}
-	return nil, e
 }
 
 func (c *client) Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error {

@@ -7,42 +7,33 @@
       app
     >
       <v-list dense>
-        <v-list-tile @click="">
+        <v-list-tile @click="showProjects">
           <v-list-tile-action>
-            <v-icon>dashboard</v-icon>
+            <v-icon>group_work</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>Dashboard</v-list-tile-title>
+            <v-list-tile-title>Projects</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
-        <v-list-tile @click="">
+        <v-list-tile @click="logout">
           <v-list-tile-action>
-            <v-icon>settings</v-icon>
+            <v-icon>exit_to_app</v-icon>
           </v-list-tile-action>
           <v-list-tile-content>
-            <v-list-tile-title>Settings</v-list-tile-title>
+            <v-list-tile-title>Logout</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
       </v-list>
     </v-navigation-drawer>
-    <v-toolbar app fixed clipped-left>
+    <v-toolbar app fixed clipped-left color="primary">
       <v-toolbar-side-icon @click.stop="drawer = !drawer"></v-toolbar-side-icon>
-      <v-toolbar-title>Application</v-toolbar-title>
+      <v-toolbar-title>Project Trees</v-toolbar-title>
     </v-toolbar>
     <v-content>
       <v-container fluid fill-height>
         <v-layout justify-center align-center>
           <v-flex shrink>
             <v-tooltip right>
-              <v-btn
-                icon
-                large
-                :href="source"
-                target="_blank"
-                slot="activator"
-              >
-                <v-icon large>code</v-icon>
-              </v-btn>
               <span>Source</span>
             </v-tooltip>
           </v-flex>
@@ -56,15 +47,29 @@
 </template>
 
 <script>
+  import api from '@/api'
+  import router from '@/router'
   export default {
     name: 'app',
     data () {
       return {
-        drawer: true
+        drawer: false
       }
     },
-    props: {
-      source: String
+    methods: {
+      logout: () => {
+        api.logout().then(() => {
+          router.push('/login')
+        })
+      },
+      showProjects: () => {
+        api.v1.centralAccount.getMe().then((res) => {
+          let me = res.data.me
+          router.push('/app/region/' + me.region + '/shard/' + me.shard + '/account/' + me.id + '/projects')
+        }).catch(() => {
+          // TODO
+        })
+      }
     }
   }
 </script>

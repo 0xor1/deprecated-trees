@@ -28,14 +28,6 @@ func (c *client) getHost(region string) string {
 	return host
 }
 
-func (c *client) GetRegions() []string {
-	regions := make([]string, 0, len(c.regions))
-	for r := range c.regions {
-		regions = append(regions, r)
-	}
-	return regions
-}
-
 func (c *client) IsValidRegion(region string) bool {
 	_, exists := c.regions[strings.ToLower(region)]
 	return exists

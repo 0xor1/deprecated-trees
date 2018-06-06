@@ -2,13 +2,13 @@ import axios from 'axios'
 
 const config = {
   lcl: {
-    central: 'http://localhost:8787',
+    central: 'http://lcl-api.project-trees.com:8787',
     regions: {
-      use: 'http://localhost:8787',
-      usw: 'http://localhost:8787',
-      euw: 'http://localhost:8787',
-      asp: 'http://localhost:8787',
-      aus: 'http://localhost:8787'
+      use: 'http://lcl-api.project-trees.com:8787',
+      usw: 'http://lcl-api.project-trees.com:8787',
+      euw: 'http://lcl-api.project-trees.com:8787',
+      asp: 'http://lcl-api.project-trees.com:8787',
+      aus: 'http://lcl-api.project-trees.com:8787'
     }
   },
   dev: {
@@ -90,7 +90,7 @@ export const cnst = {
 
 let getEnv = () => {
   switch (location.origin) {
-    case 'http://localhost:8080':
+    case 'http://lcl.project-trees.com:8080':
       return cnst.env.lcl
     case 'https://dev.project-trees.com':
       return cnst.env.dev
@@ -102,6 +102,8 @@ let getEnv = () => {
       throw new Error('unknown origin')
   }
 }
+
+let memCache = {}
 
 let newApi
 newApi = (opts) => {
@@ -219,11 +221,11 @@ newApi = (opts) => {
         })
       })
     },
+    logout: () => {
+      return postCentral('/api/logout')
+    },
     v1: {
       centralAccount: {
-        getRegions: () => {
-          return getCentral('/api/v1/centralAccount/getRegions')
-        },
         register: (name, email, pwd, region, language, displayName, theme) => {
           return postCentral('/api/v1/centralAccount/register', {name, email, pwd, region, language, displayName, theme})
         },
@@ -234,7 +236,11 @@ newApi = (opts) => {
           return postCentral('/api/v1/centralAccount/activate', {email, activationCode})
         },
         authenticate: (email, pwdTry) => {
-          return postCentral('/api/v1/centralAccount/authenticate', {email, pwdTry})
+          return postCentral('/api/v1/centralAccount/authenticate', {email, pwdTry}).then((res) => {
+            memCache.me = res.data.me
+            memCache[memCache.me.id] = memCache.me
+            return res
+          })
         },
         confirmNewEmail: (currentEmail, newEmail, confirmationCode) => {
           return postCentral('/api/v1/centralAccount/confirmNewEmail', {currentEmail, newEmail, confirmationCode})
@@ -258,6 +264,11 @@ newApi = (opts) => {
           return getCentral('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
         },
         getMe: () => {
+          // if (memCache.me) {
+          //   return new Promise((resolve, reject) => {
+          //     resolve({data: memCache.me})
+          //   })
+          // }
           return getCentral('/api/v1/centralAccount/getMe')
         },
         setMyPwd: (oldPwd, newPwd) => {

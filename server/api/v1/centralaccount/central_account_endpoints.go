@@ -43,16 +43,6 @@ var (
 
 //endpoints
 
-var getRegions = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
-	Path:                     "/api/v1/centralAccount/getRegions",
-	RequiresSession:          false,
-	ExampleResponseStructure: []string{"use", "usw", "eu"},
-	CtxHandler: func(ctx ctx.Ctx, _ interface{}) interface{} {
-		return ctx.RegionalV1PrivateClient().GetRegions()
-	},
-}
-
 type registerArgs struct {
 	Name        string     `json:"name"`
 	Email       string     `json:"email"`
@@ -928,7 +918,6 @@ var removeMembers = &endpoint.Endpoint{
 }
 
 var Endpoints = []*endpoint.Endpoint{
-	getRegions,
 	register,
 	resendActivationEmail,
 	activate,

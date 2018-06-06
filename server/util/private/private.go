@@ -6,7 +6,6 @@ import (
 )
 
 type V1Client interface {
-	GetRegions() []string
 	IsValidRegion(region string) bool
 	CreateAccount(region string, account, me id.Id, myName string, myDisplayName *string, hasAvatar bool) (int, error)
 	DeleteAccount(region string, shard int, account, me id.Id) error

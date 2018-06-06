@@ -43,9 +43,10 @@
     methods: {
       login () {
         api.v1.centralAccount.authenticate(this.email, this.pwdTry).then((res) => {
-          console.log(res)
+          let me = res.data.me
+          router.push('/app/region/' + me.region + '/shard/' + me.shard + '/account/' + me.id + '/projects')
         }).catch(() => {
-          this.err = 'login failed'
+          // TODO
         })
       },
       register () {

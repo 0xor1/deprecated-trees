@@ -27,10 +27,6 @@ func Test_system(t *testing.T) {
 		region: testServer.URL,
 	})
 
-	regions, err := client.GetRegions()
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(regions))
-	assert.Equal(t, region, regions[0])
 	aliDisplayName := "Ali O'Mally"
 	client.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
 
@@ -39,12 +35,12 @@ func Test_system(t *testing.T) {
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 
 	client.Activate("ali@ali.com", activationCode)
-	aliInitInfo, err := client.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
+	aliInitInfo, _ := client.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
 	aliId := aliInitInfo.Me.Id
 
-	err = client.SetMyEmail(aliCss, "aliNew@aliNew.com")
+	client.SetMyEmail(aliCss, "aliNew@aliNew.com")
 
-	err = client.ResendMyNewEmailConfirmationEmail(aliCss)
+	client.ResendMyNewEmailConfirmationEmail(aliCss)
 	newEmailConfirmationCode := ""
 	SR.AccountDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
 
@@ -56,7 +52,7 @@ func Test_system(t *testing.T) {
 
 	client.SetNewPwdFromPwdReset("al1-Pwd-W00-2", "aliNew@aliNew.com", resetPwdCode)
 
-	acc, err := client.GetAccount("ali")
+	acc, _ := client.GetAccount("ali")
 	assert.True(t, acc.Id.Equal(aliId))
 	assert.Equal(t, "ali", acc.Name)
 	assert.Equal(t, aliDisplayName, *acc.DisplayName)
@@ -67,7 +63,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, acc.Region)
 	assert.Equal(t, 0, acc.Shard)
 
-	accs, err := client.GetAccounts([]id.Id{aliId})
+	accs, _ := client.GetAccounts([]id.Id{aliId})
 	assert.True(t, accs[0].Id.Equal(aliId))
 	assert.Equal(t, "ali", accs[0].Name)
 	assert.Equal(t, aliDisplayName, *accs[0].DisplayName)
@@ -78,7 +74,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, accs[0].Region)
 	assert.Equal(t, 0, accs[0].Shard)
 
-	me, err := client.GetMe(aliCss)
+	me, _ := client.GetMe(aliCss)
 	assert.True(t, me.Id.Equal(aliId))
 	assert.Equal(t, "ali", me.Name)
 	assert.Equal(t, aliDisplayName, *me.DisplayName)
@@ -92,19 +88,19 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, "en", me.Language)
 
 	client.SetMyPwd(aliCss, "al1-Pwd-W00-2", "al1-Pwd-W00")
-	aliInitInfo2, err := client.Authenticate(aliCss, "aliNew@aliNew.com", "al1-Pwd-W00")
+	aliInitInfo2, _ := client.Authenticate(aliCss, "aliNew@aliNew.com", "al1-Pwd-W00")
 	aliId2 := aliInitInfo2.Me.Id
 	assert.True(t, aliId.Equal(aliId2))
 
-	err = client.SetAccountName(aliCss, aliId, "aliNew")
+	client.SetAccountName(aliCss, aliId, "aliNew")
 	aliDisplayName = "ZZZ ali ZZZ"
-	err = client.SetAccountDisplayName(aliCss, aliId, &aliDisplayName)
-	err = client.SetAccountAvatar(aliCss, aliId, ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))))
+	client.SetAccountDisplayName(aliCss, aliId, &aliDisplayName)
+	client.SetAccountAvatar(aliCss, aliId, ioutil.NopCloser(base64.NewDecoder(base64.StdEncoding, strings.NewReader(testImgOk))))
 
 	//err = client.MigrateAccount(aliCss, aliId, "usw")
 
 	orgDisplayName := "Big Corp"
-	org, err := client.CreateAccount(aliCss, "org", region, &orgDisplayName)
+	org, _ := client.CreateAccount(aliCss, "org", region, &orgDisplayName)
 	assert.Equal(t, "org", org.Name)
 	assert.Equal(t, orgDisplayName, *org.DisplayName)
 	assert.InDelta(t, time.Now().Unix(), org.CreatedOn.Unix(), 5)
@@ -114,7 +110,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, org.Region)
 	assert.Equal(t, 0, org.Shard)
 	orgDisplayName2 := "Big Corp 2"
-	org2, err := client.CreateAccount(aliCss, "zorg2", region, &orgDisplayName2)
+	org2, _ := client.CreateAccount(aliCss, "zorg2", region, &orgDisplayName2)
 	assert.Equal(t, "zorg2", org2.Name)
 	assert.Equal(t, orgDisplayName2, *org2.DisplayName)
 	assert.InDelta(t, time.Now().Unix(), org2.CreatedOn.Unix(), 5)
@@ -124,7 +120,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, org2.Region)
 	assert.Equal(t, 0, org2.Shard)
 
-	myAccsRes, err := client.GetMyAccounts(aliCss, nil, 1)
+	myAccsRes, _ := client.GetMyAccounts(aliCss, nil, 1)
 	assert.Equal(t, 1, len(myAccsRes.Accounts))
 	assert.True(t, myAccsRes.More)
 	assert.Equal(t, "org", myAccsRes.Accounts[0].Name)
@@ -136,7 +132,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, myAccsRes.Accounts[0].Region)
 	assert.Equal(t, 0, myAccsRes.Accounts[0].Shard)
 
-	myAccsRes, err = client.GetMyAccounts(aliCss, &org.Id, 1)
+	myAccsRes, _ = client.GetMyAccounts(aliCss, &org.Id, 1)
 	assert.Equal(t, 1, len(myAccsRes.Accounts))
 	assert.False(t, myAccsRes.More)
 	assert.Equal(t, "zorg2", myAccsRes.Accounts[0].Name)
@@ -158,13 +154,13 @@ func Test_system(t *testing.T) {
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	client.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
-	bobInitInfo, err := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
+	bobInitInfo, _ := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
 	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	client.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
-	catInitInfo, err := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
+	catInitInfo, _ := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 	catId := catInitInfo.Me.Id
 
 	addBob := AddMember{}
@@ -175,49 +171,49 @@ func Test_system(t *testing.T) {
 	addCat.Role = cnst.AccountMemberOfOnlySpecificProjects
 	client.AddMembers(aliCss, org.Id, []*AddMember{&addBob, &addCat})
 
-	accs, err = client.SearchAccounts("org")
+	accs, _ = client.SearchAccounts("org")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(org.Id))
 	assert.Equal(t, "org", accs[0].Name)
 	assert.Equal(t, orgDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, false, accs[0].IsPersonal)
 
-	accs, err = client.SearchAccounts("ali")
+	accs, _ = client.SearchAccounts("ali")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(aliId))
 	assert.Equal(t, "aliNew", accs[0].Name)
 	assert.Equal(t, aliDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	accs, err = client.SearchAccounts("bob")
+	accs, _ = client.SearchAccounts("bob")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(bobId))
 	assert.Equal(t, "bob", accs[0].Name)
 	assert.Equal(t, bobDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	accs, err = client.SearchAccounts("cat")
+	accs, _ = client.SearchAccounts("cat")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(catId))
 	assert.Equal(t, "cat", accs[0].Name)
 	assert.Equal(t, catDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	accs, err = client.SearchPersonalAccounts("ali")
+	accs, _ = client.SearchPersonalAccounts("ali")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(aliId))
 	assert.Equal(t, "aliNew", accs[0].Name)
 	assert.Equal(t, aliDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	accs, err = client.SearchPersonalAccounts("bob")
+	accs, _ = client.SearchPersonalAccounts("bob")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(bobId))
 	assert.Equal(t, "bob", accs[0].Name)
 	assert.Equal(t, bobDisplayName, *accs[0].DisplayName)
 	assert.Equal(t, true, accs[0].IsPersonal)
 
-	accs, err = client.SearchPersonalAccounts("cat")
+	accs, _ = client.SearchPersonalAccounts("cat")
 	assert.Equal(t, 1, len(accs))
 	assert.True(t, accs[0].Id.Equal(catId))
 	assert.Equal(t, "cat", accs[0].Name)
