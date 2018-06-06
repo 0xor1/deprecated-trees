@@ -4,34 +4,32 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/avatar"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/err"
-	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/mail"
 	"bitbucket.org/0xor1/trees/server/util/private"
 	"bitbucket.org/0xor1/trees/server/util/queryinfo"
 	"bitbucket.org/0xor1/trees/server/util/redis"
 	t "bitbucket.org/0xor1/trees/server/util/time"
 	"encoding/base64"
-	"encoding/gob"
 	"fmt"
 	"github.com/0xor1/config"
 	"github.com/0xor1/iredis"
 	"github.com/0xor1/isql"
 	"github.com/0xor1/panic"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gorilla/sessions"
 	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/session"
 )
 
 // pass in empty strings for no config file
 func Config(configFile string, createPrivateV1Client func(map[string]string) private.V1Client) *Resources {
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
-	// server address eg "localhost:8787"
-	config.SetDefault("serverAddress", "0.0.0.0:8787")
+	// server address
+	config.SetDefault("serverAddress", "127.0.0.1:80")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
 	// must be one of "central", "use", "usw", "euw", "asp", "aus"
@@ -48,11 +46,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("apiLogoutRoute", "/api/logout")
 	// api mget timeout
 	config.SetDefault("apiMGetTimeout", "2s")
-	// session cookie name
-	config.SetDefault("sessionCookieName", "t")
-	// cookie session domain
-	config.SetDefault("sessionDomain", ".project-trees.com")
-	// session cookie store
+	// session store
 	config.SetDefault("sessionAuthKey64s", []interface{}{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
 		"WK_2RgRx6vjfWVkpiwOCB1fvv1yklnltstBjYlQGfRsl6LyVV4mkt6UamUylmkwC8MEgb9bSGr1FYgM2Zk20Ug",
@@ -95,11 +89,11 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		cnst.USWRegion: "http://lcl.project-trees.com:8787",
-		cnst.USERegion: "http://lcl.project-trees.com:8787",
-		cnst.EUWRegion: "http://lcl.project-trees.com:8787",
-		cnst.ASPRegion: "http://lcl.project-trees.com:8787",
-		cnst.AUSRegion: "http://lcl.project-trees.com:8787",
+		cnst.USWRegion: "http://lcl-api.project-trees.com",
+		cnst.USERegion: "http://lcl-api.project-trees.com",
+		cnst.EUWRegion: "http://lcl-api.project-trees.com",
+		cnst.ASPRegion: "http://lcl-api.project-trees.com",
+		cnst.AUSRegion: "http://lcl-api.project-trees.com",
 	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)
@@ -138,12 +132,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		}
 		sessionAuthEncrKeyPairs = append(sessionAuthEncrKeyPairs, authBytes, encrBytes)
 	}
-	sessionStore := sessions.NewCookieStore(sessionAuthEncrKeyPairs...)
-	sessionStore.Options.MaxAge = 0
-	sessionStore.Options.HttpOnly = true
-	sessionStore.Options.Secure = config.GetString("env") != cnst.LclEnv
-	sessionStore.Options.Domain = config.GetString("sessionDomain")
-	gob.Register(id.New()) //register Id type for sessionCookie
+	sessionStore := session.New(sessionAuthEncrKeyPairs...)
 
 	var logError func(error)
 	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
@@ -219,22 +208,20 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		ServerCreatedOn:               t.NowUnixMillis(),
 		ServerAddress:                 config.GetString("serverAddress"),
 		Env:                           config.GetString("env"),
-		Region:                        config.GetString("region"),
-		Version:                       config.GetString("version"),
-		FileServerDir:                 config.GetString("fileServerDir"),
-		ApiDocsRoute:                  strings.ToLower(config.GetString("apiDocsRoute")),
-		ApiMGetRoute:                  strings.ToLower(config.GetString("apiMGetRoute")),
-		ApiLogoutRoute:                  strings.ToLower(config.GetString("apiLogoutRoute")),
-		ApiMGetTimeout:                config.GetDuration("apiMGetTimeout"),
-		SessionCookieName:             config.GetString("sessionCookieName"),
-		SessionStore:                  sessionStore,
-		CachingEnabled:                config.GetBool("cachingEnabled"),
-		MasterCacheKey:                config.GetString("masterCacheKey"),
-		NameRegexMatchers:             nameRegexMatchers,
-		PwdRegexMatchers:              pwdRegexMatchers,
-		NameMinRuneCount:              config.GetInt("nameMinRuneCount"),
-		NameMaxRuneCount:              config.GetInt("nameMaxRuneCount"),
-		PwdMinRuneCount:               config.GetInt("pwdMinRuneCount"),
+		Region:            config.GetString("region"),
+		Version:           config.GetString("version"),
+		FileServerDir:     config.GetString("fileServerDir"),
+		ApiDocsRoute:      strings.ToLower(config.GetString("apiDocsRoute")),
+		ApiMGetRoute:      strings.ToLower(config.GetString("apiMGetRoute")),
+		ApiMGetTimeout:    config.GetDuration("apiMGetTimeout"),
+		SessionStore:      sessionStore,
+		CachingEnabled:    config.GetBool("cachingEnabled"),
+		MasterCacheKey:    config.GetString("masterCacheKey"),
+		NameRegexMatchers: nameRegexMatchers,
+		PwdRegexMatchers:  pwdRegexMatchers,
+		NameMinRuneCount:  config.GetInt("nameMinRuneCount"),
+		NameMaxRuneCount:  config.GetInt("nameMaxRuneCount"),
+		PwdMinRuneCount:   config.GetInt("pwdMinRuneCount"),
 		PwdMaxRuneCount:               config.GetInt("pwdMaxRuneCount"),
 		MaxProcessEntityCount:         config.GetInt("maxProcessEntityCount"),
 		CryptCodeLen:                  config.GetInt("cryptCodeLen"),
@@ -278,14 +265,10 @@ type Resources struct {
 	ApiDocsRoute string
 	// api mget path
 	ApiMGetRoute string
-	// api logout path
-	ApiLogoutRoute string
 	// api mget path
 	ApiMGetTimeout time.Duration
-	// session cookie name
-	SessionCookieName string
-	// session cookie store
-	SessionStore *sessions.CookieStore
+	// session store
+	SessionStore session.Store
 	// indented json api docs
 	ApiDocs []byte
 	// is caching enabled

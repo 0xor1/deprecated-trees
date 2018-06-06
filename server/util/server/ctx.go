@@ -15,13 +15,13 @@ import (
 	"github.com/0xor1/isql"
 	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
-	"github.com/gorilla/sessions"
 	"math/rand"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/session"
 )
 
 var (
@@ -30,8 +30,7 @@ var (
 
 // per request info fields
 type _ctx struct {
-	me                     *id.Id
-	session                *sessions.Session
+	session                *session.Session
 	requestStartUnixMillis int64
 	resp                   http.ResponseWriter
 	req                    *http.Request
@@ -48,12 +47,15 @@ type _ctx struct {
 }
 
 func (c *_ctx) TryMe() *id.Id {
-	return c.me
+	if c.session == nil {
+		return nil
+	}
+	return &c.session.Me
 }
 
 func (c *_ctx) Me() id.Id {
-	panic.IfTrue(c.me == nil, unauthorizedErr)
-	return *c.me
+	panic.IfTrue(c.session == nil, unauthorizedErr)
+	return c.session.Me
 }
 
 func (c *_ctx) Log(err error) {
@@ -180,7 +182,7 @@ func (c *_ctx) EnvClientScheme() string {
 func (c *_ctx) EnvClientHost() string {
 	switch c.SR.Env {
 	case cnst.LclEnv:
-		return "lcl.project-trees.com:8080"
+		return "lcl.project-trees.com"
 	case cnst.DevEnv:
 		return "dev.project-trees.com"
 	case cnst.StgEnv:

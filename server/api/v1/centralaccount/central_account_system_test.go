@@ -20,7 +20,7 @@ func Test_system(t *testing.T) {
 	SR := static.Config("", private.NewClient)
 	serv := server.New(SR, Endpoints, private.Endpoints)
 	testServer := httptest.NewServer(serv)
-	aliCss := clientsession.New()
+	aliCss := &clientsession.Store{}
 	client := NewClient(testServer.URL)
 	region := cnst.LclEnv
 	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
@@ -153,13 +153,13 @@ func Test_system(t *testing.T) {
 	bobActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	client.Activate("bob@bob.com", bobActivationCode)
-	bobCss := clientsession.New()
+	bobCss := &clientsession.Store{}
 	bobInitInfo, _ := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
 	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	client.Activate("cat@cat.com", catActivationCode)
-	catCss := clientsession.New()
+	catCss := &clientsession.Store{}
 	catInitInfo, _ := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 	catId := catInitInfo.Me.Id
 
