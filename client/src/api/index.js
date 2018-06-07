@@ -1,14 +1,17 @@
 import axios from 'axios'
 
+// important!! or axios will not send cookies to cors requests :( lost  3 days figuring this information out, shakes fist vigorously
+axios.defaults.withCredentials = true
+
 const config = {
   lcl: {
-    central: 'http://lcl-api.project-trees.com:8787',
+    central: 'http://lcl-api.project-trees.com',
     regions: {
-      use: 'http://lcl-api.project-trees.com:8787',
-      usw: 'http://lcl-api.project-trees.com:8787',
-      euw: 'http://lcl-api.project-trees.com:8787',
-      asp: 'http://lcl-api.project-trees.com:8787',
-      aus: 'http://lcl-api.project-trees.com:8787'
+      use: 'http://lcl-api.project-trees.com',
+      usw: 'http://lcl-api.project-trees.com',
+      euw: 'http://lcl-api.project-trees.com',
+      asp: 'http://lcl-api.project-trees.com',
+      aus: 'http://lcl-api.project-trees.com'
     }
   },
   dev: {
@@ -90,7 +93,7 @@ export const cnst = {
 
 let getEnv = () => {
   switch (location.origin) {
-    case 'http://lcl.project-trees.com:8080':
+    case 'http://lcl.project-trees.com':
       return cnst.env.lcl
     case 'https://dev.project-trees.com':
       return cnst.env.dev
