@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '@/router'
 
 const config = {
   lcl: {
@@ -119,7 +120,12 @@ newApi = (opts) => {
   let doReq = (axiosConfig) => {
     axiosConfig.headers = axiosConfig.headers || {}
     axiosConfig.headers[sessionHeaderName] = session
-    return axios(axiosConfig)
+    return axios(axiosConfig).catch((res) => {
+      if (res.response && res.response.status === 401) {
+        router.push('/login')
+      }
+      return res
+    })
   }
   let buildUrl = (region, path) => {
     if (region === cnst.regions.central) {
@@ -267,11 +273,11 @@ newApi = (opts) => {
           return getCentral('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
         },
         getMe: () => {
-          // if (memCache.me) {
-          //   return new Promise((resolve, reject) => {
-          //     resolve({data: memCache.me})
-          //   })
-          // }
+          if (memCache.me) {
+            return new Promise((resolve, reject) => {
+              resolve({data: memCache.me})
+            })
+          }
           return getCentral('/api/v1/centralAccount/getMe')
         },
         setMyPwd: (oldPwd, newPwd) => {

@@ -116,10 +116,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resp.Header().Set("Access-Control-Expose-Headers", session.HeaderName)
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
-	resp.Header().Set("Content-Security-Policy", "default-src 'self'")
+	resp.Header().Set("Content-Security-Policy", "default-src *.project-trees.com")
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
 	if req.Method == http.MethodOptions { // if preflight options request return now
+		writeJsonOk(resp, nil)
 		return
 	}
 	//check for none api call
