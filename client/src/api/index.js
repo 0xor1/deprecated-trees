@@ -267,11 +267,11 @@ newApi = (opts) => {
           return getCentral('/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
         },
         getMe: () => {
-          // if (memCache.me) {
-          //   return new Promise((resolve, reject) => {
-          //     resolve({data: memCache.me})
-          //   })
-          // }
+          if (memCache.me) {
+            return new Promise((resolve, reject) => {
+              resolve({data: memCache.me})
+            })
+          }
           return getCentral('/api/v1/centralAccount/getMe')
         },
         setMyPwd: (oldPwd, newPwd) => {
