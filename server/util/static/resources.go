@@ -30,8 +30,8 @@ import (
 func Config(configFile string, createPrivateV1Client func(map[string]string) private.V1Client) *Resources {
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
-	// server address eg "localhost:8787"
-	config.SetDefault("serverAddress", "0.0.0.0:8787")
+	// server address eg "127.0.0.1:80"
+	config.SetDefault("serverAddress", "127.0.0.1:80")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
 	// must be one of "central", "use", "usw", "euw", "asp", "aus"
@@ -264,7 +264,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 type Resources struct {
 	// server created on unix millisecs
 	ServerCreatedOn int64
-	// server address eg "localhost:8787"
+	// server address eg "127.0.0.1:80"
 	ServerAddress string
 	// must be one of "lcl", "dev", "stg", "prd"
 	Env string

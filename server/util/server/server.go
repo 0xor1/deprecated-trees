@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/crypt"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
 	"bitbucket.org/0xor1/trees/server/util/err"
@@ -110,19 +109,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 	}
 	//set common headers
-	if s.SR.Env == cnst.LclEnv {
-		resp.Header().Set("Access-Control-Allow-Origin", ctx.EnvClientScheme() + ctx.EnvClientHost())
-		if req.Method == http.MethodOptions {
-			resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
-			resp.Header().Set("Access-Control-Allow-Headers", "X-Client,Content-Type")
-			return
-		}
-	}
+	resp.Header().Set("Access-Control-Allow-Origin", ctx.EnvClientScheme() + ctx.EnvClientHost())
+	resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
+	resp.Header().Set("Access-Control-Allow-Credentials", "true")
+	resp.Header().Set("Access-Control-Allow-Headers", "X-Client,Content-Type")
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
-	resp.Header().Set("Content-Security-Policy", "default-src 'self'")
+	resp.Header().Set("Content-Security-Policy", "default-src *.project-trees.com")
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
+	if req.Method == http.MethodOptions {
+		writeJsonOk(resp, nil)
+		return
+	}
 	//check for none api call
 	if req.Method == http.MethodGet && !strings.HasPrefix(lowerPath, "/api/") {
 		s.FileServer.ServeHTTP(resp, req)
@@ -135,11 +134,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	//check for special case of api logout
 	if req.Method == http.MethodPost && lowerPath == s.SR.ApiLogoutRoute {
-		http.SetCookie(resp, &http.Cookie{
-			Name: s.SR.SessionCookieName,
-			Value: "",
-			MaxAge: -1,
-		})
+		var e error
+		ctx.session, e = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
+		panic.If(e)
+		ctx.session.Options.MaxAge = -1
+		ctx.session.Values = map[interface{}]interface{}{}
+		ctx.session.Save(req, resp)
+		writeJsonOk(resp, nil)
 		return
 	}
 	//check for special case of api mget
@@ -184,7 +185,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// only none private endpoints use sessions
 	if !ep.IsPrivate {
 		//get a cookie session
-		ctx.session, _ = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
+		var e error
+		ctx.session, e = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
+		panic.If(e)
 		if ctx.session != nil {
 			iMe := ctx.session.Values["me"]
 			if iMe != nil {

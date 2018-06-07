@@ -180,7 +180,7 @@ func (c *_ctx) EnvClientScheme() string {
 func (c *_ctx) EnvClientHost() string {
 	switch c.SR.Env {
 	case cnst.LclEnv:
-		return "lcl.project-trees.com:8080"
+		return "lcl.project-trees.com"
 	case cnst.DevEnv:
 		return "dev.project-trees.com"
 	case cnst.StgEnv:
