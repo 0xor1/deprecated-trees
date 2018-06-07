@@ -12,7 +12,7 @@
               </v-toolbar>
               <v-card-media src="/static/img/icons/logo.svg" class="mt-3" height=200 contain></v-card-media>
               <v-card-text>
-                <v-form>
+                <v-form ref="form" @keyup.native.enter="register">
                   <v-text-field v-model="name" prepend-icon="person" name="name" label="Username" type="text"></v-text-field>
                   <v-text-field v-model="displayName" prepend-icon="person" name="displayName" label="Display Name" type="text"></v-text-field>
                   <v-text-field v-model="email" prepend-icon="person" name="email" label="Email" type="email"></v-text-field>

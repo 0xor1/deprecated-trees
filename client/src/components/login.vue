@@ -12,7 +12,7 @@
               </v-toolbar>
               <v-card-media src="/static/img/icons/logo.svg" class="mt-3" height=200 contain></v-card-media>
               <v-card-text>
-                <v-form>
+                <v-form ref="form" @keyup.native.enter="login">
                   <v-text-field prepend-icon="person" name="email" label="Email" type="email" v-model="email"></v-text-field>
                   <v-text-field prepend-icon="lock" name="pwd" label="Password" id="pwd" type="password" v-model="pwdTry"></v-text-field>
                 </v-form>

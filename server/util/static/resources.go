@@ -66,9 +66,16 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// incremental base64 value
 	config.SetDefault("masterCacheKey", "0")
 	// regexes that account names must match to be valid during account creation or name setting
-	config.SetDefault("nameRegexMatchers", []interface{}{})
+	config.SetDefault("nameRegexMatchers", []interface{}{
+		`^[0-9a-zA-Z_]+$`,
+	})
 	// regexes that account pwds must match to be valid during account creation or pwd setting
-	config.SetDefault("pwdRegexMatchers", []interface{}{})
+	config.SetDefault("pwdRegexMatchers", []interface{}{
+		`[0-9]`,
+		`[a-z]`,
+		`[A-Z]`,
+		`[\W]`,
+	})
 	// minimum number of runes required for a valid account name
 	config.SetDefault("nameMinRuneCount", 3)
 	// maximum number of runes required for a valid account name
@@ -76,7 +83,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// minimum number of runes required for a valid account pwd
 	config.SetDefault("pwdMinRuneCount", 8)
 	// maximum number of runes required for a valid account pwd
-	config.SetDefault("pwdMaxRuneCount", 200)
+	config.SetDefault("pwdMaxRuneCount", 100)
 	// max number of entities that can be processed at once, also used for max limit value on queries
 	config.SetDefault("maxProcessEntityCount", 100)
 	// length of cryptographic codes, used in email links for validating email addresses and resetting pwds
@@ -95,11 +102,11 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
 	// private client config
 	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		cnst.USWRegion: "http://lcl.project-trees.com:8787",
-		cnst.USERegion: "http://lcl.project-trees.com:8787",
-		cnst.EUWRegion: "http://lcl.project-trees.com:8787",
-		cnst.ASPRegion: "http://lcl.project-trees.com:8787",
-		cnst.AUSRegion: "http://lcl.project-trees.com:8787",
+		cnst.USWRegion: "http://lcl-api.project-trees.com",
+		cnst.USERegion: "http://lcl-api.project-trees.com",
+		cnst.EUWRegion: "http://lcl-api.project-trees.com",
+		cnst.ASPRegion: "http://lcl-api.project-trees.com",
+		cnst.AUSRegion: "http://lcl-api.project-trees.com",
 	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)
@@ -178,7 +185,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	}
 	pwdRegexMatchers := make([]*regexp.Regexp, 0, len(config.GetStringSlice("pwdRegexMatchers")))
 	for _, str := range config.GetStringSlice("pwdRegexMatchers") {
-		nameRegexMatchers = append(pwdRegexMatchers, regexp.MustCompile(str))
+		pwdRegexMatchers = append(pwdRegexMatchers, regexp.MustCompile(str))
 	}
 
 	var accountDb isql.ReplicaSet

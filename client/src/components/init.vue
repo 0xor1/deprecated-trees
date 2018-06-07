@@ -18,10 +18,9 @@
     name: 'init',
     components: {FingerprintSpinner},
     data () {
-      api.v1.centralAccount.getMe().then(() => {
-        router.push('/me')
-      }).catch(() => {
-        router.push('/login')
+      api.v1.centralAccount.getMe().then((res) => {
+        let me = res.data
+        router.push('/app/region/' + me.region + '/shard/' + me.shard + '/account/' + me.id + '/projects')
       })
       return {}
     }

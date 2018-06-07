@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '@/router'
 
 // important!! or axios will not send cookies to cors requests :( lost  3 days figuring this information out, shakes fist vigorously
 axios.defaults.withCredentials = true
@@ -145,6 +146,11 @@ newApi = (opts) => {
       return doReq({
         method: 'get',
         url: url
+      }).catch((res) => {
+        if (res.response.status === 401) {
+          router.push('/login')
+        }
+        throw res
       })
     } else if (isMGetApi && !mGetSending && !mGetSent) {
       if (region !== mGetApiRegion) {
@@ -272,7 +278,10 @@ newApi = (opts) => {
               resolve({data: memCache.me})
             })
           }
-          return getCentral('/api/v1/centralAccount/getMe')
+          return getCentral('/api/v1/centralAccount/getMe').then((res) => {
+            memCache.me = res.data
+            return res
+          })
         },
         setMyPwd: (oldPwd, newPwd) => {
           return postCentral('/api/v1/centralAccount/setMyPwd', {oldPwd, newPwd})
