@@ -2,13 +2,13 @@ import axios from 'axios'
 
 const config = {
   lcl: {
-    central: 'http://lcl-api.project-trees.com',
+    central: 'http://lcl-api.project-trees.com:8787',
     regions: {
-      use: 'http://lcl-api.project-trees.com',
-      usw: 'http://lcl-api.project-trees.com',
-      euw: 'http://lcl-api.project-trees.com',
-      asp: 'http://lcl-api.project-trees.com',
-      aus: 'http://lcl-api.project-trees.com'
+      use: 'http://lcl-api.project-trees.com:8787',
+      usw: 'http://lcl-api.project-trees.com:8787',
+      euw: 'http://lcl-api.project-trees.com:8787',
+      asp: 'http://lcl-api.project-trees.com:8787',
+      aus: 'http://lcl-api.project-trees.com:8787'
     }
   },
   dev: {
@@ -90,7 +90,7 @@ export const cnst = {
 
 let getEnv = () => {
   switch (location.origin) {
-    case 'http://lcl.project-trees.com':
+    case 'http://lcl.project-trees.com:8080':
       return cnst.env.lcl
     case 'https://dev.project-trees.com':
       return cnst.env.dev
@@ -103,8 +103,6 @@ let getEnv = () => {
   }
 }
 
-const sessionHeaderName = 'x-session'
-let session = ''
 let memCache = {}
 
 let newApi
@@ -118,7 +116,7 @@ newApi = (opts) => {
   let regionalHosts = config[getEnv()].regions
   let doReq = (axiosConfig) => {
     axiosConfig.headers = axiosConfig.headers || {}
-    axiosConfig.headers[sessionHeaderName] = session
+    axiosConfig.headers['X-Client'] = 'web'
     return axios(axiosConfig)
   }
   let buildUrl = (region, path) => {
@@ -224,7 +222,7 @@ newApi = (opts) => {
       })
     },
     logout: () => {
-      session = ''
+      return postCentral('/api/logout')
     },
     v1: {
       centralAccount: {
@@ -241,7 +239,6 @@ newApi = (opts) => {
           return postCentral('/api/v1/centralAccount/authenticate', {email, pwdTry}).then((res) => {
             memCache.me = res.data.me
             memCache[memCache.me.id] = memCache.me
-            session = res.headers[sessionHeaderName]
             return res
           })
         },

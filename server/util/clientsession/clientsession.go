@@ -1,5 +1,11 @@
 package clientsession
 
+func New() *Store {
+	return &Store{
+		Cookies: map[string]string{},
+	}
+}
+
 type Store struct {
-	Session string
+	Cookies map[string]string
 }

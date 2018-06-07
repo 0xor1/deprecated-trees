@@ -58,8 +58,9 @@
     },
     methods: {
       logout: () => {
-        api.logout()
-        router.push('/login')
+        api.logout().then(() => {
+          router.push('/login')
+        })
       },
       showProjects: () => {
         api.v1.centralAccount.getMe().then((res) => {

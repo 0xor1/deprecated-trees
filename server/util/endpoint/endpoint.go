@@ -14,7 +14,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"bitbucket.org/0xor1/trees/server/util/session"
 )
 
 var (
@@ -96,7 +95,7 @@ type endpointDocumentation struct {
 	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
 }
 
-func (ep *Endpoint) createRequest(css *clientsession.Store, host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
+func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
 	reqUrl, e := url.Parse(host + ep.Path)
 	if e != nil {
 		return nil, e
@@ -136,26 +135,34 @@ func (ep *Endpoint) createRequest(css *clientsession.Store, host string, args in
 	if e != nil {
 		return nil, e
 	}
+	req.Header.Add("X-Client", "go-client")
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
-	}
-	if css != nil {
-		req.Header.Set(session.HeaderName, css.Session)
 	}
 	return req, nil
 }
 
 func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
-	req, e := ep.createRequest(css, host, args, buildForm)
+	req, e := ep.createRequest(host, args, buildForm)
 	if e != nil {
 		return nil, e
+	}
+	if css != nil {
+		for name, value := range css.Cookies {
+			req.AddCookie(&http.Cookie{
+				Name:  name,
+				Value: value,
+			})
+		}
 	}
 	resp, e := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
-	if css != nil && ep.IsAuthentication {
-		css.Session = resp.Header.Get(session.HeaderName)
+	if css != nil {
+		for _, cookie := range resp.Cookies() {
+			css.Cookies[cookie.Name] = cookie.Value
+		}
 	}
 	if e != nil {
 		return nil, e

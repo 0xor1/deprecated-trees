@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/crypt"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
 	"bitbucket.org/0xor1/trees/server/util/err"
@@ -21,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"bitbucket.org/0xor1/trees/server/util/session"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -110,18 +110,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer req.Body.Close()
 	}
 	//set common headers
-	resp.Header().Set("Access-Control-Allow-Origin", ctx.EnvClientScheme() + ctx.EnvClientHost())
-	resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
-	resp.Header().Set("Access-Control-Allow-Headers", session.HeaderName + ",Content-Type")
-	resp.Header().Set("Access-Control-Expose-Headers", session.HeaderName)
+	if s.SR.Env == cnst.LclEnv {
+		resp.Header().Set("Access-Control-Allow-Origin", ctx.EnvClientScheme() + ctx.EnvClientHost())
+		if req.Method == http.MethodOptions {
+			resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
+			resp.Header().Set("Access-Control-Allow-Headers", "X-Client,Content-Type")
+			return
+		}
+	}
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
 	resp.Header().Set("Content-Security-Policy", "default-src 'self'")
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
-	if req.Method == http.MethodOptions { // if preflight options request return now
-		return
-	}
 	//check for none api call
 	if req.Method == http.MethodGet && !strings.HasPrefix(lowerPath, "/api/") {
 		s.FileServer.ServeHTTP(resp, req)
@@ -130,6 +131,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//check for special case of api docs first
 	if req.Method == http.MethodGet && lowerPath == s.SR.ApiDocsRoute {
 		writeRawJson(resp, 200, s.SR.ApiDocs)
+		return
+	}
+	//check for special case of api logout
+	if req.Method == http.MethodPost && lowerPath == s.SR.ApiLogoutRoute {
+		http.SetCookie(resp, &http.Cookie{
+			Name: s.SR.SessionCookieName,
+			Value: "",
+			MaxAge: -1,
+		})
 		return
 	}
 	//check for special case of api mget
@@ -144,8 +154,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			gets = append(gets, func(key, reqUrl string) func() {
 				return func() {
 					r, _ := http.NewRequest(http.MethodGet, reqUrl, nil)
-					for k, _ := range req.Header {
-						r.Header.Add(k, req.Header.Get(k))
+					for _, c := range req.Cookies() {
+						r.AddCookie(c)
 					}
 					w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
 					s.ServeHTTP(w, r)
@@ -174,9 +184,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// only none private endpoints use sessions
 	if !ep.IsPrivate {
 		//get a cookie session
-		ctx.session = s.SR.SessionStore.Get(req)
-		//check for valid me value if endpoint requires active session
-		if ep.RequiresSession && ctx.session == nil {
+		ctx.session, _ = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
+		if ctx.session != nil {
+			iMe := ctx.session.Values["me"]
+			if iMe != nil {
+				me := iMe.(id.Id)
+				ctx.me = &me
+			}
+		}
+		//check for valid me value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
+		if ep.RequiresSession && ctx.me == nil || req.Method == http.MethodPost && req.Header.Get("X-Client") == "" {
 			writeJson(resp, http.StatusUnauthorized, unauthorizedErr)
 			return
 		}
@@ -241,11 +258,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if me, ok := result.(id.Identifiable); !ok {
 			err.FmtPanic("isAuthentication did not return id.Identifiable type")
 		} else {
-			ctx.session = &session.Session{
-				Me: me.Id(),
-				AuthedOn: t.NowUnixMillis(),
-			}
-			s.SR.SessionStore.Save(resp, ctx.session)
+			i := me.Id()
+			ctx.me = &i //set me on _ctx for logging info in defer above
+			ctx.session.Values["me"] = i
+			ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
+			ctx.session.Save(req, resp)
 		}
 	}
 	ctx.doCacheUpdate()

@@ -18,7 +18,7 @@ func Test_system(t *testing.T) {
 	SR := static.Config("", private.NewClient)
 	serv := server.New(SR, centralaccount.Endpoints, private.Endpoints, account.Endpoints, Endpoints)
 	testServer := httptest.NewServer(serv)
-	aliCss := &clientsession.Store{}
+	aliCss := clientsession.New()
 	centralClient := centralaccount.NewClient(testServer.URL)
 	accountClient := account.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
@@ -42,13 +42,13 @@ func Test_system(t *testing.T) {
 	bobActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
-	bobCss := &clientsession.Store{}
+	bobCss := clientsession.New()
 	bobInitInfo, err := centralClient.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
 	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	centralClient.Activate("cat@cat.com", catActivationCode)
-	catCss := &clientsession.Store{}
+	catCss := clientsession.New()
 	catInitInfo, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 	catId := catInitInfo.Me.Id
 
