@@ -54,7 +54,7 @@
       showProjects () {
         api.v1.centralAccount.getMe().then((me) => {
           router.push('/app/region/' + me.region + '/shard/' + me.shard + '/account/' + me.id + '/projects')
-        }).catch((err) => {
+        }).catch(() => {
           // TODO
         })
       }
