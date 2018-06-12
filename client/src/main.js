@@ -4,8 +4,8 @@ import Vue from 'vue'
 import Vuetify from 'vuetify'
 import app from '@/app'
 import router from '@/router'
-import 'vuetify/dist/vuetify.min.css'
 import 'material-design-icons-iconfont/dist/material-design-icons.scss'
+import 'vuetify/dist/vuetify.min.css'
 import colors from 'vuetify/es5/util/colors'
 
 Vue.config.productionTip = false
