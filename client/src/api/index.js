@@ -121,7 +121,14 @@ newApi = (opts) => {
   let doReq = (axiosConfig) => {
     axiosConfig.headers = axiosConfig.headers || {}
     axiosConfig.headers['X-Client'] = 'web'
-    return axios(axiosConfig)
+    return axios(axiosConfig).then((res) => {
+      return res.data
+    }).catch((res) => {
+      if (res.response.status === 401) {
+        router.push('/login')
+      }
+      throw res
+    })
   }
   let buildUrl = (region, path) => {
     if (region === cnst.regions.central) {
@@ -146,11 +153,6 @@ newApi = (opts) => {
       return doReq({
         method: 'get',
         url: url
-      }).catch((res) => {
-        if (res.response.status === 401) {
-          router.push('/login')
-        }
-        throw res
       })
     } else if (isMGetApi && !mGetSending && !mGetSent) {
       if (region !== mGetApiRegion) {
@@ -215,10 +217,10 @@ newApi = (opts) => {
           mGetSent = true
           for (let i = 0, l = awaitingMGetList.length; i < l; i++) {
             let key = '' + i
-            if (res.data[key].code === 200) {
-              awaitingMGetList[i].resolve(res.data[key].body)
+            if (res[key].code === 200) {
+              awaitingMGetList[i].resolve(res[key].body)
             } else {
-              awaitingMGetList[i].reject(res.data[key])
+              awaitingMGetList[i].reject(res[key])
             }
           }
         }).catch((error) => {
@@ -231,6 +233,7 @@ newApi = (opts) => {
       })
     },
     logout: () => {
+      memCache = {}
       return postCentral('/api/logout')
     },
     v1: {
@@ -246,7 +249,7 @@ newApi = (opts) => {
         },
         authenticate: (email, pwdTry) => {
           return postCentral('/api/v1/centralAccount/authenticate', {email, pwdTry}).then((res) => {
-            memCache.me = res.data.me
+            memCache.me = res.me
             memCache[memCache.me.id] = memCache.me
             return res
           })
@@ -274,12 +277,12 @@ newApi = (opts) => {
         },
         getMe: () => {
           if (memCache.me) {
-            return new Promise((resolve, reject) => {
-              resolve({data: memCache.me})
+            return new Promise((resolve) => {
+              resolve(memCache.me)
             })
           }
           return getCentral('/api/v1/centralAccount/getMe').then((res) => {
-            memCache.me = res.data
+            memCache.me = res
             return res
           })
         },

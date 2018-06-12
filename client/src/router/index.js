@@ -52,6 +52,10 @@ export default new Router({
           path: 'task/:task',
           name: 'task',
           component: task
+        },
+        {
+          path: '*',
+          redirect: 'projects'
         }
       ]
     }

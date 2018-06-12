@@ -7,7 +7,7 @@
       app
     >
       <v-list dense>
-        <v-list-tile @click="showProjects">
+        <v-list-tile v-on:click="showProjects">
           <v-list-tile-action>
             <v-icon>group_work</v-icon>
           </v-list-tile-action>
@@ -30,19 +30,8 @@
       <v-toolbar-title>Project Trees</v-toolbar-title>
     </v-toolbar>
     <v-content>
-      <v-container fluid fill-height>
-        <v-layout justify-center align-center>
-          <v-flex shrink>
-            <v-tooltip right>
-              <span>Source</span>
-            </v-tooltip>
-          </v-flex>
-        </v-layout>
-      </v-container>
+      <router-view></router-view>
     </v-content>
-    <v-footer app fixed>
-      <span>&copy; 2017</span>
-    </v-footer>
   </v-app>
 </template>
 
@@ -57,16 +46,15 @@
       }
     },
     methods: {
-      logout: () => {
+      logout () {
         api.logout().then(() => {
           router.push('/login')
         })
       },
-      showProjects: () => {
-        api.v1.centralAccount.getMe().then((res) => {
-          let me = res.data.me
+      showProjects () {
+        api.v1.centralAccount.getMe().then((me) => {
           router.push('/app/region/' + me.region + '/shard/' + me.shard + '/account/' + me.id + '/projects')
-        }).catch(() => {
+        }).catch((err) => {
           // TODO
         })
       }

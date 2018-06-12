@@ -43,7 +43,7 @@
     methods: {
       login () {
         api.v1.centralAccount.authenticate(this.email, this.pwdTry).then((res) => {
-          let me = res.data.me
+          let me = res.me
           router.push('/app/region/' + me.region + '/shard/' + me.shard + '/account/' + me.id + '/projects')
         }).catch(() => {
           // TODO
