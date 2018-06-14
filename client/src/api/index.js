@@ -119,6 +119,9 @@ newApi = (opts) => {
   let centralHost = config[getEnv()].central
   let regionalHosts = config[getEnv()].regions
   let doReq = (axiosConfig) => {
+    if (axiosConfig.data && typeof axiosConfig.data.shard === 'string') {
+      axiosConfig.data.shard = parseInt(axiosConfig.data.shard, 10)
+    }
     axiosConfig.headers = axiosConfig.headers || {}
     axiosConfig.headers['X-Client'] = 'web'
     return axios(axiosConfig).then((res) => {
@@ -146,7 +149,10 @@ newApi = (opts) => {
 
   let get = (region, path, data) => {
     let url = buildUrl(region, path)
-    if (typeof data === 'object') {
+    if (data) {
+      if (typeof data.shard === 'string') {
+        data.shard = parseInt(data.shard, 10)
+      }
       url = url + '?args=' + encodeURIComponent(JSON.stringify(data))
     }
     if (!isMGetApi || (mGetSending && !mGetSent)) {
