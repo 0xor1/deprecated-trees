@@ -201,7 +201,7 @@
           if (!fromScroll) {
             this.projects = []
           }
-          api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, this.pagination.sortBy, sortDir, after, 20).then((res) => {
+          api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, this.pagination.sortBy, sortDir, after, 100).then((res) => {
             this.loading = false
             res.projects.forEach((project) => {
               this.projects.push(project)
