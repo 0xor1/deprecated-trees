@@ -1,23 +1,37 @@
 <template>
   <v-container class="pa-0" fluid fill-height>
-    <v-layout v-if="loadingProjects" align-center justify-center>
-      <fingerprint-spinner :animation-duration="2000" :size="200" :color="'#405A0F'"></fingerprint-spinner>
-    </v-layout>
-  <v-layout v-else row>
-    <v-layout v-if="projects.length === 0" justify-center align-center>
-      <v-card class="mt-3">
-        <v-card-text >No Projects</v-card-text> <v-btn v-on:click="createProjectDialog = true" color="primary">create</v-btn>
-      </v-card>
-    </v-layout>
-      <v-flex v-else>
-      <v-list  two-line>
-        <v-list-tile v-for="project in projects" :key="project.id" v-on:click="goToTask(project)">
-          <v-list-tile-title>{{project.name}}</v-list-tile-title>
-          <v-list-tile-action-text>{{project.description}}</v-list-tile-action-text>
-        </v-list-tile>
-      </v-list>
-      </v-flex>
-      <v-btn v-if="projects.length > 0" v-on:click="createProjectDialog = true" fixed right bottom color="primary" fab>
+  <v-layout row fill-height>
+    <v-data-table
+      style="width: 100%!important; height: 100%!important"
+      :headers="headers"
+      :items="projects"
+      :pagination.sync="pagination"
+      :total-items="totalProjects"
+      :loading="loading"
+      hide-actions
+      class="elevation-1"
+    >
+      <template slot="items" slot-scope="projects">
+        <tr @click="goToTask(projects.item)">
+          <td class="text-xs-left" style="max-width: 400px">{{ projects.item.name }}</td>
+          <td class="text-xs-right" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'no start date' }}</td>
+          <td class="text-xs-right" style="width: 150px;">{{ projects.item.dueOn? new Date(projects.item.dueOn).toLocaleDateString(): 'no due date' }}</td>
+          <td class="text-xs-right" style="width: 150px;">{{ projects.item.createdOn? new Date(projects.item.createdOn).toLocaleDateString(): 'no created date' }}</td>
+          <td class="text-xs-right" style="width: 120px;">{{ projects.item.minimumRemainingTime }}</td>
+          <td class="text-xs-right" style="width: 120px;">{{ projects.item.totalRemainingTime }}</td>
+          <td class="text-xs-right" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
+        </tr>
+      </template>
+      <template slot="no-data">
+        <v-alert v-if="!loading" :value="true" color="info" icon="error">
+          No Projects Yet <v-btn v-on:click="toggleCreateForm" color="primary">create</v-btn>
+        </v-alert>
+        <v-alert v-if="loading" :value="true" color="info" icon="error">
+          Loading Projects
+        </v-alert>
+      </template>
+    </v-data-table>
+      <v-btn v-if="projects.length > 0" v-on:click="toggleCreateForm" fixed right bottom color="primary" fab>
         <v-icon>add</v-icon>
       </v-btn>
     <v-dialog
@@ -31,7 +45,7 @@
         <v-toolbar card dark color="primary">
           <v-toolbar-title>Create Project</v-toolbar-title>
           <v-spacer></v-spacer>
-          <v-btn icon dark @click.native="createProjectDialog = false">
+          <v-btn icon dark @click.native="toggleCreateForm">
             <v-icon>close</v-icon>
           </v-btn>
         </v-toolbar>
@@ -92,8 +106,8 @@
               :label="`Is Parallel`"
               v-model="createProjectIsParallel"></v-switch>
             <v-btn
-              :loading="creatingProject"
-              :disabled="creatingProject"
+              :loading="creating"
+              :disabled="creating"
               color="secondary"
               @click="createProject"
             >
@@ -117,9 +131,27 @@
     name: 'projects',
     components: {FingerprintSpinner},
     data () {
-      let params = router.currentRoute.params
-      let data = {
-        loadingProjects: true,
+      return {
+        headers: [
+          {
+            text: 'Name',
+            sortable: false,
+            align: 'left',
+            value: 'name'
+          },
+          {text: 'Start', align: 'right', value: cnst.sortBy.startOn},
+          {text: 'Due', align: 'right', value: cnst.sortBy.dueOn},
+          {text: 'Created', align: 'right', value: cnst.sortBy.createdOn},
+          {text: 'Min.', sortable: false, align: 'right', value: 'minimumRemainingTime'},
+          {text: 'Tot.', sortable: false, align: 'right', value: 'totalRemainingTime'},
+          {text: 'Log.', sortable: false, align: 'right', value: 'totalLoggedTime'}
+        ],
+        totalProjects: 0,
+        pagination: {
+          descending: false,
+          sortBy: cnst.sortBy.createdOn
+        },
+        loading: false,
         createProjectDialog: false,
         createProjectName: '',
         createProjectDescription: null,
@@ -128,22 +160,77 @@
         createProjectDueOn: null,
         createProjectDueOnShowPicker: false,
         createProjectIsParallel: true,
-        creatingProject: false,
+        creating: false,
         projects: []
       }
-      api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, cnst.sortBy.createdOn, cnst.sortDir.asc, null, 100).then((res) => {
-        data.loadingProjects = false
-        data.projects = res.projects
-      })
-      return data
+    },
+    watch: {
+      pagination: {
+        handler () {
+          this.loadProjects(false)
+        },
+        deep: true
+      }
+    },
+    mounted () {
+      let htmlEl = document.querySelector('html')
+      let self = this
+      this.pageScrollListener = () => {
+        if (self.totalProjects > self.projects.length && htmlEl.clientHeight + htmlEl.scrollTop >= htmlEl.scrollHeight) {
+          self.loadProjects(true)
+        }
+      }
+      document.addEventListener('scroll', this.pageScrollListener)
+    },
+    beforeDestroy () {
+      document.removeEventListener('scroll', this.pageScrollListener)
     },
     methods: {
+      loadProjects (fromScroll) {
+        if (!this.loading) {
+          let params = router.currentRoute.params
+          this.loading = true
+          let sortDir = this.pagination.descending ? cnst.sortDir.desc : cnst.sortDir.asc
+          if (!this.pagination.sortBy) {
+            this.pagination.sortBy = cnst.sortBy.createdOn
+          }
+          let after = null
+          if (fromScroll && this.projects.length > 0) {
+            after = this.projects[this.projects.length - 1].id
+          }
+          if (!fromScroll) {
+            this.projects = []
+          }
+          api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, this.pagination.sortBy, sortDir, after, 20).then((res) => {
+            this.loading = false
+            res.projects.forEach((project) => {
+              this.projects.push(project)
+            })
+            this.totalProjects = this.projects.length
+            if (res.more) {
+              this.totalProjects++
+            }
+          })
+        }
+      },
       goToTask (project) {
         let params = router.currentRoute.params
         router.push('/app/region/' + params.region + '/shard/' + params.shard + /account/ + params.account + /project/ + project.id + /task/ + project.id)
       },
+      toggleCreateForm () {
+        if (!this.creating) {
+          this.createProjectDialog = !this.createProjectDialog
+          this.createProjectName = ''
+          this.createProjectDescription = null
+          this.createProjectStartOn = null
+          this.createProjectStartOnShowPicker = false
+          this.createProjectDueOn = null
+          this.createProjectDueOnShowPicker = false
+          this.createProjectIsParallel = true
+        }
+      },
       createProject () {
-        this.creatingProject = true
+        this.creating = true
         let params = router.currentRoute.params
         let description = null
         if (this.createProjectDescription && this.createProjectDescription.length) {
@@ -158,9 +245,10 @@
           dueOn = this.createProjectDueOn + 'T00:00:00Z'
         }
         api.v1.project.create(params.region, params.shard, params.account, this.createProjectName, description, startOn, dueOn, this.createProjectIsParallel, false).then((newProject) => {
-          this.creatingProject = false
-          this.createProjectDialog = false
-          this.projects.push(newProject)
+          this.creating = false
+          this.toggleCreateForm()
+          let params = router.currentRoute.params
+          router.push('/app/region/' + params.region + '/shard/' + params.shard + /account/ + params.account + /project/ + newProject.id + /task/ + newProject.id)
         })
       }
     }
@@ -168,7 +256,5 @@
 </script>
 
 <style scoped lang="scss">
-.projects-list {
-  width: 100%;
-}
+
 </style>
