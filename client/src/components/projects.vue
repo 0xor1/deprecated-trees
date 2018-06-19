@@ -13,10 +13,11 @@
     >
       <template slot="items" slot-scope="projects">
         <tr @click="goToTask(projects.item)">
-          <td class="text-xs-left" style="max-width: 400px">{{ projects.item.name }}</td>
-          <td class="text-xs-left" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'no start date' }}</td>
-          <td class="text-xs-left" style="width: 150px;">{{ projects.item.dueOn? new Date(projects.item.dueOn).toLocaleDateString(): 'no due date' }}</td>
-          <td class="text-xs-left" style="width: 150px;">{{ projects.item.createdOn? new Date(projects.item.createdOn).toLocaleDateString(): 'no created date' }}</td>
+          <td class="text-xs-left">{{ projects.item.name }}</td>
+          <td class="text-xs-left hidden-sm-and-down">{{ projects.item.description? projects.item.description: 'none' }}</td>
+          <td class="text-xs-left" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'none' }}</td>
+          <td class="text-xs-left" style="width: 150px;">{{ projects.item.dueOn? new Date(projects.item.dueOn).toLocaleDateString(): 'none' }}</td>
+          <td class="text-xs-left" style="width: 150px;">{{ projects.item.createdOn? new Date(projects.item.createdOn).toLocaleDateString(): 'none' }}</td>
           <td class="text-xs-left" style="width: 120px;">{{ projects.item.minimumRemainingTime }}</td>
           <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalRemainingTime }}</td>
           <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
@@ -134,6 +135,7 @@
       return {
         headers: [
           {text: 'Name', sortable: false, align: 'left', value: 'name'},
+          {text: 'Description', class: 'hidden-sm-and-down', sortable: false, align: 'left', value: 'description'},
           {text: 'Start', align: 'left', value: cnst.sortBy.startOn},
           {text: 'Due', align: 'left', value: cnst.sortBy.dueOn},
           {text: 'Created', align: 'left', value: cnst.sortBy.createdOn},

@@ -31,7 +31,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
 	// server address eg "127.0.0.2:80"
-	config.SetDefault("serverAddress", "127.0.0.2:80")
+	config.SetDefault("serverAddress", "127.0.0.1:80")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
 	// must be one of "central", "use", "usw", "euw", "asp", "aus", or "lcl" or "dev" for lcl and dev envs
@@ -50,8 +50,6 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("apiMGetTimeout", "2s")
 	// session cookie name
 	config.SetDefault("sessionCookieName", "t")
-	// cookie session domain
-	config.SetDefault("sessionDomain", ".project-trees.com")
 	// session cookie store
 	config.SetDefault("sessionAuthKey64s", []interface{}{
 		"Va3ZMfhH4qSfolDHLU7oPal599DMcL93A80rV2KLM_om_HBFFUbodZKOHAGDYg4LCvjYKaicodNmwLXROKVgcA",
@@ -129,6 +127,25 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// redis pool for private request keys to check for replay attacks
 	config.SetDefault("privateKeyRedisPool", "localhost:6379")
 
+	envClientHost := ""
+	switch config.GetString("env") {
+	case cnst.LclEnv:
+		envClientHost = "lcl.project-trees.com"
+	case cnst.DevEnv:
+		envClientHost = "dev.project-trees.com"
+	case cnst.StgEnv:
+		envClientHost = "stg.project-trees.com"
+	case cnst.ProEnv:
+		envClientHost = "project-trees.com"
+	default:
+		panic.If(err.UnknownEnv)
+	}
+
+	envClientScheme := "https://"
+	if config.GetString("env") == cnst.LclEnv {
+		envClientScheme = "http://"
+	}
+
 	authKey64s := config.GetStringSlice("sessionAuthKey64s")
 	encrKey32s := config.GetStringSlice("sessionEncrKey32s")
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
@@ -149,7 +166,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	sessionStore.Options.MaxAge = 0
 	sessionStore.Options.HttpOnly = true
 	sessionStore.Options.Secure = config.GetString("env") != cnst.LclEnv
-	sessionStore.Options.Domain = config.GetString("sessionDomain")
+	sessionStore.Options.Domain = envClientHost
 	gob.Register(id.New()) //register Id type for sessionCookie
 
 	var logError func(error)
@@ -226,6 +243,8 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		ServerCreatedOn:               t.NowUnixMillis(),
 		ServerAddress:                 config.GetString("serverAddress"),
 		Env:                           config.GetString("env"),
+		EnvClientHost:                 envClientHost,
+		EnvClientScheme: 			   envClientScheme,
 		Region:                        config.GetString("region"),
 		Version:                       config.GetString("version"),
 		FileServerDir:                 config.GetString("fileServerDir"),
@@ -273,8 +292,12 @@ type Resources struct {
 	ServerCreatedOn int64
 	// server address eg "127.0.0.1:80"
 	ServerAddress string
-	// must be one of "lcl", "dev", "stg", "prd"
+	// must be one of "lcl", "dev", "stg", "pro"
 	Env string
+	// must be one of "lcl.project-trees.com", "dev.project-trees.com", "stg.project-trees.com", "project-trees.com"
+	EnvClientHost string
+	// must be one of "https://", "http://"
+	EnvClientScheme string
 	// must be one of "lcl", "dev", "central", "use", "usw", "euw"
 	Region string
 	// commit sha
