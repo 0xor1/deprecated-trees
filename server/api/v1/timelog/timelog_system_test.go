@@ -141,32 +141,32 @@ func Test_system(t *testing.T) {
 	err = client.SetNote(aliCss, 0, org.Id, proj.Id, tl2.Id, &note)
 	assert.Nil(t, err)
 
-	tls, err := client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, cnst.SortDirDesc, nil, 100)
+	tls, err := client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 	assert.True(t, tls[1].Id.Equal(tl1.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, cnst.SortDirDesc, &tl2.Id, 100)
+	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, &tl2.Id, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl1.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, &tl2.Id, &bob.Id, &tl2.Id, cnst.SortDirDesc, nil, 100)
+	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, &tl2.Id, &bob.Id, &tl2.Id, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 
 	assert.Nil(t, client.Delete(aliCss, 0, org.Id, proj.Id, tl1.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, cnst.SortDirDesc, nil, 100)
+	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 
 	assert.Nil(t, taskClient.Delete(aliCss, 0, org.Id, proj.Id, taskM.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, cnst.SortDirDesc, nil, 100)
+	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.Equal(t, true, tls[0].TaskHasBeenDeleted)

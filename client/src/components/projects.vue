@@ -14,12 +14,12 @@
       <template slot="items" slot-scope="projects">
         <tr @click="goToTask(projects.item)">
           <td class="text-xs-left" style="max-width: 400px">{{ projects.item.name }}</td>
-          <td class="text-xs-right" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'no start date' }}</td>
-          <td class="text-xs-right" style="width: 150px;">{{ projects.item.dueOn? new Date(projects.item.dueOn).toLocaleDateString(): 'no due date' }}</td>
-          <td class="text-xs-right" style="width: 150px;">{{ projects.item.createdOn? new Date(projects.item.createdOn).toLocaleDateString(): 'no created date' }}</td>
-          <td class="text-xs-right" style="width: 120px;">{{ projects.item.minimumRemainingTime }}</td>
-          <td class="text-xs-right" style="width: 120px;">{{ projects.item.totalRemainingTime }}</td>
-          <td class="text-xs-right" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
+          <td class="text-xs-left" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'no start date' }}</td>
+          <td class="text-xs-left" style="width: 150px;">{{ projects.item.dueOn? new Date(projects.item.dueOn).toLocaleDateString(): 'no due date' }}</td>
+          <td class="text-xs-left" style="width: 150px;">{{ projects.item.createdOn? new Date(projects.item.createdOn).toLocaleDateString(): 'no created date' }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ projects.item.minimumRemainingTime }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalRemainingTime }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
         </tr>
       </template>
       <template slot="no-data">
@@ -133,18 +133,13 @@
     data () {
       return {
         headers: [
-          {
-            text: 'Name',
-            sortable: false,
-            align: 'left',
-            value: 'name'
-          },
-          {text: 'Start', align: 'right', value: cnst.sortBy.startOn},
-          {text: 'Due', align: 'right', value: cnst.sortBy.dueOn},
-          {text: 'Created', align: 'right', value: cnst.sortBy.createdOn},
-          {text: 'Min.', sortable: false, align: 'right', value: 'minimumRemainingTime'},
-          {text: 'Tot.', sortable: false, align: 'right', value: 'totalRemainingTime'},
-          {text: 'Log.', sortable: false, align: 'right', value: 'totalLoggedTime'}
+          {text: 'Name', sortable: false, align: 'left', value: 'name'},
+          {text: 'Start', align: 'left', value: cnst.sortBy.startOn},
+          {text: 'Due', align: 'left', value: cnst.sortBy.dueOn},
+          {text: 'Created', align: 'left', value: cnst.sortBy.createdOn},
+          {text: 'Min.', sortable: false, align: 'left', value: 'minimumRemainingTime'},
+          {text: 'Tot.', sortable: false, align: 'left', value: 'totalRemainingTime'},
+          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'}
         ],
         totalProjects: 0,
         pagination: {
@@ -190,19 +185,19 @@
         if (!this.loading) {
           let params = router.currentRoute.params
           this.loading = true
-          let sortDir = this.pagination.descending ? cnst.sortDir.desc : cnst.sortDir.asc
           if (!this.pagination.sortBy) {
             this.pagination.sortBy = cnst.sortBy.createdOn
+            this.pagination.descending = false
           }
           let after = null
           if (fromScroll && this.projects.length > 0) {
             after = this.projects[this.projects.length - 1].id
           }
-          if (!fromScroll) {
-            this.projects = []
-          }
-          api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, this.pagination.sortBy, sortDir, after, 100).then((res) => {
+          api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, this.pagination.sortBy, !this.pagination.descending, after, 100).then((res) => {
             this.loading = false
+            if (!fromScroll) {
+              this.projects = []
+            }
             res.projects.forEach((project) => {
               this.projects.push(project)
             })

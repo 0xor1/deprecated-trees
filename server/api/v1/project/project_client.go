@@ -18,7 +18,7 @@ type Client interface {
 	//check project access permission per user
 	Get(css *clientsession.Store, shard int, account, project id.Id) (*Project, error)
 	//check project access permission per user
-	GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*GetSetResult, error)
+	GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortAsc bool, after *id.Id, limit int) (*GetSetResult, error)
 	//must be account owner/admin
 	Delete(css *clientsession.Store, shard int, account, project id.Id) error
 	//must be account owner/admin or project admin
@@ -95,7 +95,7 @@ func (c *client) Get(css *clientsession.Store, shard int, account, proj id.Id) (
 	return nil, e
 }
 
-func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortDir cnst.SortDir, after *id.Id, limit int) (*GetSetResult, error) {
+func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortAsc bool, after *id.Id, limit int) (*GetSetResult, error) {
 	val, e := getSet.DoRequest(css, c.host, &getSetArgs{
 		Shard:           shard,
 		Account:         account,
@@ -108,7 +108,7 @@ func (c *client) GetSet(css *clientsession.Store, shard int, account id.Id, name
 		DueOnBefore:     dueOnBefore,
 		IsArchived:      isArchived,
 		SortBy:          sortBy,
-		SortDir:         sortDir,
+		SortAsc:         sortAsc,
 		After:           after,
 		Limit:           limit,
 	}, nil, &GetSetResult{})

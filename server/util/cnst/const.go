@@ -38,9 +38,6 @@ const (
 	SortByCreatedOn   = SortBy("createdon")
 	SortByStartOn     = SortBy("starton")
 	SortByDueOn       = SortBy("dueon")
-
-	SortDirAsc  = SortDir("asc")
-	SortDirDesc = SortDir("desc")
 )
 
 var (
@@ -110,31 +107,6 @@ func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 	*r = ProjectRole(val)
 	r.Validate()
 	return nil
-}
-
-type SortDir string
-
-func (sd *SortDir) Validate() {
-	panic.IfTrue(sd != nil && !(*sd == SortDirAsc || *sd == SortDirDesc), invalidConstantValueErr)
-}
-
-func (sd *SortDir) String() string {
-	return string(*sd)
-}
-
-func (sd *SortDir) UnmarshalJSON(raw []byte) error {
-	val := strings.Trim(strings.ToLower(string(raw)), `"`)
-	*sd = SortDir(val)
-	sd.Validate()
-	return nil
-}
-
-func (sd *SortDir) GtLtSymbol() string {
-	if *sd == SortDirAsc {
-		return ">"
-	} else {
-		return "<"
-	}
 }
 
 type SortBy string

@@ -85,10 +85,6 @@ export const cnst = {
     // only used for projects
     startOn: 'starton',
     dueOn: 'dueon'
-  },
-  sortDir: {
-    asc: 'asc',
-    desc: 'desc'
   }
 }
 
@@ -367,8 +363,8 @@ newApi = (opts) => {
         get: (region, shard, account, project) => {
           return get(region, '/api/v1/project/get', {shard, account, project})
         },
-        getSet: (region, shard, account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit) => {
-          return get(region, '/api/v1/project/getSet', {shard, account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortDir, after, limit})
+        getSet: (region, shard, account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortAsc, after, limit) => {
+          return get(region, '/api/v1/project/getSet', {shard, account, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortAsc, after, limit})
         },
         delete: (region, shard, account, project) => {
           return post(region, '/api/v1/project/delete', {shard, account, project})
@@ -443,8 +439,8 @@ newApi = (opts) => {
         delete: (region, shard, account, project, timeLog) => {
           return post(region, '/api/v1/task/delete', {shard, account, project, timeLog})
         },
-        get: (region, shard, account, project, task, member, timeLog, sortDir, after, limit) => {
-          return get(region, '/api/v1/task/get', {shard, account, project, task, member, timeLog, sortDir, after, limit})
+        get: (region, shard, account, project, task, member, timeLog, sortAsc, after, limit) => {
+          return get(region, '/api/v1/task/get', {shard, account, project, task, member, timeLog, sortAsc, after, limit})
         }
       }
     }

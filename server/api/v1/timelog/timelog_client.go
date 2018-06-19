@@ -2,7 +2,6 @@ package timelog
 
 import (
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	tlog "bitbucket.org/0xor1/trees/server/util/timelog"
 )
@@ -13,7 +12,7 @@ type Client interface {
 	SetDuration(css *clientsession.Store, shard int, account, project, timeLog id.Id, duration uint64) error
 	SetNote(css *clientsession.Store, shard int, account, project, timeLog id.Id, note *string) error
 	Delete(css *clientsession.Store, shard int, account, project, timeLog id.Id) error
-	Get(css *clientsession.Store, shard int, account, project id.Id, task, member, timeLog *id.Id, sortDir cnst.SortDir, after *id.Id, limit int) ([]*tlog.TimeLog, error)
+	Get(css *clientsession.Store, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) ([]*tlog.TimeLog, error)
 }
 
 func NewClient(host string) Client {
@@ -89,7 +88,7 @@ func (c *client) Delete(css *clientsession.Store, shard int, account, project, t
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, task, member, timeLog *id.Id, sortDir cnst.SortDir, after *id.Id, limit int) ([]*tlog.TimeLog, error) {
+func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) ([]*tlog.TimeLog, error) {
 	val, e := get.DoRequest(css, c.host, &getArgs{
 		Shard:   shard,
 		Account: account,
@@ -97,7 +96,7 @@ func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id
 		Task:    task,
 		Member:  member,
 		TimeLog: timeLog,
-		SortDir: sortDir,
+		SortAsc: sortAsc,
 		After:   after,
 		Limit:   limit,
 	}, nil, &[]*tlog.TimeLog{})

@@ -153,7 +153,7 @@ type getSetArgs struct {
 	DueOnBefore     *time.Time   `json:"dueOnBefore"`
 	IsArchived      bool         `json:"isArchived"`
 	SortBy          cnst.SortBy  `json:"sortBy"`
-	SortDir         cnst.SortDir `json:"sortDir"`
+	SortAsc         bool 		 `json:"sortAsc"`
 	After           *id.Id       `json:"after"`
 	Limit           int          `json:"limit"`
 }
@@ -179,12 +179,12 @@ var getSet = &endpoint.Endpoint{
 		}
 		args.Limit = validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		if myAccountRole == nil {
-			return dbGetPublicProjects(ctx, args.Shard, args.Account, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
+			return dbGetPublicProjects(ctx, args.Shard, args.Account, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortAsc, args.After, args.Limit)
 		}
 		if *myAccountRole != cnst.AccountOwner && *myAccountRole != cnst.AccountAdmin {
-			return dbGetPublicAndSpecificAccessProjects(ctx, args.Shard, args.Account, ctx.Me(), args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
+			return dbGetPublicAndSpecificAccessProjects(ctx, args.Shard, args.Account, ctx.Me(), args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortAsc, args.After, args.Limit)
 		}
-		return dbGetAllProjects(ctx, args.Shard, args.Account, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortDir, args.After, args.Limit)
+		return dbGetAllProjects(ctx, args.Shard, args.Account, args.NameContains, args.CreatedOnAfter, args.CreatedOnBefore, args.StartOnAfter, args.StartOnBefore, args.DueOnAfter, args.DueOnBefore, args.IsArchived, args.SortBy, args.SortAsc, args.After, args.Limit)
 	},
 }
 

@@ -2,7 +2,6 @@ package timelog
 
 import (
 	"bitbucket.org/0xor1/trees/server/util/cachekey"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/id"
@@ -10,6 +9,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"
+	"bitbucket.org/0xor1/trees/server/util/sortdir"
 )
 
 func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog.TimeLog {
@@ -36,11 +36,11 @@ func dbDelete(ctx ctx.Ctx, shard int, account, project, task, member, timeLog id
 	ctx.TouchDlms(cachekey.NewSetDlms().CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL deleteTimeLog(?, ?, ?, ?)`, account, project, timeLog, ctx.Me())).TimeLog(account, project, timeLog, &task, &member).ProjectActivities(account, project))
 }
 
-func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortDir cnst.SortDir, after *id.Id, limit int) []*tlog.TimeLog {
+func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) []*tlog.TimeLog {
 	if timeLog != nil {
 		return []*tlog.TimeLog{dbGetTimeLog(ctx, shard, account, project, *timeLog)}
 	}
-	cacheKey := cachekey.NewGet("timelog.dbGetTimeLogs", shard, account, project, task, member, timeLog, sortDir, after, limit)
+	cacheKey := cachekey.NewGet("timelog.dbGetTimeLogs", shard, account, project, task, member, timeLog, sortAsc, after, limit)
 	if task != nil {
 		cacheKey.TaskTimeLogSet(account, project, *task, member)
 	}
@@ -66,10 +66,10 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 		args = append(args, *member)
 	}
 	if after != nil {
-		query.WriteString(fmt.Sprintf(` AND loggedOn %s= (SELECT loggedOn FROM timeLogs WHERE account=? AND project=? AND id=?) AND id %s ?`, sortDir.GtLtSymbol(), sortDir.GtLtSymbol()))
+		query.WriteString(fmt.Sprintf(` AND loggedOn %s= (SELECT loggedOn FROM timeLogs WHERE account=? AND project=? AND id=?) AND id %s ?`, sortdir.GtLtSymbol(sortAsc), sortdir.GtLtSymbol(sortAsc)))
 		args = append(args, account, project, *after, *after)
 	}
-	query.WriteString(fmt.Sprintf(` ORDER BY loggedOn %s, id %s LIMIT ?`, sortDir.String(), sortDir.String()))
+	query.WriteString(fmt.Sprintf(` ORDER BY loggedOn %s, id %s LIMIT ?`, sortdir.String(sortAsc), sortdir.String(sortAsc)))
 	args = append(args, limit)
 	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {

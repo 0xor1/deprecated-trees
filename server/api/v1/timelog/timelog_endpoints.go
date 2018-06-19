@@ -1,7 +1,6 @@
 package timelog
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
@@ -157,7 +156,7 @@ type getArgs struct {
 	Task    *id.Id       `json:"task,omitempty"`
 	Member  *id.Id       `json:"member,omitempty"`
 	TimeLog *id.Id       `json:"timeLog,omitempty"`
-	SortDir cnst.SortDir `json:"sortDir"`
+	SortAsc bool `json:"sortAsc"`
 	After   *id.Id       `json:"after,omitempty"`
 	Limit   int          `json:"limit"`
 }
@@ -173,7 +172,7 @@ var get = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
-		return dbGetTimeLogs(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member, args.TimeLog, args.SortDir, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		return dbGetTimeLogs(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member, args.TimeLog, args.SortAsc, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
 }
 
