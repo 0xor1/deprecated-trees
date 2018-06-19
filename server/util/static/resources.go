@@ -30,12 +30,12 @@ import (
 func Config(configFile string, createPrivateV1Client func(map[string]string) private.V1Client) *Resources {
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
-	// server address eg "127.0.0.1:80"
-	config.SetDefault("serverAddress", "127.0.0.1:80")
+	// server address eg "127.0.0.2:80"
+	config.SetDefault("serverAddress", "127.0.0.2:80")
 	// must be one of "lcl", "dev", "stg", "prd"
 	config.SetDefault("env", cnst.LclEnv)
-	// must be one of "central", "use", "usw", "euw", "asp", "aus"
-	config.SetDefault("region", "")
+	// must be one of "central", "use", "usw", "euw", "asp", "aus", or "lcl" or "dev" for lcl and dev envs
+	config.SetDefault("region", cnst.LclEnv)
 	// commit sha
 	config.SetDefault("version", cnst.LclEnv)
 	// relative path from server executable to static file resource directory

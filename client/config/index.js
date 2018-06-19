@@ -44,12 +44,17 @@ module.exports = {
   dev: {
     env: require('./dev.env'),
     port: 80,
-    host: '127.0.0.2',
+    host: '127.0.0.1',
     autoOpenBrowser: true,
     assetsSubDirectory: 'static',
     assetsPublicPath: '/',
     openUri: 'http://lcl.project-trees.com',
-    proxyTable: {},
+    proxyTable: {
+      '/api': {
+        target: 'http://lcl-api.project-trees.com',
+        changeOrigin: true,
+      }
+    },
     // CSS Sourcemaps off by default because relative paths are "buggy"
     // with this option, according to the CSS-Loader README
     // (https://github.com/webpack/css-loader#sourcemaps)

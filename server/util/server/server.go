@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"io"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -108,20 +110,35 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req != nil && req.Body != nil {
 		defer req.Body.Close()
 	}
+	reqQueryValues := req.URL.Query()
+	panic.IfTruef(reqQueryValues.Get("region") == "", "missing region query param")
+	// act as a proxy for other regions if necessary, this will only happen in stg and pro environments as lcl and dev are one box environments
+	lowerRegion := strings.ToLower(reqQueryValues.Get("region"))
+	if !(s.SR.Env == cnst.LclEnv || s.SR.Env == cnst.DevEnv) && lowerRegion != s.SR.Region {
+		req.URL.Host = fmt.Sprintf("%s-%s-api.project-trees.com")
+		proxyResp, e := http.DefaultClient.Do(req)
+		panic.If(e)
+		if proxyResp != nil && proxyResp.Body != nil {
+			defer proxyResp.Body.Close()
+		}
+		for k, vv := range proxyResp.Header { // copy headers
+			for _, v := range vv {
+				resp.Header().Add(k, v)
+			}
+		}
+		for _, cookie := range proxyResp.Cookies() { //copy cookies
+			http.SetCookie(resp, cookie)
+		}
+		resp.WriteHeader(proxyResp.StatusCode)
+		io.Copy(resp, proxyResp.Body)
+		return
+	}
 	//set common headers
-	resp.Header().Set("Access-Control-Allow-Origin", ctx.EnvClientScheme() + ctx.EnvClientHost())
-	resp.Header().Set("Access-Control-Allow-Methods", "GET,POST")
-	resp.Header().Set("Access-Control-Allow-Credentials", "true")
-	resp.Header().Set("Access-Control-Allow-Headers", "X-Client,Content-Type")
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
 	resp.Header().Set("Content-Security-Policy", "default-src *.project-trees.com")
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
-	if req.Method == http.MethodOptions {
-		writeJsonOk(resp, nil)
-		return
-	}
 	//check for none api call
 	if req.Method == http.MethodGet && !strings.HasPrefix(lowerPath, "/api/") {
 		s.FileServer.ServeHTTP(resp, req)
@@ -205,7 +222,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var e error
 	var argsBytes []byte
 	var args interface{}
-	reqQueryValues := req.URL.Query()
 	if ep.Method == http.MethodGet && ep.GetArgsStruct != nil {
 		argsBytes = []byte(reqQueryValues.Get("args"))
 	} else if ep.Method == http.MethodPost && ep.GetArgsStruct != nil {

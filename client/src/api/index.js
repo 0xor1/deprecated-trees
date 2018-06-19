@@ -48,8 +48,8 @@ const config = {
 }
 
 export const cnst = {
-  central: 'central',
   regions: {
+    central: 'central',
     use: 'use', // US East
     usw: 'usw', // US West
     euw: 'euw', // EU West
@@ -88,21 +88,6 @@ export const cnst = {
   }
 }
 
-let getEnv = () => {
-  switch (location.origin) {
-    case 'http://lcl.project-trees.com':
-      return cnst.env.lcl
-    case 'https://dev.project-trees.com':
-      return cnst.env.dev
-    case 'https://stg.project-trees.com':
-      return cnst.env.stg
-    case 'https://project-trees.com':
-      return cnst.env.pro
-    default:
-      throw new Error('unknown origin')
-  }
-}
-
 let memCache = {}
 
 let newApi
@@ -112,8 +97,6 @@ newApi = (opts) => {
   let mGetSending = false
   let mGetSent = false
   let awaitingMGetList = []
-  let centralHost = config[getEnv()].central
-  let regionalHosts = config[getEnv()].regions
   let doReq = (axiosConfig) => {
     if (axiosConfig.data && typeof axiosConfig.data.shard === 'string') {
       axiosConfig.data.shard = parseInt(axiosConfig.data.shard, 10)
@@ -129,13 +112,6 @@ newApi = (opts) => {
       throw res
     })
   }
-  let buildUrl = (region, path) => {
-    if (region === cnst.regions.central) {
-      return centralHost + path
-    } else {
-      return regionalHosts[region] + path
-    }
-  }
   let getCentral = (path, data) => {
     return get(cnst.regions.central, path, data)
   }
@@ -144,12 +120,12 @@ newApi = (opts) => {
   }
 
   let get = (region, path, data) => {
-    let url = buildUrl(region, path)
+    let url = path + '?region=' + region
     if (data) {
       if (typeof data.shard === 'string') {
         data.shard = parseInt(data.shard, 10)
       }
-      url = url + '?args=' + encodeURIComponent(JSON.stringify(data))
+      url = url + '&args=' + encodeURIComponent(JSON.stringify(data))
     }
     if (!isMGetApi || (mGetSending && !mGetSent)) {
       return doReq({
@@ -176,9 +152,10 @@ newApi = (opts) => {
   }
 
   let post = (region, path, data) => {
+    let url = path + '?region=' + region
     return doReq({
       method: 'post',
-      url: buildUrl(region, path),
+      url: url,
       data: data
     })
   }
