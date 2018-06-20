@@ -1,6 +1,15 @@
 <template>
   <v-container class="pa-0" fluid fill-height>
-  <v-layout row fill-height>
+  <v-layout column fill-height>
+    <v-flex>
+      <v-text-field
+        v-model="search"
+        append-icon="search"
+        label="Search Name"
+        single-line
+        hide-details>
+      </v-text-field>
+    </v-flex>
     <v-data-table
       style="width: 100%!important; height: 100%!important"
       :headers="headers"
@@ -12,7 +21,7 @@
       class="elevation-1"
     >
       <template slot="items" slot-scope="projects">
-        <tr @click="goToTask(projects.item)">
+        <tr @click="goToTask(projects.item)" style="cursor: pointer">
           <td class="text-xs-left">{{ projects.item.name }}</td>
           <td class="text-xs-left hidden-sm-and-down">{{ projects.item.description? projects.item.description: 'none' }}</td>
           <td class="text-xs-left" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'none' }}</td>
@@ -24,8 +33,11 @@
         </tr>
       </template>
       <template slot="no-data">
-        <v-alert v-if="!loading" :value="true" color="info" icon="error">
+        <v-alert v-if="!loading && !search" :value="true" color="info" icon="error">
           No Projects Yet <v-btn v-on:click="toggleCreateForm" color="primary">create</v-btn>
+        </v-alert>
+        <v-alert v-if="!loading && search" :value="true" color="info" icon="error">
+          No Projects Match Search <h3>"{{search}}"</h3>
         </v-alert>
         <v-alert v-if="loading" :value="true" color="info" icon="error">
           Loading Projects
@@ -148,6 +160,7 @@
           descending: false,
           sortBy: cnst.sortBy.createdOn
         },
+        search: '',
         loading: false,
         createProjectDialog: false,
         createProjectName: '',
@@ -158,7 +171,8 @@
         createProjectDueOnShowPicker: false,
         createProjectIsParallel: true,
         creating: false,
-        projects: []
+        projects: [],
+        searchSetTimeout: null
       }
     },
     watch: {
@@ -167,6 +181,12 @@
           this.loadProjects(false)
         },
         deep: true
+      },
+      search (val) {
+        clearTimeout(this.searchSetTimeout)
+        this.searchSetTimeout = setTimeout(() => {
+          this.loadProjects(false)
+        }, 500)
       }
     },
     mounted () {
@@ -195,7 +215,11 @@
           if (fromScroll && this.projects.length > 0) {
             after = this.projects[this.projects.length - 1].id
           }
-          api.v1.project.getSet(params.region, params.shard, params.account, null, null, null, null, null, null, null, false, this.pagination.sortBy, !this.pagination.descending, after, 100).then((res) => {
+          let search = null
+          if (this.search && this.search.length > 0) {
+            search = this.search
+          }
+          api.v1.project.getSet(params.region, params.shard, params.account, search, null, null, null, null, null, null, false, this.pagination.sortBy, !this.pagination.descending, after, 100).then((res) => {
             this.loading = false
             if (!fromScroll) {
               this.projects = []
