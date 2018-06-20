@@ -7,7 +7,6 @@ import (
 	"bitbucket.org/0xor1/trees/server/api/v1/project"
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/server"
 	"bitbucket.org/0xor1/trees/server/util/static"
 	"github.com/stretchr/testify/assert"
@@ -155,9 +154,9 @@ func Test_system(t *testing.T) {
 	client.Delete(aliCss, 0, org.Id, proj.Id, taskA.Id)
 	client.Delete(aliCss, 0, org.Id, proj.Id, taskD.Id)
 
-	res, err := client.Get(aliCss, 0, org.Id, proj.Id, []id.Id{taskC.Id, taskH.Id})
-	assert.Equal(t, 2, len(res))
-	res, err = client.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, 100)
+	task, err := client.Get(aliCss, 0, org.Id, proj.Id, taskH.Id)
+	assert.NotNil(t, 2, task)
+	res, err := client.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, 100)
 	assert.Equal(t, 3, len(res))
 	res, err = client.GetChildren(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, 2)
 	assert.Equal(t, 2, len(res))

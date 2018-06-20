@@ -110,29 +110,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if req != nil && req.Body != nil {
 		defer req.Body.Close()
 	}
-	reqQueryValues := req.URL.Query()
-	panic.IfTruef(reqQueryValues.Get("region") == "", "missing region query param")
-	// act as a proxy for other regions if necessary, this will only happen in stg and pro environments as lcl and dev are one box environments
-	lowerRegion := strings.ToLower(reqQueryValues.Get("region"))
-	if !(s.SR.Env == cnst.LclEnv || s.SR.Env == cnst.DevEnv) && lowerRegion != s.SR.Region {
-		req.URL.Host = fmt.Sprintf("%s-%s-api.project-trees.com")
-		proxyResp, e := http.DefaultClient.Do(req)
-		panic.If(e)
-		if proxyResp != nil && proxyResp.Body != nil {
-			defer proxyResp.Body.Close()
-		}
-		for k, vv := range proxyResp.Header { // copy headers
-			for _, v := range vv {
-				resp.Header().Add(k, v)
-			}
-		}
-		for _, cookie := range proxyResp.Cookies() { //copy cookies
-			http.SetCookie(resp, cookie)
-		}
-		resp.WriteHeader(proxyResp.StatusCode)
-		io.Copy(resp, proxyResp.Body)
-		return
-	}
 	//set common headers
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
@@ -158,6 +135,29 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		ctx.session.Values = map[interface{}]interface{}{}
 		ctx.session.Save(req, resp)
 		writeJsonOk(resp, nil)
+		return
+	}
+	reqQueryValues := req.URL.Query()
+	panic.IfTruef(reqQueryValues.Get("region") == "", "missing region query param")
+	// act as a proxy for other regions if necessary, this will only happen in stg and pro environments as lcl and dev are one box environments
+	lowerRegion := strings.ToLower(reqQueryValues.Get("region"))
+	if !(s.SR.Env == cnst.LclEnv || s.SR.Env == cnst.DevEnv) && lowerRegion != s.SR.Region {
+		req.URL.Host = fmt.Sprintf("%s-%s-api.project-trees.com")
+		proxyResp, e := http.DefaultClient.Do(req)
+		panic.If(e)
+		if proxyResp != nil && proxyResp.Body != nil {
+			defer proxyResp.Body.Close()
+		}
+		for k, vv := range proxyResp.Header { // copy headers
+			for _, v := range vv {
+				resp.Header().Add(k, v)
+			}
+		}
+		for _, cookie := range proxyResp.Cookies() { //copy cookies
+			http.SetCookie(resp, cookie)
+		}
+		resp.WriteHeader(proxyResp.StatusCode)
+		io.Copy(resp, proxyResp.Body)
 		return
 	}
 	//check for special case of api mget
@@ -359,9 +359,17 @@ type mgetResponse struct {
 func (r *mgetResponse) MarshalJSON() ([]byte, error) {
 	if r.includeHeaders {
 		h, _ := json.Marshal(r.Header)
-		return []byte(fmt.Sprintf(`{"code":%d,"header":%s,"body":%s}`, r.Code, h, r.Body)), nil
+		if r.Code == 200 {
+			return []byte(fmt.Sprintf(`{"code":%d,"header":%s,"body":%s}`, r.Code, h, r.Body)), nil
+		} else {
+			return []byte(fmt.Sprintf(`{"code":%d,"header":%s,"body":%q}`, r.Code, h, r.Body)), nil
+		}
 	} else {
-		return []byte(fmt.Sprintf(`{"code":%d,"body":%s}`, r.Code, r.Body)), nil
+		if r.Code == 200 {
+			return []byte(fmt.Sprintf(`{"code":%d,"body":%s}`, r.Code, r.Body)), nil
+		} else {
+			return []byte(fmt.Sprintf(`{"code":%d,"body":%q}`, r.Code, r.Body)), nil
+		}
 	}
 }
 

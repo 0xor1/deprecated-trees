@@ -390,14 +390,14 @@ newApi = (opts) => {
         delete: (region, shard, account, project, task) => {
           return post(region, '/api/v1/task/delete', {shard, account, project, task})
         },
-        get: (region, shard, account, project, tasks) => {
-          return get(region, '/api/v1/task/get', {shard, account, project, tasks})
+        get: (region, shard, account, project, task) => {
+          return get(region, '/api/v1/task/get', {shard, account, project, task})
         },
         getChildren: (region, shard, account, project, parent, fromSibling, limit) => {
           return get(region, '/api/v1/task/getChildren', {shard, account, project, parent, fromSibling, limit})
         },
         getAncestors: (region, shard, account, project, child, limit) => {
-          return get(region, '/api/v1/task/getAncestors', {shard, account, project, parent, child, limit})
+          return get(region, '/api/v1/task/getAncestors', {shard, account, project, child, limit})
         }
       },
       timeLog: {

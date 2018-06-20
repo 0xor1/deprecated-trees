@@ -222,7 +222,7 @@ type deleteArgs struct {
 	Task    id.Id `json:"task"`
 }
 
-var deleteTask = &endpoint.Endpoint{
+var delete = &endpoint.Endpoint{
 	Method:          http.MethodPost,
 	Path:            "/api/v1/task/delete",
 	RequiresSession: true,
@@ -243,22 +243,22 @@ type getArgs struct {
 	Shard   int     `json:"shard"`
 	Account id.Id   `json:"account"`
 	Project id.Id   `json:"project"`
-	Tasks   []id.Id `json:"tasks"`
+	Task    id.Id 	`json:"task"`
 }
 
 var get = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/get",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*Task{{}},
+	ExampleResponseStructure: &Task{},
 	GetArgsStruct: func() interface{} {
 		return &getArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
-		validate.EntityCount(len(args.Tasks), ctx.MaxProcessEntityCount())
-		return dbGetTasks(ctx, args.Shard, args.Account, args.Project, args.Tasks)
+		validate.EntityCount(len(args.Task), ctx.MaxProcessEntityCount())
+		return dbGetTask(ctx, args.Shard, args.Account, args.Project, args.Task)
 	},
 }
 
@@ -295,9 +295,9 @@ type getAncestorTasksArgs struct {
 	Limit   int   `json:"limit"`
 }
 
-var getAncestorTasks = &endpoint.Endpoint{
+var getAncestors = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
-	Path:                     "/api/v1/task/getAncestorTasks",
+	Path:                     "/api/v1/task/getAncestors",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*Ancestor{{}},
 	GetArgsStruct: func() interface{} {
@@ -319,10 +319,10 @@ var Endpoints = []*endpoint.Endpoint{
 	setMember,
 	setRemainingTime,
 	move,
-	deleteTask,
+	delete,
 	get,
 	getChildren,
-	getAncestorTasks,
+	getAncestors,
 }
 
 type Task struct {

@@ -6,7 +6,6 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
-	"bytes"
 	"github.com/0xor1/panic"
 )
 
@@ -118,33 +117,15 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 	ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
 }
 
-func dbGetTasks(ctx ctx.Ctx, shard int, account, project id.Id, tasks []id.Id) []*Task {
-	cacheKey := cachekey.NewGet("project.dbGetTasks", shard, account, project, tasks)
-	res := make([]*Task, 0, len(tasks))
+func dbGetTask(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id) *Task {
+	cacheKey := cachekey.NewGet("project.dbGetTask", shard, account, project, task)
+	res := Task{}
 	if ctx.GetCacheValue(&res, cacheKey) {
-		return res
+		return &res
 	}
-	query := bytes.NewBufferString(`SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id IN (?`)
-	queryArgs := make([]interface{}, 0, 2+len(tasks))
-	queryArgs = append(queryArgs, account, project, tasks[0])
-	for _, task := range tasks[1:] {
-		query.WriteString(`,?`)
-		queryArgs = append(queryArgs, task)
-	}
-	query.WriteString(`)`)
-	rows, e := ctx.TreeQuery(shard, query.String(), queryArgs...)
-	if rows != nil {
-		defer rows.Close()
-	}
-	panic.If(e)
-	for rows.Next() {
-		ta := Task{}
-		panic.If(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
-		nilOutPropertiesThatAreNotNilInTheDb(&ta)
-		res = append(res, &ta)
-	}
+	panic.If(ctx.TreeQueryRow(shard, `SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id = ?`, account, project, task).Scan(&res.Id, &res.Parent, &res.FirstChild, &res.NextSibling, &res.IsAbstract, &res.Name, &res.Description, &res.CreatedOn, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.LinkedFileCount, &res.ChatCount, &res.ChildCount, &res.DescendantCount, &res.IsParallel, &res.Member))
 	ctx.SetCacheValue(res, cacheKey)
-	return res
+	return &res
 }
 
 func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*Task {

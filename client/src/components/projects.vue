@@ -33,11 +33,11 @@
         </tr>
       </template>
       <template slot="no-data">
-        <v-alert v-if="!loading && !search" :value="true" color="info" icon="error">
+        <v-alert v-if="!loading && !lastUsedSearch" :value="true" color="info" icon="error">
           No Projects Yet <v-btn v-on:click="toggleCreateForm" color="primary">create</v-btn>
         </v-alert>
-        <v-alert v-if="!loading && search" :value="true" color="info" icon="error">
-          No Projects Match Search <h3>"{{search}}"</h3>
+        <v-alert v-if="!loading && lastUsedSearch" :value="true" color="info" icon="error">
+          No Projects Match Search <h3>"{{lastUsedSearch}}"</h3>
         </v-alert>
         <v-alert v-if="loading" :value="true" color="info" icon="error">
           Loading Projects
@@ -161,6 +161,7 @@
           sortBy: cnst.sortBy.createdOn
         },
         search: '',
+        lastUsedSearch: '',
         loading: false,
         createProjectDialog: false,
         createProjectName: '',
@@ -219,6 +220,7 @@
           if (this.search && this.search.length > 0) {
             search = this.search
           }
+          this.lastUsedSearch = search
           api.v1.project.getSet(params.region, params.shard, params.account, search, null, null, null, null, null, null, false, this.pagination.sortBy, !this.pagination.descending, after, 100).then((res) => {
             this.loading = false
             if (!fromScroll) {

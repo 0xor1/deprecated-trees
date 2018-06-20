@@ -14,7 +14,7 @@ type Client interface {
 	SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error //only applies to tasks
 	Move(css *clientsession.Store, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
 	Delete(css *clientsession.Store, shard int, account, project, task id.Id) error
-	Get(css *clientsession.Store, shard int, account, project id.Id, tasks []id.Id) ([]*Task, error)
+	Get(css *clientsession.Store, shard int, account, project id.Id, task id.Id) (*Task, error)
 	GetChildren(css *clientsession.Store, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) ([]*Task, error)
 	GetAncestors(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*Ancestor, error)
 }
@@ -117,7 +117,7 @@ func (c *client) Move(css *clientsession.Store, shard int, account, project, tas
 }
 
 func (c *client) Delete(css *clientsession.Store, shard int, account, project, task id.Id) error {
-	_, e := deleteTask.DoRequest(css, c.host, &deleteArgs{
+	_, e := delete.DoRequest(css, c.host, &deleteArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
@@ -126,15 +126,15 @@ func (c *client) Delete(css *clientsession.Store, shard int, account, project, t
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, tasks []id.Id) ([]*Task, error) {
+func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, task id.Id) (*Task, error) {
 	val, e := get.DoRequest(css, c.host, &getArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
-		Tasks:   tasks,
-	}, nil, &[]*Task{})
+		Task:    task,
+	}, nil, &Task{})
 	if val != nil {
-		return *val.(*[]*Task), e
+		return val.(*Task), e
 	}
 	return nil, e
 }
@@ -155,7 +155,7 @@ func (c *client) GetChildren(css *clientsession.Store, shard int, account, proje
 }
 
 func (c *client) GetAncestors(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*Ancestor, error) {
-	val, e := getAncestorTasks.DoRequest(css, c.host, &getAncestorTasksArgs{
+	val, e := getAncestors.DoRequest(css, c.host, &getAncestorTasksArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
