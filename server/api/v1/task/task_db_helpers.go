@@ -128,56 +128,71 @@ func dbGetTask(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id) *Task
 	return &res
 }
 
-func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) []*Task {
-	res := make([]*Task, 0, limit)
+func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) *getChildrenResp {
+	res := getChildrenResp{}
 	cacheKey := cachekey.NewGet("project.dbGetChildTasks", shard, account, project, parent, fromSibling, limit).TaskChildrenSet(account, project, parent)
 	if ctx.GetCacheValue(&res, cacheKey) {
-		return res
+		return &res
 	}
-	rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, account, project, parent, fromSibling, limit)
+	rows, e := ctx.TreeQuery(shard, `CALL getChildTasks(?, ?, ?, ?, ?)`, account, project, parent, fromSibling, limit+1)
 	if rows != nil {
 		defer rows.Close()
 	}
 	panic.If(e)
+	childSet := make([]*Task, 0, limit+1)
 	for rows.Next() {
 		ta := Task{}
 		panic.If(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
-		res = append(res, &ta)
+		childSet = append(childSet, &ta)
+	}
+	if len(childSet) == limit+1 {
+		res.Children = childSet[:limit]
+		res.More = true
+	} else {
+		res.Children = childSet
+		res.More = false
 	}
 	ctx.SetCacheValue(res, cacheKey)
-	return res
+	return &res
 }
 
-func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) []*Ancestor {
-	res := make([]*Ancestor, 0, limit)
+func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) *getAncestorsResp {
+	res := getAncestorsResp{}
 	cacheKey := cachekey.NewGet("project.dbGetAncestorTasks", shard, account, project, child, limit).Task(account, project, child)
 	innerCacheKey := cachekey.NewGet("project.dbGetAncestorTasks-inner", shard, account, project, child, limit)
 	innerRes := true
 	if ctx.GetCacheValue(&res, cacheKey) {
-		for _, a := range res { //we have to check each task dlm here to ensure the upwards ancestor tree structure is unchanged since the result was cached
+		for _, a := range res.Ancestors { //we have to check each task dlm here to ensure the upwards ancestor tree structure is unchanged since the result was cached
 			innerCacheKey.Task(account, project, a.Id)
 		}
 		if ctx.GetCacheValue(&innerRes, innerCacheKey) {
-			return res
+			return &res
 		}
 		innerCacheKey.DlmKeys = make([]string, 0, 10)
-		res = make([]*Ancestor, 0, limit)
 	}
-	rows, e := ctx.TreeQuery(shard, `CALL getAncestorTasks(?, ?, ?, ?)`, account, project, child, limit)
+	rows, e := ctx.TreeQuery(shard, `CALL getAncestorTasks(?, ?, ?, ?)`, account, project, child, limit+1)
 	if rows != nil {
 		defer rows.Close()
 	}
 	panic.If(e)
+	ancestorSet := make([]*Ancestor, 0, limit+1)
 	for rows.Next() {
 		an := Ancestor{}
 		panic.If(rows.Scan(&an.Id, &an.Name))
 		innerCacheKey.Task(account, project, an.Id)
-		res = append(res, &an)
+		ancestorSet = append(ancestorSet, &an)
+	}
+	if len(ancestorSet) == limit+1 {
+		res.Ancestors = ancestorSet[:limit]
+		res.More = true
+	} else {
+		res.Ancestors = ancestorSet
+		res.More = false
 	}
 	ctx.SetCacheValue(res, cacheKey)
 	ctx.SetCacheValue(true, innerCacheKey)
-	return res
+	return &res
 }
 
 func nilOutPropertiesThatAreNotNilInTheDb(ta *Task) {

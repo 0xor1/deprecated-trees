@@ -26,7 +26,7 @@ func Test_system(t *testing.T) {
 	projectClient := project.NewClient(testServer.URL)
 	taskClient := task.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
-	region := cnst.LclEnv
+	region := cnst.EUWRegion
 	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
 		region: testServer.URL,
 	})
@@ -79,7 +79,7 @@ func Test_system(t *testing.T) {
 	start := time.Now()
 	end := start.Add(5 * 24 * time.Hour)
 	desc := "desc"
-	proj, err := projectClient.Create(aliCss, 0, org.Id, "proj", &desc, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
+	proj, err := projectClient.Create(aliCss, region, 0, org.Id, "proj", &desc, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
 
 	oneVal := uint64(1)
 	twoVal := uint64(2)
@@ -88,7 +88,7 @@ func Test_system(t *testing.T) {
 	falseVal := false
 	trueVal := true
 	//create task needs extensive testing to test every avenue of the stored procedure
-	taskA, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, proj.Id, nil, "A", &desc, true, &falseVal, nil, nil)
+	taskA, err := taskClient.Create(aliCss, region, 0, org.Id, proj.Id, proj.Id, nil, "A", &desc, true, &falseVal, nil, nil)
 	assert.Equal(t, true, taskA.IsAbstract)
 	assert.Equal(t, "A", taskA.Name)
 	assert.Equal(t, "desc", *taskA.Description)
@@ -102,21 +102,21 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, uint64(0), *taskA.DescendantCount)
 	assert.Equal(t, false, *taskA.IsParallel)
 	assert.Nil(t, taskA.Member)
-	taskClient.Create(aliCss, 0, org.Id, proj.Id, proj.Id, &taskA.Id, "B", &desc, true, &falseVal, nil, nil)
-	taskC, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, proj.Id, nil, "C", &desc, true, &trueVal, nil, nil)
-	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, proj.Id, &taskA.Id, "D", &desc, false, nil, &aliId, &fourVal)
-	taskE, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, "E", &desc, false, nil, &aliId, &twoVal)
-	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "F", &desc, false, nil, &aliId, &oneVal)
-	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, nil, "G", &desc, false, nil, &aliId, &fourVal)
-	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "H", &desc, false, nil, &aliId, &threeVal)
-	taskI, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, nil, "I", &desc, false, nil, &aliId, &twoVal)
-	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "J", &desc, false, nil, &aliId, &oneVal)
-	_, err = taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, nil, "K", &desc, false, nil, &aliId, &fourVal)
-	taskL, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "L", &desc, true, &trueVal, nil, nil)
-	taskM, err := taskClient.Create(aliCss, 0, org.Id, proj.Id, taskL.Id, nil, "M", &desc, false, nil, &aliId, &threeVal)
+	taskClient.Create(aliCss, region, 0, org.Id, proj.Id, proj.Id, &taskA.Id, "B", &desc, true, &falseVal, nil, nil)
+	taskC, err := taskClient.Create(aliCss, region, 0, org.Id, proj.Id, proj.Id, nil, "C", &desc, true, &trueVal, nil, nil)
+	_, err = taskClient.Create(aliCss, region, 0, org.Id, proj.Id, proj.Id, &taskA.Id, "D", &desc, false, nil, &aliId, &fourVal)
+	taskE, err := taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskC.Id, nil, "E", &desc, false, nil, &aliId, &twoVal)
+	_, err = taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "F", &desc, false, nil, &aliId, &oneVal)
+	_, err = taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskC.Id, nil, "G", &desc, false, nil, &aliId, &fourVal)
+	_, err = taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskC.Id, &taskE.Id, "H", &desc, false, nil, &aliId, &threeVal)
+	taskI, err := taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskA.Id, nil, "I", &desc, false, nil, &aliId, &twoVal)
+	_, err = taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "J", &desc, false, nil, &aliId, &oneVal)
+	_, err = taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskA.Id, nil, "K", &desc, false, nil, &aliId, &fourVal)
+	taskL, err := taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "L", &desc, true, &trueVal, nil, nil)
+	taskM, err := taskClient.Create(aliCss, region, 0, org.Id, proj.Id, taskL.Id, nil, "M", &desc, false, nil, &aliId, &threeVal)
 
 	aNote := "word up!"
-	tl1, err := client.Create(aliCss, 0, org.Id, proj.Id, taskM.Id, 30, &aNote)
+	tl1, err := client.Create(aliCss, region, 0, org.Id, proj.Id, taskM.Id, 30, &aNote)
 	assert.Nil(t, err)
 	assert.True(t, tl1.Project.Equal(proj.Id))
 	assert.True(t, tl1.Member.Equal(aliId))
@@ -125,7 +125,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, uint64(30), tl1.Duration)
 	assert.InDelta(t, ti.NowUnixMillis()/1000, tl1.LoggedOn.Unix(), 1)
 
-	tl2, err := client.CreateAndSetRemainingTime(bobCss, 0, org.Id, proj.Id, taskM.Id, 100, 30, &aNote)
+	tl2, err := client.CreateAndSetRemainingTime(bobCss, region, 0, org.Id, proj.Id, taskM.Id, 100, 30, &aNote)
 	assert.Nil(t, err)
 	assert.True(t, tl2.Project.Equal(proj.Id))
 	assert.True(t, tl2.Member.Equal(bobId))
@@ -134,39 +134,39 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, uint64(30), tl2.Duration)
 	assert.InDelta(t, ti.NowUnixMillis()/1000, tl2.LoggedOn.Unix(), 1)
 
-	err = client.SetDuration(aliCss, 0, org.Id, proj.Id, tl2.Id, 100)
+	err = client.SetDuration(aliCss, region, 0, org.Id, proj.Id, tl2.Id, 100)
 	assert.Nil(t, err)
 
 	note := "word down?"
-	err = client.SetNote(aliCss, 0, org.Id, proj.Id, tl2.Id, &note)
+	err = client.SetNote(aliCss, region, 0, org.Id, proj.Id, tl2.Id, &note)
 	assert.Nil(t, err)
 
-	tls, err := client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
+	tls, err := client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 	assert.True(t, tls[1].Id.Equal(tl1.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, &tl2.Id, 100)
+	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, &tl2.Id, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl1.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, &tl2.Id, &bob.Id, &tl2.Id, false, nil, 100)
+	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, &tl2.Id, &bob.Id, &tl2.Id, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 
-	assert.Nil(t, client.Delete(aliCss, 0, org.Id, proj.Id, tl1.Id))
+	assert.Nil(t, client.Delete(aliCss, region, 0, org.Id, proj.Id, tl1.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
+	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.True(t, tls[0].Id.Equal(tl2.Id))
 
-	assert.Nil(t, taskClient.Delete(aliCss, 0, org.Id, proj.Id, taskM.Id))
+	assert.Nil(t, taskClient.Delete(aliCss, region, 0, org.Id, proj.Id, taskM.Id))
 
-	tls, err = client.Get(aliCss, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
+	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, 1, len(tls))
 	assert.Equal(t, true, tls[0].TaskHasBeenDeleted)

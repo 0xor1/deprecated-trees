@@ -5,11 +5,11 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/sortdir"
 	tlog "bitbucket.org/0xor1/trees/server/util/timelog"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"
-	"bitbucket.org/0xor1/trees/server/util/sortdir"
 )
 
 func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog.TimeLog {

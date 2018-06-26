@@ -6,17 +6,17 @@ import (
 )
 
 type Client interface {
-	Create(css *clientsession.Store, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, remainingTime *uint64) (*Task, error)
-	SetName(css *clientsession.Store, shard int, account, project, task id.Id, name string) error
-	SetDescription(css *clientsession.Store, shard int, account, project, task id.Id, description *string) error
-	SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error         //only applies to abstract tasks
-	SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error               //only applies to tasks
-	SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error //only applies to tasks
-	Move(css *clientsession.Store, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
-	Delete(css *clientsession.Store, shard int, account, project, task id.Id) error
-	Get(css *clientsession.Store, shard int, account, project id.Id, task id.Id) (*Task, error)
-	GetChildren(css *clientsession.Store, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) ([]*Task, error)
-	GetAncestors(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*Ancestor, error)
+	Create(css *clientsession.Store, region string, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, remainingTime *uint64) (*Task, error)
+	SetName(css *clientsession.Store, region string, shard int, account, project, task id.Id, name string) error
+	SetDescription(css *clientsession.Store, region string, shard int, account, project, task id.Id, description *string) error
+	SetIsParallel(css *clientsession.Store, region string, shard int, account, project, task id.Id, isParallel bool) error         //only applies to abstract tasks
+	SetMember(css *clientsession.Store, region string, shard int, account, project, task id.Id, member *id.Id) error               //only applies to tasks
+	SetRemainingTime(css *clientsession.Store, region string, shard int, account, project, task id.Id, remainingTime uint64) error //only applies to tasks
+	Move(css *clientsession.Store, region string, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
+	Delete(css *clientsession.Store, region string, shard int, account, project, task id.Id) error
+	Get(css *clientsession.Store, region string, shard int, account, project id.Id, task id.Id) (*Task, error)
+	GetChildren(css *clientsession.Store, region string, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) (*getChildrenResp, error)
+	GetAncestors(css *clientsession.Store, region string, shard int, account, project, child id.Id, limit int) (*getAncestorsResp, error)
 }
 
 func NewClient(host string) Client {
@@ -29,8 +29,8 @@ type client struct {
 	host string
 }
 
-func (c *client) Create(css *clientsession.Store, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, totalRemainingTime *uint64) (*Task, error) {
-	val, e := create.DoRequest(css, c.host, &createArgs{
+func (c *client) Create(css *clientsession.Store, region string, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, totalRemainingTime *uint64) (*Task, error) {
+	val, e := create.DoRequest(css, c.host, region, &createArgs{
 		Shard:              shard,
 		Account:            account,
 		Project:            project,
@@ -49,8 +49,8 @@ func (c *client) Create(css *clientsession.Store, shard int, account, project, p
 	return nil, e
 }
 
-func (c *client) SetName(css *clientsession.Store, shard int, account, project, task id.Id, name string) error {
-	_, e := setName.DoRequest(css, c.host, &setNameArgs{
+func (c *client) SetName(css *clientsession.Store, region string, shard int, account, project, task id.Id, name string) error {
+	_, e := setName.DoRequest(css, c.host, region, &setNameArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
@@ -60,8 +60,8 @@ func (c *client) SetName(css *clientsession.Store, shard int, account, project, 
 	return e
 }
 
-func (c *client) SetDescription(css *clientsession.Store, shard int, account, project, task id.Id, description *string) error {
-	_, e := setDescription.DoRequest(css, c.host, &setDescriptionArgs{
+func (c *client) SetDescription(css *clientsession.Store, region string, shard int, account, project, task id.Id, description *string) error {
+	_, e := setDescription.DoRequest(css, c.host, region, &setDescriptionArgs{
 		Shard:       shard,
 		Account:     account,
 		Project:     project,
@@ -71,8 +71,8 @@ func (c *client) SetDescription(css *clientsession.Store, shard int, account, pr
 	return e
 }
 
-func (c *client) SetIsParallel(css *clientsession.Store, shard int, account, project, task id.Id, isParallel bool) error {
-	_, e := setIsParallel.DoRequest(css, c.host, &setIsParallelArgs{
+func (c *client) SetIsParallel(css *clientsession.Store, region string, shard int, account, project, task id.Id, isParallel bool) error {
+	_, e := setIsParallel.DoRequest(css, c.host, region, &setIsParallelArgs{
 		Shard:      shard,
 		Account:    account,
 		Project:    project,
@@ -82,8 +82,8 @@ func (c *client) SetIsParallel(css *clientsession.Store, shard int, account, pro
 	return e
 }
 
-func (c *client) SetMember(css *clientsession.Store, shard int, account, project, task id.Id, member *id.Id) error {
-	_, e := setMember.DoRequest(css, c.host, &setMemberArgs{
+func (c *client) SetMember(css *clientsession.Store, region string, shard int, account, project, task id.Id, member *id.Id) error {
+	_, e := setMember.DoRequest(css, c.host, region, &setMemberArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
@@ -93,8 +93,8 @@ func (c *client) SetMember(css *clientsession.Store, shard int, account, project
 	return e
 }
 
-func (c *client) SetRemainingTime(css *clientsession.Store, shard int, account, project, task id.Id, remainingTime uint64) error {
-	_, e := setRemainingTime.DoRequest(css, c.host, &setRemainingTimeArgs{
+func (c *client) SetRemainingTime(css *clientsession.Store, region string, shard int, account, project, task id.Id, remainingTime uint64) error {
+	_, e := setRemainingTime.DoRequest(css, c.host, region, &setRemainingTimeArgs{
 		Shard:         shard,
 		Account:       account,
 		Project:       project,
@@ -104,8 +104,8 @@ func (c *client) SetRemainingTime(css *clientsession.Store, shard int, account, 
 	return e
 }
 
-func (c *client) Move(css *clientsession.Store, shard int, account, project, task, newParent id.Id, newPreviousSibling *id.Id) error {
-	_, e := move.DoRequest(css, c.host, &moveArgs{
+func (c *client) Move(css *clientsession.Store, region string, shard int, account, project, task, newParent id.Id, newPreviousSibling *id.Id) error {
+	_, e := move.DoRequest(css, c.host, region, &moveArgs{
 		Shard:              shard,
 		Account:            account,
 		Project:            project,
@@ -116,8 +116,8 @@ func (c *client) Move(css *clientsession.Store, shard int, account, project, tas
 	return e
 }
 
-func (c *client) Delete(css *clientsession.Store, shard int, account, project, task id.Id) error {
-	_, e := delete.DoRequest(css, c.host, &deleteArgs{
+func (c *client) Delete(css *clientsession.Store, region string, shard int, account, project, task id.Id) error {
+	_, e := delete.DoRequest(css, c.host, region, &deleteArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
@@ -126,8 +126,8 @@ func (c *client) Delete(css *clientsession.Store, shard int, account, project, t
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id, task id.Id) (*Task, error) {
-	val, e := get.DoRequest(css, c.host, &getArgs{
+func (c *client) Get(css *clientsession.Store, region string, shard int, account, project id.Id, task id.Id) (*Task, error) {
+	val, e := get.DoRequest(css, c.host, region, &getArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
@@ -139,31 +139,31 @@ func (c *client) Get(css *clientsession.Store, shard int, account, project id.Id
 	return nil, e
 }
 
-func (c *client) GetChildren(css *clientsession.Store, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) ([]*Task, error) {
-	val, e := getChildren.DoRequest(css, c.host, &getChildrenArgs{
+func (c *client) GetChildren(css *clientsession.Store, region string, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) (*getChildrenResp, error) {
+	val, e := getChildren.DoRequest(css, c.host, region, &getChildrenArgs{
 		Shard:       shard,
 		Account:     account,
 		Project:     project,
 		Parent:      parent,
 		FromSibling: fromSibling,
 		Limit:       limit,
-	}, nil, &[]*Task{})
+	}, nil, &getChildrenResp{})
 	if val != nil {
-		return *val.(*[]*Task), e
+		return val.(*getChildrenResp), e
 	}
 	return nil, e
 }
 
-func (c *client) GetAncestors(css *clientsession.Store, shard int, account, project, child id.Id, limit int) ([]*Ancestor, error) {
-	val, e := getAncestors.DoRequest(css, c.host, &getAncestorTasksArgs{
+func (c *client) GetAncestors(css *clientsession.Store, region string, shard int, account, project, child id.Id, limit int) (*getAncestorsResp, error) {
+	val, e := getAncestors.DoRequest(css, c.host, region, &getAncestorsArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
 		Task:    child,
 		Limit:   limit,
-	}, nil, &[]*Ancestor{})
+	}, nil, &getAncestorsResp{})
 	if val != nil {
-		return *val.(*[]*Ancestor), e
+		return val.(*getAncestorsResp), e
 	}
 	return nil, e
 }

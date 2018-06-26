@@ -142,20 +142,20 @@ var get = &endpoint.Endpoint{
 }
 
 type getSetArgs struct {
-	Shard           int          `json:"shard"`
-	Account         id.Id        `json:"account"`
-	NameContains    *string      `json:"nameContains"`
-	CreatedOnAfter  *time.Time   `json:"createdOnAfter"`
-	CreatedOnBefore *time.Time   `json:"createdOnBefore"`
-	StartOnAfter    *time.Time   `json:"startOnAfter"`
-	StartOnBefore   *time.Time   `json:"startOnBefore"`
-	DueOnAfter      *time.Time   `json:"dueOnAfter"`
-	DueOnBefore     *time.Time   `json:"dueOnBefore"`
-	IsArchived      bool         `json:"isArchived"`
-	SortBy          cnst.SortBy  `json:"sortBy"`
-	SortAsc         bool 		 `json:"sortAsc"`
-	After           *id.Id       `json:"after"`
-	Limit           int          `json:"limit"`
+	Shard           int         `json:"shard"`
+	Account         id.Id       `json:"account"`
+	NameContains    *string     `json:"nameContains"`
+	CreatedOnAfter  *time.Time  `json:"createdOnAfter"`
+	CreatedOnBefore *time.Time  `json:"createdOnBefore"`
+	StartOnAfter    *time.Time  `json:"startOnAfter"`
+	StartOnBefore   *time.Time  `json:"startOnBefore"`
+	DueOnAfter      *time.Time  `json:"dueOnAfter"`
+	DueOnBefore     *time.Time  `json:"dueOnBefore"`
+	IsArchived      bool        `json:"isArchived"`
+	SortBy          cnst.SortBy `json:"sortBy"`
+	SortAsc         bool        `json:"sortAsc"`
+	After           *id.Id      `json:"after"`
+	Limit           int         `json:"limit"`
 }
 
 type GetSetResult struct {

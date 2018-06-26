@@ -35,7 +35,7 @@ func (c *client) IsValidRegion(region string) bool {
 
 func (c *client) CreateAccount(region string, account, me id.Id, myName string, myDisplayName *string, hasAvatar bool) (int, error) {
 	respVal := 0
-	val, e := createAccount.DoRequest(nil, c.getHost(region), &createAccountArgs{
+	val, e := createAccount.DoRequest(nil, c.getHost(region), region, &createAccountArgs{
 		Account:       account,
 		Me:            me,
 		MyName:        myName,
@@ -49,7 +49,7 @@ func (c *client) CreateAccount(region string, account, me id.Id, myName string, 
 }
 
 func (c *client) DeleteAccount(region string, shard int, account, me id.Id) error {
-	_, e := deleteAccount.DoRequest(nil, c.getHost(region), &deleteAccountArgs{
+	_, e := deleteAccount.DoRequest(nil, c.getHost(region), region, &deleteAccountArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,
@@ -58,7 +58,7 @@ func (c *client) DeleteAccount(region string, shard int, account, me id.Id) erro
 }
 
 func (c *client) AddMembers(region string, shard int, account, me id.Id, members []*private.AddMember) error {
-	_, e := addMembers.DoRequest(nil, c.getHost(region), &addMembersArgs{
+	_, e := addMembers.DoRequest(nil, c.getHost(region), region, &addMembersArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,
@@ -68,7 +68,7 @@ func (c *client) AddMembers(region string, shard int, account, me id.Id, members
 }
 
 func (c *client) RemoveMembers(region string, shard int, account, me id.Id, members []id.Id) error {
-	_, err := removeMembers.DoRequest(nil, c.getHost(region), &removeMembersArgs{
+	_, err := removeMembers.DoRequest(nil, c.getHost(region), region, &removeMembersArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,
@@ -79,7 +79,7 @@ func (c *client) RemoveMembers(region string, shard int, account, me id.Id, memb
 
 func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, me id.Id) (bool, error) {
 	respVal := false
-	val, e := memberIsOnlyAccountOwner.DoRequest(nil, c.getHost(region), &memberIsOnlyAccountOwnerArgs{
+	val, e := memberIsOnlyAccountOwner.DoRequest(nil, c.getHost(region), region, &memberIsOnlyAccountOwnerArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,
@@ -91,7 +91,7 @@ func (c *client) MemberIsOnlyAccountOwner(region string, shard int, account, me 
 }
 
 func (c *client) SetMemberName(region string, shard int, account, me id.Id, newName string) error {
-	_, e := setMemberName.DoRequest(nil, c.getHost(region), &setMemberNameArgs{
+	_, e := setMemberName.DoRequest(nil, c.getHost(region), region, &setMemberNameArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,
@@ -101,7 +101,7 @@ func (c *client) SetMemberName(region string, shard int, account, me id.Id, newN
 }
 
 func (c *client) SetMemberDisplayName(region string, shard int, account, me id.Id, newDisplayName *string) error {
-	_, e := setMemberDisplayName.DoRequest(nil, c.getHost(region), &setMemberDisplayNameArgs{
+	_, e := setMemberDisplayName.DoRequest(nil, c.getHost(region), region, &setMemberDisplayNameArgs{
 		Shard:          shard,
 		Account:        account,
 		Me:             me,
@@ -111,7 +111,7 @@ func (c *client) SetMemberDisplayName(region string, shard int, account, me id.I
 }
 
 func (c *client) SetMemberHasAvatar(region string, shard int, account, me id.Id, hasAvatar bool) error {
-	_, e := setMemberHasAvatar.DoRequest(nil, c.getHost(region), &setMemberHasAvatarArgs{
+	_, e := setMemberHasAvatar.DoRequest(nil, c.getHost(region), region, &setMemberHasAvatarArgs{
 		Shard:     shard,
 		Account:   account,
 		Me:        me,
@@ -122,7 +122,7 @@ func (c *client) SetMemberHasAvatar(region string, shard int, account, me id.Id,
 
 func (c *client) MemberIsAccountOwner(region string, shard int, account, me id.Id) (bool, error) {
 	respVal := false
-	val, e := memberIsAccountOwner.DoRequest(nil, c.getHost(region), &memberIsAccountOwnerArgs{
+	val, e := memberIsAccountOwner.DoRequest(nil, c.getHost(region), region, &memberIsAccountOwnerArgs{
 		Shard:   shard,
 		Account: account,
 		Me:      me,

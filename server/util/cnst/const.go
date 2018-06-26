@@ -14,11 +14,11 @@ const (
 	ProEnv = "pro"
 
 	CentralRegion = "central"
-	USWRegion = "usw"
-	USERegion = "use"
-	EUWRegion = "euw"
-	ASPRegion = "asp"
-	AUSRegion = "aus"
+	USWRegion     = "usw"
+	USERegion     = "use"
+	EUWRegion     = "euw"
+	ASPRegion     = "asp"
+	AUSRegion     = "aus"
 
 	LightTheme      = Theme(0)
 	DarkTheme       = Theme(1)

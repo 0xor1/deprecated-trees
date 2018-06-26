@@ -150,15 +150,15 @@ var delete = &endpoint.Endpoint{
 }
 
 type getArgs struct {
-	Shard   int          `json:"shard"`
-	Account id.Id        `json:"account"`
-	Project id.Id        `json:"project"`
-	Task    *id.Id       `json:"task,omitempty"`
-	Member  *id.Id       `json:"member,omitempty"`
-	TimeLog *id.Id       `json:"timeLog,omitempty"`
-	SortAsc bool `json:"sortAsc"`
-	After   *id.Id       `json:"after,omitempty"`
-	Limit   int          `json:"limit"`
+	Shard   int    `json:"shard"`
+	Account id.Id  `json:"account"`
+	Project id.Id  `json:"project"`
+	Task    *id.Id `json:"task,omitempty"`
+	Member  *id.Id `json:"member,omitempty"`
+	TimeLog *id.Id `json:"timeLog,omitempty"`
+	SortAsc bool   `json:"sortAsc"`
+	After   *id.Id `json:"after,omitempty"`
+	Limit   int    `json:"limit"`
 }
 
 var get = &endpoint.Endpoint{

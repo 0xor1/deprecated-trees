@@ -63,7 +63,7 @@
           </v-btn>
         </v-toolbar>
         <v-card-text>
-          <v-form ref="form" @keyup.native.enter="register">
+          <v-form ref="form" @keyup.native.enter="createProject">
             <v-text-field v-model="createProjectName" name="projectName" label="Name" type="text"></v-text-field>
             <v-text-field v-model="createProjectDescription" name="projectDescription" label="Description" type="text"></v-text-field>
             <v-layout row>
@@ -128,8 +128,6 @@
             </v-btn>
           </v-form>
         </v-card-text>
-
-        <div style="flex: 1 1 auto;"></div>
       </v-card>
     </v-dialog>
   </v-layout>
@@ -139,10 +137,8 @@
 <script>
   import api, {cnst} from '@/api'
   import router from '@/router'
-  import {FingerprintSpinner} from 'epic-spinners'
   export default {
     name: 'projects',
-    components: {FingerprintSpinner},
     data () {
       return {
         headers: [

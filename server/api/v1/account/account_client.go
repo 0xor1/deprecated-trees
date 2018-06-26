@@ -10,17 +10,17 @@ import (
 
 type Client interface {
 	//must be account owner
-	SetPublicProjectsEnabled(css *clientsession.Store, shard int, account id.Id, publicProjectsEnabled bool) error
+	SetPublicProjectsEnabled(css *clientsession.Store, region string, shard int, account id.Id, publicProjectsEnabled bool) error
 	//must be account owner/admin
-	GetPublicProjectsEnabled(css *clientsession.Store, shard int, account id.Id) (bool, error)
+	GetPublicProjectsEnabled(css *clientsession.Store, region string, shard int, account id.Id) (bool, error)
 	//must be account owner/admin
-	SetMemberRole(css *clientsession.Store, shard int, account, member id.Id, role cnst.AccountRole) error
+	SetMemberRole(css *clientsession.Store, region string, shard int, account, member id.Id, role cnst.AccountRole) error
 	//pointers are optional filters
-	GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error)
+	GetMembers(css *clientsession.Store, region string, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error)
 	//either one or both of OccurredAfter/Before must be nil
-	GetActivities(css *clientsession.Store, shard int, account id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
+	GetActivities(css *clientsession.Store, region string, shard int, account id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
 	//for anyone
-	GetMe(css *clientsession.Store, shard int, account id.Id) (*Member, error)
+	GetMe(css *clientsession.Store, region string, shard int, account id.Id) (*Member, error)
 }
 
 func NewClient(host string) Client {
@@ -33,8 +33,8 @@ type client struct {
 	host string
 }
 
-func (c *client) SetPublicProjectsEnabled(css *clientsession.Store, shard int, account id.Id, publicProjectsEnabled bool) error {
-	_, e := setPublicProjectsEnabled.DoRequest(css, c.host, &setPublicProjectsEnabledArgs{
+func (c *client) SetPublicProjectsEnabled(css *clientsession.Store, region string, shard int, account id.Id, publicProjectsEnabled bool) error {
+	_, e := setPublicProjectsEnabled.DoRequest(css, c.host, region, &setPublicProjectsEnabledArgs{
 		Shard:                 shard,
 		Account:               account,
 		PublicProjectsEnabled: publicProjectsEnabled,
@@ -42,9 +42,9 @@ func (c *client) SetPublicProjectsEnabled(css *clientsession.Store, shard int, a
 	return e
 }
 
-func (c *client) GetPublicProjectsEnabled(css *clientsession.Store, shard int, account id.Id) (bool, error) {
+func (c *client) GetPublicProjectsEnabled(css *clientsession.Store, region string, shard int, account id.Id) (bool, error) {
 	respVal := true
-	val, e := getPublicProjectsEnabled.DoRequest(css, c.host, &getPublicProjectsEnabledArgs{
+	val, e := getPublicProjectsEnabled.DoRequest(css, c.host, region, &getPublicProjectsEnabledArgs{
 		Shard:   shard,
 		Account: account,
 	}, nil, &respVal)
@@ -54,8 +54,8 @@ func (c *client) GetPublicProjectsEnabled(css *clientsession.Store, shard int, a
 	return false, e
 }
 
-func (c *client) SetMemberRole(css *clientsession.Store, shard int, account, member id.Id, role cnst.AccountRole) error {
-	_, e := setMemberRole.DoRequest(css, c.host, &setMemberRoleArgs{
+func (c *client) SetMemberRole(css *clientsession.Store, region string, shard int, account, member id.Id, role cnst.AccountRole) error {
+	_, e := setMemberRole.DoRequest(css, c.host, region, &setMemberRoleArgs{
 		Shard:   shard,
 		Account: account,
 		Member:  member,
@@ -64,8 +64,8 @@ func (c *client) SetMemberRole(css *clientsession.Store, shard int, account, mem
 	return e
 }
 
-func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error) {
-	val, e := getMembers.DoRequest(css, c.host, &getMembersArgs{
+func (c *client) GetMembers(css *clientsession.Store, region string, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error) {
+	val, e := getMembers.DoRequest(css, c.host, region, &getMembersArgs{
 		Shard:        shard,
 		Account:      account,
 		Role:         role,
@@ -79,8 +79,8 @@ func (c *client) GetMembers(css *clientsession.Store, shard int, account id.Id, 
 	return nil, e
 }
 
-func (c *client) GetActivities(css *clientsession.Store, shard int, account id.Id, itemId *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error) {
-	val, e := getActivities.DoRequest(css, c.host, &getActivitiesArgs{
+func (c *client) GetActivities(css *clientsession.Store, region string, shard int, account id.Id, itemId *id.Id, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error) {
+	val, e := getActivities.DoRequest(css, c.host, region, &getActivitiesArgs{
 		Shard:          shard,
 		Account:        account,
 		Item:           itemId,
@@ -95,8 +95,8 @@ func (c *client) GetActivities(css *clientsession.Store, shard int, account id.I
 	return nil, e
 }
 
-func (c *client) GetMe(css *clientsession.Store, shard int, account id.Id) (*Member, error) {
-	val, e := getMe.DoRequest(css, c.host, &getMeArgs{
+func (c *client) GetMe(css *clientsession.Store, region string, shard int, account id.Id) (*Member, error) {
+	val, e := getMe.DoRequest(css, c.host, region, &getMeArgs{
 		Shard:   shard,
 		Account: account,
 	}, nil, &Member{})

@@ -22,7 +22,7 @@ func Test_system(t *testing.T) {
 	centralClient := centralaccount.NewClient(testServer.URL)
 	accountClient := account.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
-	region := cnst.LclEnv
+	region := cnst.EUWRegion
 	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
 		region: testServer.URL,
 	})
@@ -61,34 +61,34 @@ func Test_system(t *testing.T) {
 	cat.Role = cnst.AccountMemberOfOnlySpecificProjects
 	centralClient.AddMembers(aliCss, org.Id, []*centralaccount.AddMember{&bob, &cat})
 
-	accountClient.SetPublicProjectsEnabled(aliCss, 0, org.Id, true)
+	accountClient.SetPublicProjectsEnabled(aliCss, region, 0, org.Id, true)
 
 	p1Desc := "p1_desc"
 	p2Desc := "p2_desc"
 	p3Desc := "p3_desc"
-	proj, err := client.Create(aliCss, 0, org.Id, "a-p1", &p1Desc, nil, nil, true, false, nil)
-	proj2, err := client.Create(aliCss, 0, org.Id, "b-p2", &p2Desc, nil, nil, true, false, nil)
-	proj3, err := client.Create(aliCss, 0, org.Id, "c-p3", &p3Desc, nil, nil, true, false, nil)
-	client.SetIsPublic(aliCss, 0, org.Id, proj.Id, true)
-	proj, err = client.Get(aliCss, 0, org.Id, proj.Id)
+	proj, err := client.Create(aliCss, region, 0, org.Id, "a-p1", &p1Desc, nil, nil, true, false, nil)
+	proj2, err := client.Create(aliCss, region, 0, org.Id, "b-p2", &p2Desc, nil, nil, true, false, nil)
+	proj3, err := client.Create(aliCss, region, 0, org.Id, "c-p3", &p3Desc, nil, nil, true, false, nil)
+	client.SetIsPublic(aliCss, region, 0, org.Id, proj.Id, true)
+	proj, err = client.Get(aliCss, region, 0, org.Id, proj.Id)
 	assert.Equal(t, "a-p1", proj.Name)
 	assert.Equal(t, "p1_desc", *proj.Description)
 	assert.Equal(t, true, proj.IsParallel)
 	assert.Equal(t, true, proj.IsPublic)
-	projRes, err := client.GetSet(aliCss, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, false, cnst.SortByCreatedOn, true, nil, 1)
+	projRes, err := client.GetSet(aliCss, region, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, false, cnst.SortByCreatedOn, true, nil, 1)
 	assert.Equal(t, 1, len(projRes.Projects))
 	assert.True(t, projRes.More)
 	assert.Equal(t, proj.Name, projRes.Projects[0].Name)
-	projRes, err = client.GetSet(aliCss, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, false, cnst.SortByCreatedOn, true, &proj.Id, 100)
+	projRes, err = client.GetSet(aliCss, region, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, false, cnst.SortByCreatedOn, true, &proj.Id, 100)
 	assert.Equal(t, 2, len(projRes.Projects))
 	assert.False(t, projRes.More)
 	assert.Equal(t, proj2.Name, projRes.Projects[0].Name)
 	assert.Equal(t, proj3.Name, projRes.Projects[1].Name)
-	client.SetIsArchived(aliCss, 0, org.Id, proj.Id, true)
-	projRes, err = client.GetSet(aliCss, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, true, cnst.SortByCreatedOn, true, nil, 100)
+	client.SetIsArchived(aliCss, region, 0, org.Id, proj.Id, true)
+	projRes, err = client.GetSet(aliCss, region, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, true, cnst.SortByCreatedOn, true, nil, 100)
 	assert.Equal(t, 1, len(projRes.Projects))
 	assert.False(t, projRes.More)
-	client.SetIsArchived(aliCss, 0, org.Id, proj.Id, false)
+	client.SetIsArchived(aliCss, region, 0, org.Id, proj.Id, false)
 	aliP := &AddProjectMember{}
 	aliP.Id = aliId
 	aliP.Role = cnst.ProjectAdmin
@@ -98,21 +98,21 @@ func Test_system(t *testing.T) {
 	catP := &AddProjectMember{}
 	catP.Id = cat.Id
 	catP.Role = cnst.ProjectReader
-	client.AddMembers(aliCss, 0, org.Id, proj.Id, []*AddProjectMember{aliP, bobP, catP})
-	accountClient.SetMemberRole(aliCss, 0, org.Id, bobP.Id, cnst.AccountMemberOfOnlySpecificProjects)
-	client.SetMemberRole(aliCss, 0, org.Id, proj.Id, bobP.Id, cnst.ProjectReader)
-	memRes, err := client.GetMembers(aliCss, 0, org.Id, proj.Id, nil, nil, nil, 100)
+	client.AddMembers(aliCss, region, 0, org.Id, proj.Id, []*AddProjectMember{aliP, bobP, catP})
+	accountClient.SetMemberRole(aliCss, region, 0, org.Id, bobP.Id, cnst.AccountMemberOfOnlySpecificProjects)
+	client.SetMemberRole(aliCss, region, 0, org.Id, proj.Id, bobP.Id, cnst.ProjectReader)
+	memRes, err := client.GetMembers(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, 100)
 	assert.Equal(t, 3, len(memRes.Members))
 	assert.False(t, memRes.More)
 	assert.True(t, memRes.Members[0].Id.Equal(aliId))
 	assert.True(t, memRes.Members[1].Id.Equal(bob.Id))
 	assert.True(t, memRes.Members[2].Id.Equal(cat.Id))
-	bobMe, err := client.GetMe(bobCss, 0, org.Id, proj.Id)
+	bobMe, err := client.GetMe(bobCss, region, 0, org.Id, proj.Id)
 	assert.True(t, bobMe.Id.Equal(bob.Id))
-	activities, err := client.GetActivities(aliCss, 0, org.Id, proj.Id, nil, nil, nil, nil, 100)
+	activities, err := client.GetActivities(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, nil, 100)
 	assert.Equal(t, 8, len(activities))
-	client.RemoveMembers(aliCss, 0, org.Id, proj.Id, []id.Id{bob.Id, cat.Id})
-	client.Delete(aliCss, 0, org.Id, proj.Id)
+	client.RemoveMembers(aliCss, region, 0, org.Id, proj.Id, []id.Id{bob.Id, cat.Id})
+	client.Delete(aliCss, region, 0, org.Id, proj.Id)
 
 	centralClient.DeleteAccount(aliCss, aliId)
 	centralClient.DeleteAccount(aliCss, org.Id)

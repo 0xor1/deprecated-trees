@@ -8,12 +8,12 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/sortdir"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"
 	"strings"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/sortdir"
 )
 
 func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {

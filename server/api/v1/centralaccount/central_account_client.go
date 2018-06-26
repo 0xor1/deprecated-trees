@@ -52,7 +52,7 @@ type client struct {
 }
 
 func (c *client) Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error {
-	_, e := register.DoRequest(nil, c.host, &registerArgs{
+	_, e := register.DoRequest(nil, c.host, cnst.CentralRegion, &registerArgs{
 		Name:        name,
 		Email:       email,
 		Pwd:         pwd,
@@ -65,14 +65,14 @@ func (c *client) Register(name, email, pwd, region, language string, displayName
 }
 
 func (c *client) ResendActivationEmail(email string) error {
-	_, e := resendActivationEmail.DoRequest(nil, c.host, &resendActivationEmailArgs{
+	_, e := resendActivationEmail.DoRequest(nil, c.host, cnst.CentralRegion, &resendActivationEmailArgs{
 		Email: email,
 	}, nil, nil)
 	return e
 }
 
 func (c *client) Activate(email, activationCode string) error {
-	_, e := activate.DoRequest(nil, c.host, &activateArgs{
+	_, e := activate.DoRequest(nil, c.host, cnst.CentralRegion, &activateArgs{
 		Email:          email,
 		ActivationCode: activationCode,
 	}, nil, nil)
@@ -80,7 +80,7 @@ func (c *client) Activate(email, activationCode string) error {
 }
 
 func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (*AuthenticateResult, error) {
-	val, e := authenticate.DoRequest(css, c.host, &authenticateArgs{
+	val, e := authenticate.DoRequest(css, c.host, cnst.CentralRegion, &authenticateArgs{
 		Email:  email,
 		PwdTry: pwdTry,
 	}, nil, &AuthenticateResult{})
@@ -91,7 +91,7 @@ func (c *client) Authenticate(css *clientsession.Store, email, pwdTry string) (*
 }
 
 func (c *client) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string) error {
-	_, e := confirmNewEmail.DoRequest(nil, c.host, &confirmNewEmailArgs{
+	_, e := confirmNewEmail.DoRequest(nil, c.host, cnst.CentralRegion, &confirmNewEmailArgs{
 		CurrentEmail:     currentEmail,
 		NewEmail:         newEmail,
 		ConfirmationCode: confirmationCode,
@@ -100,14 +100,14 @@ func (c *client) ConfirmNewEmail(currentEmail, newEmail, confirmationCode string
 }
 
 func (c *client) ResetPwd(email string) error {
-	_, e := resetPwd.DoRequest(nil, c.host, &resetPwdArgs{
+	_, e := resetPwd.DoRequest(nil, c.host, cnst.CentralRegion, &resetPwdArgs{
 		Email: email,
 	}, nil, nil)
 	return e
 }
 
 func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error {
-	_, e := setNewPwdFromPwdReset.DoRequest(nil, c.host, &setNewPwdFromPwdResetArgs{
+	_, e := setNewPwdFromPwdReset.DoRequest(nil, c.host, cnst.CentralRegion, &setNewPwdFromPwdResetArgs{
 		NewPwd:       newPwd,
 		Email:        email,
 		ResetPwdCode: resetPwdCode,
@@ -116,7 +116,7 @@ func (c *client) SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
 }
 
 func (c *client) GetAccount(name string) (*Account, error) {
-	val, e := getAccount.DoRequest(nil, c.host, &getAccountArgs{
+	val, e := getAccount.DoRequest(nil, c.host, cnst.CentralRegion, &getAccountArgs{
 		Name: name,
 	}, nil, &Account{})
 	if val != nil {
@@ -126,7 +126,7 @@ func (c *client) GetAccount(name string) (*Account, error) {
 }
 
 func (c *client) GetAccounts(accounts []id.Id) ([]*Account, error) {
-	val, e := getAccounts.DoRequest(nil, c.host, &getAccountsArgs{
+	val, e := getAccounts.DoRequest(nil, c.host, cnst.CentralRegion, &getAccountsArgs{
 		Accounts: accounts,
 	}, nil, &[]*Account{})
 	if val != nil {
@@ -136,7 +136,7 @@ func (c *client) GetAccounts(accounts []id.Id) ([]*Account, error) {
 }
 
 func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) {
-	val, e := searchAccounts.DoRequest(nil, c.host, &searchAccountsArgs{
+	val, e := searchAccounts.DoRequest(nil, c.host, cnst.CentralRegion, &searchAccountsArgs{
 		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
 	}, nil, &[]*Account{})
 	if val != nil {
@@ -146,7 +146,7 @@ func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account,
 }
 
 func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) {
-	val, e := searchPersonalAccounts.DoRequest(nil, c.host, &searchPersonalAccountsArgs{
+	val, e := searchPersonalAccounts.DoRequest(nil, c.host, cnst.CentralRegion, &searchPersonalAccountsArgs{
 		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
 	}, nil, &[]*Account{})
 	if val != nil {
@@ -156,7 +156,7 @@ func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*
 }
 
 func (c *client) GetMe(css *clientsession.Store) (*Me, error) {
-	val, e := getMe.DoRequest(css, c.host, nil, nil, &Me{})
+	val, e := getMe.DoRequest(css, c.host, cnst.CentralRegion, nil, nil, &Me{})
 	if val != nil {
 		return val.(*Me), e
 	}
@@ -164,7 +164,7 @@ func (c *client) GetMe(css *clientsession.Store) (*Me, error) {
 }
 
 func (c *client) SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error {
-	_, e := setMyPwd.DoRequest(css, c.host, &setMyPwdArgs{
+	_, e := setMyPwd.DoRequest(css, c.host, cnst.CentralRegion, &setMyPwdArgs{
 		OldPwd: oldPwd,
 		NewPwd: newPwd,
 	}, nil, nil)
@@ -172,19 +172,19 @@ func (c *client) SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error
 }
 
 func (c *client) SetMyEmail(css *clientsession.Store, newEmail string) error {
-	_, e := setMyEmail.DoRequest(css, c.host, &setMyEmailArgs{
+	_, e := setMyEmail.DoRequest(css, c.host, cnst.CentralRegion, &setMyEmailArgs{
 		NewEmail: newEmail,
 	}, nil, nil)
 	return e
 }
 
 func (c *client) ResendMyNewEmailConfirmationEmail(css *clientsession.Store) error {
-	_, e := resendMyNewEmailConfirmationEmail.DoRequest(css, c.host, nil, nil, nil)
+	_, e := resendMyNewEmailConfirmationEmail.DoRequest(css, c.host, cnst.CentralRegion, nil, nil, nil)
 	return e
 }
 
 func (c *client) SetAccountName(css *clientsession.Store, account id.Id, newName string) error {
-	_, e := setAccountName.DoRequest(css, c.host, &setAccountNameArgs{
+	_, e := setAccountName.DoRequest(css, c.host, cnst.CentralRegion, &setAccountNameArgs{
 		Account: account,
 		NewName: newName,
 	}, nil, nil)
@@ -192,7 +192,7 @@ func (c *client) SetAccountName(css *clientsession.Store, account id.Id, newName
 }
 
 func (c *client) SetAccountDisplayName(css *clientsession.Store, account id.Id, newDisplayName *string) error {
-	_, e := setAccountDisplayName.DoRequest(css, c.host, &setAccountDisplayNameArgs{
+	_, e := setAccountDisplayName.DoRequest(css, c.host, cnst.CentralRegion, &setAccountDisplayNameArgs{
 		Account:        account,
 		NewDisplayName: newDisplayName,
 	}, nil, nil)
@@ -201,7 +201,7 @@ func (c *client) SetAccountDisplayName(css *clientsession.Store, account id.Id, 
 
 func (c *client) SetAccountAvatar(css *clientsession.Store, account id.Id, avatar io.ReadCloser) error {
 	defer avatar.Close()
-	_, e := setAccountAvatar.DoRequest(css, c.host, &setAccountAvatarArgs{
+	_, e := setAccountAvatar.DoRequest(css, c.host, cnst.CentralRegion, &setAccountAvatarArgs{
 		Account: account,
 		Avatar:  avatar,
 	}, func() (io.ReadCloser, string) {
@@ -219,7 +219,7 @@ func (c *client) SetAccountAvatar(css *clientsession.Store, account id.Id, avata
 }
 
 func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegion string) error {
-	_, e := migrateAccount.DoRequest(css, c.host, &migrateAccountArgs{
+	_, e := migrateAccount.DoRequest(css, c.host, cnst.CentralRegion, &migrateAccountArgs{
 		Account:   account,
 		NewRegion: newRegion,
 	}, nil, nil)
@@ -227,7 +227,7 @@ func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegi
 }
 
 func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error) {
-	val, e := createAccount.DoRequest(css, c.host, &createAccountArgs{
+	val, e := createAccount.DoRequest(css, c.host, cnst.CentralRegion, &createAccountArgs{
 		Name:        name,
 		Region:      region,
 		DisplayName: displayName,
@@ -239,7 +239,7 @@ func (c *client) CreateAccount(css *clientsession.Store, name, region string, di
 }
 
 func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*GetMyAccountsResult, error) {
-	val, e := getMyAccounts.DoRequest(css, c.host, &getMyAccountsArgs{
+	val, e := getMyAccounts.DoRequest(css, c.host, cnst.CentralRegion, &getMyAccountsArgs{
 		After: after,
 		Limit: limit,
 	}, nil, &GetMyAccountsResult{})
@@ -250,14 +250,14 @@ func (c *client) GetMyAccounts(css *clientsession.Store, after *id.Id, limit int
 }
 
 func (c *client) DeleteAccount(css *clientsession.Store, account id.Id) error {
-	_, e := deleteAccount.DoRequest(css, c.host, &deleteAccountArgs{
+	_, e := deleteAccount.DoRequest(css, c.host, cnst.CentralRegion, &deleteAccountArgs{
 		Account: account,
 	}, nil, nil)
 	return e
 }
 
 func (c *client) AddMembers(css *clientsession.Store, account id.Id, newMembers []*AddMember) error {
-	_, e := addMembers.DoRequest(css, c.host, &addMembersArgs{
+	_, e := addMembers.DoRequest(css, c.host, cnst.CentralRegion, &addMembersArgs{
 		Account:    account,
 		NewMembers: newMembers,
 	}, nil, nil)
@@ -265,7 +265,7 @@ func (c *client) AddMembers(css *clientsession.Store, account id.Id, newMembers 
 }
 
 func (c *client) RemoveMembers(css *clientsession.Store, account id.Id, existingMembers []id.Id) error {
-	_, e := removeMembers.DoRequest(css, c.host, &removeMembersArgs{
+	_, e := removeMembers.DoRequest(css, c.host, cnst.CentralRegion, &removeMembersArgs{
 		Account:         account,
 		ExistingMembers: existingMembers,
 	}, nil, nil)

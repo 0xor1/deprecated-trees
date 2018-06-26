@@ -95,12 +95,13 @@ type endpointDocumentation struct {
 	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
 }
 
-func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
+func (ep *Endpoint) createRequest(host string, region string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
 	reqUrl, e := url.Parse(host + ep.Path)
 	if e != nil {
 		return nil, e
 	}
 	urlVals := url.Values{}
+	urlVals.Set("region", region)
 	var body io.ReadCloser
 	var contentType string
 	if buildForm != nil {
@@ -142,8 +143,8 @@ func (ep *Endpoint) createRequest(host string, args interface{}, buildForm func(
 	return req, nil
 }
 
-func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
-	req, e := ep.createRequest(host, args, buildForm)
+func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, region string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
+	req, e := ep.createRequest(host, region, args, buildForm)
 	if e != nil {
 		return nil, e
 	}

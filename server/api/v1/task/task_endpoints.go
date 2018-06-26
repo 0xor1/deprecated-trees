@@ -240,10 +240,10 @@ var delete = &endpoint.Endpoint{
 }
 
 type getArgs struct {
-	Shard   int     `json:"shard"`
-	Account id.Id   `json:"account"`
-	Project id.Id   `json:"project"`
-	Task    id.Id 	`json:"task"`
+	Shard   int   `json:"shard"`
+	Account id.Id `json:"account"`
+	Project id.Id `json:"project"`
+	Task    id.Id `json:"task"`
 }
 
 var get = &endpoint.Endpoint{
@@ -271,11 +271,16 @@ type getChildrenArgs struct {
 	Limit       int    `json:"limit"`
 }
 
+type getChildrenResp struct {
+	Children []*Task `json:"children"`
+	More     bool    `json:"more"`
+}
+
 var getChildren = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getChildren",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*Task{{}},
+	ExampleResponseStructure: &getChildrenResp{Children: []*Task{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getChildrenArgs{}
 	},
@@ -287,7 +292,7 @@ var getChildren = &endpoint.Endpoint{
 	},
 }
 
-type getAncestorTasksArgs struct {
+type getAncestorsArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
 	Project id.Id `json:"project"`
@@ -295,16 +300,21 @@ type getAncestorTasksArgs struct {
 	Limit   int   `json:"limit"`
 }
 
+type getAncestorsResp struct {
+	Ancestors []*Ancestor `json:"ancestors"`
+	More      bool        `json:"more"`
+}
+
 var getAncestors = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getAncestors",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*Ancestor{{}},
+	ExampleResponseStructure: &getAncestorsResp{Ancestors: []*Ancestor{{}}},
 	GetArgsStruct: func() interface{} {
-		return &getAncestorTasksArgs{}
+		return &getAncestorsArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*getAncestorTasksArgs)
+		args := a.(*getAncestorsArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
 		return dbGetAncestorTasks(ctx, args.Shard, args.Account, args.Project, args.Task, args.Limit)

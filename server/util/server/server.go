@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/crypt"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
 	"bitbucket.org/0xor1/trees/server/util/err"
@@ -15,14 +16,13 @@ import (
 	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/context"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"io"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
