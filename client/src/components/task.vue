@@ -1,9 +1,33 @@
 <template>
-  <v-container class="pa-0" fluid fill-height>
+  <v-container v-if="loading" fluid fill-height>
+    <v-layout align-center justify-center>
+      <fingerprint-spinner :animation-duration="2000" :size="200" :color="'#9FC657'"></fingerprint-spinner>
+    </v-layout>
+  </v-container>
+  <v-container v-else-if="task.isAbstract" class="pa-0" fluid fill-height>
     <v-layout column fill-height>
       <v-flex>
+        <v-breadcrumbs v-if="project !== task.id">
+          <v-breadcrumbs-item
+            class="active"
+            v-for="ancestor in ancestors"
+            :key="ancestor.id"
+            :disabled="false"
+            :href="'/#/app/region/' + region + '/shard/' + shard + '/account/' + account + '/project/' + project + '/task/' + ancestor.id"
+          >
+            {{ ancestor.name }}
+          </v-breadcrumbs-item>
+          <v-breadcrumbs-item> <!--empty breadcrumb item as the last item is always disaabled, not suer if this is a bug or a feature but it's not helpful here -->
+          </v-breadcrumbs-item>
+        </v-breadcrumbs>
         <v-card>
-          <v-card-title>S'up Homes</v-card-title>
+          <v-card-title class="py-1"><h3>{{task.name}}</h3></v-card-title>
+          <v-card-text class="py-1">{{task.description}}</v-card-text>
+          <v-card-text class="py-1">
+            Min: <h3>{{task.minimumRemainingTime}}</h3> &nbsp;
+            Tot: <h3>{{task.totalRemainingTime}}</h3> &nbsp;
+            Log: <h3>{{task.totalLoggedTime}}</h3>
+          </v-card-text>
         </v-card>
       </v-flex>
       <v-data-table
@@ -25,7 +49,7 @@
         </template>
         <template slot="no-data">
           <v-alert v-if="!loading" :value="true" color="info" icon="error">
-            No Children Yet <v-btn v-on:click="toggleCreateForm" color="primary">create</v-btn>
+            No Child Tasks Yet <v-btn v-on:click="toggleCreateForm" color="primary">create</v-btn>
           </v-alert>
           <v-alert v-if="loading" :value="true" color="info" icon="error">
             Loading Data
@@ -76,10 +100,17 @@
 <script>
   import api from '@/api'
   import router from '@/router'
+  import {FingerprintSpinner} from 'epic-spinners'
   export default {
     name: 'task',
+    components: {FingerprintSpinner},
     data () {
+      let params = router.currentRoute.params
       let data = {
+        region: params.region,
+        shard: params.shard,
+        account: params.account,
+        project: params.project,
         headers: [
           {text: 'Name', sortable: false, align: 'left', value: 'name'},
           {text: 'Description', class: 'hidden-sm-and-down', sortable: false, align: 'left', value: 'description'},
@@ -96,27 +127,31 @@
         createTaskDescription: null,
         createTaskIsParallel: true,
         creating: false,
-        children: null,
+        children: [],
         moreChildren: false,
+        moreAncestors: false,
         task: null,
-        ancestors: null
+        ancestors: []
       }
-      let params = router.currentRoute.params
       let mapi = api.newMGetApi(params.region)
       if (params.project === params.task) {
-        mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((task) => {
-          data.task = task
+        mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((project) => {
+          data.task = project
+          data.task.isAbstract = true
         })
       } else {
         mapi.v1.task.get(params.region, params.shard, params.account, params.project, params.task).then((task) => {
           data.task = task
         })
       }
-      mapi.v1.task.getAncestors(params.region, params.shard, params.account, params.project, params.task, 100).then((ancestors) => {
-        data.ancestors = ancestors
+      mapi.v1.task.getAncestors(params.region, params.shard, params.account, params.project, params.task, 100).then((res) => {
+        data.ancestors = res.ancestors
+        data.moreAncestors = res.more
       })
-      mapi.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, null, 100).then((children) => {
-        data.children = children
+      mapi.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, null, 100).then((res) => {
+        data.children = res.children
+        data.moreChildren = res.more
+        data.loading = false
       })
       mapi.sendMGet()
       return data
@@ -158,32 +193,20 @@
       },
       toggleCreateForm () {
         if (!this.creating) {
-          this.createProjectDialog = !this.createProjectDialog
-          this.createProjectName = ''
-          this.createProjectDescription = null
-          this.createProjectStartOn = null
-          this.createProjectStartOnShowPicker = false
-          this.createProjectDueOn = null
-          this.createProjectDueOnShowPicker = false
-          this.createProjectIsParallel = true
+          this.createTaskDialog = !this.createTaskDialog
+          this.createTaskName = ''
+          this.createTaskDescription = null
+          this.createTaskIsParallel = true
         }
       },
       createTask () {
         this.creating = true
         let params = router.currentRoute.params
         let description = null
-        if (this.createProjectDescription && this.createProjectDescription.length) {
-          description = this.createProjectDescription
+        if (this.createTaskDescription && this.createTaskDescription.length) {
+          description = this.createTaskDescription
         }
-        let startOn = null
-        if (this.createProjectStartOn && this.createProjectStartOn.length > 0) {
-          startOn = this.createProjectStartOn + 'T00:00:00Z'
-        }
-        let dueOn = null
-        if (this.createProjectDueOn && this.createProjectDueOn.length > 0) {
-          dueOn = this.createProjectDueOn + 'T00:00:00Z'
-        }
-        api.v1.project.create(params.region, params.shard, params.account, this.createProjectName, description, startOn, dueOn, this.createProjectIsParallel, false).then((newProject) => {
+        api.v1.task.create(params.region, params.shard, params.account, this.createTaskName, description).then((newProject) => {
           this.creating = false
           this.toggleCreateForm()
           let params = router.currentRoute.params
@@ -195,5 +218,7 @@
 </script>
 
 <style scoped lang="scss">
-
+  h3, span {
+    display: inline-flex;
+  }
 </style>
