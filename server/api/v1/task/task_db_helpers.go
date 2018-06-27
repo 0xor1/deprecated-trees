@@ -118,7 +118,7 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 }
 
 func dbGetTask(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id) *Task {
-	cacheKey := cachekey.NewGet("project.dbGetTask", shard, account, project, task)
+	cacheKey := cachekey.NewGet("project.dbGetTask", shard, account, project, task).Task(account, project, task)
 	res := Task{}
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -169,7 +169,7 @@ func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, l
 		if ctx.GetCacheValue(&innerRes, innerCacheKey) {
 			return &res
 		}
-		innerCacheKey.DlmKeys = make([]string, 0, 10)
+		innerCacheKey.DlmKeys = map[string]bool{}
 	}
 	rows, e := ctx.TreeQuery(shard, `CALL getAncestorTasks(?, ?, ?, ?)`, account, project, child, limit+1)
 	if rows != nil {

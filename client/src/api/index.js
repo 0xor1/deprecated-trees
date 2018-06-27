@@ -366,8 +366,8 @@ newApi = (opts) => {
         }
       },
       task: {
-        create: (region, shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime) => {
-          return post(region, '/api/v1/task/create', {shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, remainingTime})
+        create: (region, shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, totalRemainingTime) => {
+          return post(region, '/api/v1/task/create', {shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, totalRemainingTime})
         },
         setName: (region, shard, account, project, task, name) => {
           return post(region, '/api/v1/task/setName', {shard, account, project, task, name})

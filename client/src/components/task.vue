@@ -26,7 +26,9 @@
           <v-card-text class="py-1">
             Min: <h3>{{task.minimumRemainingTime}}</h3> &nbsp;
             Tot: <h3>{{task.totalRemainingTime}}</h3> &nbsp;
-            Log: <h3>{{task.totalLoggedTime}}</h3>
+            Log: <h3>{{task.totalLoggedTime}}</h3> &nbsp;
+            Children: <h3>{{task.childCount}}</h3> &nbsp;
+            Descendants: <h3>{{task.descendantCount}}</h3> &nbsp;
           </v-card-text>
         </v-card>
       </v-flex>
@@ -41,10 +43,12 @@
         <template slot="items" slot-scope="children">
           <tr @click="goToTask(children.item)" style="cursor: pointer">
             <td class="text-xs-left">{{ children.item.name }}</td>
-            <td class="text-xs-left hidden-sm-and-down">{{ children.item.description? projects.item.description: 'none' }}</td>
+            <td class="text-xs-left hidden-sm-and-down">{{ children.item.description? children.item.description: 'none' }}</td>
             <td class="text-xs-left" style="width: 120px;">{{ children.item.minimumRemainingTime }}</td>
             <td class="text-xs-left" style="width: 120px;">{{ children.item.totalRemainingTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalLoggedTime }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.childCount }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.descendantCount }}</td>
           </tr>
         </template>
         <template slot="no-data">
@@ -76,9 +80,14 @@
           </v-toolbar>
           <v-card-text>
             <v-form ref="form" @keyup.native.enter="createTask">
+              <v-switch
+                :label="`Is Abstract`"
+                v-model="createTaskIsAbstract"></v-switch>
               <v-text-field v-model="createTaskName" name="taskName" label="Name" type="text"></v-text-field>
               <v-text-field v-model="createTaskDescription" name="taskDescription" label="Description" type="text"></v-text-field>
+              <v-text-field v-if="!createTaskIsAbstract" v-model="createTaskRemainingTime" name="taskRemainingTime" label="Remaining Time" type="number"></v-text-field>
               <v-switch
+                v-if="createTaskIsAbstract"
                 :label="`Is Parallel`"
                 v-model="createTaskIsParallel"></v-switch>
               <v-btn
@@ -106,7 +115,7 @@
     components: {FingerprintSpinner},
     data () {
       let params = router.currentRoute.params
-      let data = {
+      return {
         region: params.region,
         shard: params.shard,
         account: params.account,
@@ -116,15 +125,19 @@
           {text: 'Description', class: 'hidden-sm-and-down', sortable: false, align: 'left', value: 'description'},
           {text: 'Min.', sortable: false, align: 'left', value: 'minimumRemainingTime'},
           {text: 'Tot.', sortable: false, align: 'left', value: 'totalRemainingTime'},
-          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'}
+          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'},
+          {text: 'Children', sortable: false, align: 'left', value: 'childCount'},
+          {text: 'Descendants', sortable: false, align: 'left', value: 'descendantCount'}
         ],
         pagination: {
           descending: false
         },
         loading: true,
         createTaskDialog: false,
+        createTaskIsAbstract: true,
         createTaskName: '',
         createTaskDescription: null,
+        createTaskRemainingTime: null,
         createTaskIsParallel: true,
         creating: false,
         children: [],
@@ -133,28 +146,6 @@
         task: null,
         ancestors: []
       }
-      let mapi = api.newMGetApi(params.region)
-      if (params.project === params.task) {
-        mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((project) => {
-          data.task = project
-          data.task.isAbstract = true
-        })
-      } else {
-        mapi.v1.task.get(params.region, params.shard, params.account, params.project, params.task).then((task) => {
-          data.task = task
-        })
-      }
-      mapi.v1.task.getAncestors(params.region, params.shard, params.account, params.project, params.task, 100).then((res) => {
-        data.ancestors = res.ancestors
-        data.moreAncestors = res.more
-      })
-      mapi.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, null, 100).then((res) => {
-        data.children = res.children
-        data.moreChildren = res.more
-        data.loading = false
-      })
-      mapi.sendMGet()
-      return data
     },
     mounted () {
       let htmlEl = document.querySelector('html')
@@ -165,11 +156,41 @@
         }
       }
       document.addEventListener('scroll', this.pageScrollListener)
+      this.init()
     },
     beforeDestroy () {
       document.removeEventListener('scroll', this.pageScrollListener)
     },
+    watch: {
+      $route () {
+        this.init()
+      }
+    },
     methods: {
+      init () {
+        let params = router.currentRoute.params
+        let mapi = api.newMGetApi(params.region)
+        if (params.project === params.task) {
+          mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((project) => {
+            this.task = project
+            this.task.isAbstract = true
+          })
+        } else {
+          mapi.v1.task.get(params.region, params.shard, params.account, params.project, params.task).then((task) => {
+            this.task = task
+          })
+        }
+        mapi.v1.task.getAncestors(params.region, params.shard, params.account, params.project, params.task, 100).then((res) => {
+          this.ancestors = res.ancestors
+          this.moreAncestors = res.more
+        })
+        mapi.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, null, 100).then((res) => {
+          this.children = res.children
+          this.moreChildren = res.more
+          this.loading = false
+        })
+        mapi.sendMGet()
+      },
       loadChildren () {
         if (!this.loading) {
           let params = router.currentRoute.params
@@ -190,6 +211,7 @@
       goToTask (task) {
         let params = router.currentRoute.params
         router.push('/app/region/' + params.region + '/shard/' + params.shard + /account/ + params.account + /project/ + params.project + /task/ + task.id)
+        this.init()
       },
       toggleCreateForm () {
         if (!this.creating) {
@@ -197,6 +219,7 @@
           this.createTaskName = ''
           this.createTaskDescription = null
           this.createTaskIsParallel = true
+          this.createTaskRemainingTime = null
         }
       },
       createTask () {
@@ -206,11 +229,40 @@
         if (this.createTaskDescription && this.createTaskDescription.length) {
           description = this.createTaskDescription
         }
-        api.v1.task.create(params.region, params.shard, params.account, this.createTaskName, description).then((newProject) => {
-          this.creating = false
-          this.toggleCreateForm()
-          let params = router.currentRoute.params
-          router.push('/app/region/' + params.region + '/shard/' + params.shard + /account/ + params.account + /project/ + newProject.id + /task/ + newProject.id)
+        let previousSibling = null
+        if (this.children.length > 0) {
+          previousSibling = this.children[this.children.length - 1].id
+        }
+        let isParallel = this.createTaskIsParallel
+        if (!this.createTaskIsAbstract) {
+          isParallel = null
+        }
+        let remainingTime = parseInt(this.createTaskRemainingTime)
+        if (this.createTaskIsAbstract) {
+          remainingTime = null
+        }
+        let myId = null
+        api.v1.centralAccount.getMe().then((me) => {
+          if (!this.createTaskIsAbstract) {
+            myId = me.id
+          }
+          api.v1.task.create(params.region, params.shard, params.account, params.project, params.task, previousSibling, this.createTaskName, description, this.createTaskIsAbstract, isParallel, myId, remainingTime).then((newTask) => {
+            this.creating = false
+            this.toggleCreateForm()
+            this.children.push(newTask)
+            this.task.childCount++
+            this.task.descendantCount++
+            if (remainingTime) {
+              this.task.totalRemainingTime += remainingTime
+              if (this.task.isParallel) {
+                if (this.task.minimumRemainingTime < remainingTime) {
+                  this.task.minimumRemainingTime = remainingTime
+                }
+              } else {
+                this.task.minimumRemainingTime += remainingTime
+              }
+            }
+          })
         })
       }
     }

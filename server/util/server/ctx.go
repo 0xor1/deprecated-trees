@@ -108,7 +108,7 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key) bool {
 		c.Log(e)
 		return false
 	}
-	argsJsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: key.Args})
+	argsJsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.SortedDlmKeys(), Dlm: dlm, Args: key.Args})
 	if e != nil {
 		c.Log(e)
 		return false
@@ -150,7 +150,7 @@ func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key) {
 		c.Log(e)
 		return
 	}
-	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.DlmKeys, Dlm: dlm, Args: key.Args})
+	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.SortedDlmKeys(), Dlm: dlm, Args: key.Args})
 	if e != nil {
 		c.Log(e)
 		return
@@ -162,7 +162,7 @@ func (c *_ctx) TouchDlms(cacheKeys *cachekey.Key) {
 	if !c.SR.CachingEnabled {
 		return
 	}
-	for _, key := range cacheKeys.DlmKeys {
+	for key := range cacheKeys.DlmKeys {
 		c.dlmsToUpdate[key] = nil
 	}
 }
@@ -297,10 +297,10 @@ func (c *_ctx) getQueryInfos() []*queryinfo.QueryInfo {
 	return cpy
 }
 
-func (c *_ctx) getDlm(dlmKeys []string) (int64, error) {
+func (c *_ctx) getDlm(dlmKeys map[string]bool) (int64, error) {
 	dlmsToFetch := make([]interface{}, 0, len(dlmKeys))
 	latestDlm := int64(0)
-	for _, dlmKey := range dlmKeys {
+	for dlmKey := range dlmKeys {
 		dlm, exists := c.retrievedDlms[dlmKey]
 		if !exists {
 			dlmsToFetch = append(dlmsToFetch, dlmKey)

@@ -16,7 +16,7 @@ type Key struct {
 	isGet   bool
 	Key     string
 	Args    []interface{}
-	DlmKeys []string
+	DlmKeys map[string]bool
 }
 
 func NewGet(key string, args ...interface{}) *Key {
@@ -24,15 +24,30 @@ func NewGet(key string, args ...interface{}) *Key {
 		isGet:   true,
 		Key:     key,
 		Args:    args,
-		DlmKeys: make([]string, 0, 10),
+		DlmKeys: map[string]bool{},
 	}
 }
 
 func NewSetDlms() *Key {
 	return &Key{
 		isGet:   false,
-		DlmKeys: make([]string, 0, 10),
+		DlmKeys: map[string]bool{},
 	}
+}
+
+func (k *Key) SortedDlmKeys() []string {
+	sorted := make([]string, 0, len(k.DlmKeys))
+	for key := range k.DlmKeys {
+		idx := sort.SearchStrings(sorted, key)
+		if idx == len(sorted) {
+			sorted = append(sorted, key)
+		} else if sorted[idx] != key {
+			sorted = append(sorted, "")
+			copy(sorted[idx+1:], sorted[idx:])
+			sorted[idx] = key
+		}
+	}
+	return sorted
 }
 
 func (k *Key) AccountMaster(account id.Id) *Key {
@@ -213,13 +228,6 @@ func (k *Key) setKey(typeKey string, id id.Id) *Key {
 	} else {
 		key = typeKey + ":" + id.String()
 	}
-	idx := sort.SearchStrings(k.DlmKeys, key)
-	if idx == len(k.DlmKeys) {
-		k.DlmKeys = append(k.DlmKeys, key)
-	} else if k.DlmKeys[idx] != key {
-		k.DlmKeys = append(k.DlmKeys, "")
-		copy(k.DlmKeys[idx+1:], k.DlmKeys[idx:])
-		k.DlmKeys[idx] = key
-	}
+	k.DlmKeys[key] = true
 	return k
 }

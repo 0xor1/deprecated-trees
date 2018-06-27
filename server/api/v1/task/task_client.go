@@ -159,7 +159,7 @@ func (c *client) GetAncestors(css *clientsession.Store, region string, shard int
 		Shard:   shard,
 		Account: account,
 		Project: project,
-		Task:    child,
+		Child:   child,
 		Limit:   limit,
 	}, nil, &getAncestorsResp{})
 	if val != nil {

@@ -296,7 +296,7 @@ type getAncestorsArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
 	Project id.Id `json:"project"`
-	Task    id.Id `json:"task"`
+	Child   id.Id `json:"child"`
 	Limit   int   `json:"limit"`
 }
 
@@ -317,7 +317,7 @@ var getAncestors = &endpoint.Endpoint{
 		args := a.(*getAncestorsArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		validate.Limit(args.Limit, ctx.MaxProcessEntityCount())
-		return dbGetAncestorTasks(ctx, args.Shard, args.Account, args.Project, args.Task, args.Limit)
+		return dbGetAncestorTasks(ctx, args.Shard, args.Account, args.Project, args.Child, args.Limit)
 	},
 }
 
