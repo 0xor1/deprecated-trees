@@ -4,7 +4,7 @@
       <fingerprint-spinner :animation-duration="2000" :size="200" :color="'#9FC657'"></fingerprint-spinner>
     </v-layout>
   </v-container>
-  <v-container v-else-if="task.isAbstract" class="pa-0" fluid fill-height>
+  <v-container v-else class="pa-0" fluid fill-height>
     <v-layout column fill-height>
       <v-flex>
         <v-breadcrumbs v-if="project !== task.id">
@@ -24,15 +24,16 @@
           <v-card-title class="py-1"><h3>{{task.name}}</h3></v-card-title>
           <v-card-text class="py-1">{{task.description}}</v-card-text>
           <v-card-text class="py-1">
-            Min: <h3>{{task.minimumRemainingTime}}</h3> &nbsp;
+            <span v-if="task.isAbstract">Min: <h3>{{task.minimumRemainingTime}}</h3> &nbsp;</span>
             Tot: <h3>{{task.totalRemainingTime}}</h3> &nbsp;
             Log: <h3>{{task.totalLoggedTime}}</h3> &nbsp;
-            Children: <h3>{{task.childCount}}</h3> &nbsp;
-            Descendants: <h3>{{task.descendantCount}}</h3> &nbsp;
+            <span v-if="task.isAbstract">Children: <h3>{{task.childCount}}</h3> &nbsp;</span>
+            <span v-if="task.isAbstract">Descendants: <h3>{{task.descendantCount}}</h3> &nbsp;</span>
           </v-card-text>
         </v-card>
       </v-flex>
       <v-data-table
+        v-if="task.isAbstract"
         style="width: 100%!important; height: 100%!important"
         :headers="headers"
         :items="children"
@@ -44,23 +45,52 @@
           <tr @click="goToTask(children.item)" style="cursor: pointer">
             <td class="text-xs-left">{{ children.item.name }}</td>
             <td class="text-xs-left hidden-sm-and-down">{{ children.item.description? children.item.description: 'none' }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.minimumRemainingTime }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.minimumRemainingTime: children.item.totalRemainingTime }}</td>
             <td class="text-xs-left" style="width: 120px;">{{ children.item.totalRemainingTime }}</td>
             <td class="text-xs-left" style="width: 120px;">{{ children.item.totalLoggedTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.childCount }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.descendantCount }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.childCount: 0 }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.descendantCount: 0 }}</td>
           </tr>
         </template>
         <template slot="no-data">
           <v-alert v-if="!loading" :value="true" color="info" icon="error">
-            No Child Tasks Yet <v-btn v-on:click="toggleCreateForm" color="primary">create</v-btn>
+            No Child Tasks Yet <v-btn v-on:click="toggleCreateTaskForm" color="primary">create</v-btn>
           </v-alert>
           <v-alert v-if="loading" :value="true" color="info" icon="error">
             Loading Data
           </v-alert>
         </template>
       </v-data-table>
-      <v-btn v-if="children.length > 0" v-on:click="toggleCreateForm" fixed right bottom color="primary" fab>
+      <v-data-table
+        v-else
+        style="width: 100%!important; height: 100%!important"
+        :headers="headers"
+        :items="children"
+        :loading="loading"
+        hide-actions
+        class="elevation-1"
+      >
+        <template slot="items" slot-scope="children">
+          <tr @click="goToTask(children.item)" style="cursor: pointer">
+            <td class="text-xs-left">{{ children.item.name }}</td>
+            <td class="text-xs-left hidden-sm-and-down">{{ children.item.description? children.item.description: 'none' }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.minimumRemainingTime: children.item.totalRemainingTime }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalRemainingTime }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalLoggedTime }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.childCount: 0 }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.descendantCount: 0 }}</td>
+          </tr>
+        </template>
+        <template slot="no-data">
+          <v-alert v-if="!loading" :value="true" color="info" icon="error">
+            No Time Logs Yet <v-btn v-on:click="toggleCreateTaskForm" color="primary">create</v-btn>
+          </v-alert>
+          <v-alert v-if="loading" :value="true" color="info" icon="error">
+            Loading Data
+          </v-alert>
+        </template>
+      </v-data-table>
+      <v-btn v-if="children.length > 0" v-on:click="toggleCreateTaskForm" fixed right bottom color="primary" fab>
         <v-icon>add</v-icon>
       </v-btn>
       <v-dialog
@@ -74,7 +104,7 @@
           <v-toolbar card dark color="primary">
             <v-toolbar-title>Create Task</v-toolbar-title>
             <v-spacer></v-spacer>
-            <v-btn icon dark @click.native="toggleCreateForm">
+            <v-btn icon dark @click.native="toggleCreateTaskForm">
               <v-icon>close</v-icon>
             </v-btn>
           </v-toolbar>
@@ -91,8 +121,8 @@
                 :label="`Is Parallel`"
                 v-model="createTaskIsParallel"></v-switch>
               <v-btn
-                :loading="creating"
-                :disabled="creating"
+                :loading="creatingTask"
+                :disabled="creatingTask"
                 color="secondary"
                 @click="createTask"
               >
@@ -134,13 +164,16 @@
         },
         loading: true,
         createTaskDialog: false,
+        createTimeLogDialog: false,
         createTaskIsAbstract: true,
         createTaskName: '',
         createTaskDescription: null,
         createTaskRemainingTime: null,
         createTaskIsParallel: true,
-        creating: false,
+        creatingTask: false,
         children: [],
+        timeLogs: [],
+        moreTimeLogs: false,
         moreChildren: false,
         moreAncestors: false,
         task: null,
@@ -213,8 +246,8 @@
         router.push('/app/region/' + params.region + '/shard/' + params.shard + /account/ + params.account + /project/ + params.project + /task/ + task.id)
         this.init()
       },
-      toggleCreateForm () {
-        if (!this.creating) {
+      toggleCreateTaskForm () {
+        if (!this.creatingTask) {
           this.createTaskDialog = !this.createTaskDialog
           this.createTaskName = ''
           this.createTaskDescription = null
@@ -223,7 +256,7 @@
         }
       },
       createTask () {
-        this.creating = true
+        this.creatingTask = true
         let params = router.currentRoute.params
         let description = null
         if (this.createTaskDescription && this.createTaskDescription.length) {
@@ -247,8 +280,8 @@
             myId = me.id
           }
           api.v1.task.create(params.region, params.shard, params.account, params.project, params.task, previousSibling, this.createTaskName, description, this.createTaskIsAbstract, isParallel, myId, remainingTime).then((newTask) => {
-            this.creating = false
-            this.toggleCreateForm()
+            this.creatingTask = false
+            this.toggleCreateTaskForm()
             this.children.push(newTask)
             this.task.childCount++
             this.task.descendantCount++

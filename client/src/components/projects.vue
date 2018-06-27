@@ -30,6 +30,8 @@
           <td class="text-xs-left" style="width: 120px;">{{ projects.item.minimumRemainingTime }}</td>
           <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalRemainingTime }}</td>
           <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ projects.item.childCount }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ projects.item.descendantCount }}</td>
         </tr>
       </template>
       <template slot="no-data">
@@ -149,7 +151,9 @@
           {text: 'Created', align: 'left', value: cnst.sortBy.createdOn},
           {text: 'Min.', sortable: false, align: 'left', value: 'minimumRemainingTime'},
           {text: 'Tot.', sortable: false, align: 'left', value: 'totalRemainingTime'},
-          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'}
+          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'},
+          {text: 'Children', sortable: false, align: 'left', value: 'childCount'},
+          {text: 'Descendants', sortable: false, align: 'left', value: 'descendantCount'}
         ],
         totalProjects: 0,
         pagination: {

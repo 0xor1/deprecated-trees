@@ -36,9 +36,9 @@ func dbDelete(ctx ctx.Ctx, shard int, account, project, task, member, timeLog id
 	ctx.TouchDlms(cachekey.NewSetDlms().CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL deleteTimeLog(?, ?, ?, ?)`, account, project, timeLog, ctx.Me())).TimeLog(account, project, timeLog, &task, &member).ProjectActivities(account, project))
 }
 
-func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) []*tlog.TimeLog {
+func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) *getResp {
 	if timeLog != nil {
-		return []*tlog.TimeLog{dbGetTimeLog(ctx, shard, account, project, *timeLog)}
+		return &getResp{TimeLogs: []*tlog.TimeLog{dbGetTimeLog(ctx, shard, account, project, *timeLog)}}
 	}
 	cacheKey := cachekey.NewGet("timelog.dbGetTimeLogs", shard, account, project, task, member, timeLog, sortAsc, after, limit)
 	if task != nil {
@@ -50,9 +50,9 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 	if task == nil && member == nil {
 		cacheKey.ProjectTimeLogSet(account, project)
 	}
-	timeLogsSet := make([]*tlog.TimeLog, 0, limit)
-	if ctx.GetCacheValue(&timeLogsSet, cacheKey) {
-		return timeLogsSet
+	res := getResp{}
+	if ctx.GetCacheValue(&res, cacheKey) {
+		return &res
 	}
 	query := bytes.NewBufferString(`SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=?`)
 	args := make([]interface{}, 0, 9)
@@ -70,17 +70,25 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 		args = append(args, account, project, *after, *after)
 	}
 	query.WriteString(fmt.Sprintf(` ORDER BY loggedOn %s, id %s LIMIT ?`, sortdir.String(sortAsc), sortdir.String(sortAsc)))
-	args = append(args, limit)
+	args = append(args, limit+1)
 	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {
 		defer rows.Close()
 	}
 	panic.If(e)
+	timeLogsSet := make([]*tlog.TimeLog, 0, limit+1)
 	for rows.Next() {
 		tl := tlog.TimeLog{}
 		panic.If(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 		timeLogsSet = append(timeLogsSet, &tl)
 	}
-	ctx.SetCacheValue(timeLogsSet, cacheKey)
-	return timeLogsSet
+	if len(timeLogsSet) == limit+1 {
+		res.TimeLogs = timeLogsSet[:limit]
+		res.More = true
+	} else {
+		res.TimeLogs = timeLogsSet
+		res.More = false
+	}
+	ctx.SetCacheValue(res, cacheKey)
+	return &res
 }

@@ -161,11 +161,16 @@ type getArgs struct {
 	Limit   int    `json:"limit"`
 }
 
+type getResp struct {
+	TimeLogs []*timelog.TimeLog    `json:"timeLogs"`
+	More bool `json:"more"`
+}
+
 var get = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
 	Path:                     "/api/v1/timeLog/get",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*timelog.TimeLog{{}},
+	ExampleResponseStructure: &getResp{TimeLogs: []*timelog.TimeLog{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getArgs{}
 	},

@@ -12,7 +12,7 @@ type Client interface {
 	SetDuration(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id, duration uint64) error
 	SetNote(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id, note *string) error
 	Delete(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id) error
-	Get(css *clientsession.Store, region string, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) ([]*tlog.TimeLog, error)
+	Get(css *clientsession.Store, region string, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error)
 }
 
 func NewClient(host string) Client {
@@ -88,7 +88,7 @@ func (c *client) Delete(css *clientsession.Store, region string, shard int, acco
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, region string, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) ([]*tlog.TimeLog, error) {
+func (c *client) Get(css *clientsession.Store, region string, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error) {
 	val, e := get.DoRequest(css, c.host, region, &getArgs{
 		Shard:   shard,
 		Account: account,
@@ -99,9 +99,9 @@ func (c *client) Get(css *clientsession.Store, region string, shard int, account
 		SortAsc: sortAsc,
 		After:   after,
 		Limit:   limit,
-	}, nil, &[]*tlog.TimeLog{})
+	}, nil, &getResp{})
 	if val != nil {
-		return *val.(*[]*tlog.TimeLog), e
+		return val.(*getResp), e
 	}
 	return nil, e
 }
