@@ -107,20 +107,27 @@
             </v-btn>
           </v-toolbar>
           <v-card-text>
-            <v-form ref="form" @keyup.native.enter="createTask">
+            <v-form ref="form" v-model="createTaskValid" @keyup.native.enter="createTask">
               <v-switch
                 :label="`Is Abstract`"
                 v-model="createTaskIsAbstract"></v-switch>
               <v-text-field v-model="createTaskName" name="taskName" label="Name" type="text"></v-text-field>
               <v-text-field v-model="createTaskDescription" name="taskDescription" label="Description" type="text"></v-text-field>
-              <v-text-field v-if="!createTaskIsAbstract" v-model="createTaskRemainingTime" name="taskRemainingTime" label="Remaining Time" type="number"></v-text-field>
+              <v-layout v-if="!createTaskIsAbstract" row>
+                <v-flex class="mr-3" xs12 sm6 md4>
+                  <v-text-field v-model="createTaskHours" name="createTaskHours" label="Hours" type="number" :rules="createOptionalTimeRules"></v-text-field>
+                </v-flex>
+                <v-flex xs12 sm6 md4>
+                  <v-text-field v-model="createTaskMins" name="createTaskMins" label="Minutes" type="number" :rules="createOptionalTimeRules"></v-text-field>
+                </v-flex>
+              </v-layout>
               <v-switch
                 v-if="createTaskIsAbstract"
                 :label="`Is Parallel`"
                 v-model="createTaskIsParallel"></v-switch>
               <v-btn
                 :loading="creatingTask"
-                :disabled="creatingTask"
+                :disabled="creatingTask || !createTaskValid"
                 color="secondary"
                 @click="createTask"
               >
@@ -146,13 +153,27 @@
             </v-btn>
           </v-toolbar>
           <v-card-text>
-            <v-form ref="form" @keyup.native.enter="createTimeLog">
-              <v-text-field v-model="createTimeLogDuration" name="timeLogDuration" label="Duration" type="number"></v-text-field>
-              <v-text-field v-model="createTimeLogRemainingTime" name="timeLogRemainingTime" label="Set Remaining Time" type="number"></v-text-field>
+            <v-form ref="form" v-model="createTimeLogValid" @keyup.native.enter="createTimeLog">
+              <v-layout row>
+                <v-flex class="mr-3" xs12 sm6 md4>
+                  <v-text-field v-model="createTimeLogDurationHours" name="createTimeLogDurationHours" label="Duration Hours" type="number" :rules="createOptionalTimeRules"></v-text-field>
+                </v-flex>
+                <v-flex xs12 sm6 md4>
+                  <v-text-field v-model="createTimeLogDurationMins" name="createTimeLogDurationMins" label="Duration Minutes" type="number" :rules="createOptionalTimeRules"></v-text-field>
+                </v-flex>
+              </v-layout>
+              <v-layout row>
+                <v-flex class="mr-3" xs12 sm6 md4>
+                  <v-text-field v-model="createTimeLogRemainingHours" name="createTimeLogRemainingHours" label="Remaining Hours" type="number" :rules="createOptionalTimeRules"></v-text-field>
+                </v-flex>
+                <v-flex xs12 sm6 md4>
+                  <v-text-field v-model="createTimeLogRemainingMins" name="createTimeLogRemainingMins" label="Remaining Minutes" type="number" :rules="createOptionalTimeRules"></v-text-field>
+                </v-flex>
+              </v-layout>
               <v-text-field v-model="createTimeLogNote" name="timeLogNote" label="Note" type="text"></v-text-field>
               <v-btn
                 :loading="creatingTimeLog"
-                :disabled="creatingTimeLog || createTimeLogDuration === null || createTimeLogDuration < 1"
+                :disabled="creatingTimeLog || !createTimeLogValid || createTimeLogDuration <= 0"
                 color="secondary"
                 @click="createTimeLog"
               >
@@ -179,6 +200,16 @@
       return {
         routeParams,
         project: null,
+        createTimeLogValid: true,
+        createTaskValid: true,
+        createOptionalTimeRules: [
+          v => {
+            if (v !== null && v.length !== 0 && parseInt(v) < 0) {
+              return 'entered value must be zero or greater'
+            }
+            return true
+          }
+        ],
         childrenHeaders: [
           {text: 'Name', sortable: false, align: 'left', value: 'name'},
           {text: 'Description', class: 'hidden-sm-and-down', sortable: false, align: 'left', value: 'description'},
@@ -200,12 +231,15 @@
         createTaskIsAbstract: true,
         createTaskName: '',
         createTaskDescription: null,
-        createTaskRemainingTime: null,
+        createTaskHours: 0,
+        createTaskMins: 0,
         createTaskIsParallel: true,
         creatingTask: false,
         creatingTimeLog: false,
-        createTimeLogDuration: null,
-        createTimeLogRemainingTime: null,
+        createTimeLogDurationHours: 0,
+        createTimeLogDurationMins: 0,
+        createTimeLogRemainingHours: null,
+        createTimeLogRemainingMins: null,
         createTimeLogNote: null,
         children: [],
         timeLogs: [],
@@ -229,6 +263,35 @@
     },
     beforeDestroy () {
       document.removeEventListener('scroll', this.pageScrollListener)
+    },
+    computed: {
+      createTimeLogDuration () {
+        let hrs = parseInt(this.createTimeLogDurationHours)
+        let mins = parseInt(this.createTimeLogDurationMins)
+        let tot = 0
+        if (!isNaN(hrs)) {
+          tot += hrs * 60
+        }
+        if (!isNaN(mins)) {
+          tot += mins
+        }
+        return tot
+      },
+      createTimeLogRemainingTime () {
+        let hrs = parseInt(this.createTimeLogRemainingHours)
+        let mins = parseInt(this.createTimeLogRemainingMins)
+        let tot = 0
+        if (isNaN(hrs) && isNaN(mins)) {
+          return null
+        }
+        if (!isNaN(hrs)) {
+          tot += hrs * 60
+        }
+        if (!isNaN(mins)) {
+          tot += mins
+        }
+        return tot
+      }
     },
     watch: {
       $route () {
@@ -309,14 +372,17 @@
           this.createTaskName = ''
           this.createTaskDescription = null
           this.createTaskIsParallel = true
-          this.createTaskRemainingTime = null
+          this.createTaskHours = 0
+          this.createTaskMins = 0
         }
       },
       toggleCreateTimeLogForm () {
         if (!this.creatingTimeLog) {
           this.createTimeLogDialog = !this.createTimeLogDialog
-          this.createTimeLogDuration = null
-          this.createTimeLogRemainingTime = null
+          this.createTimeLogDurationHours = 0
+          this.createTimeLogDurationMins = 0
+          this.createTimeLogRemainingHours = null
+          this.createTimeLogRemainingMins = null
           this.createTimeLogNote = null
         }
       },
@@ -335,7 +401,15 @@
         if (!this.createTaskIsAbstract) {
           isParallel = null
         }
-        let remainingTime = parseInt(this.createTaskRemainingTime)
+        let remainingTime = 0
+        let parsedHours = parseInt(this.createTaskHours)
+        let parsedMins = parseInt(this.createTaskMins)
+        if (!isNaN(parsedHours)) {
+          remainingTime += parsedHours * 60
+        }
+        if (!isNaN(parsedMins)) {
+          remainingTime += parsedMins
+        }
         if (this.createTaskIsAbstract) {
           remainingTime = null
         }
@@ -364,7 +438,7 @@
         })
       },
       createTimeLog () {
-        if (this.createTimeLogDuration !== null && parseInt(this.createTimeLogDuration) > 0) {
+        if (this.createTimeLogDuration > 0) {
           this.creatingTimeLog = true
           let params = router.currentRoute.params
           let note = null
@@ -374,14 +448,14 @@
           let resHandler = (newTimeLog) => {
             this.creatingTimeLog = false
             this.timeLogs.push(newTimeLog)
-            this.task.totalLoggedTime += parseInt(this.createTimeLogDuration)
-            if (this.createTimeLogRemainingTime !== null && parseInt(this.createTimeLogRemainingTime) >= 0) {
-              this.task.totalRemainingTime = parseInt(this.createTimeLogRemainingTime)
+            this.task.totalLoggedTime += this.createTimeLogDuration
+            if (this.createTimeLogRemainingTime !== null) {
+              this.task.totalRemainingTime = this.createTimeLogRemainingTime
             }
             this.toggleCreateTimeLogForm()
           }
-          if (this.createTimeLogRemainingTime !== null && this.createTimeLogRemainingTime >= 0) {
-            api.v1.timeLog.createAndSetRemainingTime(params.region, params.shard, params.account, params.project, params.task, parseInt(this.createTimeLogRemainingTime), parseInt(this.createTimeLogDuration), note).then(resHandler)
+          if (this.createTimeLogRemainingTime !== null) {
+            api.v1.timeLog.createAndSetRemainingTime(params.region, params.shard, params.account, params.project, params.task, this.createTimeLogRemainingTime, this.createTimeLogDuration, note).then(resHandler)
           } else {
             api.v1.timeLog.create(params.region, params.shard, params.account, params.project, params.task, this.createTimeLogDuration, note).then(resHandler)
           }

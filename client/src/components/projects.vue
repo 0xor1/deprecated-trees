@@ -164,7 +164,7 @@
         createProjectHoursPerDayRules: [
           v => {
             if (!v || v <= 0 || v > 24) {
-              return 'Hours per Work Day must be a positive number no greater than 24'
+              return 'must be a positive number no greater than 24'
             }
             return true
           }
@@ -173,7 +173,7 @@
         createProjectDaysPerWeekRules: [
           v => {
             if (!v || v <= 0 || v > 7) {
-              return 'Days per Work Week must be a positive number no greater than 7'
+              return 'must be a positive number no greater than 7'
             }
             return true
           }
