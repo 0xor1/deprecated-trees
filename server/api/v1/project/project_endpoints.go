@@ -421,7 +421,7 @@ type Project struct {
 	ChatCount            uint64     `json:"chatCount"`
 	ChildCount           uint64     `json:"childCount"`
 	DescendantCount      uint64     `json:"descendantCount"`
-	IsParallel           bool       `json:"isParallel,omitempty"`
+	IsParallel           bool       `json:"isParallel"`
 	IsPublic             bool       `json:"isPublic"`
 }
 

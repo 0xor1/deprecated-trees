@@ -110,6 +110,9 @@ func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 
 func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, timeLog *id.Id, loggedOn *time.Time, duration *uint64, note *string) *timelog.TimeLog {
 	rows, e := ctx.TreeQuery(shard, `CALL setRemainingTimeAndOrLogTime( ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), remainingTime, timeLog, loggedOn, duration, note)
+	if rows != nil {
+		defer rows.Close()
+	}
 	panic.If(e)
 	tasks := make([]id.Id, 0, 100)
 	var existingMember *id.Id
@@ -154,6 +157,9 @@ func MakeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) {
 
 func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) []id.Id {
 	rows, e := ctx.TreeQuery(shard, sql, args...)
+	if rows != nil {
+		defer rows.Close()
+	}
 	panic.If(e)
 	res := make([]id.Id, 0, 100)
 	for rows.Next() {

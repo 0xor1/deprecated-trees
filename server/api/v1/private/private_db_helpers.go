@@ -110,6 +110,9 @@ func dbSetMembersInactive(ctx ctx.Ctx, shard int, account id.Id, members []id.Id
 	cacheKey := cachekey.NewSetDlms().AccountMembers(account, members)
 	for _, mem := range members {
 		rows, e := ctx.TreeQuery(shard, `CALL setAccountMemberInactive(?, ?)`, account, mem)
+		if rows != nil {
+			defer rows.Close()
+		}
 		panic.If(e)
 		for rows.Next() {
 			var project id.Id

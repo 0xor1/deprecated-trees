@@ -34,6 +34,9 @@ func dbCreateTask(ctx ctx.Ctx, shard int, account, project, parent id.Id, nextSi
 
 func dbSetName(ctx ctx.Ctx, shard int, account, project, task id.Id, name string) {
 	rows, e := ctx.TreeQuery(shard, `CALL setTaskName(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), name)
+	if rows != nil {
+		defer rows.Close()
+	}
 	panic.If(e)
 	var timeLog *id.Id //on the first pass this is the parent (if any)
 	var member *id.Id
@@ -93,6 +96,9 @@ func dbMoveTask(ctx ctx.Ctx, shard int, account, project, task, newParent id.Id,
 
 func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 	rows, e := ctx.TreeQuery(shard, `CALL deleteTask(?, ?, ?, ?)`, account, project, task, ctx.Me())
+	if rows != nil {
+		defer rows.Close()
+	}
 	panic.If(e)
 	affectedTasks := make([]id.Id, 0, 100)
 	updatedProjectMembers := make([]id.Id, 0, 100)

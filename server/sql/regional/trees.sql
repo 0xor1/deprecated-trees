@@ -1181,6 +1181,7 @@ CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_account BINARY(16), 
     DECLARE totalRemainingTimeChangeIsPositive BOOL DEFAULT TRUE;
     DECLARE totalLoggedTimeChangeIsPositive BOOL DEFAULT TRUE;
     DECLARE descendantCountChangeIsPositive BOOL DEFAULT TRUE;
+    DECLARE minimumRemainingTimeIsChanging BOOL DEFAULT TRUE;
 
     SELECT totalRemainingTime, totalLoggedTime, minimumRemainingTime, childCount, descendantCount, isParallel, parent INTO originalTotalRemainingTime, originalTotalLoggedTime, preChangeMinimumRemainingTime, originalChildCount, originalDescendantCount, currentIsParallel, nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
     IF currentIsParallel THEN
@@ -1234,37 +1235,67 @@ CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_account BINARY(16), 
           SET postChangeMinimumRemainingTime = currentMinimumRemainingTime + postChangeMinimumRemainingTime-preChangeMinimumRemainingTime;
         ELSE #nochange to minimum time to make
           SET postChangeMinimumRemainingTime=currentMinimumRemainingTime;
+          SET minimumRemainingTimeIsChanging=FALSE;
         END IF;
         SET preChangeMinimumRemainingTime=currentMinimumRemainingTime;
       ELSE
         SELECT parent INTO nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
+        SET minimumRemainingTimeIsChanging=FALSE;
       END IF;
 
-      #do the actual update, needs a bunch of bool logic to work out +/- sign usage, 8 cases for all combinations, but the task is updated in a single update statement :)
-      IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
-      ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      #do the actual update, needs a bunch of bool logic to work out +/- sign usage, 16 cases for all combinations, but the task is updated in a single update statement :)
+      IF minimumRemainingTimeIsChanging THEN
+        IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
+        END IF;
+      ELSE
+        IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                              _account AND project = _project AND id = _task;
+        END IF;
       END IF;
 
       INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;

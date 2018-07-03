@@ -282,6 +282,9 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 	query.WriteString(fmt.Sprintf(` ORDER BY %s %s, id LIMIT ?`, sortBy, sortdir.String(sortAsc)))
 	args = append(args, limit+1)
 	rows, e := ctx.TreeQuery(shard, fmt.Sprintf(query.String(), specificSqlFilterTxt), args...)
+	if rows != nil {
+		defer rows.Close()
+	}
 	panic.If(e)
 	projSet := make([]*Project, 0, limit+1)
 	idx := 0
@@ -308,6 +311,9 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 		}
 		query.WriteString(fmt.Sprintf(`) LIMIT %d`, len(projSet)))
 		rows, e := ctx.TreeQuery(shard, query.String(), args...)
+		if rows != nil {
+			defer rows.Close()
+		}
 		panic.If(e)
 		for rows.Next() {
 			rows.Scan(&i, &description, &totalRemainingTime, &totalLoggedTime, &minimumRemainingTime, &linkedFileCount, &chatCount, &childCount, &descendantCount, &isParallel)
