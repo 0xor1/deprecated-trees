@@ -7,14 +7,13 @@ import (
 )
 
 var (
-	NoSuchRegion           = &Err{Code: "u_e_nsr", Message: "no such region"}
+	InvalidRegion          = &Err{Code: "u_e_nsr", Message: "invalid region"}
 	NotImplemented         = &Err{Code: "u_e_ni", Message: "not implemented"}
 	InvalidArguments       = &Err{Code: "u_e_ia", Message: "invalid arguments"}
 	InsufficientPermission = &Err{Code: "u_e_ip", Message: "insufficient permissions"}
 	InvalidOperation       = &Err{Code: "u_e_io", Message: "invalid operation"}
 	InvalidEntityCount     = &Err{Code: "u_e_iec", Message: "invalid entity count"}
 	NoSuchEntity           = &Err{Code: "u_e_nse", Message: "no such entity"}
-	UnknownEnv             = &Err{Code: "u_e_ue", Message: "unknown env"}
 	External               = &Err{Code: "u_e_e", Message: "external error occurred"}
 )
 
@@ -27,6 +26,15 @@ func (e *Err) Error() string {
 	return fmt.Sprintf("code: %q message: %q", e.Code, e.Message)
 }
 
+type httpErr struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (e *httpErr) Error() string {
+	return e.Message
+}
+
 func IsSqlErrNoRowsElsePanicIf(e error) bool {
 	if e == sql.ErrNoRows {
 		return true
@@ -36,5 +44,9 @@ func IsSqlErrNoRowsElsePanicIf(e error) bool {
 }
 
 func FmtPanic(format string, a ...interface{}) {
-	panic.If(fmt.Errorf(format, a...))
+	panic.IfTruef(true, format, a...)
+}
+
+func HttpPanic(code int, message string) {
+	panic.If(&httpErr{Code: code, Message: message})
 }

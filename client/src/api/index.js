@@ -1,55 +1,9 @@
 import axios from 'axios'
 import router from '@/router'
 
-// important!! or axios will not send cookies to cors requests :( lost  3 days figuring this information out, shakes fist vigorously
-axios.defaults.withCredentials = true
-
-const config = {
-  lcl: {
-    central: 'http://lcl-api.project-trees.com',
-    regions: {
-      use: 'http://lcl-api.project-trees.com',
-      usw: 'http://lcl-api.project-trees.com',
-      euw: 'http://lcl-api.project-trees.com',
-      asp: 'http://lcl-api.project-trees.com',
-      aus: 'http://lcl-api.project-trees.com'
-    }
-  },
-  dev: {
-    central: 'https://dev-api.project-trees.com',
-    regions: {
-      use: 'https://dev-api.project-trees.com',
-      usw: 'https://dev-api.project-trees.com',
-      euw: 'https://dev-api.project-trees.com',
-      asp: 'https://dev-api.project-trees.com',
-      aus: 'https://dev-api.project-trees.com'
-    }
-  },
-  stg: {
-    central: 'https://stg-central-api.project-trees.com',
-    regions: {
-      use: 'https://stg-use-api.project-trees.com',
-      usw: 'https://stg-usw-api.project-trees.com',
-      euw: 'https://stg-euw-api.project-trees.com',
-      asp: 'https://stg-asp-api.project-trees.com',
-      aus: 'https://stg-aus-api.project-trees.com'
-    }
-  },
-  pro: {
-    central: 'https://pro-central-api.project-trees.com',
-    regions: {
-      use: 'https://pro-use-api.project-trees.com',
-      usw: 'https://pro-usw-api.project-trees.com',
-      euw: 'https://pro-euw-api.project-trees.com',
-      asp: 'https://pro-asp-api.project-trees.com',
-      aus: 'https://pro-aus-api.project-trees.com'
-    }
-  }
-}
-
 export const cnst = {
   regions: {
-    central: 'central',
+    central: 'central', // Central directory
     use: 'use', // US East
     usw: 'usw', // US West
     euw: 'euw', // EU West
@@ -161,9 +115,6 @@ newApi = (opts) => {
   }
 
   return {
-    env: () => {
-      return config.env
-    },
     newMGetApi: (region) => {
       return newApi({isMGetApi: true, mGetApiRegion: region})
     },
@@ -308,11 +259,11 @@ newApi = (opts) => {
         }
       },
       account: {
-        setPublicProjectsEnabled: (region, shard, account, publicProjectsEnabled) => {
-          return post(region, '/api/v1/account/setPublicProjectsEnabled', {shard, account, publicProjectsEnabled})
+        edit: (region, shard, account, fields) => {
+          return post(region, '/api/v1/account/edit', {shard, account, fields})
         },
-        getPublicProjectsEnabled: (region, shard, account) => {
-          return get(region, '/api/v1/account/getPublicProjectsEnabled', {shard, account})
+        get: (region, shard, account) => {
+          return get(region, '/api/v1/account/get', {shard, account})
         },
         setMemberRole: (region, shard, account, member, role) => {
           return post(region, '/api/v1/account/setMemberRole', {shard, account, member, role})
@@ -328,14 +279,11 @@ newApi = (opts) => {
         }
       },
       project: {
-        create: (region, shard, account, name, description, startOn, dueOn, isParallel, isPublic, members) => {
-          return post(region, '/api/v1/project/create', {shard, account, name, description, startOn, dueOn, isParallel, isPublic, members})
+        create: (region, shard, account, name, description, hoursPerDay, daysPerWeek, startOn, dueOn, isParallel, isPublic, members) => {
+          return post(region, '/api/v1/project/create', {shard, account, name, description, hoursPerDay, daysPerWeek, startOn, dueOn, isParallel, isPublic, members})
         },
-        setIsPublic: (region, shard, account, project, isPublic) => {
-          return post(region, '/api/v1/project/setIsPublic', {shard, account, project, isPublic})
-        },
-        setIsArchived: (region, shard, account, project, isArchived) => {
-          return post(region, '/api/v1/project/setIsArchived', {shard, account, project, isArchived})
+        edit: (region, shard, account, project, fields) => {
+          return post(region, '/api/v1/project/edit', {shard, account, project, fields})
         },
         get: (region, shard, account, project) => {
           return get(region, '/api/v1/project/get', {shard, account, project})
@@ -402,22 +350,22 @@ newApi = (opts) => {
       },
       timeLog: {
         create: (region, shard, account, project, task, duration, note) => {
-          return post(region, '/api/v1/task/create', {shard, account, project, task, duration, note})
+          return post(region, '/api/v1/timeLog/create', {shard, account, project, task, duration, note})
         },
-        createAndSetTimeRemaining: (region, shard, account, project, task, timeRemaining, duration, note) => {
-          return post(region, '/api/v1/task/createAndSetTimeRemaining', {shard, account, project, task, timeRemaining, duration, note})
+        createAndSetRemainingTime: (region, shard, account, project, task, remainingTime, duration, note) => {
+          return post(region, '/api/v1/timeLog/createAndSetRemainingTime', {shard, account, project, task, remainingTime, duration, note})
         },
         setDuration: (region, shard, account, project, timeLog, duration) => {
-          return post(region, '/api/v1/task/setDuration', {shard, account, project, timeLog, duration})
+          return post(region, '/api/v1/timeLog/setDuration', {shard, account, project, timeLog, duration})
         },
         setNote: (region, shard, account, project, timeLog, note) => {
-          return post(region, '/api/v1/task/setNote', {shard, account, project, timeLog, note})
+          return post(region, '/api/v1/timeLog/setNote', {shard, account, project, timeLog, note})
         },
         delete: (region, shard, account, project, timeLog) => {
-          return post(region, '/api/v1/task/delete', {shard, account, project, timeLog})
+          return post(region, '/api/v1/timeLog/delete', {shard, account, project, timeLog})
         },
         get: (region, shard, account, project, task, member, timeLog, sortAsc, after, limit) => {
-          return get(region, '/api/v1/task/get', {shard, account, project, task, member, timeLog, sortAsc, after, limit})
+          return get(region, '/api/v1/timeLog/get', {shard, account, project, task, member, timeLog, sortAsc, after, limit})
         }
       }
     }

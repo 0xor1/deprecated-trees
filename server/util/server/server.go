@@ -99,10 +99,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			} else {
 				writeJson(resp, http.StatusInternalServerError, err.External)
 			}
-			er := r.(error)
-			if er != nil {
-				s.SR.LogError(er)
-			}
+			ctx.LogIf(r.(error))
 		}
 		s.SR.LogStats(resp.code, req.Method, lowerPath, ctx.requestStartUnixMillis, ctx.getQueryInfos())
 	}()
@@ -113,7 +110,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//set common headers
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
-	resp.Header().Set("Content-Security-Policy", "default-src *.project-trees.com")
+	//resp.Header().Set("Content-Security-Policy", "default-src *.project-trees.com")
 	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
 	resp.Header().Set("X-Version", s.SR.Version)
 	//check for none api call
@@ -140,9 +137,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	reqQueryValues := req.URL.Query()
 	panic.IfTruef(reqQueryValues.Get("region") == "", "missing region query param")
 	// act as a proxy for other regions if necessary, this will only happen in stg and pro environments as lcl and dev are one box environments
-	lowerRegion := strings.ToLower(reqQueryValues.Get("region"))
-	if !(s.SR.Env == cnst.LclEnv || s.SR.Env == cnst.DevEnv) && lowerRegion != s.SR.Region {
-		req.URL.Host = fmt.Sprintf("%s-%s-api.project-trees.com")
+	region := cnst.Region(strings.ToLower(reqQueryValues.Get("region")))
+	region.Validate()
+	if !(s.SR.Env == cnst.LclEnv || s.SR.Env == cnst.DevEnv) && region != s.SR.Region {
+		req.URL.Host = fmt.Sprintf("%s-%s-api.%s", s.SR.Env, region, s.SR.NakedHost)
 		proxyResp, e := http.DefaultClient.Do(req)
 		panic.If(e)
 		if proxyResp != nil && proxyResp.Body != nil {
@@ -165,6 +163,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		reqs := map[string]string{}
 		panic.If(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
 		fullMGetResponse := map[string]*mgetResponse{}
+		mGetTimedOut := false
 		fullMGetResponseMtx := &sync.Mutex{}
 		includeHeaders := ctx.queryBoolVal("headers", false)
 		gets := make([]func(), 0, len(reqs))
@@ -179,6 +178,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					s.ServeHTTP(w, r)
 					fullMGetResponseMtx.Lock()
 					defer fullMGetResponseMtx.Unlock()
+					if mGetTimedOut {
+						return
+					}
 					fullMGetResponse[key] = &mgetResponse{
 						includeHeaders: includeHeaders,
 						Code:           w.code,
@@ -188,7 +190,25 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 			}(key, reqUrl))
 		}
-		panic.If(panic.SafeGoGroup(s.SR.ApiMGetTimeout, gets...))
+		e := panic.SafeGoGroup(s.SR.ApiMGetTimeout, gets...)
+		if e != nil {
+			s.SR.LogError(e)
+			if _, ok := e.(*panic.TimeoutErr); ok {
+				fullMGetResponseMtx.Lock()
+				defer fullMGetResponseMtx.Unlock()
+				mGetTimedOut = true
+				for key := range reqs {
+					if fullMGetResponse[key] == nil {
+						fullMGetResponse[key] = &mgetResponse{
+							includeHeaders: includeHeaders,
+							Code:           http.StatusRequestTimeout,
+							Header:         http.Header{},
+							Body:           []byte(`Request Timeout`),
+						}
+					}
+				}
+			}
+		}
 		writeJsonOk(ctx.resp, fullMGetResponse)
 		return
 	}

@@ -27,11 +27,9 @@
           <td class="text-xs-left" style="width: 150px;">{{ projects.item.startOn? new Date(projects.item.startOn).toLocaleDateString(): 'none' }}</td>
           <td class="text-xs-left" style="width: 150px;">{{ projects.item.dueOn? new Date(projects.item.dueOn).toLocaleDateString(): 'none' }}</td>
           <td class="text-xs-left" style="width: 150px;">{{ projects.item.createdOn? new Date(projects.item.createdOn).toLocaleDateString(): 'none' }}</td>
-          <td class="text-xs-left" style="width: 120px;">{{ projects.item.minimumRemainingTime }}</td>
-          <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalRemainingTime }}</td>
-          <td class="text-xs-left" style="width: 120px;">{{ projects.item.totalLoggedTime }}</td>
-          <td class="text-xs-left" style="width: 120px;">{{ projects.item.childCount }}</td>
-          <td class="text-xs-left" style="width: 120px;">{{ projects.item.descendantCount }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ printDuration(projects.item.minimumRemainingTime, false, projects.item.hoursPerDay, projects.item.daysPerWeek) }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ printDuration(projects.item.totalRemainingTime, false, projects.item.hoursPerDay, projects.item.daysPerWeek) }}</td>
+          <td class="text-xs-left" style="width: 120px;">{{ printDuration(projects.item.totalLoggedTime, false, projects.item.hoursPerDay, projects.item.daysPerWeek) }}</td>
         </tr>
       </template>
       <template slot="no-data">
@@ -65,64 +63,72 @@
           </v-btn>
         </v-toolbar>
         <v-card-text>
-          <v-form ref="form" @keyup.native.enter="createProject">
+          <v-form ref="form" @keyup.native.enter="createProject" v-model="createProjectValid" lazy-validation>
             <v-text-field v-model="createProjectName" name="projectName" label="Name" type="text"></v-text-field>
             <v-text-field v-model="createProjectDescription" name="projectDescription" label="Description" type="text"></v-text-field>
             <v-layout row>
-            <v-flex class="mr-3" xs12 sm6 md4>
-              <v-menu
-                ref="createProjectStartOn"
-                :close-on-content-click="false"
-                v-model="createProjectStartOnShowPicker"
-                :nudge-right="40"
-                :return-value.sync="createProjectStartOn"
-                lazy
-                transition="scale-transition"
-                offset-y
-                full-width
-                min-width="290px"
-              >
-                <v-text-field
-                  slot="activator"
-                  v-model="createProjectStartOn"
-                  label="Start On"
-                  prepend-icon="event"
-                  readonly
-                ></v-text-field>
-                <v-date-picker v-model="createProjectStartOn" @input="$refs.createProjectStartOn.save(createProjectStartOn)"></v-date-picker>
+              <v-flex class="mr-3" xs12 sm6 md4>
+                <v-text-field v-model="createProjectHoursPerDay" name="createProjectHoursPerDay" label="Hours per Work Day" type="number" :rules="createProjectHoursPerDayRules"></v-text-field>
+              </v-flex>
+              <v-flex xs12 sm6 md4>
+                <v-text-field v-model="createProjectDaysPerWeek" name="createProjectDaysPerWeek" label="Days per Work Week" type="number" :rules="createProjectDaysPerWeekRules"></v-text-field>
+              </v-flex>
+            </v-layout>
+            <v-layout row>
+              <v-flex class="mr-3" xs12 sm6 md4>
+                <v-menu
+                  ref="createProjectStartOn"
+                  :close-on-content-click="false"
+                  v-model="createProjectStartOnShowPicker"
+                  :nudge-right="40"
+                  :return-value.sync="createProjectStartOn"
+                  lazy
+                  transition="scale-transition"
+                  offset-y
+                  full-width
+                  min-width="290px"
+                >
+                  <v-text-field
+                    slot="activator"
+                    v-model="createProjectStartOn"
+                    label="Start On"
+                    prepend-icon="event"
+                    readonly
+                  ></v-text-field>
+                  <v-date-picker v-model="createProjectStartOn" @input="$refs.createProjectStartOn.save(createProjectStartOn)"></v-date-picker>
 
-              </v-menu>
-            </v-flex>
-            <v-flex xs12 sm6 md4>
-              <v-menu
-                ref="createProjectDueOn"
-                :close-on-content-click="false"
-                v-model="createProjectDueOnShowPicker"
-                :nudge-right="40"
-                :return-value.sync="createProjectDueOn"
-                lazy
-                transition="scale-transition"
-                offset-y
-                full-width
-                min-width="290px"
-              >
-                <v-text-field
-                  slot="activator"
-                  v-model="createProjectDueOn"
-                  label="Due On"
-                  prepend-icon="event"
-                  readonly
-                ></v-text-field>
-                <v-date-picker v-model="createProjectDueOn" @input="$refs.createProjectDueOn.save(createProjectDueOn)"></v-date-picker>
-              </v-menu>
-            </v-flex>
+                </v-menu>
+              </v-flex>
+              <v-flex xs12 sm6 md4>
+                <v-menu
+                  ref="createProjectDueOn"
+                  :close-on-content-click="false"
+                  v-model="createProjectDueOnShowPicker"
+                  :nudge-right="40"
+                  :return-value.sync="createProjectDueOn"
+                  lazy
+                  transition="scale-transition"
+                  offset-y
+                  full-width
+                  min-width="290px"
+                >
+                  <v-text-field
+                    slot="activator"
+                    v-model="createProjectDueOn"
+                    label="Due On"
+                    prepend-icon="event"
+                    readonly
+                  ></v-text-field>
+                  <v-date-picker v-model="createProjectDueOn" @input="$refs.createProjectDueOn.save(createProjectDueOn)"></v-date-picker>
+                </v-menu>
+              </v-flex>
             </v-layout>
             <v-switch
               :label="`Is Parallel`"
               v-model="createProjectIsParallel"></v-switch>
             <v-btn
               :loading="creating"
-              :disabled="creating"
+              :disabled="creating || !createProjectValid"
               color="secondary"
               @click="createProject"
             >
@@ -139,6 +145,7 @@
 <script>
   import api, {cnst} from '@/api'
   import router from '@/router'
+  import {printDuration} from '@/helper'
   export default {
     name: 'projects',
     data () {
@@ -151,10 +158,27 @@
           {text: 'Created', align: 'left', value: cnst.sortBy.createdOn},
           {text: 'Min.', sortable: false, align: 'left', value: 'minimumRemainingTime'},
           {text: 'Tot.', sortable: false, align: 'left', value: 'totalRemainingTime'},
-          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'},
-          {text: 'Children', sortable: false, align: 'left', value: 'childCount'},
-          {text: 'Descendants', sortable: false, align: 'left', value: 'descendantCount'}
+          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'}
         ],
+        createProjectHoursPerDay: 8,
+        createProjectHoursPerDayRules: [
+          v => {
+            if (!v || v <= 0 || v > 24) {
+              return 'Hours per Work Day must be a positive number no greater than 24'
+            }
+            return true
+          }
+        ],
+        createProjectDaysPerWeek: 5,
+        createProjectDaysPerWeekRules: [
+          v => {
+            if (!v || v <= 0 || v > 7) {
+              return 'Days per Work Week must be a positive number no greater than 7'
+            }
+            return true
+          }
+        ],
+        createProjectValid: true,
         totalProjects: 0,
         pagination: {
           descending: false,
@@ -204,6 +228,7 @@
       document.removeEventListener('scroll', this.pageScrollListener)
     },
     methods: {
+      printDuration,
       loadProjects (fromScroll) {
         if (!this.loading) {
           let params = router.currentRoute.params
@@ -253,6 +278,9 @@
         }
       },
       createProject () {
+        if (!this.$refs.form.validate()) {
+          return
+        }
         this.creating = true
         let params = router.currentRoute.params
         let description = null
@@ -267,7 +295,7 @@
         if (this.createProjectDueOn && this.createProjectDueOn.length > 0) {
           dueOn = this.createProjectDueOn + 'T00:00:00Z'
         }
-        api.v1.project.create(params.region, params.shard, params.account, this.createProjectName, description, startOn, dueOn, this.createProjectIsParallel, false).then((newProject) => {
+        api.v1.project.create(params.region, params.shard, params.account, this.createProjectName, description, parseInt(this.createProjectHoursPerDay), parseInt(this.createProjectDaysPerWeek), startOn, dueOn, this.createProjectIsParallel, false).then((newProject) => {
           this.creating = false
           this.toggleCreateForm()
           let params = router.currentRoute.params

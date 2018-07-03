@@ -7,13 +7,13 @@
   <v-container v-else class="pa-0" fluid fill-height>
     <v-layout column fill-height>
       <v-flex>
-        <v-breadcrumbs v-if="project !== task.id">
+        <v-breadcrumbs v-if="project.id !== task.id">
           <v-breadcrumbs-item
             class="active"
             v-for="ancestor in ancestors"
             :key="ancestor.id"
             :disabled="false"
-            :href="'/#/app/region/' + region + '/shard/' + shard + '/account/' + account + '/project/' + project + '/task/' + ancestor.id"
+            :href="'/#/app/region/' + routeParams.region + '/shard/' + routeParams.shard + '/account/' + routeParams.account + '/project/' + project.id + '/task/' + ancestor.id"
           >
             {{ ancestor.name }}
           </v-breadcrumbs-item>
@@ -24,18 +24,19 @@
           <v-card-title class="py-1"><h3>{{task.name}}</h3></v-card-title>
           <v-card-text class="py-1">{{task.description}}</v-card-text>
           <v-card-text class="py-1">
-            <span v-if="task.isAbstract">Min: <h3>{{task.minimumRemainingTime}}</h3> &nbsp;</span>
-            Tot: <h3>{{task.totalRemainingTime}}</h3> &nbsp;
-            Log: <h3>{{task.totalLoggedTime}}</h3> &nbsp;
-            <span v-if="task.isAbstract">Children: <h3>{{task.childCount}}</h3> &nbsp;</span>
-            <span v-if="task.isAbstract">Descendants: <h3>{{task.descendantCount}}</h3> &nbsp;</span>
+            <div v-if="task.isAbstract">Parallel: <h3>{{task.isParallel}}</h3> </div>
+            <div v-if="task.isAbstract">Min: <h3>{{ printDuration(task.minimumRemainingTime, false, project.hoursPerDay, project.daysPerWeek)}}</h3> </div>
+            <div>Tot: <h3>{{printDuration(task.totalRemainingTime, false, project.hoursPerDay, project.daysPerWeek)}}</h3> </div>
+            <div>Log: <h3>{{printDuration(task.totalLoggedTime, false, project.hoursPerDay, project.daysPerWeek)}}</h3> </div>
+            <div v-if="task.isAbstract">Children: <h3>{{task.childCount}}</h3> </div>
+            <div v-if="task.isAbstract">Descendants: <h3>{{task.descendantCount}}</h3> </div>
           </v-card-text>
         </v-card>
       </v-flex>
       <v-data-table
         v-if="task.isAbstract"
         style="width: 100%!important; height: 100%!important"
-        :headers="headers"
+        :headers="childrenHeaders"
         :items="children"
         :loading="loading"
         hide-actions
@@ -45,11 +46,9 @@
           <tr @click="goToTask(children.item)" style="cursor: pointer">
             <td class="text-xs-left">{{ children.item.name }}</td>
             <td class="text-xs-left hidden-sm-and-down">{{ children.item.description? children.item.description: 'none' }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.minimumRemainingTime: children.item.totalRemainingTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalRemainingTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalLoggedTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.childCount: 0 }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.descendantCount: 0 }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ printDuration(children.item.minimumRemainingTime, false, project.hoursPerDay, project.daysPerWeek) }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ printDuration(children.item.totalRemainingTime, false, project.hoursPerDay, project.daysPerWeek) }}</td>
+            <td class="text-xs-left" style="width: 120px;">{{ printDuration(children.item.totalLoggedTime, false, project.hoursPerDay, project.daysPerWeek) }}</td>
           </tr>
         </template>
         <template slot="no-data">
@@ -64,32 +63,31 @@
       <v-data-table
         v-else
         style="width: 100%!important; height: 100%!important"
-        :headers="headers"
-        :items="children"
+        :headers="timeLogHeaders"
+        :items="timeLogs"
         :loading="loading"
         hide-actions
         class="elevation-1"
       >
-        <template slot="items" slot-scope="children">
-          <tr @click="goToTask(children.item)" style="cursor: pointer">
-            <td class="text-xs-left">{{ children.item.name }}</td>
-            <td class="text-xs-left hidden-sm-and-down">{{ children.item.description? children.item.description: 'none' }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.minimumRemainingTime: children.item.totalRemainingTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalRemainingTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.totalLoggedTime }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.childCount: 0 }}</td>
-            <td class="text-xs-left" style="width: 120px;">{{ children.item.isAbstract? children.item.descendantCount: 0 }}</td>
+        <template slot="items" slot-scope="timeLogs">
+          <tr>
+            <td class="text-xs-left">{{ new Date(timeLogs.item.loggedOn).toLocaleDateString() }}</td>
+            <td class="text-xs-left">{{ printDuration(timeLogs.item.duration, false, project.hoursPerDay, project.daysPerWeek) }}</td>
+            <td class="text-xs-left">{{ timeLogs.item.note }}</td>
           </tr>
         </template>
         <template slot="no-data">
           <v-alert v-if="!loading" :value="true" color="info" icon="error">
-            No Time Logs Yet <v-btn v-on:click="toggleCreateTaskForm" color="primary">create</v-btn>
+            No Time Logs Yet <v-btn v-on:click="toggleCreateTimeLogForm" color="primary">create</v-btn>
           </v-alert>
           <v-alert v-if="loading" :value="true" color="info" icon="error">
             Loading Data
           </v-alert>
         </template>
       </v-data-table>
+      <v-btn v-if="timeLogs.length > 0" v-on:click="toggleCreateTimeLogForm" fixed right bottom color="primary" fab>
+        <v-icon>add</v-icon>
+      </v-btn>
       <v-btn v-if="children.length > 0" v-on:click="toggleCreateTaskForm" fixed right bottom color="primary" fab>
         <v-icon>add</v-icon>
       </v-btn>
@@ -132,6 +130,38 @@
           </v-card-text>
         </v-card>
       </v-dialog>
+      <v-dialog
+        v-model="createTimeLogDialog"
+        fullscreen
+        hide-overlay
+        transition="dialog-bottom-transition"
+        scrollable
+      >
+        <v-card tile>
+          <v-toolbar card dark color="primary">
+            <v-toolbar-title>Create Time Log</v-toolbar-title>
+            <v-spacer></v-spacer>
+            <v-btn icon dark @click.native="toggleCreateTimeLogForm">
+              <v-icon>close</v-icon>
+            </v-btn>
+          </v-toolbar>
+          <v-card-text>
+            <v-form ref="form" @keyup.native.enter="createTimeLog">
+              <v-text-field v-model="createTimeLogDuration" name="timeLogDuration" label="Duration" type="number"></v-text-field>
+              <v-text-field v-model="createTimeLogRemainingTime" name="timeLogRemainingTime" label="Set Remaining Time" type="number"></v-text-field>
+              <v-text-field v-model="createTimeLogNote" name="timeLogNote" label="Note" type="text"></v-text-field>
+              <v-btn
+                :loading="creatingTimeLog"
+                :disabled="creatingTimeLog || createTimeLogDuration === null || createTimeLogDuration < 1"
+                color="secondary"
+                @click="createTimeLog"
+              >
+                Create
+              </v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
     </v-layout>
   </v-container>
 </template>
@@ -139,25 +169,27 @@
 <script>
   import api from '@/api'
   import router from '@/router'
+  import {printDuration} from '@/helper'
   import {FingerprintSpinner} from 'epic-spinners'
   export default {
     name: 'task',
     components: {FingerprintSpinner},
     data () {
-      let params = router.currentRoute.params
+      let routeParams = router.currentRoute.params
       return {
-        region: params.region,
-        shard: params.shard,
-        account: params.account,
-        project: params.project,
-        headers: [
+        routeParams,
+        project: null,
+        childrenHeaders: [
           {text: 'Name', sortable: false, align: 'left', value: 'name'},
           {text: 'Description', class: 'hidden-sm-and-down', sortable: false, align: 'left', value: 'description'},
           {text: 'Min.', sortable: false, align: 'left', value: 'minimumRemainingTime'},
           {text: 'Tot.', sortable: false, align: 'left', value: 'totalRemainingTime'},
-          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'},
-          {text: 'Children', sortable: false, align: 'left', value: 'childCount'},
-          {text: 'Descendants', sortable: false, align: 'left', value: 'descendantCount'}
+          {text: 'Log.', sortable: false, align: 'left', value: 'totalLoggedTime'}
+        ],
+        timeLogHeaders: [
+          {text: 'Logged On', sortable: false, align: 'left', value: 'loggedOn'},
+          {text: 'Duration', sortable: false, align: 'left', value: 'duration'},
+          {text: 'Note', sortable: false, align: 'left', value: 'note'}
         ],
         pagination: {
           descending: false
@@ -171,6 +203,10 @@
         createTaskRemainingTime: null,
         createTaskIsParallel: true,
         creatingTask: false,
+        creatingTimeLog: false,
+        createTimeLogDuration: null,
+        createTimeLogRemainingTime: null,
+        createTimeLogNote: null,
         children: [],
         timeLogs: [],
         moreTimeLogs: false,
@@ -185,7 +221,7 @@
       let self = this
       this.pageScrollListener = () => {
         if (self.moreChildren && htmlEl.clientHeight + htmlEl.scrollTop >= htmlEl.scrollHeight) {
-          self.loadChildren()
+          self.loadMore()
         }
       }
       document.addEventListener('scroll', this.pageScrollListener)
@@ -200,15 +236,18 @@
       }
     },
     methods: {
+      printDuration,
       init () {
         let params = router.currentRoute.params
         let mapi = api.newMGetApi(params.region)
-        if (params.project === params.task) {
-          mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((project) => {
+        mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((project) => {
+          this.project = project
+          if (params.project === params.task) {
             this.task = project
             this.task.isAbstract = true
-          })
-        } else {
+          }
+        })
+        if (params.project !== params.task) {
           mapi.v1.task.get(params.region, params.shard, params.account, params.project, params.task).then((task) => {
             this.task = task
           })
@@ -220,25 +259,43 @@
         mapi.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, null, 100).then((res) => {
           this.children = res.children
           this.moreChildren = res.more
+        })
+        mapi.v1.timeLog.get(params.region, params.shard, params.account, params.project, params.task, null, null, true, null, 100).then((res) => {
+          this.timeLogs = res.timeLogs
+          this.moreTimeLogs = res.more
           this.loading = false
         })
         mapi.sendMGet()
       },
-      loadChildren () {
+      loadMore () {
         if (!this.loading) {
           let params = router.currentRoute.params
           this.loading = true
-          let after = null
-          if (this.children.length > 0) {
-            after = this.children[this.children.length - 1].id
-          }
-          api.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, after, 100).then((res) => {
-            this.loading = false
-            res.children.forEach((child) => {
-              this.children.push(child)
+          if (this.task.isAbstract) {
+            let after = null
+            if (this.children.length > 0) {
+              after = this.children[this.children.length - 1].id
+            }
+            api.v1.task.getChildren(params.region, params.shard, params.account, params.project, params.task, after, 100).then((res) => {
+              this.loading = false
+              res.children.forEach((child) => {
+                this.children.push(child)
+              })
+              this.moreChildren = res.more
             })
-            this.moreChildren = res.more
-          })
+          } else {
+            let after = null
+            if (this.timeLogs.length > 0) {
+              after = this.timeLogs[this.timeLogs.length - 1].id
+            }
+            api.v1.timeLog.get(params.region, params.shard, params.account, params.project, params.task, null, null, true, after, 100).then((res) => {
+              this.loading = false
+              res.timeLogs.forEach((tl) => {
+                this.timeLogs.push(tl)
+              })
+              this.moreTimeLogs = res.more
+            })
+          }
         }
       },
       goToTask (task) {
@@ -253,6 +310,14 @@
           this.createTaskDescription = null
           this.createTaskIsParallel = true
           this.createTaskRemainingTime = null
+        }
+      },
+      toggleCreateTimeLogForm () {
+        if (!this.creatingTimeLog) {
+          this.createTimeLogDialog = !this.createTimeLogDialog
+          this.createTimeLogDuration = null
+          this.createTimeLogRemainingTime = null
+          this.createTimeLogNote = null
         }
       },
       createTask () {
@@ -297,6 +362,30 @@
             }
           })
         })
+      },
+      createTimeLog () {
+        if (this.createTimeLogDuration !== null && parseInt(this.createTimeLogDuration) > 0) {
+          this.creatingTimeLog = true
+          let params = router.currentRoute.params
+          let note = null
+          if (this.createTimeLogNote !== null && this.createTimeLogNote.length > 0) {
+            note = this.createTimeLogNote
+          }
+          let resHandler = (newTimeLog) => {
+            this.creatingTimeLog = false
+            this.timeLogs.push(newTimeLog)
+            this.task.totalLoggedTime += parseInt(this.createTimeLogDuration)
+            if (this.createTimeLogRemainingTime !== null && parseInt(this.createTimeLogRemainingTime) >= 0) {
+              this.task.totalRemainingTime = parseInt(this.createTimeLogRemainingTime)
+            }
+            this.toggleCreateTimeLogForm()
+          }
+          if (this.createTimeLogRemainingTime !== null && this.createTimeLogRemainingTime >= 0) {
+            api.v1.timeLog.createAndSetRemainingTime(params.region, params.shard, params.account, params.project, params.task, parseInt(this.createTimeLogRemainingTime), parseInt(this.createTimeLogDuration), note).then(resHandler)
+          } else {
+            api.v1.timeLog.create(params.region, params.shard, params.account, params.project, params.task, this.createTimeLogDuration, note).then(resHandler)
+          }
+        }
       }
     }
   }

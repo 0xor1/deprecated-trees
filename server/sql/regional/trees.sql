@@ -9,6 +9,8 @@ DROP TABLE IF EXISTS accounts;
 CREATE TABLE accounts(
   id BINARY(16) NOT NULL,
   publicProjectsEnabled BOOL NOT NULL DEFAULT FALSE,
+  hoursPerDay TINYINT UNSIGNED NOT NULL DEFAULT 8,
+  daysPerWeek TINYINT UNSIGNED NOT NULL DEFAULT 5,
   PRIMARY KEY (id)
 );
 
@@ -95,6 +97,8 @@ CREATE TABLE projects(
   isArchived BOOL NOT NULL,
 	name VARCHAR(250) NOT NULL,
   createdOn DATETIME NOT NULL,
+  hoursPerDay TINYINT UNSIGNED NOT NULL DEFAULT 8,
+  daysPerWeek TINYINT UNSIGNED NOT NULL DEFAULT 5,
   startOn DATETIME NULL,
   dueOn DATETIME NULL,
   fileCount BIGINT UNSIGNED NOT NULL,
@@ -158,7 +162,7 @@ DROP PROCEDURE IF EXISTS registerAccount;
 DELIMITER $$
 CREATE PROCEDURE registerAccount(_account BINARY(16), _me BINARY(16), _myName VARCHAR(50), _myDisplayName VARCHAR(100), _hasAvatar BOOL)
 BEGIN
-	INSERT INTO accounts (id, publicProjectsEnabled) VALUES (_account, false);
+  INSERT INTO accounts (id) VALUES (_account);
   INSERT INTO accountMembers (account, id, name, displayName, hasAvatar, isActive, role) VALUES (_account, _me, _myName, _myDisplayName, _hasAvatar, true, 0);
   INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'create', NULL, NULL);
 END;
@@ -232,18 +236,28 @@ CREATE PROCEDURE deleteAccount(_account BINARY(16))
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setPublicProjectsEnabled;
+DROP PROCEDURE IF EXISTS editAccount;
 DELIMITER $$
-CREATE PROCEDURE setPublicProjectsEnabled(_account BINARY(16), _me BINARY(16), _enabled BOOL)
+CREATE PROCEDURE editAccount(_account BINARY(16), _me BINARY(16), _setPublicProjectsEnabled BOOL, _publicProjectsEnabled BOOL, _setHoursPerDay BOOL, _hoursPerDay TINYINT UNSIGNED, _setDaysPerWeek BOOL, _daysPerWeek TINYINT UNSIGNED)
   BEGIN
-    UPDATE accounts SET publicProjectsEnabled=_enabled WHERE id=_account;
-    IF NOT _enabled THEN
-      UPDATE projects SET isPublic=FALSE WHERE account=_account;
+	IF _setPublicProjectsEnabled THEN
+		UPDATE accounts SET publicProjectsEnabled=_publicProjectsEnabled WHERE id=_account;
+		IF NOT _publicProjectsEnabled THEN
+			UPDATE projects SET isPublic=FALSE WHERE account=_account;
+		END IF;
+		IF _publicProjectsEnabled THEN
+			INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'setPublicProjectsEnabled', NULL, 'true');
+		ELSE
+			INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'setPublicProjectsEnabled', NULL, 'false');
+		END IF;
     END IF;
-    IF _enabled THEN
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'setPublicProjectsEnabled', NULL, 'true');
-    ELSE
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'setPublicProjectsEnabled', NULL, 'false');
+	IF _setHoursPerDay THEN
+		UPDATE accounts SET hoursPerDay=_hoursPerDay WHERE id=_account;
+		INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _me, _account, 'account', 'setHoursPerDay', NULL, CAST(_hoursPerDay as char character set utf8));
+    END IF;
+	IF _setDaysPerWeek THEN
+		UPDATE accounts SET daysPerWeek=_daysPerWeek WHERE id=_account;
+		INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000002'), _me, _account, 'account', 'setDaysPerWeek', NULL, CAST(_daysPerWeek as char character set utf8));
     END IF;
   END;
 $$
@@ -269,10 +283,10 @@ DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createProject;
 DELIMITER $$
-CREATE PROCEDURE createProject(_account BINARY(16), _project BINARY(16), _me BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _isParallel BOOL, _isPublic BOOL)
+CREATE PROCEDURE createProject(_account BINARY(16), _project BINARY(16), _me BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _hoursPerDay TINYINT UNSIGNED, _daysPerWeek TINYINT UNSIGNED, _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _isParallel BOOL, _isPublic BOOL)
   BEGIN
     INSERT INTO projectLocks (account, id) VALUES(_account, _project);
-    INSERT INTO projects (account, id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_account, _project, FALSE, _name, _createdOn, _startOn, _dueOn, 0, 0, _isPublic);
+    INSERT INTO projects (account, id, isArchived, name, hoursPerDay, daysPerWeek, createdOn, startOn, dueOn, fileCount, fileSize, isPublic) VALUES (_account, _project, FALSE, _name, _hoursPerDay, _daysPerWeek, _createdOn, _startOn, _dueOn, 0, 0, _isPublic);
     INSERT INTO tasks (account, project, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member) VALUES (_account, _project, _project, NULL, NULL, NULL, TRUE, _name, _description, _createdOn, 0, 0, 0, 0, 0, 0, 0, _isParallel, NULL);
     INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _project, 'project', 'create', _name, NULL);
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'create', NULL, NULL);
@@ -280,45 +294,67 @@ CREATE PROCEDURE createProject(_account BINARY(16), _project BINARY(16), _me BIN
 $$
 DELIMITER ;
 
-DROP PROCEDURE IF EXISTS setProjectIsPublic;
+DROP PROCEDURE IF EXISTS editProject;
 DELIMITER $$
-CREATE PROCEDURE setProjectIsPublic(_account BINARY(16), _project BINARY(16), _me BINARY(16), _isPublic BOOL)
+CREATE PROCEDURE editProject(_account BINARY(16), _project BINARY(16), _me BINARY(16), _setIsPublic BOOL, _isPublic BOOL, _setIsArchived BOOL, _isArchived BOOL, _setHoursPerDay BOOL, _hoursPerDay TINYINT UNSIGNED, _setDaysPerWeek BOOL, _daysPerWeek TINYINT UNSIGNED, _setStartOn BOOL, _startOn DATETIME, _setDueOn BOOL, _dueOn DATETIME)
   BEGIN
     DECLARE projName VARCHAR(250);
     SELECT name INTO projName FROM projects WHERE account = _account AND id = _project;
-    UPDATE projects SET isPublic=_isPublic WHERE account = _account AND id = _project;
-    IF _isPublic THEN
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', projName, 'true');
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', NULL, 'true');
-    ELSE
-      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', projName, 'false');
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', NULL, 'false');
+    IF _setIsPublic THEN
+      UPDATE projects SET isPublic=_isPublic WHERE account = _account AND id = _project;
+      IF _isPublic THEN
+        INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', projName, 'true');
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', NULL, 'true');
+      ELSE
+        INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', projName, 'false');
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsPublic', NULL, 'false');
+      END IF;
     END IF;
-  END;
-$$
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS setProjectIsArchived;
-DELIMITER $$
-CREATE PROCEDURE setProjectIsArchived(_account BINARY(16), _project BINARY(16), _me BINARY(16), _isArchived BOOL)
-  BEGIN
-    DECLARE projName VARCHAR(250);
-    SELECT name INTO projName FROM projects WHERE account = _account AND id = _project;
-    UPDATE projects SET isArchived=_isArchived WHERE account = _account AND id = _project;
-    IF _isArchived THEN
+    IF _setIsArchived THEN
+      UPDATE projects SET isArchived=_isArchived WHERE account = _account AND id = _project;
+      IF _isArchived THEN
+        INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _me, _project, 'project', 'setIsArchived', projName, 'true');
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _me, _project, 'project', 'setIsArchived', NULL, 'true');
+      ELSE
+        INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _me, _project, 'project', 'setIsArchived', projName, 'false');
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000001'), _me, _project, 'project', 'setIsArchived', NULL, 'false');
+      END IF;
+    END IF;
+    IF _setHoursPerDay THEN
+      UPDATE projects SET hoursPerDay=_hoursPerDay WHERE account = _account AND id = _project;
       INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsArchived', projName, 'true');
+        _account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000002'), _me, _project, 'project', 'setHoursPerDay', projName, CAST(_hoursPerDay as char character set utf8));
       INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsArchived', NULL, 'true');
-    ELSE
+        _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000002'), _me, _project, 'project', 'setHoursPerDay', NULL, CAST(_hoursPerDay as char character set utf8));
+    END IF;
+    IF _setDaysPerWeek THEN
+      UPDATE projects SET daysPerWeek=_daysPerWeek WHERE account = _account AND id = _project;
       INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsArchived', projName, 'false');
+        _account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000003'), _me, _project, 'project', 'setDaysPerWeek', projName, CAST(_daysPerWeek as char character set utf8));
       INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-        _account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'setIsArchived', NULL, 'false');
+        _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000003'), _me, _project, 'project', 'setDaysPerWeek', NULL, CAST(_daysPerWeek as char character set utf8));
+    END IF;
+    IF _setStartOn THEN
+      UPDATE projects SET startOn=_startOn WHERE account = _account AND id = _project;
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+        _account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000004'), _me, _project, 'project', 'setStartOn', projName, CAST(_startOn as char character set utf8));
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+        _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000004'), _me, _project, 'project', 'setStartOn', NULL, CAST(_startOn as char character set utf8));
+    END IF;
+    IF _setDueOn THEN
+      UPDATE projects SET dueOn=_dueOn WHERE account = _account AND id = _project;
+      INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+        _account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000005'), _me, _project, 'project', 'setDueOn', projName, CAST(_dueOn as char character set utf8));
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+        _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000005'), _me, _project, 'project', 'setDueOn', NULL, CAST(_dueOn as char character set utf8));
     END IF;
   END;
 $$

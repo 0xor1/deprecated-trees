@@ -27,12 +27,10 @@ func Test_system(t *testing.T) {
 	taskClient := task.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
 	region := cnst.EUWRegion
-	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
-		region: testServer.URL,
-	})
+	SR.RegionalV1PrivateClient = private.NewTestClient(testServer.URL)
 
 	aliDisplayName := "Ali O'Mally"
-	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
+	centralClient.Register(region, "ali", "ali@ali.com", "al1-Pwd-W00", "en", &aliDisplayName, cnst.DarkTheme)
 	activationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 	centralClient.Activate("ali@ali.com", activationCode)
@@ -40,11 +38,11 @@ func Test_system(t *testing.T) {
 	aliId := aliInitInfo.Me.Id
 	assert.Nil(t, err)
 	bobDisplayName := "Fat Bob"
-	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, cnst.LightTheme)
+	centralClient.Register(region, "bob", "bob@bob.com", "8ob-Pwd-W00", "en", &bobDisplayName, cnst.LightTheme)
 	catDisplayName := "Lap Cat"
-	centralClient.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, cnst.ColorBlindTheme)
+	centralClient.Register(region, "cat", "cat@cat.com", "c@t-Pwd-W00", "de", &catDisplayName, cnst.ColorBlindTheme)
 	danDisplayName := "Dan the Man"
-	centralClient.Register("dan", "dan@dan.com", "d@n-Pwd-W00", region, "en", &danDisplayName, cnst.DarkTheme)
+	centralClient.Register(region, "dan", "dan@dan.com", "d@n-Pwd-W00", "en", &danDisplayName, cnst.DarkTheme)
 	bobActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
@@ -64,7 +62,7 @@ func Test_system(t *testing.T) {
 	danInitInfo, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
 	danId := danInitInfo.Me.Id
 
-	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
+	org, err := centralClient.CreateAccount(aliCss, region, "org", nil)
 	bob := centralaccount.AddMember{}
 	bob.Id = bobId
 	bob.Role = cnst.AccountAdmin
@@ -79,7 +77,7 @@ func Test_system(t *testing.T) {
 	start := time.Now()
 	end := start.Add(5 * 24 * time.Hour)
 	desc := "desc"
-	proj, err := projectClient.Create(aliCss, region, 0, org.Id, "proj", &desc, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
+	proj, err := projectClient.Create(aliCss, region, 0, org.Id, "proj", &desc, 8, 5, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
 
 	oneVal := uint64(1)
 	twoVal := uint64(2)
@@ -143,33 +141,33 @@ func Test_system(t *testing.T) {
 
 	tls, err := client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(tls))
-	assert.True(t, tls[0].Id.Equal(tl2.Id))
-	assert.True(t, tls[1].Id.Equal(tl1.Id))
+	assert.Equal(t, 2, len(tls.TimeLogs))
+	assert.True(t, tls.TimeLogs[0].Id.Equal(tl2.Id))
+	assert.True(t, tls.TimeLogs[1].Id.Equal(tl1.Id))
 
 	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, &tl2.Id, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(tls))
-	assert.True(t, tls[0].Id.Equal(tl1.Id))
+	assert.Equal(t, 1, len(tls.TimeLogs))
+	assert.True(t, tls.TimeLogs[0].Id.Equal(tl1.Id))
 
 	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, &tl2.Id, &bob.Id, &tl2.Id, false, nil, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(tls))
-	assert.True(t, tls[0].Id.Equal(tl2.Id))
+	assert.Equal(t, 1, len(tls.TimeLogs))
+	assert.True(t, tls.TimeLogs[0].Id.Equal(tl2.Id))
 
 	assert.Nil(t, client.Delete(aliCss, region, 0, org.Id, proj.Id, tl1.Id))
 
 	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(tls))
-	assert.True(t, tls[0].Id.Equal(tl2.Id))
+	assert.Equal(t, 1, len(tls.TimeLogs))
+	assert.True(t, tls.TimeLogs[0].Id.Equal(tl2.Id))
 
 	assert.Nil(t, taskClient.Delete(aliCss, region, 0, org.Id, proj.Id, taskM.Id))
 
 	tls, err = client.Get(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, false, nil, 100)
 	assert.Nil(t, err)
-	assert.Equal(t, 1, len(tls))
-	assert.Equal(t, true, tls[0].TaskHasBeenDeleted)
+	assert.Equal(t, 1, len(tls.TimeLogs))
+	assert.Equal(t, true, tls.TimeLogs[0].TaskHasBeenDeleted)
 
 	centralClient.DeleteAccount(aliCss, org.Id)
 	centralClient.DeleteAccount(aliCss, aliId)

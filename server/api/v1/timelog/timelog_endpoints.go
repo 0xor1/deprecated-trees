@@ -162,8 +162,8 @@ type getArgs struct {
 }
 
 type getResp struct {
-	TimeLogs []*timelog.TimeLog    `json:"timeLogs"`
-	More bool `json:"more"`
+	TimeLogs []*timelog.TimeLog `json:"timeLogs"`
+	More     bool               `json:"more"`
 }
 
 var get = &endpoint.Endpoint{

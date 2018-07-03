@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
+	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func Test_system(t *testing.T) {
@@ -23,12 +24,10 @@ func Test_system(t *testing.T) {
 	accountClient := account.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
 	region := cnst.EUWRegion
-	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
-		region: testServer.URL,
-	})
+	SR.RegionalV1PrivateClient = private.NewTestClient(testServer.URL)
 
 	aliDisplayName := "Ali O'Mally"
-	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
+	centralClient.Register(region, "ali", "ali@ali.com", "al1-Pwd-W00", "en", &aliDisplayName, cnst.DarkTheme)
 	activationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 	centralClient.Activate("ali@ali.com", activationCode)
@@ -36,9 +35,9 @@ func Test_system(t *testing.T) {
 	aliId := aliInitInfo.Me.Id
 	assert.Nil(t, err)
 	bobDisplayName := "Fat Bob"
-	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, cnst.LightTheme)
+	centralClient.Register(region, "bob", "bob@bob.com", "8ob-Pwd-W00", "en", &bobDisplayName, cnst.LightTheme)
 	catDisplayName := "Lap Cat"
-	centralClient.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, cnst.ColorBlindTheme)
+	centralClient.Register(region, "cat", "cat@cat.com", "c@t-Pwd-W00", "de", &catDisplayName, cnst.ColorBlindTheme)
 	bobActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
@@ -52,7 +51,7 @@ func Test_system(t *testing.T) {
 	catInitInfo, err := centralClient.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")
 	catId := catInitInfo.Me.Id
 
-	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
+	org, err := centralClient.CreateAccount(aliCss, region, "org", nil)
 	bob := centralaccount.AddMember{}
 	bob.Id = bobId
 	bob.Role = cnst.AccountAdmin
@@ -61,15 +60,19 @@ func Test_system(t *testing.T) {
 	cat.Role = cnst.AccountMemberOfOnlySpecificProjects
 	centralClient.AddMembers(aliCss, org.Id, []*centralaccount.AddMember{&bob, &cat})
 
-	accountClient.SetPublicProjectsEnabled(aliCss, region, 0, org.Id, true)
+	accountClient.Edit(aliCss, region, 0, org.Id, account.Fields{PublicProjectsEnabled: &field.Bool{true}})
 
 	p1Desc := "p1_desc"
 	p2Desc := "p2_desc"
 	p3Desc := "p3_desc"
-	proj, err := client.Create(aliCss, region, 0, org.Id, "a-p1", &p1Desc, nil, nil, true, false, nil)
-	proj2, err := client.Create(aliCss, region, 0, org.Id, "b-p2", &p2Desc, nil, nil, true, false, nil)
-	proj3, err := client.Create(aliCss, region, 0, org.Id, "c-p3", &p3Desc, nil, nil, true, false, nil)
-	client.SetIsPublic(aliCss, region, 0, org.Id, proj.Id, true)
+	proj, err := client.Create(aliCss, region, 0, org.Id, "a-p1", &p1Desc, 8, 5, nil, nil, true, false, nil)
+	proj2, err := client.Create(aliCss, region, 0, org.Id, "b-p2", &p2Desc, 8, 5, nil, nil, true, false, nil)
+	proj3, err := client.Create(aliCss, region, 0, org.Id, "c-p3", &p3Desc, 8, 5, nil, nil, true, false, nil)
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{
+		IsPublic: &field.Bool{true},
+		HoursPerDay: &field.UInt8{6},
+		DaysPerWeek: &field.UInt8{6},
+	})
 	proj, err = client.Get(aliCss, region, 0, org.Id, proj.Id)
 	assert.Equal(t, "a-p1", proj.Name)
 	assert.Equal(t, "p1_desc", *proj.Description)
@@ -84,11 +87,11 @@ func Test_system(t *testing.T) {
 	assert.False(t, projRes.More)
 	assert.Equal(t, proj2.Name, projRes.Projects[0].Name)
 	assert.Equal(t, proj3.Name, projRes.Projects[1].Name)
-	client.SetIsArchived(aliCss, region, 0, org.Id, proj.Id, true)
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{IsArchived:&field.Bool{true}})
 	projRes, err = client.GetSet(aliCss, region, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, true, cnst.SortByCreatedOn, true, nil, 100)
 	assert.Equal(t, 1, len(projRes.Projects))
 	assert.False(t, projRes.More)
-	client.SetIsArchived(aliCss, region, 0, org.Id, proj.Id, false)
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{IsArchived:&field.Bool{false}})
 	aliP := &AddProjectMember{}
 	aliP.Id = aliId
 	aliP.Role = cnst.ProjectAdmin
@@ -110,7 +113,7 @@ func Test_system(t *testing.T) {
 	bobMe, err := client.GetMe(bobCss, region, 0, org.Id, proj.Id)
 	assert.True(t, bobMe.Id.Equal(bob.Id))
 	activities, err := client.GetActivities(aliCss, region, 0, org.Id, proj.Id, nil, nil, nil, nil, 100)
-	assert.Equal(t, 8, len(activities))
+	assert.Equal(t, 10, len(activities))
 	client.RemoveMembers(aliCss, region, 0, org.Id, proj.Id, []id.Id{bob.Id, cat.Id})
 	client.Delete(aliCss, region, 0, org.Id, proj.Id)
 

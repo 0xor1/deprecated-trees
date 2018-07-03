@@ -13,6 +13,7 @@ import (
 	"github.com/0xor1/panic"
 	"net/http"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 var (
@@ -24,6 +25,8 @@ type createArgs struct {
 	Account     id.Id               `json:"account"`
 	Name        string              `json:"name"`
 	Description *string             `json:"description"`
+	HoursPerDay uint8             `json:"hoursPerDay"`
+	DaysPerWeek uint8             `json:"daysPerWeek"`
 	StartOn     *time.Time          `json:"startOn"`
 	DueOn       *time.Time          `json:"dueOn"`
 	IsParallel  bool                `json:"isParallel"`
@@ -42,11 +45,16 @@ var create = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		panic.IfTrue(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
+		panic.IfTrue(args.IsPublic && !db.GetAccount(ctx, args.Shard, args.Account).PublicProjectsEnabled, publicProjectsDisabledErr)
+
+		validate.HoursPerDay(args.HoursPerDay)
+		validate.DaysPerWeek(args.DaysPerWeek)
 
 		project := &Project{}
 		project.Id = id.New()
 		project.Name = args.Name
+		project.HoursPerDay = args.HoursPerDay
+		project.DaysPerWeek = args.DaysPerWeek
 		project.Description = args.Description
 		project.CreatedOn = t.Now()
 		project.StartOn = args.StartOn
@@ -74,47 +82,38 @@ var create = &endpoint.Endpoint{
 	},
 }
 
-type setIsPublicArgs struct {
-	Shard    int   `json:"shard"`
-	Account  id.Id `json:"account"`
-	Project  id.Id `json:"project"`
-	IsPublic bool  `json:"isPublic"`
+type editArgs struct {
+	Shard   int    `json:"shard"`
+	Account id.Id  `json:"account"`
+	Project id.Id  `json:"project"`
+	Fields  Fields `json:"fields"`
 }
 
-var setIsPublic = &endpoint.Endpoint{
+var edit = &endpoint.Endpoint{
 	Method:          http.MethodPost,
-	Path:            "/api/v1/project/setIsPublic",
+	Path:            "/api/v1/project/edit",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &setIsPublicArgs{}
+		return &editArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setIsPublicArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		panic.IfTrue(args.IsPublic && !db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account), publicProjectsDisabledErr)
-		dbSetIsPublic(ctx, args.Shard, args.Account, args.Project, args.IsPublic)
-		return nil
-	},
-}
-
-type setIsArchivedArgs struct {
-	Shard      int   `json:"shard"`
-	Account    id.Id `json:"account"`
-	Project    id.Id `json:"project"`
-	IsArchived bool  `json:"isArchived"`
-}
-
-var setIsArchived = &endpoint.Endpoint{
-	Method:          http.MethodPost,
-	Path:            "/api/v1/project/setIsArchived",
-	RequiresSession: true,
-	GetArgsStruct: func() interface{} {
-		return &setIsArchivedArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setIsArchivedArgs)
-		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		dbSetProjectIsArchived(ctx, args.Shard, args.Account, args.Project, args.IsArchived)
+		args := a.(*editArgs)
+		accRole, projRole := db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me())
+		if args.Fields.IsPublic != nil || args.Fields.IsArchived != nil {
+			//must be account owner/admin to set these fields
+			validate.MemberHasAccountAdminAccess(accRole)
+		} else {
+			//other fields only require project admin access
+			validate.MemberHasProjectAdminAccess(accRole, projRole)
+		}
+		if args.Fields.HoursPerDay != nil {
+			validate.HoursPerDay(args.Fields.HoursPerDay.Val)
+		}
+		if args.Fields.DaysPerWeek != nil {
+			validate.DaysPerWeek(args.Fields.DaysPerWeek.Val)
+		}
+		panic.IfTrue(args.Fields.IsPublic != nil && args.Fields.IsPublic.Val && !db.GetAccount(ctx, args.Shard, args.Account).PublicProjectsEnabled, publicProjectsDisabledErr)
+		dbEdit(ctx, args.Shard, args.Account, args.Project, args.Fields)
 		return nil
 	},
 }
@@ -383,8 +382,7 @@ var getActivities = &endpoint.Endpoint{
 
 var Endpoints = []*endpoint.Endpoint{
 	create,
-	setIsPublic,
-	setIsArchived,
+	edit,
 	get,
 	getSet,
 	delete,
@@ -409,6 +407,8 @@ type Project struct {
 	IsArchived           bool       `json:"isArchived"`
 	Name                 string     `json:"name"`
 	Description          *string    `json:"description"`
+	HoursPerDay          uint8   `json:"hoursPerDay"`
+	DaysPerWeek          uint8    `json:"daysPerWeek"`
 	CreatedOn            time.Time  `json:"createdOn"`
 	StartOn              *time.Time `json:"startOn,omitempty"`
 	DueOn                *time.Time `json:"dueOn,omitempty"`
@@ -423,6 +423,21 @@ type Project struct {
 	DescendantCount      uint64     `json:"descendantCount"`
 	IsParallel           bool       `json:"isParallel,omitempty"`
 	IsPublic             bool       `json:"isPublic"`
+}
+
+type Fields struct {
+	// account owner/admin
+	IsPublic             *field.Bool    `json:"isPublic,omitempty"`
+	// account owner/admin
+	IsArchived           *field.Bool    `json:"isArchived,omitempty"`
+	// account owner/admin or project admin
+	HoursPerDay			 *field.UInt8	`json:"hoursPerDay,omitempty"`
+	// account owner/admin or project admin
+	DaysPerWeek			 *field.UInt8	`json:"daysPerWeek,omitempty"`
+	// account owner/admin or project admin
+	StartOn              *field.TimePtr `json:"startOn,omitempty"`
+	// account owner/admin or project admin
+	DueOn                *field.TimePtr `json:"dueOn,omitempty"`
 }
 
 type AddProjectMember struct {

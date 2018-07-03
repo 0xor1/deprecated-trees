@@ -14,6 +14,14 @@ var (
 	emailRegex          = regexp.MustCompile(`.+@.+\..+`)
 )
 
+func HoursPerDay(hoursPerDay uint8) {
+	panic.IfTruef(hoursPerDay == 0 || hoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
+}
+
+func DaysPerWeek(daysPerWeek uint8) {
+	panic.IfTruef(daysPerWeek == 0 || daysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
+}
+
 type invalidErr struct {
 	*err.Err
 	ArgName       string           `json:"argName"`

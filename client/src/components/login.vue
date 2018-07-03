@@ -44,6 +44,7 @@
             if (!v || v.length < 3 || v.length > 50 || !/.+@.+\..+/.test(v)) {
               return 'Valid email required'
             }
+            return true
           }
         ],
         pwdTryRules: [
@@ -51,6 +52,7 @@
             if (!v || v.length < 8 || v.length > 200 || !/[0-9]/.test(v) || !/[a-z]/.test(v) || !/[A-Z]/.test(v) || !/[\W]/.test(v)) {
               return 'Password must be 8 or more characters including a digit, an upper and lowercase letter and a symbol'
             }
+            return true
           }
         ]
       }

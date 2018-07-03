@@ -44,13 +44,13 @@ var (
 //endpoints
 
 type registerArgs struct {
-	Name        string     `json:"name"`
-	Email       string     `json:"email"`
-	Pwd         string     `json:"pwd"`
-	Region      string     `json:"region"`
-	Language    string     `json:"language"`
-	DisplayName *string    `json:"displayName"`
-	Theme       cnst.Theme `json:"theme"`
+	Name        string      `json:"name"`
+	Email       string      `json:"email"`
+	Pwd         string      `json:"pwd"`
+	Region      cnst.Region `json:"region"`
+	Language    string      `json:"language"`
+	DisplayName *string     `json:"displayName"`
+	Theme       cnst.Theme  `json:"theme"`
 }
 
 var register = &endpoint.Endpoint{
@@ -76,7 +76,7 @@ var register = &endpoint.Endpoint{
 			}
 		}
 
-		panic.IfTrue(!ctx.RegionalV1PrivateClient().IsValidRegion(args.Region), err.NoSuchRegion)
+		args.Region.ValidateForDataRegions()
 		panic.IfTrue(dbAccountWithCiNameExists(ctx, args.Name), nameAlreadyInUseErr)
 
 		if acc := dbGetPersonalAccountByEmail(ctx, args.Email); acc != nil {
@@ -698,8 +698,8 @@ var setAccountAvatar = &endpoint.Endpoint{
 }
 
 type migrateAccountArgs struct {
-	Account   id.Id  `json:"account"`
-	NewRegion string `json:"newRegion"`
+	Account   id.Id       `json:"account"`
+	NewRegion cnst.Region `json:"newRegion"`
 }
 
 var migrateAccount = &endpoint.Endpoint{
@@ -716,9 +716,9 @@ var migrateAccount = &endpoint.Endpoint{
 }
 
 type createAccountArgs struct {
-	Name        string  `json:"name"`
-	Region      string  `json:"region"`
-	DisplayName *string `json:"displayName"`
+	Name        string      `json:"name"`
+	Region      cnst.Region `json:"region"`
+	DisplayName *string     `json:"displayName"`
 }
 
 var createAccount = &endpoint.Endpoint{
@@ -734,7 +734,7 @@ var createAccount = &endpoint.Endpoint{
 		args.Name = strings.Trim(args.Name, " ")
 		validate.StringArg("name", args.Name, ctx.NameMinRuneCount(), ctx.NameMaxRuneCount(), ctx.NameRegexMatchers())
 
-		panic.IfTrue(!ctx.RegionalV1PrivateClient().IsValidRegion(args.Region), err.NoSuchRegion)
+		args.Region.ValidateForDataRegions()
 		panic.IfTrue(dbAccountWithCiNameExists(ctx, args.Name), nameAlreadyInUseErr)
 
 		account := &Account{}
@@ -946,15 +946,15 @@ var Endpoints = []*endpoint.Endpoint{
 
 //structs
 type Account struct {
-	Id          id.Id     `json:"id"`
-	Name        string    `json:"name"`
-	DisplayName *string   `json:"displayName"`
-	CreatedOn   time.Time `json:"createdOn"`
-	Region      string    `json:"region"`
-	NewRegion   *string   `json:"newRegion,omitempty"`
-	Shard       int       `json:"shard"`
-	HasAvatar   bool      `json:"hasAvatar"`
-	IsPersonal  bool      `json:"isPersonal"`
+	Id          id.Id       `json:"id"`
+	Name        string      `json:"name"`
+	DisplayName *string     `json:"displayName"`
+	CreatedOn   time.Time   `json:"createdOn"`
+	Region      cnst.Region `json:"region"`
+	NewRegion   *string     `json:"newRegion,omitempty"`
+	Shard       int         `json:"shard"`
+	HasAvatar   bool        `json:"hasAvatar"`
+	IsPersonal  bool        `json:"isPersonal"`
 }
 
 func (a *Account) isMigrating() bool {

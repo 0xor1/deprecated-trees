@@ -65,6 +65,7 @@
             if (!v || v.length < 3 || v.length > 50 || !/^\w{3,50}$/.test(v)) {
               return 'Name must be 3-50 numbers, letters or underscore characters'
             }
+            return true
           }
         ],
         emailRules: [
@@ -72,6 +73,7 @@
             if (!v || v.length < 3 || v.length > 50 || !/.+@.+\..+/.test(v)) {
               return 'Valid email required'
             }
+            return true
           }
         ],
         pwdRules: [
@@ -79,6 +81,7 @@
             if (!v || v.length < 8 || v.length > 200 || !/[0-9]/.test(v) || !/[a-z]/.test(v) || !/[A-Z]/.test(v) || !/[\W]/.test(v)) {
               return 'Password must be 8 or more characters including a digit, an upper and lowercase letter and a symbol'
             }
+            return true
           }
         ],
         regionRules: [
@@ -86,6 +89,7 @@
             if (!v || v.length < 3) {
               return 'Must select a region'
             }
+            return true
           }
         ]
       }

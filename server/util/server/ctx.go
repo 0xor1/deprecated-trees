@@ -17,6 +17,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
 	"math/rand"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -55,8 +56,12 @@ func (c *_ctx) Me() id.Id {
 	return *c.me
 }
 
-func (c *_ctx) Log(err error) {
-	c.SR.LogError(err)
+func (c *_ctx) LogIf(err error) bool {
+	if err != nil {
+		c.SR.LogError(err)
+		return true
+	}
+	return false
 }
 
 func (c *_ctx) AccountExec(query string, args ...interface{}) (sql.Result, error) {
@@ -104,13 +109,16 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key) bool {
 		return false
 	}
 	dlm, e := c.getDlm(key.DlmKeys)
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
+		// if the error is a timeout error to redis assume it's unavailable for  the rest of the request and skip it
+		if to, ok := e.(net.Error); ok && to.Timeout() {
+			f := false
+			c.cache = &f
+		}
 		return false
 	}
 	argsJsonBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.SortedDlmKeys(), Dlm: dlm, Args: key.Args})
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
 		return false
 	}
 	cnn := c.SR.DlmAndDataRedisPool.Get()
@@ -121,16 +129,14 @@ func (c *_ctx) GetCacheValue(val interface{}, key *cachekey.Key) bool {
 	if e == redis.ErrNil {
 		return false
 	}
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
 		return false
 	}
 	if len(jsonBytes) == 0 {
 		return false
 	}
 	e = json.Unmarshal(jsonBytes, val)
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
 		return false
 	}
 	return true
@@ -141,18 +147,20 @@ func (c *_ctx) SetCacheValue(val interface{}, key *cachekey.Key) {
 		return
 	}
 	dlm, e := c.getDlm(key.DlmKeys)
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
+		// if the error is a timeout error to redis assume it's unavailable for  the rest of the request and skip it
+		if to, ok := e.(net.Error); ok && to.Timeout() {
+			f := false
+			c.cache = &f
+		}
 		return
 	}
 	valBytes, e := json.Marshal(val)
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
 		return
 	}
 	cacheKeyBytes, e := json.Marshal(&valueCacheKey{MasterKey: c.SR.MasterCacheKey, Key: key.Key, DlmKeys: key.SortedDlmKeys(), Dlm: dlm, Args: key.Args})
-	if e != nil {
-		c.Log(e)
+	if c.LogIf(e) {
 		return
 	}
 	c.cacheItemsToUpdate[string(cacheKeyBytes)] = valBytes
@@ -167,12 +175,12 @@ func (c *_ctx) TouchDlms(cacheKeys *cachekey.Key) {
 	}
 }
 
-func (c *_ctx) EnvClientScheme() string {
-	return c.SR.EnvClientScheme
+func (c *_ctx) ClientScheme() string {
+	return c.SR.ClientScheme
 }
 
-func (c *_ctx) EnvClientHost() string {
-	return c.SR.EnvClientHost
+func (c *_ctx) ClientHost() string {
+	return c.SR.ClientHost
 }
 
 func (c *_ctx) NameRegexMatchers() []*regexp.Regexp {
@@ -344,9 +352,7 @@ func (c *_ctx) doCacheUpdate() {
 		start := time.NowUnixMillis()
 		_, e := cnn.Do("MSET", setArgs...)
 		c.writeQueryInfo("MSET", setArgs, start)
-		if e != nil {
-			c.Log(e)
-		}
+		c.LogIf(e)
 	}
 }
 

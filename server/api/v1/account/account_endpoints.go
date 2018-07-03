@@ -12,46 +12,54 @@ import (
 	"github.com/0xor1/panic"
 	"net/http"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/field"
+	"bitbucket.org/0xor1/trees/server/util/account"
 )
 
-type setPublicProjectsEnabledArgs struct {
+type editArgs struct {
 	Shard                 int   `json:"shard"`
 	Account               id.Id `json:"account"`
-	PublicProjectsEnabled bool  `json:"publicProjectsEnabled"`
+	Fields Fields  `json:"fields"`
 }
 
-var setPublicProjectsEnabled = &endpoint.Endpoint{
+var edit = &endpoint.Endpoint{
 	Method:          http.MethodPost,
-	Path:            "/api/v1/account/setPublicProjectsEnabled",
+	Path:            "/api/v1/account/edit",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &setPublicProjectsEnabledArgs{}
+		return &editArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setPublicProjectsEnabledArgs)
+		args := a.(*editArgs)
 		validate.MemberHasAccountOwnerAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		dbSetPublicProjectsEnabled(ctx, args.Shard, args.Account, args.PublicProjectsEnabled)
+		if args.Fields.HoursPerDay != nil {
+			validate.HoursPerDay(args.Fields.HoursPerDay.Val)
+		}
+		if args.Fields.DaysPerWeek != nil {
+			validate.DaysPerWeek(args.Fields.DaysPerWeek.Val)
+		}
+		dbEdit(ctx, args.Shard, args.Account, args.Fields)
 		return nil
 	},
 }
 
-type getPublicProjectsEnabledArgs struct {
+type getArgs struct {
 	Shard   int   `json:"shard"`
 	Account id.Id `json:"account"`
 }
 
-var getPublicProjectsEnabled = &endpoint.Endpoint{
+var get = &endpoint.Endpoint{
 	Method:                   http.MethodGet,
-	Path:                     "/api/v1/account/getPublicProjectsEnabled",
+	Path:                     "/api/v1/account/get",
 	RequiresSession:          true,
-	ExampleResponseStructure: false,
+	ExampleResponseStructure: &account.Account{},
 	GetArgsStruct: func() interface{} {
-		return &getPublicProjectsEnabledArgs{}
+		return &getArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*getPublicProjectsEnabledArgs)
+		args := a.(*getArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		return db.GetPublicProjectsEnabled(ctx, args.Shard, args.Account)
+		return db.GetAccount(ctx, args.Shard, args.Account)
 	},
 }
 
@@ -155,12 +163,18 @@ var getMe = &endpoint.Endpoint{
 }
 
 var Endpoints = []*endpoint.Endpoint{
-	setPublicProjectsEnabled,
-	getPublicProjectsEnabled,
+	edit,
+	get,
 	setMemberRole,
 	getMembers,
 	getActivities,
 	getMe,
+}
+
+type Fields struct {
+	PublicProjectsEnabled *field.Bool `json:"publicProjectsEnabled,omitempty"`
+	HoursPerDay *field.UInt8  `json:"hoursPerDay,omitempty"`
+	DaysPerWeek *field.UInt8  `json:"daysPerWeek,omitempty"`
 }
 
 type Member struct {

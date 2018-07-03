@@ -8,17 +8,17 @@ import (
 )
 
 const (
-	LclEnv = "lcl"
-	DevEnv = "dev"
-	StgEnv = "stg"
-	ProEnv = "pro"
+	LclEnv = Env("lcl")
+	DevEnv = Env("dev")
+	StgEnv = Env("stg")
+	ProEnv = Env("pro")
 
-	CentralRegion = "central"
-	USWRegion     = "usw"
-	USERegion     = "use"
-	EUWRegion     = "euw"
-	ASPRegion     = "asp"
-	AUSRegion     = "aus"
+	CentralRegion = Region("central")
+	USWRegion     = Region("usw")
+	USERegion     = Region("use")
+	EUWRegion     = Region("euw")
+	ASPRegion     = Region("asp")
+	AUSRegion     = Region("aus")
 
 	LightTheme      = Theme(0)
 	DarkTheme       = Theme(1)
@@ -34,8 +34,8 @@ const (
 	ProjectReader = ProjectRole(2)
 
 	SortByName        = SortBy("name")
-	SortByDisplayName = SortBy("displayname")
 	SortByCreatedOn   = SortBy("createdon")
+	SortByDisplayName = SortBy("displayname")
 	SortByStartOn     = SortBy("starton")
 	SortByDueOn       = SortBy("dueon")
 )
@@ -43,6 +43,44 @@ const (
 var (
 	invalidConstantValueErr = &err.Err{Code: "u_c_icv", Message: "invalid constant value"}
 )
+
+type Env string
+
+func (e *Env) Validate() {
+	panic.IfTrue(e != nil && !(*e == LclEnv || *e == DevEnv || *e == StgEnv || *e == ProEnv), invalidConstantValueErr)
+}
+
+func (e *Env) String() string {
+	return string(*e)
+}
+
+func (e *Env) UnmarshalJSON(raw []byte) error {
+	val := strings.Trim(strings.ToLower(string(raw)), `"`)
+	*e = Env(val)
+	e.Validate()
+	return nil
+}
+
+type Region string
+
+func (r *Region) Validate() {
+	panic.IfTrue(r != nil && !(*r == CentralRegion || *r == USWRegion || *r == USERegion || *r == EUWRegion || *r == ASPRegion || *r == AUSRegion), invalidConstantValueErr)
+}
+
+func (r *Region) ValidateForDataRegions() {
+	panic.IfTrue(r != nil && !(*r == USWRegion || *r == USERegion || *r == EUWRegion || *r == ASPRegion || *r == AUSRegion), invalidConstantValueErr)
+}
+
+func (r *Region) String() string {
+	return string(*r)
+}
+
+func (r *Region) UnmarshalJSON(raw []byte) error {
+	val := strings.Trim(strings.ToLower(string(raw)), `"`)
+	*r = Region(val)
+	r.Validate()
+	return nil
+}
 
 type Theme uint8
 

@@ -2,17 +2,18 @@ package timelog
 
 import (
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	tlog "bitbucket.org/0xor1/trees/server/util/timelog"
 )
 
 type Client interface {
-	Create(css *clientsession.Store, region string, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error)                                          //only applys to task tasks
-	CreateAndSetRemainingTime(css *clientsession.Store, region string, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) //only applys to task tasks
-	SetDuration(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id, duration uint64) error
-	SetNote(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id, note *string) error
-	Delete(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id) error
-	Get(css *clientsession.Store, region string, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error)
+	Create(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error)                                          //only applys to task tasks
+	CreateAndSetRemainingTime(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) //only applys to task tasks
+	SetDuration(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, duration uint64) error
+	SetNote(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, note *string) error
+	Delete(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id) error
+	Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error)
 }
 
 func NewClient(host string) Client {
@@ -25,7 +26,7 @@ type client struct {
 	host string
 }
 
-func (c *client) Create(css *clientsession.Store, region string, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error) {
+func (c *client) Create(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error) {
 	val, e := create.DoRequest(css, c.host, region, &createArgs{
 		Shard:    shard,
 		Account:  account,
@@ -40,7 +41,7 @@ func (c *client) Create(css *clientsession.Store, region string, shard int, acco
 	return nil, e
 }
 
-func (c *client) CreateAndSetRemainingTime(css *clientsession.Store, region string, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) {
+func (c *client) CreateAndSetRemainingTime(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) {
 	val, e := createAndSetRemainingTime.DoRequest(css, c.host, region, &createAndSetRemainingTimeArgs{
 		Shard:         shard,
 		Account:       account,
@@ -56,7 +57,7 @@ func (c *client) CreateAndSetRemainingTime(css *clientsession.Store, region stri
 	return nil, e
 }
 
-func (c *client) SetDuration(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id, duration uint64) error {
+func (c *client) SetDuration(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, duration uint64) error {
 	_, e := setDuration.DoRequest(css, c.host, region, &setDurationArgs{
 		Shard:    shard,
 		Account:  account,
@@ -67,7 +68,7 @@ func (c *client) SetDuration(css *clientsession.Store, region string, shard int,
 	return e
 }
 
-func (c *client) SetNote(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id, note *string) error {
+func (c *client) SetNote(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, note *string) error {
 	_, e := setNote.DoRequest(css, c.host, region, &setNoteArgs{
 		Shard:   shard,
 		Account: account,
@@ -78,7 +79,7 @@ func (c *client) SetNote(css *clientsession.Store, region string, shard int, acc
 	return e
 }
 
-func (c *client) Delete(css *clientsession.Store, region string, shard int, account, project, timeLog id.Id) error {
+func (c *client) Delete(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id) error {
 	_, e := delete.DoRequest(css, c.host, region, &deleteArgs{
 		Shard:   shard,
 		Account: account,
@@ -88,7 +89,7 @@ func (c *client) Delete(css *clientsession.Store, region string, shard int, acco
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, region string, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error) {
+func (c *client) Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error) {
 	val, e := get.DoRequest(css, c.host, region, &getArgs{
 		Shard:   shard,
 		Account: account,

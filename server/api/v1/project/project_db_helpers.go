@@ -14,6 +14,7 @@ import (
 	"github.com/0xor1/panic"
 	"strings"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
@@ -29,13 +30,52 @@ func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 }
 
 func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *Project) {
-	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
+	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.HoursPerDay, project.DaysPerWeek, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
 	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).AccountProjectsSet(account))
 }
 
-func dbSetIsPublic(ctx ctx.Ctx, shard int, account, project id.Id, isPublic bool) {
-	_, e := ctx.TreeExec(shard, `CALL setProjectIsPublic(?, ?, ?, ?)`, account, project, ctx.Me(), isPublic)
+func dbEdit(ctx ctx.Ctx, shard int, account, project id.Id, fields Fields) {
+	setIsPublic := false
+	if fields.IsPublic != nil {
+		setIsPublic = true
+	}else {
+		fields.IsPublic = &field.Bool{}
+	}
+	setIsArchived := false
+	if fields.IsArchived != nil {
+		setIsArchived = true
+	}else {
+		fields.IsArchived = &field.Bool{}
+	}
+	setHoursPerDay := false
+	if fields.HoursPerDay != nil {
+		setHoursPerDay = true
+	}else {
+		fields.HoursPerDay = &field.UInt8{}
+	}
+	setDaysPerWeek := false
+	if fields.DaysPerWeek != nil {
+		setDaysPerWeek = true
+	}else {
+		fields.DaysPerWeek = &field.UInt8{}
+	}
+	setStartOn := false
+	if fields.StartOn != nil {
+		setStartOn = true
+	}else {
+		fields.StartOn = &field.TimePtr{}
+	}
+	setDueOn := false
+	if fields.DueOn != nil {
+		setDueOn = true
+	}else {
+		fields.DueOn = &field.TimePtr{}
+	}
+	if !setIsPublic && !setIsArchived && !setHoursPerDay && !setDaysPerWeek && !setStartOn && !setDueOn {
+		return
+	}
+	_, e := ctx.TreeExec(shard, `CALL editProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, ctx.Me(), setIsPublic, fields.IsPublic.Val, setIsArchived, fields.IsArchived.Val, setHoursPerDay, fields.HoursPerDay.Val, setDaysPerWeek, fields.DaysPerWeek.Val, setStartOn, fields.StartOn.Val, setDueOn, fields.DueOn.Val)
 	panic.If(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
 }
@@ -46,8 +86,8 @@ func dbGetProject(ctx ctx.Ctx, shard int, account, proj id.Id) *Project {
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
-	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, account, proj, account, proj, proj)
-	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&res.Id, &res.IsArchived, &res.Name, &res.CreatedOn, &res.StartOn, &res.DueOn, &res.FileCount, &res.FileSize, &res.IsPublic, &res.Description, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.LinkedFileCount, &res.ChatCount, &res.ChildCount, &res.DescendantCount, &res.IsParallel)) {
+	row := ctx.TreeQueryRow(shard, `SELECT p.id, p.isArchived, p.name, p.hoursPerDay, p.daysPerWeek, p.createdOn, p.startOn, p.dueOn, p.fileCount, p.fileSize, p.isPublic, t.description, t.totalRemainingTime, t.totalLoggedTime, t.minimumRemainingTime, t.linkedFileCount, t.chatCount, t.childCount, t.descendantCount, t.isParallel FROM projects p, tasks t WHERE p.account=? AND p.id=? AND t.account=? AND t.project=? AND t.id=?`, account, proj, account, proj, proj)
+	if err.IsSqlErrNoRowsElsePanicIf(row.Scan(&res.Id, &res.IsArchived, &res.Name, &res.HoursPerDay, &res.DaysPerWeek, &res.CreatedOn, &res.StartOn, &res.DueOn, &res.FileCount, &res.FileSize, &res.IsPublic, &res.Description, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.LinkedFileCount, &res.ChatCount, &res.ChildCount, &res.DescendantCount, &res.IsParallel)) {
 		return nil
 	}
 	ctx.SetCacheValue(res, cacheKey)
@@ -64,12 +104,6 @@ func dbGetPublicAndSpecificAccessProjects(ctx ctx.Ctx, shard int, account, me id
 
 func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortAsc bool, after *id.Id, limit int) *GetSetResult {
 	return dbGetProjects(ctx, shard, ``, account, nil, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortAsc, after, limit)
-}
-
-func dbSetProjectIsArchived(ctx ctx.Ctx, shard int, account, project id.Id, isArchived bool) {
-	_, e := ctx.TreeExec(shard, `CALL setProjectIsArchived(?, ?, ?, ?)`, account, project, ctx.Me(), isArchived)
-	panic.If(e)
-	ctx.TouchDlms(cachekey.NewSetDlms().Project(account, project).ProjectActivities(account, project))
 }
 
 func dbDeleteProject(ctx ctx.Ctx, shard int, account, project id.Id) {
@@ -203,11 +237,11 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 
 func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account id.Id, me *id.Id, nameContains *string, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore *time.Time, isArchived bool, sortBy cnst.SortBy, sortAsc bool, after *id.Id, limit int) *GetSetResult {
 	res := GetSetResult{}
-	cacheKey := cachekey.NewGet("project.dbGetProjectsSet", shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortAsc, after, limit).AccountProjectsSet(account)
+	cacheKey := cachekey.NewGet("project.dbGetProjects", shard, specificSqlFilterTxt, account, me, nameContains, createdOnAfter, createdOnBefore, startOnAfter, startOnBefore, dueOnAfter, dueOnBefore, isArchived, sortBy, sortAsc, after, limit).AccountProjectsSet(account)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
-	query := bytes.NewBufferString(`SELECT id, isArchived, name, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
+	query := bytes.NewBufferString(`SELECT id, isArchived, name, hoursPerDay, daysPerWeek, createdOn, startOn, dueOn, fileCount, fileSize, isPublic FROM projects WHERE account=? AND isArchived=? %s`)
 	args := make([]interface{}, 0, 14)
 	args = append(args, account, isArchived)
 	if me != nil {
@@ -254,7 +288,7 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 	resIdx := map[string]int{}
 	for rows.Next() {
 		proj := Project{}
-		panic.If(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
+		panic.If(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.HoursPerDay, &proj.DaysPerWeek, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
 		projSet = append(projSet, &proj)
 		resIdx[proj.Id.String()] = idx
 		idx++

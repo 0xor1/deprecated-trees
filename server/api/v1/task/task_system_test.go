@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func Test_system(t *testing.T) {
@@ -25,12 +26,10 @@ func Test_system(t *testing.T) {
 	projectClient := project.NewClient(testServer.URL)
 	client := NewClient(testServer.URL)
 	region := cnst.EUWRegion
-	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
-		region: testServer.URL,
-	})
+	SR.RegionalV1PrivateClient = private.NewTestClient(testServer.URL)
 
 	aliDisplayName := "Ali O'Mally"
-	centralClient.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
+	centralClient.Register(region, "ali", "ali@ali.com", "al1-Pwd-W00", "en", &aliDisplayName, cnst.DarkTheme)
 	activationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 	centralClient.Activate("ali@ali.com", activationCode)
@@ -38,11 +37,11 @@ func Test_system(t *testing.T) {
 	aliId := aliInitInfo.Me.Id
 	assert.Nil(t, err)
 	bobDisplayName := "Fat Bob"
-	centralClient.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, cnst.LightTheme)
+	centralClient.Register(region, "bob", "bob@bob.com", "8ob-Pwd-W00", "en", &bobDisplayName, cnst.LightTheme)
 	catDisplayName := "Lap Cat"
-	centralClient.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, cnst.ColorBlindTheme)
+	centralClient.Register(region, "cat", "cat@cat.com", "c@t-Pwd-W00", "de", &catDisplayName, cnst.ColorBlindTheme)
 	danDisplayName := "Dan the Man"
-	centralClient.Register("dan", "dan@dan.com", "d@n-Pwd-W00", region, "en", &danDisplayName, cnst.DarkTheme)
+	centralClient.Register(region, "dan", "dan@dan.com", "d@n-Pwd-W00", "en", &danDisplayName, cnst.DarkTheme)
 	bobActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	centralClient.Activate("bob@bob.com", bobActivationCode)
@@ -62,7 +61,7 @@ func Test_system(t *testing.T) {
 	danInitInfo, err := centralClient.Authenticate(danCss, "dan@dan.com", "d@n-Pwd-W00")
 	danId := danInitInfo.Me.Id
 
-	org, err := centralClient.CreateAccount(aliCss, "org", region, nil)
+	org, err := centralClient.CreateAccount(aliCss, region, "org", nil)
 	bob := centralaccount.AddMember{}
 	bob.Id = bobId
 	bob.Role = cnst.AccountAdmin
@@ -77,7 +76,7 @@ func Test_system(t *testing.T) {
 	start := time.Now()
 	end := start.Add(5 * 24 * time.Hour)
 	desc := "desc"
-	proj, err := projectClient.Create(aliCss, region, 0, org.Id, "proj", &desc, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
+	proj, err := projectClient.Create(aliCss, region, 0, org.Id, "proj", &desc, 8, 5, &start, &end, true, false, []*project.AddProjectMember{{Id: aliId, Role: cnst.ProjectAdmin}, {Id: bobId, Role: cnst.ProjectAdmin}, {Id: catId, Role: cnst.ProjectWriter}, {Id: danId, Role: cnst.ProjectReader}})
 
 	oneVal := uint64(1)
 	twoVal := uint64(2)
@@ -139,14 +138,14 @@ func Test_system(t *testing.T) {
 	ancestors, err = client.GetAncestors(nil, region, 0, org.Id, proj.Id, taskM.Id, 100)
 	assert.Nil(t, ancestors)
 	assert.NotNil(t, err)
-	accountClient.SetPublicProjectsEnabled(aliCss, region, 0, org.Id, true)
-	projectClient.SetIsPublic(aliCss, region, 0, org.Id, proj.Id, true)
+	accountClient.Edit(aliCss, region, 0, org.Id, account.Fields{PublicProjectsEnabled:&field.Bool{true}})
+	projectClient.Edit(aliCss, region, 0, org.Id, proj.Id, project.Fields{IsPublic: &field.Bool{true}})
 	ancestors, err = client.GetAncestors(nil, region, 0, org.Id, proj.Id, taskM.Id, 100)
 	assert.Equal(t, 3, len(ancestors.Ancestors))
 	assert.True(t, proj.Id.Equal(ancestors.Ancestors[0].Id))
 	assert.True(t, taskA.Id.Equal(ancestors.Ancestors[1].Id))
 	assert.True(t, taskL.Id.Equal(ancestors.Ancestors[2].Id))
-	projectClient.SetIsPublic(aliCss, region, 0, org.Id, proj.Id, false)
+	projectClient.Edit(aliCss, region, 0, org.Id, proj.Id, project.Fields{IsPublic: &field.Bool{false}})
 	ancestors, err = client.GetAncestors(nil, region, 0, org.Id, proj.Id, taskM.Id, 100)
 	assert.Nil(t, ancestors)
 	assert.NotNil(t, err)

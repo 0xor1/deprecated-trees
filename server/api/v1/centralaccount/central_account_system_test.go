@@ -22,13 +22,11 @@ func Test_system(t *testing.T) {
 	testServer := httptest.NewServer(serv)
 	aliCss := clientsession.New()
 	client := NewClient(testServer.URL)
-	region := cnst.LclEnv
-	SR.RegionalV1PrivateClient = private.NewClient(map[string]string{
-		region: testServer.URL,
-	})
+	region := cnst.EUWRegion
+	SR.RegionalV1PrivateClient = private.NewTestClient(testServer.URL)
 
 	aliDisplayName := "Ali O'Mally"
-	client.Register("ali", "ali@ali.com", "al1-Pwd-W00", region, "en", &aliDisplayName, cnst.DarkTheme)
+	client.Register(region, "ali", "ali@ali.com", "al1-Pwd-W00", "en", &aliDisplayName, cnst.DarkTheme)
 
 	client.ResendActivationEmail("ali@ali.com")
 	activationCode := ""
@@ -100,7 +98,7 @@ func Test_system(t *testing.T) {
 	//err = client.MigrateAccount(aliCss, aliId, "usw")
 
 	orgDisplayName := "Big Corp"
-	org, _ := client.CreateAccount(aliCss, "org", region, &orgDisplayName)
+	org, _ := client.CreateAccount(aliCss, region, "org", &orgDisplayName)
 	assert.Equal(t, "org", org.Name)
 	assert.Equal(t, orgDisplayName, *org.DisplayName)
 	assert.InDelta(t, time.Now().Unix(), org.CreatedOn.Unix(), 5)
@@ -110,7 +108,7 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, region, org.Region)
 	assert.Equal(t, 0, org.Shard)
 	orgDisplayName2 := "Big Corp 2"
-	org2, _ := client.CreateAccount(aliCss, "zorg2", region, &orgDisplayName2)
+	org2, _ := client.CreateAccount(aliCss, region, "zorg2", &orgDisplayName2)
 	assert.Equal(t, "zorg2", org2.Name)
 	assert.Equal(t, orgDisplayName2, *org2.DisplayName)
 	assert.InDelta(t, time.Now().Unix(), org2.CreatedOn.Unix(), 5)
@@ -146,9 +144,9 @@ func Test_system(t *testing.T) {
 
 	bobDisplayName := "Fat Bob"
 
-	client.Register("bob", "bob@bob.com", "8ob-Pwd-W00", region, "en", &bobDisplayName, cnst.LightTheme)
+	client.Register(region, "bob", "bob@bob.com", "8ob-Pwd-W00", "en", &bobDisplayName, cnst.LightTheme)
 	catDisplayName := "Lap Cat"
-	client.Register("cat", "cat@cat.com", "c@t-Pwd-W00", region, "de", &catDisplayName, cnst.ColorBlindTheme)
+	client.Register(region, "cat", "cat@cat.com", "c@t-Pwd-W00", "de", &catDisplayName, cnst.ColorBlindTheme)
 
 	bobActivationCode := ""
 	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)

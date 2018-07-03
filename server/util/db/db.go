@@ -11,6 +11,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/validate"
 	"github.com/0xor1/panic"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/account"
 )
 
 var (
@@ -78,16 +79,16 @@ func GetAccountAndProjectRolesAndProjectIsPublic(ctx ctx.Ctx, shard int, account
 	return accRole, projRole, isPublic
 }
 
-func GetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id) bool {
-	var enabled bool
-	cacheKey := cachekey.NewGet("db.GetPublicProjectsEnabled", shard, account).Account(account)
-	if ctx.GetCacheValue(&enabled, cacheKey) {
-		return enabled
+func GetAccount(ctx ctx.Ctx, shard int, acc id.Id) *account.Account {
+	res := account.Account{}
+	cacheKey := cachekey.NewGet("db.GetAccount", shard, acc).Account(acc)
+	if ctx.GetCacheValue(&res, cacheKey) {
+		return &res
 	}
-	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled FROM accounts WHERE id=?`, account)
-	panic.If(row.Scan(&enabled))
-	ctx.SetCacheValue(enabled, cacheKey)
-	return enabled
+	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled, hoursPerDay, daysPerWeek FROM accounts WHERE id=?`, acc)
+	panic.If(row.Scan(&res.PublicProjectsEnabled, &res.HoursPerDay, &res.DaysPerWeek))
+	ctx.SetCacheValue(res, cacheKey)
+	return &res
 }
 
 func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timelog.TimeLog {

@@ -51,7 +51,7 @@ module.exports = {
     openUri: 'http://lcl.project-trees.com',
     proxyTable: {
       '/api': {
-        target: 'http://lcl-api.project-trees.com',
+        target: 'http://lcl-euw-api.project-trees.com',
         changeOrigin: true,
       }
     },

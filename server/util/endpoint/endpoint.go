@@ -2,6 +2,7 @@ package endpoint
 
 import (
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
+	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/time"
@@ -95,13 +96,13 @@ type endpointDocumentation struct {
 	IsAuthentication         *bool       `json:"isAuthentication,omitempty"`
 }
 
-func (ep *Endpoint) createRequest(host string, region string, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
-	reqUrl, e := url.Parse(host + ep.Path)
+func (ep *Endpoint) createRequest(baseURl string, region cnst.Region, args interface{}, buildForm func() (io.ReadCloser, string)) (*http.Request, error) {
+	reqUrl, e := url.Parse(baseURl + ep.Path)
 	if e != nil {
 		return nil, e
 	}
 	urlVals := url.Values{}
-	urlVals.Set("region", region)
+	urlVals.Set("region", string(region))
 	var body io.ReadCloser
 	var contentType string
 	if buildForm != nil {
@@ -143,8 +144,9 @@ func (ep *Endpoint) createRequest(host string, region string, args interface{}, 
 	return req, nil
 }
 
-func (ep *Endpoint) DoRequest(css *clientsession.Store, host string, region string, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
-	req, e := ep.createRequest(host, region, args, buildForm)
+func (ep *Endpoint) DoRequest(css *clientsession.Store, baseUrl string, region cnst.Region, args interface{}, buildForm func() (io.ReadCloser, string), respVal interface{}) (interface{}, error) {
+	region.Validate()
+	req, e := ep.createRequest(baseUrl, region, args, buildForm)
 	if e != nil {
 		return nil, e
 	}

@@ -13,7 +13,7 @@ import (
 
 type Client interface {
 	//accessible outside of active session
-	Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error
+	Register(region cnst.Region, name, email, pwd, language string, displayName *string, theme cnst.Theme) error
 	ResendActivationEmail(email string) error
 	Activate(email, activationCode string) error
 	Authenticate(css *clientsession.Store, email, pwd string) (*AuthenticateResult, error)
@@ -32,8 +32,8 @@ type Client interface {
 	SetAccountName(css *clientsession.Store, account id.Id, newName string) error
 	SetAccountDisplayName(css *clientsession.Store, account id.Id, newDisplayName *string) error
 	SetAccountAvatar(css *clientsession.Store, account id.Id, avatar io.ReadCloser) error
-	MigrateAccount(css *clientsession.Store, account id.Id, newRegion string) error
-	CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error)
+	MigrateAccount(css *clientsession.Store, account id.Id, newRegion cnst.Region) error
+	CreateAccount(css *clientsession.Store, region cnst.Region, name string, displayName *string) (*Account, error)
 	GetMyAccounts(css *clientsession.Store, after *id.Id, limit int) (*GetMyAccountsResult, error)
 	DeleteAccount(css *clientsession.Store, account id.Id) error
 	//member centric - must be an owner or admin
@@ -51,7 +51,7 @@ type client struct {
 	host string
 }
 
-func (c *client) Register(name, email, pwd, region, language string, displayName *string, theme cnst.Theme) error {
+func (c *client) Register(region cnst.Region, name, email, pwd, language string, displayName *string, theme cnst.Theme) error {
 	_, e := register.DoRequest(nil, c.host, cnst.CentralRegion, &registerArgs{
 		Name:        name,
 		Email:       email,
@@ -218,7 +218,7 @@ func (c *client) SetAccountAvatar(css *clientsession.Store, account id.Id, avata
 	return e
 }
 
-func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegion string) error {
+func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegion cnst.Region) error {
 	_, e := migrateAccount.DoRequest(css, c.host, cnst.CentralRegion, &migrateAccountArgs{
 		Account:   account,
 		NewRegion: newRegion,
@@ -226,7 +226,7 @@ func (c *client) MigrateAccount(css *clientsession.Store, account id.Id, newRegi
 	return e
 }
 
-func (c *client) CreateAccount(css *clientsession.Store, name, region string, displayName *string) (*Account, error) {
+func (c *client) CreateAccount(css *clientsession.Store, region cnst.Region, name string, displayName *string) (*Account, error) {
 	val, e := createAccount.DoRequest(css, c.host, cnst.CentralRegion, &createAccountArgs{
 		Name:        name,
 		Region:      region,

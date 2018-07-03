@@ -17,7 +17,7 @@ type Ctx interface {
 	TryMe() *id.Id
 	Me() id.Id
 	//error logging
-	Log(err error)
+	LogIf(err error) bool
 	//db access
 	AccountExec(query string, args ...interface{}) (sql.Result, error)
 	AccountQuery(query string, args ...interface{}) (isql.Rows, error)
@@ -34,8 +34,8 @@ type Ctx interface {
 	SetCacheValue(val interface{}, key *cachekey.Key)
 	TouchDlms(cacheKeys *cachekey.Key)
 	//basic static values
-	EnvClientScheme() string
-	EnvClientHost() string
+	ClientScheme() string
+	ClientHost() string
 	NameRegexMatchers() []*regexp.Regexp
 	PwdRegexMatchers() []*regexp.Regexp
 	NameMinRuneCount() int

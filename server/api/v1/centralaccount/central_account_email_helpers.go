@@ -10,7 +10,7 @@ func emailSendMultipleAccountPolicyNotice(ctx ctx.Ctx, address string) {
 }
 
 func emailSendActivationLink(ctx ctx.Ctx, address, activationCode string) {
-	ctx.MailClient().Send([]string{address}, fmt.Sprintf("%s%s/#/activate/%s?email=%s", ctx.EnvClientScheme(), ctx.EnvClientHost(), activationCode, address))
+	ctx.MailClient().Send([]string{address}, fmt.Sprintf(`<a href="%s%s/#/activate/%s?email=%s">Confirm EMail</a>`, ctx.ClientScheme(), ctx.ClientHost(), activationCode, address))
 }
 
 func emailSendPwdResetLink(ctx ctx.Ctx, address, resetCode string) {

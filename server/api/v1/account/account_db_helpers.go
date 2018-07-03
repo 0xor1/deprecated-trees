@@ -13,13 +13,35 @@ import (
 	"github.com/0xor1/panic"
 	"strings"
 	"time"
+	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
-func dbSetPublicProjectsEnabled(ctx ctx.Ctx, shard int, account id.Id, publicProjectsEnabled bool) {
-	_, e := ctx.TreeExec(shard, `CALL setPublicProjectsEnabled(?, ?, ?)`, account, ctx.Me(), publicProjectsEnabled)
+func dbEdit(ctx ctx.Ctx, shard int, account id.Id, fields Fields) {
+	setPublicProjectsEnabled := false
+	if fields.PublicProjectsEnabled != nil {
+		setPublicProjectsEnabled = true
+	} else {
+		fields.PublicProjectsEnabled = &field.Bool{}
+	}
+	setHoursPerDay := false
+	if fields.HoursPerDay != nil {
+		setHoursPerDay = true
+	}else {
+		fields.HoursPerDay = &field.UInt8{}
+	}
+	setDaysPerWeek := false
+	if fields.DaysPerWeek != nil {
+		setDaysPerWeek = true
+	}else {
+		fields.DaysPerWeek = &field.UInt8{}
+	}
+	if !setPublicProjectsEnabled && !setHoursPerDay && !setDaysPerWeek {
+		return
+	}
+	_, e := ctx.TreeExec(shard, `CALL editAccount(?, ?, ?, ?, ?, ?, ?, ?)`, account, ctx.Me(), setPublicProjectsEnabled, fields.PublicProjectsEnabled.Val, setHoursPerDay, fields.HoursPerDay.Val, setDaysPerWeek, fields.DaysPerWeek.Val)
 	panic.If(e)
 	cacheKey := cachekey.NewSetDlms().Account(account).AccountActivities(account)
-	if !publicProjectsEnabled { //if setting publicProjectsEnabled to false this could have set some projects to not public
+	if fields.PublicProjectsEnabled != nil && !fields.PublicProjectsEnabled.Val { //if setting publicProjectsEnabled to false this could have set some projects to not public
 		cacheKey.AccountProjectsSet(account)
 	}
 	ctx.TouchDlms(cacheKey)

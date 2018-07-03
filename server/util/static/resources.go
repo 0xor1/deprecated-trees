@@ -27,19 +27,21 @@ import (
 )
 
 // pass in empty strings for no config file
-func Config(configFile string, createPrivateV1Client func(map[string]string) private.V1Client) *Resources {
+func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nakedHost string) private.V1Client) *Resources {
 	config := config.New(configFile, "_")
 	//defaults set up for onebox local environment configuration i.e everything running on one machine
-	// server address eg "127.0.0.2:80"
-	config.SetDefault("serverAddress", "127.0.0.1:80")
 	// must be one of "lcl", "dev", "stg", "prd"
-	config.SetDefault("env", cnst.LclEnv)
-	// must be one of "central", "use", "usw", "euw", "asp", "aus", or "lcl" or "dev" for lcl and dev envs
-	config.SetDefault("region", cnst.LclEnv)
+	config.SetDefault("env", string(cnst.LclEnv))
+	// bind address eg "127.0.0.1:80"
+	config.SetDefault("bindAddress", "127.0.0.1:80")
+	// naked host "project-trees"
+	config.SetDefault("nakedHost", "project-trees.com")
+	// must be one of "central", "use", "usw", "euw", "asp", "aus", only considered when env is not lcl or dev
+	config.SetDefault("region", "")
 	// commit sha
-	config.SetDefault("version", cnst.LclEnv)
+	config.SetDefault("version", string(cnst.LclEnv))
 	// relative path from server executable to static file resource directory
-	config.SetDefault("fileServerDir", "../client/dist")
+	config.SetDefault("fileServerDir", "client")
 	// api docs path
 	config.SetDefault("apiDocsRoute", "/api/docs")
 	// api mget path
@@ -98,18 +100,12 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	config.SetDefault("scryptKeyLen", 32)
 	// private client secret base64 encoded
 	config.SetDefault("regionalV1PrivateClientSecret", "bwIwGNgOdTWxCifGdL5BW5XhoWoctcTQyN3LLeSTo1nuDNebpKmlda2XaF66jOh1jaV7cvFRHScJrdyn8gSnMQ")
-	// private client config
-	config.SetDefault("regionalV1PrivateClientConfig", map[string]interface{}{
-		cnst.USWRegion: "http://lcl-api.project-trees.com",
-		cnst.USERegion: "http://lcl-api.project-trees.com",
-		cnst.EUWRegion: "http://lcl-api.project-trees.com",
-		cnst.ASPRegion: "http://lcl-api.project-trees.com",
-		cnst.AUSRegion: "http://lcl-api.project-trees.com",
-	})
 	// max avatar dimension
 	config.SetDefault("maxAvatarDim", 250)
 	// local avatar storage directory, relative
 	config.SetDefault("lclAvatarDir", "avatar")
+	// api key for spark post client
+	config.SetDefault("sparkPostApiKey", "")
 	// account primary sql connection
 	config.SetDefault("accountDbPrimary", "t_c_accounts:T@sk-@cc-0unt5@tcp(localhost:3307)/accounts?parseTime=true&loc=UTC&multiStatements=true")
 	// account slave sql connections
@@ -127,23 +123,31 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	// redis pool for private request keys to check for replay attacks
 	config.SetDefault("privateKeyRedisPool", "localhost:6379")
 
-	envClientHost := ""
-	switch config.GetString("env") {
-	case cnst.LclEnv:
-		envClientHost = "lcl.project-trees.com"
-	case cnst.DevEnv:
-		envClientHost = "dev.project-trees.com"
-	case cnst.StgEnv:
-		envClientHost = "stg.project-trees.com"
-	case cnst.ProEnv:
-		envClientHost = "project-trees.com"
-	default:
-		panic.If(err.UnknownEnv)
+	//validate env value
+	env := cnst.Env(config.GetString("env"))
+	env.Validate()
+	//validate region value if this isnt a one box environment
+	region := cnst.Region(config.GetString("region"))
+	if env == cnst.StgEnv || env == cnst.ProEnv {
+		region.Validate()
+	}
+	bindAddress := config.GetString("bindAddress")
+	nakedHost := config.GetString("nakedHost")
+	clientHost := fmt.Sprintf("%s.%s", env, nakedHost)
+	allHosts := []string{
+		clientHost,
+		fmt.Sprintf("%s-api.%s", env, nakedHost),
+		fmt.Sprintf("%s-%s-api.%s", env, cnst.CentralRegion, nakedHost),
+		fmt.Sprintf("%s-%s-api.%s", env, cnst.USWRegion, nakedHost),
+		fmt.Sprintf("%s-%s-api.%s", env, cnst.USERegion, nakedHost),
+		fmt.Sprintf("%s-%s-api.%s", env, cnst.EUWRegion, nakedHost),
+		fmt.Sprintf("%s-%s-api.%s", env, cnst.ASPRegion, nakedHost),
+		fmt.Sprintf("%s-%s-api.%s", env, cnst.AUSRegion, nakedHost),
 	}
 
-	envClientScheme := "https://"
-	if config.GetString("env") == cnst.LclEnv {
-		envClientScheme = "http://"
+	scheme := "https://"
+	if env == cnst.LclEnv {
+		scheme = "http://"
 	}
 
 	authKey64s := config.GetStringSlice("sessionAuthKey64s")
@@ -165,8 +169,8 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	sessionStore := sessions.NewCookieStore(sessionAuthEncrKeyPairs...)
 	sessionStore.Options.MaxAge = 0
 	sessionStore.Options.HttpOnly = true
-	sessionStore.Options.Secure = config.GetString("env") != cnst.LclEnv
-	sessionStore.Options.Domain = envClientHost
+	sessionStore.Options.Secure = env != cnst.LclEnv
+	sessionStore.Options.Domain = clientHost
 	gob.Register(id.New()) //register Id type for sessionCookie
 
 	var logError func(error)
@@ -174,11 +178,10 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 	var avatarClient avatar.Client
 	var mailClient mail.Client
 
-	if config.GetString("env") == cnst.LclEnv {
+	if env == cnst.LclEnv {
 		//setup local environment interfaces
 		logError = func(err error) {
-			fmt.Println(err)
-			fmt.Println(string(debug.Stack()))
+			fmt.Println(fmt.Sprintf("%s\n%s", err, string(debug.Stack())))
 		}
 		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
 			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
@@ -189,11 +192,20 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		avatarClient = avatar.NewLocalClient(config.GetString("lclAvatarDir"), uint(config.GetInt("maxAvatarDim")))
 		mailClient = mail.NewLocalClient()
 	} else {
-		//setup deployed environment interfaces
+		//setup aws environment interfaces
+		logError = func(err error) {
+			fmt.Println(fmt.Sprintf("%s\n%s", err, string(debug.Stack())))
+		}
+		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
+			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
+			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
+			//queryInfosBytes, _ := json.Marshal(queryInfos)
+			//fmt.Println(string(queryInfosBytes))
+		}
+		avatarClient = avatar.NewLocalClient(config.GetString("lclAvatarDir"), uint(config.GetInt("maxAvatarDim")))
+		mailClient = mail.NewSparkPostClient("noreply@"+clientHost, config.GetString("sparkPostApiKey"))
 		//TODO setup aws s3 avatarStore storage
-		//TODO setup sparkpost/mailgun/somthing mailClient client
 		//TODO setup datadog stats and error logging
-		panic.If(err.NotImplemented)
 	}
 
 	nameRegexMatchers := make([]*regexp.Regexp, 0, len(config.GetStringSlice("nameRegexMatchers")))
@@ -226,26 +238,21 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		}
 	}
 
-	var dlmAndDataRedisPool iredis.Pool
-	if config.GetString("dlmAndDataRedisPool") != "" {
-		dlmAndDataRedisPool = redis.CreatePool(config.GetString("dlmAndDataRedisPool"), logError)
-	}
-
-	var privateKeyRedisPool iredis.Pool
-	if config.GetString("privateKeyRedisPool") != "" {
-		privateKeyRedisPool = redis.CreatePool(config.GetString("privateKeyRedisPool"), logError)
-	}
+	dlmAndDataRedisPool := redis.CreatePool(config.GetString("dlmAndDataRedisPool"))
+	privateKeyRedisPool := redis.CreatePool(config.GetString("privateKeyRedisPool"))
 
 	regionalV1PrivateClientSecret, e := base64.RawURLEncoding.DecodeString(config.GetString("regionalV1PrivateClientSecret"))
 	panic.If(e)
 
 	return &Resources{
 		ServerCreatedOn:               t.NowUnixMillis(),
-		ServerAddress:                 config.GetString("serverAddress"),
-		Env:                           config.GetString("env"),
-		EnvClientHost:                 envClientHost,
-		EnvClientScheme:               envClientScheme,
-		Region:                        config.GetString("region"),
+		BindAddress:                   bindAddress,
+		Env:                           env,
+		NakedHost:                     nakedHost,
+		ClientHost:                    clientHost,
+		AllHosts:                      allHosts,
+		ClientScheme:                  scheme,
+		Region:                        region,
 		Version:                       config.GetString("version"),
 		FileServerDir:                 config.GetString("fileServerDir"),
 		ApiDocsRoute:                  strings.ToLower(config.GetString("apiDocsRoute")),
@@ -270,7 +277,7 @@ func Config(configFile string, createPrivateV1Client func(map[string]string) pri
 		ScryptP:                       config.GetInt("scryptP"),
 		ScryptKeyLen:                  config.GetInt("scryptKeyLen"),
 		RegionalV1PrivateClientSecret: regionalV1PrivateClientSecret,
-		RegionalV1PrivateClient:       createPrivateV1Client(config.GetStringMap("regionalV1PrivateClientConfig")),
+		RegionalV1PrivateClient:       newPrivateV1Client(env, scheme, nakedHost),
 		MailClient:                    mailClient,
 		AvatarClient:                  avatarClient,
 		LogError:                      logError,
@@ -291,15 +298,19 @@ type Resources struct {
 	// server created on unix millisecs
 	ServerCreatedOn int64
 	// server address eg "127.0.0.1:80"
-	ServerAddress string
+	BindAddress string
 	// must be one of "lcl", "dev", "stg", "pro"
-	Env string
-	// must be one of "lcl.project-trees.com", "dev.project-trees.com", "stg.project-trees.com", "project-trees.com"
-	EnvClientHost string
+	Env cnst.Env
+	// must be "project-trees.com"
+	NakedHost string
+	// must be one of "lcl.project-trees.com", "dev.project-trees.com", "stg.project-trees.com", "pro.project-trees.com"
+	ClientHost string
+	// must be one of collection of all API hosts e.g ["pro-api.project-trees.com", "pro-usw-api.project-trees.com", "pro-use-api.project-trees.com", "pro-euw-api.project-trees.com", "pro-asp-api.project-trees.com", "pro-asp-api.project-trees.com"]
+	AllHosts []string
 	// must be one of "https://", "http://"
-	EnvClientScheme string
-	// must be one of "lcl", "dev", "central", "use", "usw", "euw"
-	Region string
+	ClientScheme string
+	// must be one of "central", "use", "usw", "euw", only considered in non lcl and dev envs
+	Region cnst.Region
 	// commit sha
 	Version string
 	// relative path from server executable to static file resource directory
