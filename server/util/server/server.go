@@ -119,12 +119,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	//check for special case of api docs first
-	if req.Method == http.MethodGet && lowerPath == s.SR.ApiDocsRoute {
+	if lowerPath == s.SR.ApiDocsRoute {
 		writeRawJson(resp, 200, s.SR.ApiDocs)
 		return
 	}
 	//check for special case of api logout
-	if req.Method == http.MethodPost && lowerPath == s.SR.ApiLogoutRoute {
+	if lowerPath == s.SR.ApiLogoutRoute {
 		var e error
 		ctx.session, e = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
 		panic.If(e)
@@ -159,9 +159,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	//check for special case of api mget
-	if req.Method == http.MethodGet && lowerPath == s.SR.ApiMGetRoute {
+	if lowerPath == s.SR.ApiMGetRoute {
 		reqs := map[string]string{}
-		panic.If(json.Unmarshal([]byte(req.URL.Query().Get("args")), &reqs))
+		bodyBytes, e := ioutil.ReadAll(req.Body)
+		panic.If(e)
+		panic.If(json.Unmarshal(bodyBytes, &reqs))
 		fullMGetResponse := map[string]*mgetResponse{}
 		mGetTimedOut := false
 		fullMGetResponseMtx := &sync.Mutex{}
@@ -190,7 +192,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 			}(key, reqUrl))
 		}
-		e := panic.SafeGoGroup(s.SR.ApiMGetTimeout, gets...)
+		e = panic.SafeGoGroup(s.SR.ApiMGetTimeout, gets...)
 		if e != nil {
 			s.SR.LogError(e)
 			if _, ok := e.(*panic.TimeoutErr); ok {

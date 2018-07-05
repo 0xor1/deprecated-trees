@@ -326,9 +326,10 @@
         mapi.v1.timeLog.get(params.region, params.shard, params.account, params.project, params.task, null, null, true, null, 100).then((res) => {
           this.timeLogs = res.timeLogs
           this.moreTimeLogs = res.more
+        })
+        mapi.sendMGet().then(() => {
           this.loading = false
         })
-        mapi.sendMGet()
       },
       loadMore () {
         if (!this.loading) {
@@ -364,7 +365,6 @@
       goToTask (task) {
         let params = router.currentRoute.params
         router.push('/app/region/' + params.region + '/shard/' + params.shard + /account/ + params.account + /project/ + params.project + /task/ + task.id)
-        this.init()
       },
       toggleCreateTaskForm () {
         if (!this.creatingTask) {

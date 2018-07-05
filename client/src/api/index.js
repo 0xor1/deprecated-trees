@@ -81,7 +81,7 @@ newApi = (opts) => {
       }
       url = url + '&args=' + encodeURIComponent(JSON.stringify(data))
     }
-    if (!isMGetApi || (mGetSending && !mGetSent)) {
+    if (!isMGetApi) {
       return doReq({
         method: 'get',
         url: url
@@ -123,18 +123,29 @@ newApi = (opts) => {
         throw new Error('MGets must be made from the api instance returned from api.newMGetApi()')
       } else if (mGetSending || mGetSent) {
         throw new Error('each MGet must be started with a fresh api.newMGetApi(), once used that same instance cannot be reused')
-      } else if (awaitingMGetList <= 1) {
-        throw new Error('sending MGet requests should only be done with more than 1 request, otherwise just use a regular get')
       }
       mGetSending = true
       let asyncIndividualPromisesReady
       asyncIndividualPromisesReady = (resolve) => {
+        let ready = true
         for (let i = 0, l = awaitingMGetList.length; i < l; i++) {
           if (awaitingMGetList[i].resolve === null) {
+            ready = false
             setTimeout(asyncIndividualPromisesReady, 0, resolve)
           }
         }
-        resolve()
+        if (ready) {
+          resolve()
+        }
+      }
+      let mgetComplete = false
+      let mgetCompleterFunc
+      mgetCompleterFunc = (resolve) => {
+        if (mgetComplete) {
+          resolve()
+        } else {
+          setTimeout(mgetCompleterFunc, 0, resolve)
+        }
       }
       new Promise(asyncIndividualPromisesReady).then(() => {
         let mgetObj = {}
@@ -142,7 +153,7 @@ newApi = (opts) => {
           let key = '' + i
           mgetObj[key] = awaitingMGetList[i].url
         }
-        get(mGetApiRegion, '/api/mget', mgetObj).then((res) => {
+        post(mGetApiRegion, '/api/mget', mgetObj).then((res) => {
           mGetSending = false
           mGetSent = true
           for (let i = 0, l = awaitingMGetList.length; i < l; i++) {
@@ -153,7 +164,9 @@ newApi = (opts) => {
               awaitingMGetList[i].reject(res[key])
             }
           }
+          mgetComplete = true
         }).catch((error) => {
+          mgetComplete = true
           mGetSending = false
           mGetSent = true
           for (let i = 0, l = awaitingMGetList.length; i < l; i++) {
@@ -161,6 +174,7 @@ newApi = (opts) => {
           }
         })
       })
+      return new Promise(mgetCompleterFunc)
     },
     logout: () => {
       memCache = {}
