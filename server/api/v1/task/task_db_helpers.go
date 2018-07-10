@@ -4,7 +4,6 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/cachekey"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"github.com/0xor1/panic"
 )
@@ -37,7 +36,7 @@ func dbSetName(ctx ctx.Ctx, shard int, account, project, task id.Id, name string
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	var timeLog *id.Id //on the first pass this is the parent (if any)
 	var member *id.Id
 	firstRow := true
@@ -57,7 +56,7 @@ func dbSetName(ctx ctx.Ctx, shard int, account, project, task id.Id, name string
 func dbSetDescription(ctx ctx.Ctx, shard int, account, project, task id.Id, description *string) {
 	row := ctx.TreeQueryRow(shard, `CALL setTaskDescription(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), description)
 	var parent *id.Id
-	panic.If(row.Scan(&parent))
+	panic.IfNotNil(row.Scan(&parent))
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).Task(account, project, task)
 	if parent != nil {
 		cacheKey.TaskChildrenSet(account, project, *parent)
@@ -78,8 +77,8 @@ func dbSetMember(ctx ctx.Ctx, shard int, account, project, task id.Id, member *i
 	changeMade := false
 	var parent id.Id
 	var existingMember *id.Id
-	panic.If(ctx.TreeQueryRow(shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), memArg).Scan(&changeMade, &parent, &existingMember))
-	panic.IfTrue(!changeMade, db.ErrNoChangeMade)
+	panic.IfNotNil(ctx.TreeQueryRow(shard, `CALL setTaskMember(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), memArg).Scan(&changeMade, &parent, &existingMember))
+	ctx.ReturnBadRequestNowIf(!changeMade, "no change made")
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).TaskChildrenSet(account, project, parent).Task(account, project, task)
 	if member != nil {
 		cacheKey.ProjectMember(account, project, *member)
@@ -99,7 +98,7 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	affectedTasks := make([]id.Id, 0, 100)
 	updatedProjectMembers := make([]id.Id, 0, 100)
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project)
@@ -117,7 +116,7 @@ func dbDeleteTask(ctx ctx.Ctx, shard int, account, project, task id.Id) {
 		case "tl":
 			cacheKey.TimeLog(account, project, i, &j, &k)
 		default:
-			panic.If(err.InvalidOperation)
+			panic.If(true, "unknown key value in delete task rows")
 		}
 	}
 	ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, affectedTasks).ProjectMembers(account, project, updatedProjectMembers))
@@ -129,7 +128,7 @@ func dbGetTask(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id) *Task
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
-	panic.If(ctx.TreeQueryRow(shard, `SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id = ?`, account, project, task).Scan(&res.Id, &res.Parent, &res.FirstChild, &res.NextSibling, &res.IsAbstract, &res.Name, &res.Description, &res.CreatedOn, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.LinkedFileCount, &res.ChatCount, &res.ChildCount, &res.DescendantCount, &res.IsParallel, &res.Member))
+	panic.IfNotNil(ctx.TreeQueryRow(shard, `SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = ? AND project = ? AND id = ?`, account, project, task).Scan(&res.Id, &res.Parent, &res.FirstChild, &res.NextSibling, &res.IsAbstract, &res.Name, &res.Description, &res.CreatedOn, &res.TotalRemainingTime, &res.TotalLoggedTime, &res.MinimumRemainingTime, &res.LinkedFileCount, &res.ChatCount, &res.ChildCount, &res.DescendantCount, &res.IsParallel, &res.Member))
 	ctx.SetCacheValue(res, cacheKey)
 	return &res
 }
@@ -144,11 +143,11 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fro
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	childSet := make([]*Task, 0, limit+1)
 	for rows.Next() {
 		ta := Task{}
-		panic.If(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
+		panic.IfNotNil(rows.Scan(&ta.Id, &ta.Parent, &ta.FirstChild, &ta.NextSibling, &ta.IsAbstract, &ta.Name, &ta.Description, &ta.CreatedOn, &ta.TotalRemainingTime, &ta.TotalLoggedTime, &ta.MinimumRemainingTime, &ta.LinkedFileCount, &ta.ChatCount, &ta.ChildCount, &ta.DescendantCount, &ta.IsParallel, &ta.Member))
 		nilOutPropertiesThatAreNotNilInTheDb(&ta)
 		childSet = append(childSet, &ta)
 	}
@@ -181,11 +180,11 @@ func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, l
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	ancestorSet := make([]*Ancestor, 0, limit+1)
 	for rows.Next() {
 		an := Ancestor{}
-		panic.If(rows.Scan(&an.Id, &an.Name))
+		panic.IfNotNil(rows.Scan(&an.Id, &an.Name))
 		innerCacheKey.Task(account, project, an.Id)
 		ancestorSet = append(ancestorSet, &an)
 	}

@@ -13,7 +13,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/0xor1/isql"
-	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/sessions"
 	"math/rand"
@@ -22,10 +21,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-)
-
-var (
-	unauthorizedErr = &err.Err{Code: "u_s_u", Message: "unauthorized"}
 )
 
 // per request info fields
@@ -52,7 +47,7 @@ func (c *_ctx) TryMe() *id.Id {
 }
 
 func (c *_ctx) Me() id.Id {
-	panic.IfTrue(c.me == nil, unauthorizedErr)
+	c.ReturnNowIf(c.me == nil, http.StatusUnauthorized, "please login")
 	return *c.me
 }
 
@@ -62,6 +57,18 @@ func (c *_ctx) LogIf(err error) bool {
 		return true
 	}
 	return false
+}
+
+func (c *_ctx) ReturnNowIf(condition bool, httpStatus int, messageFmt string, messageArgs ...interface{}) {
+	err.HttpPanicf(condition, httpStatus, messageFmt, messageArgs...)
+}
+
+func (c *_ctx) ReturnBadRequestNowIf(condition bool, messageFmt string, messageArgs ...interface{}) {
+	err.HttpPanicf(condition, http.StatusBadRequest, messageFmt, messageArgs...)
+}
+
+func (c *_ctx) ReturnUnauthorizedNowIf(condition bool) {
+	err.HttpPanicf(condition, http.StatusUnauthorized, "unauthorized")
 }
 
 func (c *_ctx) AccountExec(query string, args ...interface{}) (sql.Result, error) {

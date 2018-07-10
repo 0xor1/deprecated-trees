@@ -3,56 +3,29 @@ package validate
 import (
 	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/err"
-	"fmt"
 	"github.com/0xor1/panic"
 	"regexp"
 	"unicode/utf8"
+	"net/http"
 )
 
 var (
-	invalidStringArgErr = &err.Err{Code: "u_v_isa", Message: "invalid string arg"}
 	emailRegex          = regexp.MustCompile(`.+@.+\..+`)
 )
 
 func HoursPerDay(hoursPerDay uint8) {
-	panic.IfTruef(hoursPerDay == 0 || hoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
+	panic.If(hoursPerDay == 0 || hoursPerDay > 24, "invalid hoursPerDay must be > 0 and <= 24")
 }
 
 func DaysPerWeek(daysPerWeek uint8) {
-	panic.IfTruef(daysPerWeek == 0 || daysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
-}
-
-type invalidErr struct {
-	*err.Err
-	ArgName       string           `json:"argName"`
-	MinRuneCount  int              `json:"minRuneCount"`
-	MaxRuneCount  int              `json:"maxRuneCount"`
-	RegexMatchers []*regexp.Regexp `json:"regexMatchers"`
-}
-
-func (e *invalidErr) Error() string {
-	return fmt.Sprintf("invalid string arg: argName: %q, minRuneCount: %d, maxRuneCount: %d, regexMatchers: %v", e.ArgName, e.MinRuneCount, e.MaxRuneCount, e.RegexMatchers)
-}
-
-func invalidStringArgErrPanic(argName string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) {
-	panic.If(&invalidErr{
-		Err:           invalidStringArgErr,
-		ArgName:       argName,
-		MinRuneCount:  minRuneCount,
-		MaxRuneCount:  maxRuneCount,
-		RegexMatchers: append(make([]*regexp.Regexp, 0, len(regexMatchers)), regexMatchers...),
-	})
+	panic.If(daysPerWeek == 0 || daysPerWeek > 7, "invalid daysPerWeek must be > 0 and <= 7")
 }
 
 func StringArg(argPurpose, arg string, minRuneCount, maxRuneCount int, regexMatchers []*regexp.Regexp) {
 	valRuneCount := utf8.RuneCountInString(arg)
-	if valRuneCount < minRuneCount || valRuneCount > maxRuneCount {
-		invalidStringArgErrPanic(argPurpose, minRuneCount, maxRuneCount, regexMatchers)
-	}
+	err.HttpPanicf(valRuneCount < minRuneCount || valRuneCount > maxRuneCount, http.StatusBadRequest, "invalid %s arg, min rune count: %d max rune count: %d", argPurpose, minRuneCount, maxRuneCount)
 	for _, regex := range regexMatchers {
-		if matches := regex.MatchString(arg); !matches {
-			invalidStringArgErrPanic(argPurpose, minRuneCount, maxRuneCount, regexMatchers)
-		}
+		err.HttpPanicf(!regex.MatchString(arg),http.StatusBadRequest, "invalid %s arg, regex: %v", argPurpose, regex.String())
 	}
 }
 
@@ -68,33 +41,33 @@ func Limit(limit, maxLimit int) int {
 }
 
 func EntityCount(entityCount, maxLimit int) {
-	panic.IfTrue(entityCount < 1 || entityCount > maxLimit, err.InvalidEntityCount)
-}
-
-func Exists(exists bool) {
-	panic.IfTrue(!exists, err.NoSuchEntity)
+	err.HttpPanicf(entityCount < 1 || entityCount > maxLimit, http.StatusBadRequest, "invalid entity count")
 }
 
 func MemberHasAccountOwnerAccess(accountRole *cnst.AccountRole) {
-	panic.IfTrue(accountRole == nil || *accountRole != cnst.AccountOwner, err.InsufficientPermission)
+	checkUnauthorized(accountRole == nil || *accountRole != cnst.AccountOwner)
 }
 
 func MemberHasAccountAdminAccess(accountRole *cnst.AccountRole) {
-	panic.IfTrue(accountRole == nil || (*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin), err.InsufficientPermission)
+	checkUnauthorized(accountRole == nil || (*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin))
 }
 
 func MemberHasProjectAdminAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole) {
-	panic.IfTrue(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || *projectRole != cnst.ProjectAdmin)), err.InsufficientPermission)
+	checkUnauthorized(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || *projectRole != cnst.ProjectAdmin)))
 }
 
 func MemberHasProjectWriteAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole) {
-	panic.IfTrue(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))), err.InsufficientPermission)
+	checkUnauthorized(accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))))
 }
 
 func MemberIsAProjectMemberWithWriteAccess(projectRole *cnst.ProjectRole) {
-	panic.IfTrue(projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter), err.InsufficientPermission)
+	checkUnauthorized(projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter))
 }
 
 func MemberHasProjectReadAccess(accountRole *cnst.AccountRole, projectRole *cnst.ProjectRole, projectIsPublic *bool) {
-	panic.IfTrue(projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter && *projectRole != cnst.ProjectReader))))), err.InsufficientPermission)
+	checkUnauthorized(projectIsPublic == nil || (!*projectIsPublic && (accountRole == nil || ((*accountRole != cnst.AccountOwner && *accountRole != cnst.AccountAdmin) && (projectRole == nil || (*projectRole != cnst.ProjectAdmin && *projectRole != cnst.ProjectWriter && *projectRole != cnst.ProjectReader))))))
+}
+
+func checkUnauthorized(condition bool) {
+	err.HttpPanicf(condition, http.StatusUnauthorized, "unauthorized")
 }

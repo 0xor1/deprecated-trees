@@ -4,12 +4,9 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/timelog"
 	"bitbucket.org/0xor1/trees/server/util/validate"
-	"github.com/0xor1/panic"
-	"net/http"
 )
 
 type createArgs struct {
@@ -22,7 +19,6 @@ type createArgs struct {
 }
 
 var create = &endpoint.Endpoint{
-	Method:                   http.MethodPost,
 	Path:                     "/api/v1/timeLog/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &timelog.TimeLog{},
@@ -46,7 +42,6 @@ type createAndSetRemainingTimeArgs struct {
 }
 
 var createAndSetRemainingTime = &endpoint.Endpoint{
-	Method:                   http.MethodPost,
 	Path:                     "/api/v1/timeLog/createAndSetRemainingTime",
 	RequiresSession:          true,
 	ExampleResponseStructure: &timelog.TimeLog{},
@@ -68,7 +63,6 @@ type setDurationArgs struct {
 }
 
 var setDuration = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/timeLog/setDuration",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -76,7 +70,7 @@ var setDuration = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setDurationArgs)
-		panic.IfTrue(args.Duration == 0, err.InvalidArguments)
+		ctx.ReturnBadRequestNowIf(args.Duration == 0, "duration must be > 0")
 		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
 		if args.Duration == tl.Duration {
 			return nil
@@ -100,7 +94,6 @@ type setNoteArgs struct {
 }
 
 var setNote = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/timeLog/setNote",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -130,7 +123,6 @@ type deleteArgs struct {
 }
 
 var delete = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/timeLog/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -167,7 +159,6 @@ type getResp struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/timeLog/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: &getResp{TimeLogs: []*timelog.TimeLog{{}}},

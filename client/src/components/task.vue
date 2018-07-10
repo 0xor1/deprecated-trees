@@ -302,7 +302,7 @@
       printDuration,
       init () {
         let params = router.currentRoute.params
-        let mapi = api.newMGetApi(params.region)
+        let mapi = api.newMDoApi(params.region)
         mapi.v1.project.get(params.region, params.shard, params.account, params.project).then((project) => {
           this.project = project
           if (params.project === params.task) {
@@ -327,7 +327,7 @@
           this.timeLogs = res.timeLogs
           this.moreTimeLogs = res.more
         })
-        mapi.sendMGet().then(() => {
+        mapi.sendMDo().then(() => {
           this.loading = false
         })
       },

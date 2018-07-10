@@ -3,7 +3,6 @@ package static
 import (
 	"bitbucket.org/0xor1/trees/server/util/avatar"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/mail"
 	"bitbucket.org/0xor1/trees/server/util/private"
@@ -45,7 +44,7 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	// api docs path
 	config.SetDefault("apiDocsRoute", "/api/docs")
 	// api mget path
-	config.SetDefault("apiMGetRoute", "/api/mget")
+	config.SetDefault("apiMDoRoute", "/api/mdo")
 	// api logout path
 	config.SetDefault("apiLogoutRoute", "/api/logout")
 	// api mget timeout
@@ -155,15 +154,11 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	sessionAuthEncrKeyPairs := make([][]byte, 0, len(authKey64s)*2)
 	for i := range authKey64s {
 		authBytes, e := base64.RawURLEncoding.DecodeString(authKey64s[i])
-		panic.If(e)
-		if len(authBytes) != 64 {
-			err.FmtPanic("sessionAuthBytes length is not 64")
-		}
+		panic.IfNotNil(e)
+		panic.If(len(authBytes) != 64,  "sessionAuthBytes length is not 64")
 		encrBytes, e := base64.RawURLEncoding.DecodeString(encrKey32s[i])
-		panic.If(e)
-		if len(encrBytes) != 32 {
-			err.FmtPanic("sessionEncrBytes length is not 32")
-		}
+		panic.IfNotNil(e)
+		panic.If(len(encrBytes) != 32, "sessionEncrBytes length is not 32")
 		sessionAuthEncrKeyPairs = append(sessionAuthEncrKeyPairs, authBytes, encrBytes)
 	}
 	sessionStore := sessions.NewCookieStore(sessionAuthEncrKeyPairs...)
@@ -174,7 +169,7 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	gob.Register(id.New()) //register Id type for sessionCookie
 
 	var logError func(error)
-	var logStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
+	var logStats func(status int, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
 	var avatarClient avatar.Client
 	var mailClient mail.Client
 
@@ -183,8 +178,8 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 		logError = func(err error) {
 			fmt.Println(fmt.Sprintf("%s\n%s", err, string(debug.Stack())))
 		}
-		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
-			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
+		logStats = func(status int, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
+			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), path)
 			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
 			//queryInfosBytes, _ := json.Marshal(queryInfos)
 			//fmt.Println(string(queryInfosBytes))
@@ -196,8 +191,8 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 		logError = func(err error) {
 			fmt.Println(fmt.Sprintf("%s\n%s", err, string(debug.Stack())))
 		}
-		logStats = func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
-			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), method, path)
+		logStats = func(status int, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo) {
+			fmt.Println(status, fmt.Sprintf("%dms", t.NowUnixMillis()-reqStartUnixMillis), path)
 			//often too much info when running locally, makes too much noise, but feel free to uncomment when necessary
 			//queryInfosBytes, _ := json.Marshal(queryInfos)
 			//fmt.Println(string(queryInfosBytes))
@@ -232,7 +227,7 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	if treeShards != nil {
 		for k := range treeShards {
 			shardId, e := strconv.ParseInt(k, 10, 32)
-			panic.If(e)
+			panic.IfNotNil(e)
 			v := config.GetStringSlice(fmt.Sprintf("treeShards.%s", k))
 			treeShardDbs[int(shardId)] = isql.NewReplicaSet("mysql", v[0], v[1:])
 		}
@@ -242,28 +237,28 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	privateKeyRedisPool := redis.CreatePool(config.GetString("privateKeyRedisPool"))
 
 	regionalV1PrivateClientSecret, e := base64.RawURLEncoding.DecodeString(config.GetString("regionalV1PrivateClientSecret"))
-	panic.If(e)
+	panic.IfNotNil(e)
 
 	return &Resources{
 		ServerCreatedOn:               t.NowUnixMillis(),
-		BindAddress:                   bindAddress,
-		Env:                           env,
-		NakedHost:                     nakedHost,
-		ClientHost:                    clientHost,
-		AllHosts:                      allHosts,
-		ClientScheme:                  scheme,
-		Region:                        region,
-		Version:                       config.GetString("version"),
-		FileServerDir:                 config.GetString("fileServerDir"),
-		ApiDocsRoute:                  strings.ToLower(config.GetString("apiDocsRoute")),
-		ApiMGetRoute:                  strings.ToLower(config.GetString("apiMGetRoute")),
-		ApiLogoutRoute:                strings.ToLower(config.GetString("apiLogoutRoute")),
-		ApiMGetTimeout:                config.GetDuration("apiMGetTimeout"),
-		SessionCookieName:             config.GetString("sessionCookieName"),
-		SessionStore:                  sessionStore,
-		CachingEnabled:                config.GetBool("cachingEnabled"),
-		MasterCacheKey:                config.GetString("masterCacheKey"),
-		NameRegexMatchers:             nameRegexMatchers,
+		BindAddress:       bindAddress,
+		Env:               env,
+		NakedHost:         nakedHost,
+		ClientHost:        clientHost,
+		AllHosts:          allHosts,
+		ClientScheme:      scheme,
+		Region:            region,
+		Version:           config.GetString("version"),
+		FileServerDir:     config.GetString("fileServerDir"),
+		ApiDocsRoute:      strings.ToLower(config.GetString("apiDocsRoute")),
+		ApiMDoRoute:       strings.ToLower(config.GetString("apiMDoRoute")),
+		ApiLogoutRoute:    strings.ToLower(config.GetString("apiLogoutRoute")),
+		ApiMGetTimeout:    config.GetDuration("apiMGetTimeout"),
+		SessionCookieName: config.GetString("sessionCookieName"),
+		SessionStore:      sessionStore,
+		CachingEnabled:    config.GetBool("cachingEnabled"),
+		MasterCacheKey:    config.GetString("masterCacheKey"),
+		NameRegexMatchers: nameRegexMatchers,
 		PwdRegexMatchers:              pwdRegexMatchers,
 		NameMinRuneCount:              config.GetInt("nameMinRuneCount"),
 		NameMaxRuneCount:              config.GetInt("nameMaxRuneCount"),
@@ -318,7 +313,7 @@ type Resources struct {
 	// api docs path
 	ApiDocsRoute string
 	// api mget path
-	ApiMGetRoute string
+	ApiMDoRoute string
 	// api logout path
 	ApiLogoutRoute string
 	// api mget path
@@ -370,7 +365,7 @@ type Resources struct {
 	// error logging function
 	LogError func(error)
 	// stats logging function
-	LogStats func(status int, method, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
+	LogStats func(status int, path string, reqStartUnixMillis int64, queryInfos []*queryinfo.QueryInfo)
 	// account sql connection
 	AccountDb isql.ReplicaSet
 	// pwd sql connection

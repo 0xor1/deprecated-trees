@@ -18,7 +18,7 @@ func dbGetTimeLog(ctx ctx.Ctx, shard int, account, project, timeLog id.Id) *tlog
 	if ctx.GetCacheValue(&tl, cacheKey) {
 		return &tl
 	}
-	panic.If(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
+	panic.IfNotNil(ctx.TreeQueryRow(shard, `SELECT project, task, id, member, loggedOn, taskHasBeenDeleted, taskName, duration, note FROM timeLogs WHERE account=? AND project=? AND id=?`, account, project, timeLog).Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 	ctx.SetCacheValue(tl, cacheKey)
 	return &tl
 }
@@ -75,11 +75,11 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	timeLogsSet := make([]*tlog.TimeLog, 0, limit+1)
 	for rows.Next() {
 		tl := tlog.TimeLog{}
-		panic.If(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
+		panic.IfNotNil(rows.Scan(&tl.Project, &tl.Task, &tl.Id, &tl.Member, &tl.LoggedOn, &tl.TaskHasBeenDeleted, &tl.TaskName, &tl.Duration, &tl.Note))
 		timeLogsSet = append(timeLogsSet, &tl)
 	}
 	if len(timeLogsSet) == limit+1 {

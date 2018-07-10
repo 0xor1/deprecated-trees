@@ -6,18 +6,12 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	t "bitbucket.org/0xor1/trees/server/util/time"
 	"bitbucket.org/0xor1/trees/server/util/validate"
-	"github.com/0xor1/panic"
 	"net/http"
 	"time"
 	"bitbucket.org/0xor1/trees/server/util/field"
-)
-
-var (
-	publicProjectsDisabledErr = &err.Err{Code: "r_v1_p_ppd", Message: "public projects disabled"}
 )
 
 type createArgs struct {
@@ -35,7 +29,6 @@ type createArgs struct {
 }
 
 var create = &endpoint.Endpoint{
-	Method:                   http.MethodPost,
 	Path:                     "/api/v1/project/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &Project{},
@@ -45,7 +38,7 @@ var create = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createArgs)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
-		panic.IfTrue(args.IsPublic && !db.GetAccount(ctx, args.Shard, args.Account).PublicProjectsEnabled, publicProjectsDisabledErr)
+		ctx.ReturnBadRequestNowIf(args.IsPublic && !db.GetAccount(ctx, args.Shard, args.Account).PublicProjectsEnabled, "public projects are not enabled on this account")
 
 		validate.HoursPerDay(args.HoursPerDay)
 		validate.DaysPerWeek(args.DaysPerWeek)
@@ -90,7 +83,6 @@ type editArgs struct {
 }
 
 var edit = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/project/edit",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -112,7 +104,7 @@ var edit = &endpoint.Endpoint{
 		if args.Fields.DaysPerWeek != nil {
 			validate.DaysPerWeek(args.Fields.DaysPerWeek.Val)
 		}
-		panic.IfTrue(args.Fields.IsPublic != nil && args.Fields.IsPublic.Val && !db.GetAccount(ctx, args.Shard, args.Account).PublicProjectsEnabled, publicProjectsDisabledErr)
+		ctx.ReturnBadRequestNowIf(args.Fields.IsPublic != nil && args.Fields.IsPublic.Val && !db.GetAccount(ctx, args.Shard, args.Account).PublicProjectsEnabled, "public projects are not enabled on this account")
 		dbEdit(ctx, args.Shard, args.Account, args.Project, args.Fields)
 		return nil
 	},
@@ -125,7 +117,6 @@ type getArgs struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: &Project{},
@@ -163,7 +154,6 @@ type GetSetResult struct {
 }
 
 var getSet = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getSet",
 	RequiresSession:          false,
 	ExampleResponseStructure: &GetSetResult{Projects: []*Project{{}}},
@@ -194,7 +184,6 @@ type deleteArgs struct {
 }
 
 var delete = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/project/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -217,7 +206,6 @@ type addMembersArgs struct {
 }
 
 var addMembers = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/project/addMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -226,15 +214,15 @@ var addMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrue(args.Account.Equal(ctx.Me()), err.InvalidOperation)
+		ctx.ReturnBadRequestNowIf(args.Account.Equal(ctx.Me()), "can't add/remove members to/from personal accounts")
 
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-		validate.Exists(dbGetProjectExists(ctx, args.Shard, args.Account, args.Project))
+		ctx.ReturnNowIf(!dbGetProjectExists(ctx, args.Shard, args.Account, args.Project), http.StatusBadRequest, "no such project")
 
 		for _, mem := range args.Members {
 			mem.Role.Validate()
 			accRole := db.GetAccountRole(ctx, args.Shard, args.Account, mem.Id)
-			panic.IfTrue(accRole == nil, err.InvalidArguments)
+			ctx.ReturnBadRequestNowIf(accRole == nil, "user is not a member of the account")
 			if *accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin {
 				mem.Role = cnst.ProjectAdmin // account owners and admins cant be added to projects with privelages less than project admin
 			}
@@ -253,7 +241,6 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/project/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -261,15 +248,15 @@ var setMemberRole = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setMemberRoleArgs)
-		panic.IfTrue(args.Account.Equal(ctx.Me()), err.InvalidOperation)
+		ctx.ReturnBadRequestNowIf(args.Account.Equal(ctx.Me()), "can't add/remove members to/from personal accounts")
 		args.Role.Validate()
 
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		accRole, projectRole := db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, args.Member)
-		panic.IfTrue(projectRole == nil, err.InvalidOperation)
+		ctx.ReturnBadRequestNowIf(projectRole == nil, "user is not a member of this project")
 		if *projectRole != args.Role {
-			panic.IfTrue(args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin), err.InvalidArguments) // account owners and admins can only be project admins
+			ctx.ReturnBadRequestNowIf(args.Role != cnst.ProjectAdmin && (*accRole == cnst.AccountOwner || *accRole == cnst.AccountAdmin), "user is an account owner/admin, they can only be assigned project admin roles on projects") // account owners and admins can only be project admins
 			dbSetMemberRole(ctx, args.Shard, args.Account, args.Project, args.Member, args.Role)
 		}
 		return nil
@@ -284,7 +271,6 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/project/removeMembers",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -293,7 +279,7 @@ var removeMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrue(args.Account.Equal(ctx.Me()), err.InvalidOperation)
+		ctx.ReturnBadRequestNowIf(args.Account.Equal(ctx.Me()), "can't add/remove members to/from personal accounts")
 		validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		for _, mem := range args.Members {
@@ -319,7 +305,6 @@ type GetMembersResult struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getMembers",
 	RequiresSession:          false,
 	ExampleResponseStructure: &GetMembersResult{Members: []*member{{}}},
@@ -340,7 +325,6 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getMe",
 	RequiresSession:          true,
 	ExampleResponseStructure: &member{},
@@ -365,7 +349,6 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/project/getActivities",
 	RequiresSession:          false,
 	ExampleResponseStructure: []*activity.Activity{{}},
@@ -374,7 +357,7 @@ var getActivities = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
-		panic.IfTrue(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
+		ctx.ReturnBadRequestNowIf(args.OccurredAfter != nil && args.OccurredBefore != nil, "only one of occurredAfter or occurredBefore can be set")
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Project, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},

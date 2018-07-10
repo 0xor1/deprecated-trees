@@ -1,15 +1,9 @@
 package cachekey
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"github.com/0xor1/panic"
 	"sort"
-)
-
-var (
-	errMissingMemberInTimeLogSetDlms = &err.Err{Code: "u_c_mmitlsd", Message: "missing member in set timelog dlms"}
-	errMissingTaskInTimeLogSetDlms   = &err.Err{Code: "u_c_mtitlsd", Message: "missing task in set timelog dlms"}
 )
 
 type Key struct {
@@ -200,7 +194,7 @@ func (k *Key) TaskTimeLogSet(account, project, task id.Id, member *id.Id) *Key {
 	} else if member != nil {
 		k.ProjectMemberTimeLogSet(account, project, *member)
 	} else {
-		panic.If(errMissingMemberInTimeLogSetDlms)
+		panic.If(true, "missing member in taskTimeLogSet dlm")
 	}
 	k.setKey("ttls", task)
 	return k
@@ -215,7 +209,7 @@ func (k *Key) TimeLog(account, project, timeLog id.Id, task, member *id.Id) *Key
 	} else if task != nil {
 		k.TaskTimeLogSet(account, project, *task, member)
 	} else {
-		panic.If(errMissingTaskInTimeLogSetDlms)
+		panic.If(true, "missing tasl in taskTimeLog dlm")
 	}
 	k.setKey("tl", timeLog)
 	return k

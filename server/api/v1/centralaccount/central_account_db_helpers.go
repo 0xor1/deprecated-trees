@@ -11,7 +11,7 @@ import (
 func dbAccountWithCiNameExists(ctx ctx.Ctx, name string) bool {
 	row := ctx.AccountQueryRow(`SELECT COUNT(*) FROM accounts WHERE name = ?`, name)
 	count := 0
-	panic.If(row.Scan(&count))
+	panic.IfNotNil(row.Scan(&count))
 	return count != 0
 }
 
@@ -26,9 +26,9 @@ func dbGetAccountByCiName(ctx ctx.Ctx, name string) *Account {
 
 func dbCreatePersonalAccount(ctx ctx.Ctx, account *fullPersonalAccountInfo, pwdInfo *pwdInfo) {
 	_, e := ctx.AccountExec(`CALL createPersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.Email, account.Language, account.Theme, account.NewEmail, account.activationCode, account.activatedOn, account.newEmailConfirmationCode, account.resetPwdCode)
-	panic.If(e)
+	panic.IfNotNil(e)
 	_, e = ctx.PwdExec(`INSERT INTO pwds (id, salt, pwd, n, r, p, keyLen) VALUES (?, ?, ?, ?, ?, ?, ?)`, account.Id, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbGetPersonalAccountByEmail(ctx ctx.Ctx, email string) *fullPersonalAccountInfo {
@@ -62,24 +62,24 @@ func dbGetPwdInfo(ctx ctx.Ctx, id id.Id) *pwdInfo {
 
 func dbUpdatePersonalAccount(ctx ctx.Ctx, personalAccountInfo *fullPersonalAccountInfo) {
 	_, e := ctx.AccountExec(`CALL updatePersonalAccount(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, personalAccountInfo.Id, personalAccountInfo.Name, personalAccountInfo.DisplayName, personalAccountInfo.CreatedOn, personalAccountInfo.Region, personalAccountInfo.NewRegion, personalAccountInfo.Shard, personalAccountInfo.HasAvatar, personalAccountInfo.Email, personalAccountInfo.Language, personalAccountInfo.Theme, personalAccountInfo.NewEmail, personalAccountInfo.activationCode, personalAccountInfo.activatedOn, personalAccountInfo.newEmailConfirmationCode, personalAccountInfo.resetPwdCode)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbUpdateAccount(ctx ctx.Ctx, account *Account) {
 	_, e := ctx.AccountExec(`CALL updateAccountInfo(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, account.IsPersonal)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbUpdatePwdInfo(ctx ctx.Ctx, id id.Id, pwdInfo *pwdInfo) {
 	_, e := ctx.PwdExec(`UPDATE pwds SET salt=?, pwd=?, n=?, r=?, p=?, keyLen=? WHERE id = ?`, pwdInfo.salt, pwdInfo.pwd, pwdInfo.n, pwdInfo.r, pwdInfo.p, pwdInfo.keyLen, id)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbDeleteAccountAndAllAssociatedMemberships(ctx ctx.Ctx, id id.Id) {
 	_, e := ctx.AccountExec(`CALL deleteAccountAndAllAssociatedMemberships(?)`, id)
-	panic.If(e)
+	panic.IfNotNil(e)
 	_, e = ctx.PwdExec(`DELETE FROM pwds WHERE id = ?`, id)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbGetAccount(ctx ctx.Ctx, id id.Id) *Account {
@@ -104,11 +104,11 @@ func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*Account {
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	res := make([]*Account, 0, len(ids))
 	for rows.Next() {
 		a := Account{}
-		panic.If(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
+		panic.IfNotNil(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	return res
@@ -122,12 +122,12 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Accoun
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 
 	res := make([]*Account, 0, 100)
 	for rows.Next() {
 		acc := Account{}
-		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
+		panic.IfNotNil(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar, &acc.IsPersonal))
 		res = append(res, &acc)
 	}
 	return res
@@ -141,13 +141,13 @@ func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) [
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 
 	res := make([]*Account, 0, 100)
 	for rows.Next() {
 		acc := Account{}
 		acc.IsPersonal = true
-		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
+		panic.IfNotNil(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
 	}
 	return res
@@ -166,12 +166,12 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*Account {
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	res := make([]*Account, 0, len(ids))
 	for rows.Next() {
 		acc := Account{}
 		acc.IsPersonal = true
-		panic.If(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
+		panic.IfNotNil(rows.Scan(&acc.Id, &acc.Name, &acc.DisplayName, &acc.CreatedOn, &acc.Region, &acc.NewRegion, &acc.Shard, &acc.HasAvatar))
 		res = append(res, &acc)
 	}
 	return res
@@ -179,7 +179,7 @@ func dbGetPersonalAccounts(ctx ctx.Ctx, ids []id.Id) []*Account {
 
 func dbCreateGroupAccountAndMembership(ctx ctx.Ctx, account *Account, member id.Id) {
 	_, e := ctx.AccountExec(`CALL  createGroupAccountAndMembership(?, ?, ?, ?, ?, ?, ?, ?, ?)`, account.Id, account.Name, account.DisplayName, account.CreatedOn, account.Region, account.NewRegion, account.Shard, account.HasAvatar, member)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*Account, bool) {
@@ -196,11 +196,11 @@ func dbGetGroupAccounts(ctx ctx.Ctx, member id.Id, after *id.Id, limit int) ([]*
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	res := make([]*Account, 0, limit+1)
 	for rows.Next() {
 		a := Account{}
-		panic.If(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
+		panic.IfNotNil(rows.Scan(&a.Id, &a.Name, &a.DisplayName, &a.CreatedOn, &a.Region, &a.NewRegion, &a.Shard, &a.HasAvatar, &a.IsPersonal))
 		res = append(res, &a)
 	}
 	if len(res) == limit+1 {
@@ -218,7 +218,7 @@ func dbCreateMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
 		args = append(args, account, member)
 	}
 	_, e := ctx.AccountExec(query.String(), args...)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 func dbDeleteMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
@@ -231,5 +231,5 @@ func dbDeleteMemberships(ctx ctx.Ctx, account id.Id, members []id.Id) {
 	}
 	query.WriteString(`)`)
 	_, e := ctx.AccountExec(query.String(), args...)
-	panic.If(e)
+	panic.IfNotNil(e)
 }

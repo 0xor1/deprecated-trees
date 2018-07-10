@@ -24,14 +24,14 @@ func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
 		return exists
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT COUNT(*) = 1 FROM projects WHERE account=? AND id=?`, account, project)
-	panic.If(row.Scan(&exists))
+	panic.IfNotNil(row.Scan(&exists))
 	ctx.SetCacheValue(exists, cacheKey)
 	return exists
 }
 
 func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *Project) {
 	_, e := ctx.TreeExec(shard, `CALL createProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project.Id, ctx.Me(), project.Name, project.Description, project.HoursPerDay, project.DaysPerWeek, project.CreatedOn, project.StartOn, project.DueOn, project.IsParallel, project.IsPublic)
-	panic.If(e)
+	panic.IfNotNil(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).AccountProjectsSet(account))
 }
 
@@ -76,7 +76,7 @@ func dbEdit(ctx ctx.Ctx, shard int, account, project id.Id, fields Fields) {
 		return
 	}
 	_, e := ctx.TreeExec(shard, `CALL editProject(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, account, project, ctx.Me(), setIsPublic, fields.IsPublic.Val, setIsArchived, fields.IsArchived.Val, setHoursPerDay, fields.HoursPerDay.Val, setDaysPerWeek, fields.DaysPerWeek.Val, setStartOn, fields.StartOn.Val, setDueOn, fields.DueOn.Val)
-	panic.If(e)
+	panic.IfNotNil(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountActivities(account).Project(account, project).ProjectActivities(account, project))
 }
 
@@ -108,7 +108,7 @@ func dbGetAllProjects(ctx ctx.Ctx, shard int, account id.Id, nameContains *strin
 
 func dbDeleteProject(ctx ctx.Ctx, shard int, account, project id.Id) {
 	_, e := ctx.TreeExec(shard, `CALL deleteProject(?, ?, ?)`, account, project, ctx.Me())
-	panic.If(e)
+	panic.IfNotNil(e)
 	ctx.TouchDlms(cachekey.NewSetDlms().AccountProjectsSet(account).ProjectMaster(account, project))
 }
 
@@ -160,11 +160,11 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	memSet := make([]*member, 0, limit+1)
 	for rows.Next() {
 		mem := member{}
-		panic.If(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
+		panic.IfNotNil(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
 		memSet = append(memSet, &mem)
 	}
 	if len(memSet) == limit+1 {
@@ -185,13 +185,13 @@ func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *member {
 		return &res
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT id, isActive, role FROM projectMembers WHERE account=? AND project=? AND id=?`, account, project, mem)
-	panic.If(row.Scan(&res.Id, &res.IsActive, &res.Role))
+	panic.IfNotNil(row.Scan(&res.Id, &res.IsActive, &res.Role))
 	ctx.SetCacheValue(&res, cacheKey)
 	return &res
 }
 
 func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) []*activity.Activity {
-	panic.IfTrue(occurredAfter != nil && occurredBefore != nil, err.InvalidArguments)
+	ctx.ReturnBadRequestNowIf(occurredAfter != nil && occurredBefore != nil, "only one of occurredAfter or occurredBefore can be set")
 	res := make([]*activity.Activity, 0, limit)
 	cacheKey := cachekey.NewGet("project.dbGetActivities", shard, account, project, item, member, occurredAfter, occurredBefore, limit).ProjectActivities(account, project)
 	if ctx.GetCacheValue(&res, cacheKey) {
@@ -225,10 +225,10 @@ func dbGetActivities(ctx ctx.Ctx, shard int, account, project id.Id, item, membe
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	for rows.Next() {
 		act := activity.Activity{}
-		panic.If(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
+		panic.IfNotNil(rows.Scan(&act.OccurredOn, &act.Item, &act.Member, &act.ItemType, &act.ItemHasBeenDeleted, &act.Action, &act.ItemName, &act.ExtraInfo))
 		res = append(res, &act)
 	}
 	ctx.SetCacheValue(res, cacheKey)
@@ -285,13 +285,13 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	projSet := make([]*Project, 0, limit+1)
 	idx := 0
 	resIdx := map[string]int{}
 	for rows.Next() {
 		proj := Project{}
-		panic.If(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.HoursPerDay, &proj.DaysPerWeek, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
+		panic.IfNotNil(rows.Scan(&proj.Id, &proj.IsArchived, &proj.Name, &proj.HoursPerDay, &proj.DaysPerWeek, &proj.CreatedOn, &proj.StartOn, &proj.DueOn, &proj.FileCount, &proj.FileSize, &proj.IsPublic))
 		projSet = append(projSet, &proj)
 		resIdx[proj.Id.String()] = idx
 		idx++
@@ -314,7 +314,7 @@ func dbGetProjects(ctx ctx.Ctx, shard int, specificSqlFilterTxt string, account 
 		if rows != nil {
 			defer rows.Close()
 		}
-		panic.If(e)
+		panic.IfNotNil(e)
 		for rows.Next() {
 			rows.Scan(&i, &description, &totalRemainingTime, &totalLoggedTime, &minimumRemainingTime, &linkedFileCount, &chatCount, &childCount, &descendantCount, &isParallel)
 			proj := projSet[resIdx[i.String()]]

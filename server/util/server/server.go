@@ -34,9 +34,8 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 		for _, ep := range endpointSet {
 			ep.ValidateEndpoint()
 			lowerPath := strings.ToLower(ep.Path)
-			if _, exists := routes[lowerPath]; exists {
-				err.FmtPanic("duplicate endpoint path %q", lowerPath)
-			}
+			_, exists := routes[lowerPath]
+			panic.If(exists, "duplicate endpoint path %q", lowerPath)
 			routes[lowerPath] = ep
 			ep.PrivateKeyGen = privateKeyGen
 		}
@@ -51,9 +50,9 @@ func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
 	}
 	var e error
 	sr.ApiDocs, e = json.MarshalIndent(routeDocs, "", "    ")
-	panic.If(e)
+	panic.IfNotNil(e)
 	fileServerDir, e := filepath.Abs(sr.FileServerDir)
-	panic.If(e)
+	panic.IfNotNil(e)
 	return &Server{
 		Routes:     routes,
 		SR:         sr,
@@ -89,19 +88,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		context.Clear(req) //required for guerrilla cookie session usage, or resources will leak
 		r := recover()
 		if r != nil {
-			e, ok := r.(*err.Err)
+			e, ok := r.(*err.Http)
 			if ok && e != nil {
-				if e == err.InsufficientPermission {
-					http.NotFound(resp, req)
-				} else {
-					writeJson(resp, http.StatusInternalServerError, e)
-				}
+				writeJson(resp, e.Code, e.Message)
 			} else {
-				writeJson(resp, http.StatusInternalServerError, err.External)
+				writeJson(resp, http.StatusInternalServerError, "internal server error")
 			}
 			ctx.LogIf(r.(error))
 		}
-		s.SR.LogStats(resp.code, req.Method, lowerPath, ctx.requestStartUnixMillis, ctx.getQueryInfos())
+		s.SR.LogStats(resp.code, lowerPath, ctx.requestStartUnixMillis, ctx.getQueryInfos())
 	}()
 	//must make sure to close the request body
 	if req != nil && req.Body != nil {
@@ -110,8 +105,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//set common headers
 	resp.Header().Set("X-Frame-Options", "DENY")
 	resp.Header().Set("X-XSS-Protection", "1; mode=block")
-	//resp.Header().Set("Content-Security-Policy", "default-src *.project-trees.com")
-	resp.Header().Set("Cache-Control", "private, must-revalidate, max-stale=0, max-age=0")
+	//resp.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src %s", s.SR.ClientHost)) TODO figure out what is wrong with the vue pwa setup that makes this break it
+	resp.Header().Set("Cache-Control", "no-cache, no-store")
 	resp.Header().Set("X-Version", s.SR.Version)
 	//check for none api call
 	if req.Method == http.MethodGet && !strings.HasPrefix(lowerPath, "/api/") {
@@ -127,7 +122,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if lowerPath == s.SR.ApiLogoutRoute {
 		var e error
 		ctx.session, e = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
-		panic.If(e)
+		panic.IfNotNil(e)
 		ctx.session.Options.MaxAge = -1
 		ctx.session.Values = map[interface{}]interface{}{}
 		ctx.session.Save(req, resp)
@@ -135,14 +130,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	reqQueryValues := req.URL.Query()
-	panic.IfTruef(reqQueryValues.Get("region") == "", "missing region query param")
+	panic.If(reqQueryValues.Get("region") == "", "missing region query param")
 	// act as a proxy for other regions if necessary, this will only happen in stg and pro environments as lcl and dev are one box environments
 	region := cnst.Region(strings.ToLower(reqQueryValues.Get("region")))
 	region.Validate()
 	if !(s.SR.Env == cnst.LclEnv || s.SR.Env == cnst.DevEnv) && region != s.SR.Region {
 		req.URL.Host = fmt.Sprintf("%s-%s-api.%s", s.SR.Env, region, s.SR.NakedHost)
 		proxyResp, e := http.DefaultClient.Do(req)
-		panic.If(e)
+		panic.IfNotNil(e)
 		if proxyResp != nil && proxyResp.Body != nil {
 			defer proxyResp.Body.Close()
 		}
@@ -158,23 +153,28 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		io.Copy(resp, proxyResp.Body)
 		return
 	}
-	//check for special case of api mget
-	if lowerPath == s.SR.ApiMGetRoute {
-		reqs := map[string]string{}
+	//check for special case of api mdo
+	if lowerPath == s.SR.ApiMDoRoute {
+		mDoReqs := map[string]mDoReq{}
 		bodyBytes, e := ioutil.ReadAll(req.Body)
-		panic.If(e)
-		panic.If(json.Unmarshal(bodyBytes, &reqs))
+		panic.IfNotNil(e)
+		panic.IfNotNil(json.Unmarshal(bodyBytes, &mDoReqs))
 		fullMGetResponse := map[string]*mgetResponse{}
 		mGetTimedOut := false
 		fullMGetResponseMtx := &sync.Mutex{}
 		includeHeaders := ctx.queryBoolVal("headers", false)
-		gets := make([]func(), 0, len(reqs))
-		for key, reqUrl := range reqs {
-			gets = append(gets, func(key, reqUrl string) func() {
+		does := make([]func(), 0, len(mDoReqs))
+		for key := range mDoReqs {
+			does = append(does, func(key string, reqData mDoReq) func() {
 				return func() {
-					r, _ := http.NewRequest(http.MethodGet, reqUrl, nil)
+					argsBytes, e := json.Marshal(reqData.Args)
+					panic.IfNotNil(e)
+					r, _ := http.NewRequest(http.MethodPost, reqData.Path + "?region=" + reqData.Region.String(), bytes.NewReader(argsBytes))
 					for _, c := range req.Cookies() {
 						r.AddCookie(c)
+					}
+					for name := range req.Header {
+						r.Header.Add(name, req.Header.Get(name))
 					}
 					w := &mgetResponseWriter{header: http.Header{}, body: bytes.NewBuffer(make([]byte, 0, 1000))}
 					s.ServeHTTP(w, r)
@@ -190,16 +190,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 						Body:           w.body.Bytes(),
 					}
 				}
-			}(key, reqUrl))
+			}(key, mDoReqs[key]))
 		}
-		e = panic.SafeGoGroup(s.SR.ApiMGetTimeout, gets...)
+		e = panic.SafeGoGroup(s.SR.ApiMGetTimeout, does...)
 		if e != nil {
 			s.SR.LogError(e)
-			if _, ok := e.(*panic.TimeoutErr); ok {
+			if panic.IsTimeOutErr(e) {
 				fullMGetResponseMtx.Lock()
 				defer fullMGetResponseMtx.Unlock()
 				mGetTimedOut = true
-				for key := range reqs {
+				for key := range mDoReqs {
 					if fullMGetResponse[key] == nil {
 						fullMGetResponse[key] = &mgetResponse{
 							includeHeaders: includeHeaders,
@@ -217,16 +217,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//get endpoint
 	ep := s.Routes[lowerPath]
 	// check for 404
-	if ep == nil || ep.Method != strings.ToUpper(req.Method) {
-		http.NotFound(resp, req)
-		return
-	}
+	err.HttpPanicf(ep == nil, http.StatusNotFound, "not found")
 	// only none private endpoints use sessions
 	if !ep.IsPrivate {
 		//get a cookie session
 		var e error
 		ctx.session, e = s.SR.SessionStore.Get(req, s.SR.SessionCookieName)
-		panic.If(e)
+		panic.IfNotNil(e)
 		if ctx.session != nil {
 			iMe := ctx.session.Values["me"]
 			if iMe != nil {
@@ -235,41 +232,30 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 		//check for valid me value if endpoint requires active session, and check for X header in POST requests for CSRF prevention
-		if ep.RequiresSession && ctx.me == nil || req.Method == http.MethodPost && req.Header.Get("X-Client") == "" {
-			writeJson(resp, http.StatusUnauthorized, unauthorizedErr)
-			return
-		}
+		err.HttpPanicf(ep.RequiresSession && ctx.me == nil || req.Method == http.MethodPost && req.Header.Get("X-Client") == "", http.StatusUnauthorized, "unauthorized")
 	}
 	//process args
 	var e error
 	var argsBytes []byte
 	var args interface{}
-	if ep.Method == http.MethodGet && ep.GetArgsStruct != nil {
-		argsBytes = []byte(reqQueryValues.Get("args"))
-	} else if ep.Method == http.MethodPost && ep.GetArgsStruct != nil {
+	if ep.GetArgsStruct != nil {
 		argsBytes, e = ioutil.ReadAll(req.Body)
-		panic.If(e)
-	} else if ep.Method == http.MethodPost && ep.ProcessForm != nil {
-		if ep.IsPrivate {
-			// private endpoints dont support post requests with form data
-			err.FmtPanic("private endpoints don't support POST Form data")
-		}
+		panic.IfNotNil(e)
+	} else if ep.ProcessForm != nil {
+		// private endpoints dont support post requests with form data
+		err.HttpPanicf(ep.IsPrivate, http.StatusBadRequest, "private endpoints don't support POST Form data")
 		args = ep.ProcessForm(resp, req)
 	}
 	//process private ts and key args
 	if ep.IsPrivate {
 		ts, e := strconv.ParseInt(reqQueryValues.Get("ts"), 10, 64)
-		panic.If(e)
+		panic.IfNotNil(e)
 		//if the timestamp the req was sent is over a minute ago, reject the request
-		if t.NowUnixMillis()-ts > 60000 {
-			err.FmtPanic("suspicious private request sent over a minute ago")
-		}
+		err.HttpPanicf(t.NowUnixMillis()-ts > 60000, http.StatusBadRequest, "suspicious private request sent over a minute ago")
 		key, e := base64.RawURLEncoding.DecodeString(reqQueryValues.Get("_"))
-		panic.If(e)
+		panic.IfNotNil(e)
 		// check the args/timestamp/key are valid
-		if !bytes.Equal(key, ep.PrivateKeyGen(argsBytes, reqQueryValues.Get("ts"))) {
-			err.FmtPanic("invalid private request keys don't match")
-		}
+		err.HttpPanicf(!bytes.Equal(key, ep.PrivateKeyGen(argsBytes, reqQueryValues.Get("ts"))), http.StatusUnauthorized, "invalid private request keys don't match")
 		//check redis cache to ensure key has not appeared in the last minute, to prevent replay attacks
 		cnn := s.SR.PrivateKeyRedisPool.Get()
 		defer cnn.Close()
@@ -277,34 +263,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		cnn.Send("SETNX", reqQueryValues.Get("_"), "")
 		cnn.Send("EXPIRE", reqQueryValues.Get("_"), 61)
 		vals, e := redis.Ints(cnn.Do("EXEC"))
-		panic.If(e)
-		if len(vals) != 2 {
-			err.FmtPanic("vals should have exactly two integer values")
-		}
-		if vals[0] != 1 {
-			err.FmtPanic("private request key duplication, replay attack detection")
-		}
-		if vals[1] != 1 {
-			err.FmtPanic("failed to set expiry on private request key")
-		}
+		panic.IfNotNil(e)
+		panic.If(len(vals) != 2,"vals should have exactly two integer values")
+		err.HttpPanicf(vals[0] != 1, http.StatusUnauthorized, "private request key duplication, replay attack detection")
+		panic.If(vals[1] != 1, "failed to set expiry on private request key")
 		//at this point private request is valid
 	}
 	if len(argsBytes) > 0 {
 		args = ep.GetArgsStruct()
-		panic.If(json.Unmarshal(argsBytes, args))
+		panic.IfNotNil(json.Unmarshal(argsBytes, args))
 	}
 	//if this endpoint is the authentication endpoint it should return just the users id.Id, add it to the session cookie
 	result := ep.CtxHandler(ctx, args)
 	if ep.IsAuthentication {
-		if me, ok := result.(id.Identifiable); !ok {
-			err.FmtPanic("isAuthentication did not return id.Identifiable type")
-		} else {
-			i := me.Id()
-			ctx.me = &i //set me on _ctx for logging info in defer above
-			ctx.session.Values["me"] = i
-			ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
-			ctx.session.Save(req, resp)
-		}
+		me, ok := result.(id.Identifiable)
+		panic.If(!ok,"isAuthentication did not return id.Identifiable type")
+		i := me.Id()
+		ctx.me = &i //set me on _ctx for logging info in defer above
+		ctx.session.Values["me"] = i
+		ctx.session.Values["AuthedOn"] = t.NowUnixMillis()
+		ctx.session.Save(req, resp)
 	}
 	ctx.doCacheUpdate()
 	if ctx.doProfile() {
@@ -324,7 +302,7 @@ func writeJsonOk(w http.ResponseWriter, body interface{}) {
 
 func writeJson(w http.ResponseWriter, code int, body interface{}) {
 	bodyBytes, e := json.Marshal(body)
-	panic.If(e)
+	panic.IfNotNil(e)
 	writeRawJson(w, code, bodyBytes)
 }
 
@@ -332,7 +310,7 @@ func writeRawJson(w http.ResponseWriter, code int, body []byte) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(code)
 	_, e := w.Write(body)
-	panic.If(e)
+	panic.IfNotNil(e)
 }
 
 type responseWrapper struct {
@@ -399,4 +377,10 @@ type profileResponse struct {
 	Duration   int64                  `json:"duration"`
 	QueryInfos []*queryinfo.QueryInfo `json:"queryInfos"`
 	Result     interface{}            `json:"result"`
+}
+
+type mDoReq struct{
+	Region cnst.Region `json:"region"`
+	Path string `json:"path"`
+	Args map[string]interface{} `json:"args"`
 }

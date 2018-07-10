@@ -5,6 +5,7 @@ import (
 	"github.com/0xor1/panic"
 	"strconv"
 	"strings"
+	"net/http"
 )
 
 const (
@@ -40,14 +41,10 @@ const (
 	SortByDueOn       = SortBy("dueon")
 )
 
-var (
-	invalidConstantValueErr = &err.Err{Code: "u_c_icv", Message: "invalid constant value"}
-)
-
 type Env string
 
 func (e *Env) Validate() {
-	panic.IfTrue(e != nil && !(*e == LclEnv || *e == DevEnv || *e == StgEnv || *e == ProEnv), invalidConstantValueErr)
+	err.HttpPanicf(e != nil && !(*e == LclEnv || *e == DevEnv || *e == StgEnv || *e == ProEnv), http.StatusBadRequest, "invalid env")
 }
 
 func (e *Env) String() string {
@@ -64,11 +61,11 @@ func (e *Env) UnmarshalJSON(raw []byte) error {
 type Region string
 
 func (r *Region) Validate() {
-	panic.IfTrue(r != nil && !(*r == CentralRegion || *r == USWRegion || *r == USERegion || *r == EUWRegion || *r == ASPRegion || *r == AUSRegion), invalidConstantValueErr)
+	err.HttpPanicf(r != nil && !(*r == CentralRegion || *r == USWRegion || *r == USERegion || *r == EUWRegion || *r == ASPRegion || *r == AUSRegion), http.StatusBadRequest, "invalid region")
 }
 
 func (r *Region) ValidateForDataRegions() {
-	panic.IfTrue(r != nil && !(*r == USWRegion || *r == USERegion || *r == EUWRegion || *r == ASPRegion || *r == AUSRegion), invalidConstantValueErr)
+	err.HttpPanicf(r != nil && !(*r == USWRegion || *r == USERegion || *r == EUWRegion || *r == ASPRegion || *r == AUSRegion), http.StatusBadRequest, "invalid region")
 }
 
 func (r *Region) String() string {
@@ -85,7 +82,7 @@ func (r *Region) UnmarshalJSON(raw []byte) error {
 type Theme uint8
 
 func (t *Theme) Validate() {
-	panic.IfTrue(t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme), invalidConstantValueErr)
+	err.HttpPanicf(t != nil && !(*t == LightTheme || *t == DarkTheme || *t == ColorBlindTheme), http.StatusBadRequest, "invalid theme")
 }
 
 func (t *Theme) String() string {
@@ -108,7 +105,7 @@ func (t *Theme) UnmarshalJSON(raw []byte) error {
 type AccountRole uint8
 
 func (r *AccountRole) Validate() {
-	panic.IfTrue(r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects), invalidConstantValueErr)
+	err.HttpPanicf(r != nil && !(*r == AccountOwner || *r == AccountAdmin || *r == AccountMemberOfAllProjects || *r == AccountMemberOfOnlySpecificProjects), http.StatusBadRequest, "invalid account role")
 }
 
 func (r *AccountRole) String() string {
@@ -120,7 +117,7 @@ func (r *AccountRole) String() string {
 
 func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 	val, e := strconv.ParseUint(string(raw), 10, 8)
-	panic.If(e)
+	panic.IfNotNil(e)
 	*r = AccountRole(val)
 	r.Validate()
 	return nil
@@ -129,7 +126,7 @@ func (r *AccountRole) UnmarshalJSON(raw []byte) error {
 type ProjectRole uint8
 
 func (r *ProjectRole) Validate() {
-	panic.IfTrue(r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader), invalidConstantValueErr)
+	err.HttpPanicf(r != nil && !(*r == ProjectAdmin || *r == ProjectWriter || *r == ProjectReader), http.StatusBadRequest, "invalid project role")
 }
 
 func (r *ProjectRole) String() string {
@@ -141,7 +138,7 @@ func (r *ProjectRole) String() string {
 
 func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 	val, e := strconv.ParseUint(string(raw), 10, 8)
-	panic.If(e)
+	panic.IfNotNil(e)
 	*r = ProjectRole(val)
 	r.Validate()
 	return nil
@@ -150,7 +147,7 @@ func (r *ProjectRole) UnmarshalJSON(raw []byte) error {
 type SortBy string
 
 func (sb *SortBy) Validate() {
-	panic.IfTrue(sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn), invalidConstantValueErr)
+	err.HttpPanicf(sb != nil && !(*sb == SortByName || *sb == SortByDisplayName || *sb == SortByCreatedOn || *sb == SortByStartOn || *sb == SortByDueOn), http.StatusBadRequest, "invalid sort by")
 }
 
 func (sb *SortBy) String() string {

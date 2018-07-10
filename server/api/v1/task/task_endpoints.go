@@ -4,12 +4,9 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	t "bitbucket.org/0xor1/trees/server/util/time"
 	"bitbucket.org/0xor1/trees/server/util/validate"
-	"github.com/0xor1/panic"
-	"net/http"
 	"time"
 )
 
@@ -28,7 +25,6 @@ type createArgs struct {
 }
 
 var create = &endpoint.Endpoint{
-	Method:                   http.MethodPost,
 	Path:                     "/api/v1/task/create",
 	RequiresSession:          true,
 	ExampleResponseStructure: &Task{},
@@ -38,7 +34,14 @@ var create = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*createArgs)
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-		panic.IfTrue((args.IsAbstract && (args.IsParallel == nil || args.Member != nil || args.TotalRemainingTime != nil)) || (!args.IsAbstract && (args.IsParallel != nil || args.TotalRemainingTime == nil)), err.InvalidArguments)
+		if args.IsAbstract {
+			ctx.ReturnBadRequestNowIf(args.IsParallel == nil, "abstract tasks must have isParallel set")
+			ctx.ReturnBadRequestNowIf(args.Member != nil, "abstract tasks do not accept a member arg")
+			ctx.ReturnBadRequestNowIf(args.TotalRemainingTime != nil, "abstract tasks do not accept a totalRemainingTime arg")
+		} else {
+			ctx.ReturnBadRequestNowIf(args.IsParallel != nil, "concrete tasks do not accept an isParallel arg")
+			ctx.ReturnBadRequestNowIf(args.TotalRemainingTime == nil, "concrete tasks must have a totalRemainingTime set")
+		}
 		zeroVal := uint64(0)
 		zeroPtr := &zeroVal
 		if !args.IsAbstract {
@@ -76,7 +79,6 @@ type setNameArgs struct {
 }
 
 var setName = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setName",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -104,7 +106,6 @@ type setDescriptionArgs struct {
 }
 
 var setDescription = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setDescription",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -128,7 +129,6 @@ type setIsParallelArgs struct {
 }
 
 var setIsParallel = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setIsParallel",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -152,7 +152,6 @@ type setMemberArgs struct {
 }
 
 var setMember = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setMember",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -178,7 +177,6 @@ type setRemainingTimeArgs struct {
 }
 
 var setRemainingTime = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/setRemainingTime",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -200,7 +198,6 @@ type moveArgs struct {
 }
 
 var move = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/move",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -223,7 +220,6 @@ type deleteArgs struct {
 }
 
 var delete = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/task/delete",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -231,7 +227,7 @@ var delete = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*deleteArgs)
-		panic.IfTrue(args.Project.Equal(args.Task), err.InvalidArguments)
+		ctx.ReturnBadRequestNowIf(args.Project.Equal(args.Task), "use project delete endpoint to delete the project node")
 		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 
 		dbDeleteTask(ctx, args.Shard, args.Account, args.Project, args.Task)
@@ -247,7 +243,6 @@ type getArgs struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/get",
 	RequiresSession:          false,
 	ExampleResponseStructure: &Task{},
@@ -277,7 +272,6 @@ type getChildrenResp struct {
 }
 
 var getChildren = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getChildren",
 	RequiresSession:          false,
 	ExampleResponseStructure: &getChildrenResp{Children: []*Task{{}}},
@@ -306,7 +300,6 @@ type getAncestorsResp struct {
 }
 
 var getAncestors = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/task/getAncestors",
 	RequiresSession:          false,
 	ExampleResponseStructure: &getAncestorsResp{Ancestors: []*Ancestor{{}}},

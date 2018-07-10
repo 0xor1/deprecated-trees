@@ -22,7 +22,7 @@ func (c *localClient) Send(sendTo []string, content string) {
 
 func NewSparkPostClient(from, apiKey string) Client {
 	spClient := &sp.Client{}
-	panic.If(spClient.Init(&sp.Config{
+	panic.IfNotNil(spClient.Init(&sp.Config{
 		BaseUrl:    "https://api.eu.sparkpost.com",
 		ApiKey:     apiKey,
 		ApiVersion: 1,
@@ -54,5 +54,5 @@ func (c *sparkPostClient) Send(sendTo []string, content string) {
 			Subject: "project-trees.com registration",
 		},
 	})
-	panic.If(e)
+	panic.IfNotNil(e)
 }

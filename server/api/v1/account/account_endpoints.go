@@ -6,11 +6,8 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/validate"
-	"github.com/0xor1/panic"
-	"net/http"
 	"time"
 	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/account"
@@ -23,7 +20,6 @@ type editArgs struct {
 }
 
 var edit = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/account/edit",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -49,7 +45,6 @@ type getArgs struct {
 }
 
 var get = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/get",
 	RequiresSession:          true,
 	ExampleResponseStructure: &account.Account{},
@@ -71,7 +66,6 @@ type setMemberRoleArgs struct {
 }
 
 var setMemberRole = &endpoint.Endpoint{
-	Method:          http.MethodPost,
 	Path:            "/api/v1/account/setMemberRole",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
@@ -82,7 +76,7 @@ var setMemberRole = &endpoint.Endpoint{
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me())
 		validate.MemberHasAccountAdminAccess(accountRole)
 		args.Role.Validate()
-		panic.IfTrue(args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner, err.InsufficientPermission)
+		ctx.ReturnUnauthorizedNowIf(args.Role == cnst.AccountOwner && *accountRole != cnst.AccountOwner)
 		dbSetMemberRole(ctx, args.Shard, args.Account, args.Member, args.Role)
 		return nil
 	},
@@ -103,7 +97,6 @@ type GetMembersResp struct {
 }
 
 var getMembers = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getMembers",
 	RequiresSession:          true,
 	ExampleResponseStructure: &GetMembersResp{Members: []*Member{{}}},
@@ -128,7 +121,6 @@ type getActivitiesArgs struct {
 }
 
 var getActivities = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getActivities",
 	RequiresSession:          true,
 	ExampleResponseStructure: []*activity.Activity{{}},
@@ -137,7 +129,7 @@ var getActivities = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getActivitiesArgs)
-		panic.IfTrue(args.OccurredAfter != nil && args.OccurredBefore != nil, err.InvalidArguments)
+		ctx.ReturnUnauthorizedNowIf(args.OccurredAfter != nil && args.OccurredBefore != nil)
 		validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		return dbGetActivities(ctx, args.Shard, args.Account, args.Item, args.Member, args.OccurredAfter, args.OccurredBefore, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
 	},
@@ -149,7 +141,6 @@ type getMeArgs struct {
 }
 
 var getMe = &endpoint.Endpoint{
-	Method:                   http.MethodGet,
 	Path:                     "/api/v1/account/getMe",
 	RequiresSession:          true,
 	ExampleResponseStructure: &Member{},

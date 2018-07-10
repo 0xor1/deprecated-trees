@@ -5,16 +5,15 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/time"
 	"bytes"
 	"encoding/base64"
-	"github.com/0xor1/panic"
 	"github.com/oklog/ulid"
 	"math/rand"
 	"sync"
+	"net/http"
 )
 
 var (
 	entropyMtx = &sync.Mutex{}
 	entropy    = rand.New(rand.NewSource(time.NowUnixMillis()))
-	parseErr   = &err.Err{Code: "u_i_p", Message: "failed to parse id"}
 )
 
 //returns ulid as a byte slice
@@ -27,7 +26,7 @@ func New() Id {
 
 func Parse(id string) Id {
 	b, e := base64.RawURLEncoding.DecodeString(id)
-	panic.IfTrue(e != nil || len(b) != 16, parseErr)
+	err.HttpPanicf(e != nil || len(b) != 16, http.StatusBadRequest, "invalid id")
 	return Id(b)
 }
 

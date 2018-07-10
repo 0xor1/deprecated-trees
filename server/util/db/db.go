@@ -14,10 +14,6 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/account"
 )
 
-var (
-	ErrNoChangeMade = &err.Err{Code: "u_d_ncm", Message: "no change made"}
-)
-
 func GetAccountRole(ctx ctx.Ctx, shard int, account, member id.Id) *cnst.AccountRole {
 	var accRole *cnst.AccountRole
 	cacheKey := cachekey.NewGet("db.GetAccountRole", shard, account, member).AccountMember(account, member)
@@ -86,7 +82,7 @@ func GetAccount(ctx ctx.Ctx, shard int, acc id.Id) *account.Account {
 		return &res
 	}
 	row := ctx.TreeQueryRow(shard, `SELECT publicProjectsEnabled, hoursPerDay, daysPerWeek FROM accounts WHERE id=?`, acc)
-	panic.If(row.Scan(&res.PublicProjectsEnabled, &res.HoursPerDay, &res.DaysPerWeek))
+	panic.IfNotNil(row.Scan(&res.PublicProjectsEnabled, &res.HoursPerDay, &res.DaysPerWeek))
 	ctx.SetCacheValue(res, cacheKey)
 	return &res
 }
@@ -94,14 +90,14 @@ func GetAccount(ctx ctx.Ctx, shard int, acc id.Id) *account.Account {
 func SetRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task id.Id, remainingTime *uint64, duration *uint64, note *string) *timelog.TimeLog {
 	var timeLog *id.Id
 	if duration != nil {
-		panic.IfTrue(*duration == 0, err.InvalidArguments)
+		ctx.ReturnBadRequestNowIf(*duration == 0, "none null duration must be > 0")
 		validate.MemberIsAProjectMemberWithWriteAccess(GetProjectRole(ctx, shard, account, project, ctx.Me()))
 		i := id.New()
 		timeLog = &i
 	} else if remainingTime != nil {
 		validate.MemberHasProjectWriteAccess(GetAccountAndProjectRoles(ctx, shard, account, project, ctx.Me()))
 	} else {
-		panic.If(err.InvalidArguments)
+		ctx.ReturnBadRequestNowIf(true, "one of duration or remainingTime must be set")
 	}
 
 	loggedOn := t.Now()
@@ -113,7 +109,7 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	tasks := make([]id.Id, 0, 100)
 	var existingMember *id.Id
 	var taskName string
@@ -122,7 +118,7 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 		rows.Scan(&i, existingMember, &taskName)
 		tasks = append(tasks, i)
 	}
-	panic.IfTrue(len(tasks) == 0, ErrNoChangeMade)
+	ctx.ReturnBadRequestNowIf(len(tasks) == 0, "no change made")
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).CombinedTaskAndTaskChildrenSets(account, project, tasks)
 	if existingMember != nil {
 		cacheKey.ProjectMember(account, project, *existingMember)
@@ -151,8 +147,8 @@ func setRemainingTimeAndOrLogTime(ctx ctx.Ctx, shard int, account, project, task
 func MakeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) {
 	row := ctx.TreeQueryRow(shard, sql, args...)
 	changeMade := false
-	panic.If(row.Scan(&changeMade))
-	panic.IfTrue(!changeMade, ErrNoChangeMade)
+	panic.IfNotNil(row.Scan(&changeMade))
+	ctx.ReturnBadRequestNowIf(!changeMade, "no change made")
 }
 
 func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) []id.Id {
@@ -160,13 +156,13 @@ func TreeChangeHelper(ctx ctx.Ctx, shard int, sql string, args ...interface{}) [
 	if rows != nil {
 		defer rows.Close()
 	}
-	panic.If(e)
+	panic.IfNotNil(e)
 	res := make([]id.Id, 0, 100)
 	for rows.Next() {
 		var i id.Id
 		rows.Scan(&i)
 		res = append(res, i)
 	}
-	panic.IfTrue(len(res) == 0, ErrNoChangeMade)
+	ctx.ReturnBadRequestNowIf(len(res) == 0, "no change made")
 	return res
 }

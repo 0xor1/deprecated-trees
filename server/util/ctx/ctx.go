@@ -18,6 +18,10 @@ type Ctx interface {
 	Me() id.Id
 	//error logging
 	LogIf(err error) bool
+	//exit request immediately if condition is met
+	ReturnNowIf(condition bool, httpStatus int, messageFmt string, messageArgs ...interface{})
+	ReturnBadRequestNowIf(condition bool, messageFmt string, messageArgs ...interface{})
+	ReturnUnauthorizedNowIf(condition bool)
 	//db access
 	AccountExec(query string, args ...interface{}) (sql.Result, error)
 	AccountQuery(query string, args ...interface{}) (isql.Rows, error)

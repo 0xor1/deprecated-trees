@@ -5,16 +5,9 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/private"
 	"bitbucket.org/0xor1/trees/server/util/validate"
-	"github.com/0xor1/panic"
-	"net/http"
-)
-
-var (
-	zeroOwnerCountErr = &err.Err{Code: "r_v1_pr_zoc", Message: "zero owner count"}
 )
 
 type createAccountArgs struct {
@@ -26,7 +19,6 @@ type createAccountArgs struct {
 }
 
 var createAccount = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/createAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -45,7 +37,6 @@ type deleteAccountArgs struct {
 }
 
 var deleteAccount = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/deleteAccount",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -70,7 +61,6 @@ type addMembersArgs struct {
 }
 
 var addMembers = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/addMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -79,7 +69,7 @@ var addMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*addMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrue(args.Account.Equal(args.Me), err.InvalidOperation)
+		ctx.ReturnBadRequestNowIf(args.Account.Equal(args.Me), "can't add/remove members to/from personal accounts")
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
 		validate.MemberHasAccountAdminAccess(accountRole)
 
@@ -126,7 +116,6 @@ type removeMembersArgs struct {
 }
 
 var removeMembers = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/removeMembers",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -135,21 +124,21 @@ var removeMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*removeMembersArgs)
 		validate.EntityCount(len(args.Members), ctx.MaxProcessEntityCount())
-		panic.IfTrue(args.Account.Equal(args.Me), err.InvalidOperation)
+		ctx.ReturnBadRequestNowIf(args.Account.Equal(args.Me), "can;t add/remove members to/from personal accounts")
 
 		accountRole := db.GetAccountRole(ctx, args.Shard, args.Account, args.Me)
-		panic.IfTrue(accountRole == nil, err.InsufficientPermission)
+		ctx.ReturnUnauthorizedNowIf(accountRole == nil)
 
 		switch *accountRole {
 		case cnst.AccountOwner:
 			totalOwnerCount := dbGetTotalOwnerCount(ctx, args.Shard, args.Account)
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.Account, args.Members)
-			panic.IfTrue(totalOwnerCount == ownerCountInRemoveSet, zeroOwnerCountErr)
+			ctx.ReturnBadRequestNowIf(totalOwnerCount == ownerCountInRemoveSet, "action would result in no owners on the account")
 		case cnst.AccountAdmin:
 			ownerCountInRemoveSet := dbGetOwnerCountInSet(ctx, args.Shard, args.Account, args.Members)
-			panic.IfTrue(ownerCountInRemoveSet > 0, err.InsufficientPermission)
+			ctx.ReturnUnauthorizedNowIf(ownerCountInRemoveSet > 0)
 		default:
-			panic.IfTrue(len(args.Members) != 1 || !args.Members[0].Equal(args.Me), err.InsufficientPermission)
+			ctx.ReturnUnauthorizedNowIf(len(args.Members) != 1 || !args.Members[0].Equal(args.Me))
 		}
 
 		dbSetMembersInactive(ctx, args.Shard, args.Account, args.Members)
@@ -165,7 +154,6 @@ type memberIsOnlyAccountOwnerArgs struct {
 }
 
 var memberIsOnlyAccountOwner = &endpoint.Endpoint{
-	Method:    http.MethodGet,
 	Path:      "/api/v1/private/memberIsOnlyAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -190,7 +178,6 @@ type setMemberNameArgs struct {
 }
 
 var setMemberName = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/setMemberName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -211,7 +198,6 @@ type setMemberDisplayNameArgs struct {
 }
 
 var setMemberDisplayName = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/setMemberDisplayName",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -232,7 +218,6 @@ type setMemberHasAvatarArgs struct {
 }
 
 var setMemberHasAvatar = &endpoint.Endpoint{
-	Method:    http.MethodPost,
 	Path:      "/api/v1/private/setMemberHasAvatar",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
@@ -252,7 +237,6 @@ type memberIsAccountOwnerArgs struct {
 }
 
 var memberIsAccountOwner = &endpoint.Endpoint{
-	Method:    http.MethodGet,
 	Path:      "/api/v1/private/memberIsAccountOwner",
 	IsPrivate: true,
 	GetArgsStruct: func() interface{} {
