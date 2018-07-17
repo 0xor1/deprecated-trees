@@ -65,10 +65,10 @@ func (c *client) Create(css *clientsession.Store, region cnst.Region, shard int,
 
 func (c *client) Edit(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, fields Fields) error {
 	_, e := edit.DoRequest(css, c.host, region, &editArgs{
-		Shard:    shard,
-		Account:  account,
-		Project:  project,
-		Fields: fields,
+		Shard:   shard,
+		Account: account,
+		Project: project,
+		Fields:  fields,
 	}, nil, nil)
 	return e
 }

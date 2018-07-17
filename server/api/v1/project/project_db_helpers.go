@@ -7,6 +7,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/err"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/sortdir"
 	"bytes"
@@ -14,7 +15,6 @@ import (
 	"github.com/0xor1/panic"
 	"strings"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func dbGetProjectExists(ctx ctx.Ctx, shard int, account, project id.Id) bool {
@@ -36,40 +36,28 @@ func dbCreateProject(ctx ctx.Ctx, shard int, account id.Id, project *Project) {
 }
 
 func dbEdit(ctx ctx.Ctx, shard int, account, project id.Id, fields Fields) {
-	setIsPublic := false
-	if fields.IsPublic != nil {
-		setIsPublic = true
-	}else {
+	setIsPublic := fields.IsPublic != nil
+	if !setIsPublic {
 		fields.IsPublic = &field.Bool{}
 	}
-	setIsArchived := false
-	if fields.IsArchived != nil {
-		setIsArchived = true
-	}else {
+	setIsArchived := fields.IsArchived != nil
+	if !setIsArchived {
 		fields.IsArchived = &field.Bool{}
 	}
-	setHoursPerDay := false
-	if fields.HoursPerDay != nil {
-		setHoursPerDay = true
-	}else {
+	setHoursPerDay := fields.HoursPerDay != nil
+	if !setHoursPerDay {
 		fields.HoursPerDay = &field.UInt8{}
 	}
-	setDaysPerWeek := false
-	if fields.DaysPerWeek != nil {
-		setDaysPerWeek = true
-	}else {
+	setDaysPerWeek := fields.DaysPerWeek != nil
+	if !setDaysPerWeek {
 		fields.DaysPerWeek = &field.UInt8{}
 	}
-	setStartOn := false
-	if fields.StartOn != nil {
-		setStartOn = true
-	}else {
+	setStartOn := fields.StartOn != nil
+	if !setStartOn {
 		fields.StartOn = &field.TimePtr{}
 	}
-	setDueOn := false
-	if fields.DueOn != nil {
-		setDueOn = true
-	}else {
+	setDueOn := fields.DueOn != nil
+	if !setDueOn {
 		fields.DueOn = &field.TimePtr{}
 	}
 	if !setIsPublic && !setIsArchived && !setHoursPerDay && !setDaysPerWeek && !setStartOn && !setDueOn {

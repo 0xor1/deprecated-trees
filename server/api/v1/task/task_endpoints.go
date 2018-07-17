@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	t "bitbucket.org/0xor1/trees/server/util/time"
 	"bitbucket.org/0xor1/trees/server/util/validate"
@@ -70,121 +71,50 @@ var create = &endpoint.Endpoint{
 	},
 }
 
-type setNameArgs struct {
+type editArgs struct {
 	Shard   int    `json:"shard"`
 	Account id.Id  `json:"account"`
 	Project id.Id  `json:"project"`
 	Task    id.Id  `json:"task"`
-	Name    string `json:"name"`
+	Fields    Fields `json:"fields"`
 }
 
-var setName = &endpoint.Endpoint{
-	Path:            "/api/v1/task/setName",
+var edit = &endpoint.Endpoint{
+	Path:            "/api/v1/task/edit",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &setNameArgs{}
+		return &editArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setNameArgs)
-		if args.Project.Equal(args.Task) {
+		args := a.(*editArgs)
+		if args.Fields.Name != nil && args.Project.Equal(args.Task) {
 			validate.MemberHasAccountAdminAccess(db.GetAccountRole(ctx, args.Shard, args.Account, ctx.Me()))
 		} else {
 			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		}
-
-		dbSetName(ctx, args.Shard, args.Account, args.Project, args.Task, args.Name)
-		return nil
-	},
-}
-
-type setDescriptionArgs struct {
-	Shard       int     `json:"shard"`
-	Account     id.Id   `json:"account"`
-	Project     id.Id   `json:"project"`
-	Task        id.Id   `json:"task"`
-	Description *string `json:"description,omitempty"`
-}
-
-var setDescription = &endpoint.Endpoint{
-	Path:            "/api/v1/task/setDescription",
-	RequiresSession: true,
-	GetArgsStruct: func() interface{} {
-		return &setDescriptionArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setDescriptionArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-
-		dbSetDescription(ctx, args.Shard, args.Account, args.Project, args.Task, args.Description)
-		return nil
-	},
-}
-
-type setIsParallelArgs struct {
-	Shard      int   `json:"shard"`
-	Account    id.Id `json:"account"`
-	Project    id.Id `json:"project"`
-	Task       id.Id `json:"task"`
-	IsParallel bool  `json:"isParallel"`
-}
-
-var setIsParallel = &endpoint.Endpoint{
-	Path:            "/api/v1/task/setIsParallel",
-	RequiresSession: true,
-	GetArgsStruct: func() interface{} {
-		return &setIsParallelArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setIsParallelArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-
-		dbSetIsParallel(ctx, args.Shard, args.Account, args.Project, args.Task, args.IsParallel)
-		return nil
-	},
-}
-
-type setMemberArgs struct {
-	Shard   int    `json:"shard"`
-	Account id.Id  `json:"account"`
-	Project id.Id  `json:"project"`
-	Task    id.Id  `json:"task"`
-	Member  *id.Id `json:"member,omitempty"`
-}
-
-var setMember = &endpoint.Endpoint{
-	Path:            "/api/v1/task/setMember",
-	RequiresSession: true,
-	GetArgsStruct: func() interface{} {
-		return &setMemberArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setMemberArgs)
-		validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-		if args.Member != nil {
-			validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.Account, args.Project, *args.Member))
+		if args.Fields.Name != nil {
+			dbSetName(ctx, args.Shard, args.Account, args.Project, args.Task, args.Fields.Name.Val)
 		}
-		dbSetMember(ctx, args.Shard, args.Account, args.Project, args.Task, args.Member)
+		if args.Fields.Description != nil {
+			dbSetDescription(ctx, args.Shard, args.Account, args.Project, args.Task, args.Fields.Description.Val)
+		}
+		if args.Fields.IsAbstract != nil { //must do isAbstract first before any other tree altering operations
+			ctx.ReturnBadRequestNowIf(args.Project.Equal(args.Task), "can't toggle isAbstract on project task node")
+			dbSetIsAbstract(ctx, args.Shard, args.Account, args.Project, args.Task, args.Fields.IsAbstract.Val)
+		}
+		if args.Fields.IsParallel != nil {
+			dbSetIsParallel(ctx, args.Shard, args.Account, args.Project, args.Task, args.Fields.IsParallel.Val)
+		}
+		if args.Fields.Member != nil {
+			if args.Fields.Member.Val != nil {
+				validate.MemberIsAProjectMemberWithWriteAccess(db.GetProjectRole(ctx, args.Shard, args.Account, args.Project, *args.Fields.Member.Val))
+			}
+			dbSetMember(ctx, args.Shard, args.Account, args.Project, args.Task, args.Fields.Member.Val)
+		}
+		if args.Fields.RemainingTime != nil {
+			db.SetRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.Fields.RemainingTime.Val, nil, nil)
+		}
 		return nil
-	},
-}
-
-type setRemainingTimeArgs struct {
-	Shard         int    `json:"shard"`
-	Account       id.Id  `json:"account"`
-	Project       id.Id  `json:"project"`
-	Task          id.Id  `json:"task"`
-	RemainingTime uint64 `json:"remainingTime"`
-}
-
-var setRemainingTime = &endpoint.Endpoint{
-	Path:            "/api/v1/task/setRemainingTime",
-	RequiresSession: true,
-	GetArgsStruct: func() interface{} {
-		return &setRemainingTimeArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setRemainingTimeArgs)
-		return db.SetRemainingTimeAndOrLogTime(ctx, args.Shard, args.Account, args.Project, args.Task, &args.RemainingTime, nil, nil)
 	},
 }
 
@@ -316,11 +246,7 @@ var getAncestors = &endpoint.Endpoint{
 
 var Endpoints = []*endpoint.Endpoint{
 	create,
-	setName,
-	setDescription,
-	setIsParallel,
-	setMember,
-	setRemainingTime,
+	edit,
 	move,
 	delete,
 	get,
@@ -352,4 +278,13 @@ type Ancestor struct {
 	Id   id.Id  `json:"id"`
 	Name string `json:"name"`
 	//may want to add on time values here to render progress bars within breadcrumb ui component
+}
+
+type Fields struct {
+	Name          *field.String    `json:"name,omitempty"`
+	Description   *field.StringPtr `json:"description,omitempty"`
+	IsAbstract    *field.Bool      `json:"isAbstract,omitempty"`    //limit to only editable on abstract tasks which have no children and concrete tasks which have no timelogs
+	IsParallel    *field.Bool     `json:"isParallel,omitempty"`    //only relevant to abstract tasks
+	Member        *field.IdPtr     `json:"member,omitempty"`        //only relevant to concrete tasks
+	RemainingTime *field.UInt64    `json:"remainingTime,omitempty"` //only relevant to concrete tasks
 }

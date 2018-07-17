@@ -155,7 +155,7 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	for i := range authKey64s {
 		authBytes, e := base64.RawURLEncoding.DecodeString(authKey64s[i])
 		panic.IfNotNil(e)
-		panic.If(len(authBytes) != 64,  "sessionAuthBytes length is not 64")
+		panic.If(len(authBytes) != 64, "sessionAuthBytes length is not 64")
 		encrBytes, e := base64.RawURLEncoding.DecodeString(encrKey32s[i])
 		panic.IfNotNil(e)
 		panic.If(len(encrBytes) != 32, "sessionEncrBytes length is not 32")
@@ -241,24 +241,24 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 
 	return &Resources{
 		ServerCreatedOn:               t.NowUnixMillis(),
-		BindAddress:       bindAddress,
-		Env:               env,
-		NakedHost:         nakedHost,
-		ClientHost:        clientHost,
-		AllHosts:          allHosts,
-		ClientScheme:      scheme,
-		Region:            region,
-		Version:           config.GetString("version"),
-		FileServerDir:     config.GetString("fileServerDir"),
-		ApiDocsRoute:      strings.ToLower(config.GetString("apiDocsRoute")),
-		ApiMDoRoute:       strings.ToLower(config.GetString("apiMDoRoute")),
-		ApiLogoutRoute:    strings.ToLower(config.GetString("apiLogoutRoute")),
-		ApiMGetTimeout:    config.GetDuration("apiMGetTimeout"),
-		SessionCookieName: config.GetString("sessionCookieName"),
-		SessionStore:      sessionStore,
-		CachingEnabled:    config.GetBool("cachingEnabled"),
-		MasterCacheKey:    config.GetString("masterCacheKey"),
-		NameRegexMatchers: nameRegexMatchers,
+		BindAddress:                   bindAddress,
+		Env:                           env,
+		NakedHost:                     nakedHost,
+		ClientHost:                    clientHost,
+		AllHosts:                      allHosts,
+		ClientScheme:                  scheme,
+		Region:                        region,
+		Version:                       config.GetString("version"),
+		FileServerDir:                 config.GetString("fileServerDir"),
+		ApiDocsRoute:                  strings.ToLower(config.GetString("apiDocsRoute")),
+		ApiMDoRoute:                   strings.ToLower(config.GetString("apiMDoRoute")),
+		ApiLogoutRoute:                strings.ToLower(config.GetString("apiLogoutRoute")),
+		ApiMGetTimeout:                config.GetDuration("apiMGetTimeout"),
+		SessionCookieName:             config.GetString("sessionCookieName"),
+		SessionStore:                  sessionStore,
+		CachingEnabled:                config.GetBool("cachingEnabled"),
+		MasterCacheKey:                config.GetString("masterCacheKey"),
+		NameRegexMatchers:             nameRegexMatchers,
 		PwdRegexMatchers:              pwdRegexMatchers,
 		NameMinRuneCount:              config.GetInt("nameMinRuneCount"),
 		NameMaxRuneCount:              config.GetInt("nameMaxRuneCount"),

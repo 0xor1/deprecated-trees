@@ -4,13 +4,13 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/err"
 	"github.com/0xor1/panic"
+	"net/http"
 	"regexp"
 	"unicode/utf8"
-	"net/http"
 )
 
 var (
-	emailRegex          = regexp.MustCompile(`.+@.+\..+`)
+	emailRegex = regexp.MustCompile(`.+@.+\..+`)
 )
 
 func HoursPerDay(hoursPerDay uint8) {
@@ -25,7 +25,7 @@ func StringArg(argPurpose, arg string, minRuneCount, maxRuneCount int, regexMatc
 	valRuneCount := utf8.RuneCountInString(arg)
 	err.HttpPanicf(valRuneCount < minRuneCount || valRuneCount > maxRuneCount, http.StatusBadRequest, "invalid %s arg, min rune count: %d max rune count: %d", argPurpose, minRuneCount, maxRuneCount)
 	for _, regex := range regexMatchers {
-		err.HttpPanicf(!regex.MatchString(arg),http.StatusBadRequest, "invalid %s arg, regex: %v", argPurpose, regex.String())
+		err.HttpPanicf(!regex.MatchString(arg), http.StatusBadRequest, "invalid %s arg, regex: %v", argPurpose, regex.String())
 	}
 }
 

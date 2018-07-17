@@ -6,13 +6,13 @@ import (
 	"bitbucket.org/0xor1/trees/server/api/v1/private"
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/server"
 	"bitbucket.org/0xor1/trees/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
-	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func Test_system(t *testing.T) {
@@ -69,7 +69,7 @@ func Test_system(t *testing.T) {
 	proj2, err := client.Create(aliCss, region, 0, org.Id, "b-p2", &p2Desc, 8, 5, nil, nil, true, false, nil)
 	proj3, err := client.Create(aliCss, region, 0, org.Id, "c-p3", &p3Desc, 8, 5, nil, nil, true, false, nil)
 	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{
-		IsPublic: &field.Bool{true},
+		IsPublic:    &field.Bool{true},
 		HoursPerDay: &field.UInt8{6},
 		DaysPerWeek: &field.UInt8{6},
 	})
@@ -87,11 +87,11 @@ func Test_system(t *testing.T) {
 	assert.False(t, projRes.More)
 	assert.Equal(t, proj2.Name, projRes.Projects[0].Name)
 	assert.Equal(t, proj3.Name, projRes.Projects[1].Name)
-	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{IsArchived:&field.Bool{true}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{IsArchived: &field.Bool{true}})
 	projRes, err = client.GetSet(aliCss, region, 0, org.Id, nil, nil, nil, nil, nil, nil, nil, true, cnst.SortByCreatedOn, true, nil, 100)
 	assert.Equal(t, 1, len(projRes.Projects))
 	assert.False(t, projRes.More)
-	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{IsArchived:&field.Bool{false}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, Fields{IsArchived: &field.Bool{false}})
 	aliP := &AddProjectMember{}
 	aliP.Id = aliId
 	aliP.Role = cnst.ProjectAdmin

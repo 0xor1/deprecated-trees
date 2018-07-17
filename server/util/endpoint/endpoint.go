@@ -17,9 +17,9 @@ import (
 )
 
 var (
-	queryString        = "Query_String"
-	body               = "Body"
-	form               = "Form"
+	queryString = "Query_String"
+	body        = "Body"
+	form        = "Form"
 )
 
 type Endpoint struct {

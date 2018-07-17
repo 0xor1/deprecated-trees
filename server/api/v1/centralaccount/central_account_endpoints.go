@@ -182,7 +182,7 @@ var authenticate = &endpoint.Endpoint{
 		ctx.ReturnNowIf(!pwdsMatch(pwdInfo.pwd, scryptPwdTry), http.StatusBadRequest, "invalid name or password")
 
 		//must do this after checking the acc has the correct pwd otherwise it allows anyone to fish for valid emails on the system
-		ctx.ReturnNowIf(!acc.isActivated(), http.StatusBadRequest,  "account is not activated, confirm email address")
+		ctx.ReturnNowIf(!acc.isActivated(), http.StatusBadRequest, "account is not activated, confirm email address")
 
 		//if there was an outstanding password reset on this acc, remove it, they have since remembered their password
 		if acc.resetPwdCode != nil && len(*acc.resetPwdCode) > 0 {
@@ -627,7 +627,7 @@ var setAccountAvatar = &endpoint.Endpoint{
 			panic.IfNotNil(e)
 			bounds := avatarImage.Bounds()
 			ctx.ReturnBadRequestNowIf(bounds.Max.X-bounds.Min.X != bounds.Max.Y-bounds.Min.Y, "invalid avatar shape, must be square") //if it  isn't square, then error
-			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() {                    // if it is larger than allowed then resize
+			if uint(bounds.Max.X-bounds.Min.X) > ctx.AvatarClient().MaxAvatarDim() {                                                  // if it is larger than allowed then resize
 				avatarImage = resize.Resize(ctx.AvatarClient().MaxAvatarDim(), ctx.AvatarClient().MaxAvatarDim(), avatarImage, resize.NearestNeighbor)
 			}
 			buff := &bytes.Buffer{}

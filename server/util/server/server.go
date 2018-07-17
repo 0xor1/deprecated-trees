@@ -169,7 +169,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				return func() {
 					argsBytes, e := json.Marshal(reqData.Args)
 					panic.IfNotNil(e)
-					r, _ := http.NewRequest(http.MethodPost, reqData.Path + "?region=" + reqData.Region.String(), bytes.NewReader(argsBytes))
+					r, _ := http.NewRequest(http.MethodPost, reqData.Path+"?region="+reqData.Region.String(), bytes.NewReader(argsBytes))
 					for _, c := range req.Cookies() {
 						r.AddCookie(c)
 					}
@@ -264,7 +264,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		cnn.Send("EXPIRE", reqQueryValues.Get("_"), 61)
 		vals, e := redis.Ints(cnn.Do("EXEC"))
 		panic.IfNotNil(e)
-		panic.If(len(vals) != 2,"vals should have exactly two integer values")
+		panic.If(len(vals) != 2, "vals should have exactly two integer values")
 		err.HttpPanicf(vals[0] != 1, http.StatusUnauthorized, "private request key duplication, replay attack detection")
 		panic.If(vals[1] != 1, "failed to set expiry on private request key")
 		//at this point private request is valid
@@ -277,7 +277,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	result := ep.CtxHandler(ctx, args)
 	if ep.IsAuthentication {
 		me, ok := result.(id.Identifiable)
-		panic.If(!ok,"isAuthentication did not return id.Identifiable type")
+		panic.If(!ok, "isAuthentication did not return id.Identifiable type")
 		i := me.Id()
 		ctx.me = &i //set me on _ctx for logging info in defer above
 		ctx.session.Values["me"] = i
@@ -379,8 +379,8 @@ type profileResponse struct {
 	Result     interface{}            `json:"result"`
 }
 
-type mDoReq struct{
-	Region cnst.Region `json:"region"`
-	Path string `json:"path"`
-	Args map[string]interface{} `json:"args"`
+type mDoReq struct {
+	Region cnst.Region            `json:"region"`
+	Path   string                 `json:"path"`
+	Args   map[string]interface{} `json:"args"`
 }

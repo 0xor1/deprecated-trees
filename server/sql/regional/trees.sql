@@ -569,6 +569,39 @@ CREATE PROCEDURE setTaskDescription(_account BINARY(16), _project BINARY(16), _t
 $$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS setTaskIsAbstract;
+DELIMITER $$
+CREATE PROCEDURE setTaskIsAbstract(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _isAbstract BOOL)
+  BEGIN
+    DECLARE projectExists BOOL DEFAULT FALSE;
+    DECLARE taskExists BOOL DEFAULT FALSE;
+    DECLARE taskParent BINARY(16) DEFAULT NULL;
+    DECLARE currentIsAbstract BOOL DEFAULT FALSE;
+    DECLARE currentTotalLoggedTime BIGINT UNSIGNED;
+    DECLARE currentChildCount BIGINT UNSIGNED;
+    START TRANSACTION;
+    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
+    IF projectExists THEN
+      SELECT COUNT(*)=1, isAbstract, parent, totalLoggedTime, childCount INTO taskExists, currentIsAbstract, taskParent, currentTotalLoggedTime, currentChildCount FROM tasks WHERE account = _account AND project = _project AND id=_task AND project <> _task;
+      IF taskExists AND _isAbstract <> currentIsAbstract AND currentTotalLoggedTime = 0 AND currentChildCount = 0 THEN #make sure we are making a change otherwise, no need to update anything
+        IF _isAbstract THEN
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+            _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsAbstract', NULL, 'true');
+        ELSE
+          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+            _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsAbstract', NULL, 'false');
+        END IF;
+        UPDATE tasks SET isAbstract=_isAbstract WHERE account = _account AND project = _project AND id = _task;
+      ELSE
+        SET taskParent = NULL;
+      END IF;
+    END IF;
+    COMMIT;
+    SELECT taskParent;
+  END;
+$$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS setTaskIsParallel;
 DELIMITER $$
 CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _isParallel BOOL)
@@ -586,7 +619,7 @@ BEGIN
   START TRANSACTION;
   SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
   IF projectExists THEN
-    SELECT COUNT(*)=1, isParallel, parent, minimumRemainingTime INTO taskExists, currentIsParallel, taskParent, currentMinimumRemainingTime FROM tasks WHERE account = _account AND id=_task;
+    SELECT COUNT(*)=1, isParallel, parent, minimumRemainingTime INTO taskExists, currentIsParallel, taskParent, currentMinimumRemainingTime FROM tasks WHERE account = _account AND id=_task AND isAbstract=TRUE;
     IF taskExists AND _isParallel <> currentIsParallel THEN #make sure we are making a change otherwise, no need to update anything
       IF _isParallel THEN
         INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (

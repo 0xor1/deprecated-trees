@@ -1,6 +1,17 @@
 package field
 
-import "time"
+import (
+	"bitbucket.org/0xor1/trees/server/util/id"
+	"time"
+)
+
+type Id struct {
+	Val id.Id `json:"val"`
+}
+
+type IdPtr struct {
+	Val *id.Id `json:"val"`
+}
 
 type Bool struct {
 	Val bool `json:"val"`

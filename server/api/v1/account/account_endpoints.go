@@ -1,22 +1,22 @@
 package account
 
 import (
+	"bitbucket.org/0xor1/trees/server/util/account"
 	"bitbucket.org/0xor1/trees/server/util/activity"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/validate"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/field"
-	"bitbucket.org/0xor1/trees/server/util/account"
 )
 
 type editArgs struct {
-	Shard                 int   `json:"shard"`
-	Account               id.Id `json:"account"`
-	Fields Fields  `json:"fields"`
+	Shard   int    `json:"shard"`
+	Account id.Id  `json:"account"`
+	Fields  Fields `json:"fields"`
 }
 
 var edit = &endpoint.Endpoint{
@@ -163,9 +163,9 @@ var Endpoints = []*endpoint.Endpoint{
 }
 
 type Fields struct {
-	PublicProjectsEnabled *field.Bool `json:"publicProjectsEnabled,omitempty"`
-	HoursPerDay *field.UInt8  `json:"hoursPerDay,omitempty"`
-	DaysPerWeek *field.UInt8  `json:"daysPerWeek,omitempty"`
+	PublicProjectsEnabled *field.Bool  `json:"publicProjectsEnabled,omitempty"`
+	HoursPerDay           *field.UInt8 `json:"hoursPerDay,omitempty"`
+	DaysPerWeek           *field.UInt8 `json:"daysPerWeek,omitempty"`
 }
 
 type Member struct {

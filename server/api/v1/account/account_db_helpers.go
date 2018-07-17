@@ -6,13 +6,13 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"
 	"strings"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func dbEdit(ctx ctx.Ctx, shard int, account id.Id, fields Fields) {
@@ -25,13 +25,13 @@ func dbEdit(ctx ctx.Ctx, shard int, account id.Id, fields Fields) {
 	setHoursPerDay := false
 	if fields.HoursPerDay != nil {
 		setHoursPerDay = true
-	}else {
+	} else {
 		fields.HoursPerDay = &field.UInt8{}
 	}
 	setDaysPerWeek := false
 	if fields.DaysPerWeek != nil {
 		setDaysPerWeek = true
-	}else {
+	} else {
 		fields.DaysPerWeek = &field.UInt8{}
 	}
 	if !setPublicProjectsEnabled && !setHoursPerDay && !setDaysPerWeek {

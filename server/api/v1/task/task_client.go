@@ -8,11 +8,7 @@ import (
 
 type Client interface {
 	Create(css *clientsession.Store, region cnst.Region, shard int, account, project, parent id.Id, previousSibling *id.Id, name string, description *string, isAbstract bool, isParallel *bool, member *id.Id, remainingTime *uint64) (*Task, error)
-	SetName(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, name string) error
-	SetDescription(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, description *string) error
-	SetIsParallel(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, isParallel bool) error         //only applies to abstract tasks
-	SetMember(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, member *id.Id) error               //only applies to tasks
-	SetRemainingTime(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, remainingTime uint64) error //only applies to tasks
+	Edit(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, fields Fields) error
 	Move(css *clientsession.Store, region cnst.Region, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
 	Delete(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id) error
 	Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task id.Id) (*Task, error)
@@ -50,57 +46,13 @@ func (c *client) Create(css *clientsession.Store, region cnst.Region, shard int,
 	return nil, e
 }
 
-func (c *client) SetName(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, name string) error {
-	_, e := setName.DoRequest(css, c.host, region, &setNameArgs{
+func (c *client) Edit(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, fields Fields) error {
+	_, e := edit.DoRequest(css, c.host, region, &editArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
 		Task:    task,
-		Name:    name,
-	}, nil, nil)
-	return e
-}
-
-func (c *client) SetDescription(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, description *string) error {
-	_, e := setDescription.DoRequest(css, c.host, region, &setDescriptionArgs{
-		Shard:       shard,
-		Account:     account,
-		Project:     project,
-		Task:        task,
-		Description: description,
-	}, nil, nil)
-	return e
-}
-
-func (c *client) SetIsParallel(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, isParallel bool) error {
-	_, e := setIsParallel.DoRequest(css, c.host, region, &setIsParallelArgs{
-		Shard:      shard,
-		Account:    account,
-		Project:    project,
-		Task:       task,
-		IsParallel: isParallel,
-	}, nil, nil)
-	return e
-}
-
-func (c *client) SetMember(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, member *id.Id) error {
-	_, e := setMember.DoRequest(css, c.host, region, &setMemberArgs{
-		Shard:   shard,
-		Account: account,
-		Project: project,
-		Task:    task,
-		Member:  member,
-	}, nil, nil)
-	return e
-}
-
-func (c *client) SetRemainingTime(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, remainingTime uint64) error {
-	_, e := setRemainingTime.DoRequest(css, c.host, region, &setRemainingTimeArgs{
-		Shard:         shard,
-		Account:       account,
-		Project:       project,
-		Task:          task,
-		RemainingTime: remainingTime,
+		Fields:    fields,
 	}, nil, nil)
 	return e
 }

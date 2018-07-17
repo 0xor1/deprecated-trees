@@ -5,12 +5,12 @@ import (
 	"bitbucket.org/0xor1/trees/server/api/v1/private"
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/server"
 	"bitbucket.org/0xor1/trees/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
-	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func Test_System(t *testing.T) {
@@ -63,8 +63,8 @@ func Test_System(t *testing.T) {
 	assert.Equal(t, uint8(5), acc.DaysPerWeek)
 	client.Edit(aliCss, region, 0, org.Id, Fields{
 		PublicProjectsEnabled: &field.Bool{true},
-		HoursPerDay: &field.UInt8{6},
-		DaysPerWeek: &field.UInt8{6},
+		HoursPerDay:           &field.UInt8{6},
+		DaysPerWeek:           &field.UInt8{6},
 	})
 	acc, err = client.Get(aliCss, region, 0, org.Id)
 	assert.Nil(t, err)

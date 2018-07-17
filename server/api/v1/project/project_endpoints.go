@@ -6,12 +6,12 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	t "bitbucket.org/0xor1/trees/server/util/time"
 	"bitbucket.org/0xor1/trees/server/util/validate"
 	"net/http"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 type createArgs struct {
@@ -19,8 +19,8 @@ type createArgs struct {
 	Account     id.Id               `json:"account"`
 	Name        string              `json:"name"`
 	Description *string             `json:"description"`
-	HoursPerDay uint8             `json:"hoursPerDay"`
-	DaysPerWeek uint8             `json:"daysPerWeek"`
+	HoursPerDay uint8               `json:"hoursPerDay"`
+	DaysPerWeek uint8               `json:"daysPerWeek"`
 	StartOn     *time.Time          `json:"startOn"`
 	DueOn       *time.Time          `json:"dueOn"`
 	IsParallel  bool                `json:"isParallel"`
@@ -390,8 +390,8 @@ type Project struct {
 	IsArchived           bool       `json:"isArchived"`
 	Name                 string     `json:"name"`
 	Description          *string    `json:"description"`
-	HoursPerDay          uint8   `json:"hoursPerDay"`
-	DaysPerWeek          uint8    `json:"daysPerWeek"`
+	HoursPerDay          uint8      `json:"hoursPerDay"`
+	DaysPerWeek          uint8      `json:"daysPerWeek"`
 	CreatedOn            time.Time  `json:"createdOn"`
 	StartOn              *time.Time `json:"startOn,omitempty"`
 	DueOn                *time.Time `json:"dueOn,omitempty"`
@@ -410,17 +410,17 @@ type Project struct {
 
 type Fields struct {
 	// account owner/admin
-	IsPublic             *field.Bool    `json:"isPublic,omitempty"`
+	IsPublic *field.Bool `json:"isPublic,omitempty"`
 	// account owner/admin
-	IsArchived           *field.Bool    `json:"isArchived,omitempty"`
+	IsArchived *field.Bool `json:"isArchived,omitempty"`
 	// account owner/admin or project admin
-	HoursPerDay			 *field.UInt8	`json:"hoursPerDay,omitempty"`
+	HoursPerDay *field.UInt8 `json:"hoursPerDay,omitempty"`
 	// account owner/admin or project admin
-	DaysPerWeek			 *field.UInt8	`json:"daysPerWeek,omitempty"`
+	DaysPerWeek *field.UInt8 `json:"daysPerWeek,omitempty"`
 	// account owner/admin or project admin
-	StartOn              *field.TimePtr `json:"startOn,omitempty"`
+	StartOn *field.TimePtr `json:"startOn,omitempty"`
 	// account owner/admin or project admin
-	DueOn                *field.TimePtr `json:"dueOn,omitempty"`
+	DueOn *field.TimePtr `json:"dueOn,omitempty"`
 }
 
 type AddProjectMember struct {

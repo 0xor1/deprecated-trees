@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bitbucket.org/0xor1/trees/server/util/account"
 	"bitbucket.org/0xor1/trees/server/util/cachekey"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
 	"bitbucket.org/0xor1/trees/server/util/ctx"
@@ -11,7 +12,6 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/validate"
 	"github.com/0xor1/panic"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/account"
 )
 
 func GetAccountRole(ctx ctx.Ctx, shard int, account, member id.Id) *cnst.AccountRole {

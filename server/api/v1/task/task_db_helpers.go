@@ -64,6 +64,18 @@ func dbSetDescription(ctx ctx.Ctx, shard int, account, project, task id.Id, desc
 	ctx.TouchDlms(cacheKey)
 }
 
+func dbSetIsAbstract(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id, isAbstract bool) {
+	row := ctx.TreeQueryRow(shard, `CALL setTaskIsAbstract(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), isAbstract)
+	var parent *id.Id
+	panic.IfNotNil(row.Scan(&parent))
+	panic.If(parent == nil, "no change made")
+	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project).Task(account, project, task)
+	if parent != nil {
+		cacheKey.TaskChildrenSet(account, project, *parent)
+	}
+	ctx.TouchDlms(cacheKey)
+}
+
 func dbSetIsParallel(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id, isParallel bool) {
 	cacheKey := cachekey.NewSetDlms().ProjectActivities(account, project)
 	ctx.TouchDlms(cacheKey.CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL setTaskIsParallel(?, ?, ?, ?, ?)`, account, project, task, ctx.Me(), isParallel)))

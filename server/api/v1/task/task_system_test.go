@@ -7,13 +7,13 @@ import (
 	"bitbucket.org/0xor1/trees/server/api/v1/project"
 	"bitbucket.org/0xor1/trees/server/util/clientsession"
 	"bitbucket.org/0xor1/trees/server/util/cnst"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/server"
 	"bitbucket.org/0xor1/trees/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"
 	"time"
-	"bitbucket.org/0xor1/trees/server/util/field"
 )
 
 func Test_system(t *testing.T) {
@@ -112,16 +112,19 @@ func Test_system(t *testing.T) {
 	taskL, err := client.Create(aliCss, region, 0, org.Id, proj.Id, taskA.Id, &taskI.Id, "L", &desc, true, &trueVal, nil, nil)
 	taskM, err := client.Create(aliCss, region, 0, org.Id, proj.Id, taskL.Id, nil, "M", &desc, false, nil, &aliId, &threeVal)
 
-	client.SetName(aliCss, region, 0, org.Id, proj.Id, proj.Id, "PROJ")
-	client.SetName(aliCss, region, 0, org.Id, proj.Id, taskA.Id, "AAA")
-	client.SetDescription(aliCss, region, 0, org.Id, proj.Id, taskA.Id, nil)
-	client.SetIsParallel(aliCss, region, 0, org.Id, proj.Id, taskA.Id, true)
-	client.SetIsParallel(aliCss, region, 0, org.Id, proj.Id, proj.Id, false)
-	client.SetMember(aliCss, region, 0, org.Id, proj.Id, taskM.Id, &bob.Id)
-	client.SetMember(aliCss, region, 0, org.Id, proj.Id, taskM.Id, &cat.Id)
-	client.SetMember(aliCss, region, 0, org.Id, proj.Id, taskM.Id, nil)
-	client.SetMember(aliCss, region, 0, org.Id, proj.Id, taskM.Id, &cat.Id)
-	client.SetRemainingTime(catCss, region, 0, org.Id, proj.Id, taskG.Id, 1)
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, proj.Id, Fields{Name: &field.String{"PROJ"}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskA.Id, Fields{Name: &field.String{"AAA"}, Description: &field.StringPtr{nil}, IsParallel: &field.Bool{true}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, proj.Id, Fields{IsParallel: &field.Bool{false}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{Member: &field.IdPtr{&bob.Id}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{Member: &field.IdPtr{&cat.Id}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{Member: &field.IdPtr{nil}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{Member: &field.IdPtr{&cat.Id}})
+	client.Edit(catCss, region, 0, org.Id, proj.Id, taskG.Id, Fields{RemainingTime: &field.UInt64{1}})
+
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{IsAbstract: &field.Bool{true}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{IsAbstract: &field.Bool{false}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{IsAbstract: &field.Bool{true}})
+	client.Edit(aliCss, region, 0, org.Id, proj.Id, taskM.Id, Fields{IsAbstract: &field.Bool{false}})
 
 	client.Move(aliCss, region, 0, org.Id, proj.Id, taskG.Id, taskA.Id, nil)
 	client.Move(aliCss, region, 0, org.Id, proj.Id, taskG.Id, taskA.Id, &taskK.Id)
@@ -138,7 +141,7 @@ func Test_system(t *testing.T) {
 	ancestors, err = client.GetAncestors(nil, region, 0, org.Id, proj.Id, taskM.Id, 100)
 	assert.Nil(t, ancestors)
 	assert.NotNil(t, err)
-	accountClient.Edit(aliCss, region, 0, org.Id, account.Fields{PublicProjectsEnabled:&field.Bool{true}})
+	accountClient.Edit(aliCss, region, 0, org.Id, account.Fields{PublicProjectsEnabled: &field.Bool{true}})
 	projectClient.Edit(aliCss, region, 0, org.Id, proj.Id, project.Fields{IsPublic: &field.Bool{true}})
 	ancestors, err = client.GetAncestors(nil, region, 0, org.Id, proj.Id, taskM.Id, 100)
 	assert.Equal(t, 3, len(ancestors.Ancestors))
