@@ -4,6 +4,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/endpoint"
+	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/timelog"
 	"bitbucket.org/0xor1/trees/server/util/validate"
@@ -54,63 +55,35 @@ var createAndSetRemainingTime = &endpoint.Endpoint{
 	},
 }
 
-type setDurationArgs struct {
-	Shard    int    `json:"shard"`
-	Account  id.Id  `json:"account"`
-	Project  id.Id  `json:"project"`
-	TimeLog  id.Id  `json:"timeLog"`
-	Duration uint64 `json:"duration"`
+type editArgs struct {
+	Shard   int    `json:"shard"`
+	Account id.Id  `json:"account"`
+	Project id.Id  `json:"project"`
+	TimeLog id.Id  `json:"timeLog"`
+	Fields  Fields `json:"fields"`
 }
 
-var setDuration = &endpoint.Endpoint{
-	Path:            "/api/v1/timeLog/setDuration",
+var edit = &endpoint.Endpoint{
+	Path:            "/api/v1/timeLog/edit",
 	RequiresSession: true,
 	GetArgsStruct: func() interface{} {
-		return &setDurationArgs{}
+		return &editArgs{}
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setDurationArgs)
-		ctx.ReturnBadRequestNowIf(args.Duration == 0, "duration must be > 0")
+		args := a.(*editArgs)
+		ctx.ReturnBadRequestNowIf(args.Fields.Duration != nil && args.Fields.Duration.Val == 0, "duration must be > 0")
 		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
-		if args.Duration == tl.Duration {
-			return nil
-		}
 		if tl.Member.Equal(ctx.Me()) {
 			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		} else {
 			validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
 		}
-		dbSetDuration(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog, args.Duration)
-		return nil
-	},
-}
-
-type setNoteArgs struct {
-	Shard   int     `json:"shard"`
-	Account id.Id   `json:"account"`
-	Project id.Id   `json:"project"`
-	TimeLog id.Id   `json:"timeLog"`
-	Note    *string `json:"note"`
-}
-
-var setNote = &endpoint.Endpoint{
-	Path:            "/api/v1/timeLog/setNote",
-	RequiresSession: true,
-	GetArgsStruct: func() interface{} {
-		return &setNoteArgs{}
-	},
-	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
-		args := a.(*setNoteArgs)
-		tl := dbGetTimeLog(ctx, args.Shard, args.Account, args.Project, args.TimeLog)
-		if (args.Note == nil && tl.Note == nil) || (*args.Note == *tl.Note) {
-			return nil
+		if args.Fields.Duration != nil && args.Fields.Duration.Val != tl.Duration {
+			dbSetDuration(ctx, args.Shard, args.Account, args.Project, tl.Task, ctx.Me(), tl.Id, args.Fields.Duration.Val)
 		}
-		if tl.Member.Equal(ctx.Me()) {
-			validate.MemberHasProjectWriteAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
-		} else {
-			validate.MemberHasProjectAdminAccess(db.GetAccountAndProjectRoles(ctx, args.Shard, args.Account, args.Project, ctx.Me()))
+		if args.Fields.Note != nil && ((args.Fields.Note.Val == nil && tl.Note != nil) || (args.Fields.Note.Val != nil && tl.Note == nil) || (tl.Note != nil && args.Fields.Note.Val != nil && *tl.Note != *args.Fields.Note.Val)) {
+			dbSetNote(ctx, args.Shard, args.Account, args.Project, tl.Task, ctx.Me(), tl.Id, args.Fields.Note.Val)
 		}
-		dbSetNote(ctx, args.Shard, args.Account, args.Project, tl.Task, tl.Member, args.TimeLog, args.Note)
 		return nil
 	},
 }
@@ -175,8 +148,12 @@ var get = &endpoint.Endpoint{
 var Endpoints = []*endpoint.Endpoint{
 	create,
 	createAndSetRemainingTime,
-	setDuration,
-	setNote,
+	edit,
 	delete,
 	get,
+}
+
+type Fields struct {
+	Duration *field.UInt64    `json:"duration,omitempty"`
+	Note     *field.StringPtr `json:"note,omitempty"`
 }

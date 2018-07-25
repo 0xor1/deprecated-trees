@@ -10,12 +10,13 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/static"
 	t "bitbucket.org/0xor1/trees/server/util/time"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/0xor1/panic"
 	"github.com/garyburd/redigo/redis"
-	"github.com/gorilla/context"
+	gorillacontext "github.com/gorilla/context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 func New(sr *static.Resources, endpointSets ...[]*endpoint.Endpoint) *Server {
@@ -67,6 +69,9 @@ type Server struct {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	timeoutCtx, cancel := context.WithTimeout(req.Context(), 2*time.Second) // no request should be allowed to take more than a second
+	defer cancel()
+	req = req.WithContext(timeoutCtx)
 	resp := &responseWrapper{code: 0, w: w}
 	//setup _ctx
 	ctx := &_ctx{
@@ -85,7 +90,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	lowerPath := strings.ToLower(req.URL.Path)
 	// defer func handles logging panic errors and returning 500s and logging request/response/database/cache stats to datadog in none lcl env
 	defer func() {
-		context.Clear(req) //required for guerrilla cookie session usage, or resources will leak
+		gorillacontext.Clear(req) //required for gorilla cookie session usage, or resources will leak
 		r := recover()
 		if r != nil {
 			e, ok := r.(*err.Http)
@@ -97,6 +102,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			ctx.LogIf(r.(error))
 		}
 		s.SR.LogStats(resp.code, lowerPath, ctx.requestStartUnixMillis, ctx.getQueryInfos())
+	}()
+	// panic with a timeout error if we timeout and a value hasn't already been written
+	defer func() {
+		r := recover()
+		if r != nil {
+			e, ok := r.(error)
+			err.HttpPanicf(ok && e == context.DeadlineExceeded, http.StatusServiceUnavailable, "request was taking too long to process, try again later")
+			panic.IfNotNil(r)
+		}
 	}()
 	//must make sure to close the request body
 	if req != nil && req.Body != nil {
@@ -160,7 +174,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		panic.IfNotNil(e)
 		panic.IfNotNil(json.Unmarshal(bodyBytes, &mDoReqs))
 		fullMGetResponse := map[string]*mgetResponse{}
-		mGetTimedOut := false
 		fullMGetResponseMtx := &sync.Mutex{}
 		includeHeaders := ctx.queryBoolVal("headers", false)
 		does := make([]func(), 0, len(mDoReqs))
@@ -180,9 +193,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					s.ServeHTTP(w, r)
 					fullMGetResponseMtx.Lock()
 					defer fullMGetResponseMtx.Unlock()
-					if mGetTimedOut {
-						return
-					}
 					fullMGetResponse[key] = &mgetResponse{
 						includeHeaders: includeHeaders,
 						Code:           w.code,
@@ -192,25 +202,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				}
 			}(key, mDoReqs[key]))
 		}
-		e = panic.SafeGoGroup(s.SR.ApiMGetTimeout, does...)
-		if e != nil {
-			s.SR.LogError(e)
-			if panic.IsTimeOutErr(e) {
-				fullMGetResponseMtx.Lock()
-				defer fullMGetResponseMtx.Unlock()
-				mGetTimedOut = true
-				for key := range mDoReqs {
-					if fullMGetResponse[key] == nil {
-						fullMGetResponse[key] = &mgetResponse{
-							includeHeaders: includeHeaders,
-							Code:           http.StatusRequestTimeout,
-							Header:         http.Header{},
-							Body:           []byte(`Request Timeout`),
-						}
-					}
-				}
-			}
-		}
+		panic.IfNotNil(panic.SafeGoGroup(does...))
 		writeJsonOk(ctx.resp, fullMGetResponse)
 		return
 	}

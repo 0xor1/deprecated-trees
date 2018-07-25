@@ -274,21 +274,21 @@ func (c *_ctx) doProfile() bool {
 
 func (c *_ctx) sqlExec(rs isql.DBCore, query string, args ...interface{}) (sql.Result, error) {
 	start := time.NowUnixMillis()
-	res, e := rs.Exec(query, args...)
+	res, e := rs.ExecContext(c.req.Context(), query, args...)
 	c.writeQueryInfo(query, args, start)
 	return res, e
 }
 
 func (c *_ctx) sqlQuery(rs isql.DBCore, query string, args ...interface{}) (isql.Rows, error) {
 	start := time.NowUnixMillis()
-	rows, e := rs.Query(query, args...)
+	rows, e := rs.QueryContext(c.req.Context(), query, args...)
 	c.writeQueryInfo(query, args, start)
 	return rows, e
 }
 
 func (c *_ctx) sqlQueryRow(rs isql.DBCore, query string, args ...interface{}) isql.Row {
 	start := time.NowUnixMillis()
-	row := rs.QueryRow(query, args...)
+	row := rs.QueryRowContext(c.req.Context(), query, args...)
 	c.writeQueryInfo(query, args, start)
 	return row
 }

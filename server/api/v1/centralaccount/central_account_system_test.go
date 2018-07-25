@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/server"
 	"bitbucket.org/0xor1/trees/server/util/static"
 	"bitbucket.org/0xor1/trees/server/util/time"
+	"context"
 	"encoding/base64"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -30,7 +31,7 @@ func Test_system(t *testing.T) {
 
 	client.ResendActivationEmail("ali@ali.com")
 	activationCode := ""
-	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
+	SR.AccountDb.QueryRowContext(context.TODO(), `SELECT activationCode FROM personalAccounts WHERE email=?`, "ali@ali.com").Scan(&activationCode)
 
 	client.Activate("ali@ali.com", activationCode)
 	aliInitInfo, _ := client.Authenticate(aliCss, "ali@ali.com", "al1-Pwd-W00")
@@ -40,13 +41,13 @@ func Test_system(t *testing.T) {
 
 	client.ResendMyNewEmailConfirmationEmail(aliCss)
 	newEmailConfirmationCode := ""
-	SR.AccountDb.QueryRow(`SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
+	SR.AccountDb.QueryRowContext(context.TODO(), `SELECT newEmailConfirmationCode FROM personalAccounts`).Scan(&newEmailConfirmationCode)
 
 	client.ConfirmNewEmail("ali@ali.com", "aliNew@aliNew.com", newEmailConfirmationCode)
 
 	client.ResetPwd("aliNew@aliNew.com")
 	resetPwdCode := ""
-	SR.AccountDb.QueryRow(`SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
+	SR.AccountDb.QueryRowContext(context.TODO(), `SELECT resetPwdCode FROM personalAccounts`).Scan(&resetPwdCode)
 
 	client.SetNewPwdFromPwdReset("al1-Pwd-W00-2", "aliNew@aliNew.com", resetPwdCode)
 
@@ -143,19 +144,18 @@ func Test_system(t *testing.T) {
 	assert.Equal(t, 0, myAccsRes.Accounts[0].Shard)
 
 	bobDisplayName := "Fat Bob"
-
 	client.Register(region, "bob", "bob@bob.com", "8ob-Pwd-W00", "en", &bobDisplayName, cnst.LightTheme)
 	catDisplayName := "Lap Cat"
 	client.Register(region, "cat", "cat@cat.com", "c@t-Pwd-W00", "de", &catDisplayName, cnst.ColorBlindTheme)
 
 	bobActivationCode := ""
-	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
+	SR.AccountDb.QueryRowContext(context.TODO(), `SELECT activationCode FROM personalAccounts WHERE email=?`, "bob@bob.com").Scan(&bobActivationCode)
 	client.Activate("bob@bob.com", bobActivationCode)
 	bobCss := clientsession.New()
 	bobInitInfo, _ := client.Authenticate(bobCss, "bob@bob.com", "8ob-Pwd-W00")
 	bobId := bobInitInfo.Me.Id
 	catActivationCode := ""
-	SR.AccountDb.QueryRow(`SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
+	SR.AccountDb.QueryRowContext(context.TODO(), `SELECT activationCode FROM personalAccounts WHERE email=?`, "cat@cat.com").Scan(&catActivationCode)
 	client.Activate("cat@cat.com", catActivationCode)
 	catCss := clientsession.New()
 	catInitInfo, _ := client.Authenticate(catCss, "cat@cat.com", "c@t-Pwd-W00")

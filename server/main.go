@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/acme/autocert"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -41,13 +42,20 @@ func main() {
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(SR.AllHosts...),
 		}
-		go http.ListenAndServe(":http", m.HTTPHandler(nil))
-		s := &http.Server{
+		httpServer := &http.Server{
+			Addr:              ":http",
+			Handler:           m.HTTPHandler(nil),
+			ReadTimeout:       10 * time.Millisecond,
+			ReadHeaderTimeout: 10 * time.Millisecond,
+			WriteTimeout:      10 * time.Millisecond,
+		}
+		go httpServer.ListenAndServe()
+		httpsServer := &http.Server{
 			Addr:      ":https",
 			Handler:   appServer,
 			TLSConfig: &tls.Config{GetCertificate: m.GetCertificate},
 		}
 		fmt.Println("server running on autocert settings")
-		SR.LogError(s.ListenAndServeTLS("", ""))
+		SR.LogError(httpsServer.ListenAndServeTLS("", ""))
 	}
 }

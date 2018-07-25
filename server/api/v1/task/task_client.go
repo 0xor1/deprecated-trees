@@ -52,7 +52,7 @@ func (c *client) Edit(css *clientsession.Store, region cnst.Region, shard int, a
 		Account: account,
 		Project: project,
 		Task:    task,
-		Fields:    fields,
+		Fields:  fields,
 	}, nil, nil)
 	return e
 }

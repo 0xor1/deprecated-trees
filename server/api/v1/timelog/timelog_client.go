@@ -10,8 +10,7 @@ import (
 type Client interface {
 	Create(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, duration uint64, note *string) (*tlog.TimeLog, error)                                          //only applys to task tasks
 	CreateAndSetRemainingTime(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) //only applys to task tasks
-	SetDuration(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, duration uint64) error
-	SetNote(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, note *string) error
+	Edit(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, fields Fields) error
 	Delete(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id) error
 	Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error)
 }
@@ -57,24 +56,13 @@ func (c *client) CreateAndSetRemainingTime(css *clientsession.Store, region cnst
 	return nil, e
 }
 
-func (c *client) SetDuration(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, duration uint64) error {
-	_, e := setDuration.DoRequest(css, c.host, region, &setDurationArgs{
-		Shard:    shard,
-		Account:  account,
-		Project:  project,
-		TimeLog:  timeLog,
-		Duration: duration,
-	}, nil, nil)
-	return e
-}
-
-func (c *client) SetNote(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, note *string) error {
-	_, e := setNote.DoRequest(css, c.host, region, &setNoteArgs{
+func (c *client) Edit(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, fields Fields) error {
+	_, e := edit.DoRequest(css, c.host, region, &editArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
 		TimeLog: timeLog,
-		Note:    note,
+		Fields:  fields,
 	}, nil, nil)
 	return e
 }

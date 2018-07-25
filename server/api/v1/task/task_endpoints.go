@@ -76,7 +76,7 @@ type editArgs struct {
 	Account id.Id  `json:"account"`
 	Project id.Id  `json:"project"`
 	Task    id.Id  `json:"task"`
-	Fields    Fields `json:"fields"`
+	Fields  Fields `json:"fields"`
 }
 
 var edit = &endpoint.Endpoint{
@@ -284,7 +284,7 @@ type Fields struct {
 	Name          *field.String    `json:"name,omitempty"`
 	Description   *field.StringPtr `json:"description,omitempty"`
 	IsAbstract    *field.Bool      `json:"isAbstract,omitempty"`    //limit to only editable on abstract tasks which have no children and concrete tasks which have no timelogs
-	IsParallel    *field.Bool     `json:"isParallel,omitempty"`    //only relevant to abstract tasks
+	IsParallel    *field.Bool      `json:"isParallel,omitempty"`    //only relevant to abstract tasks
 	Member        *field.IdPtr     `json:"member,omitempty"`        //only relevant to concrete tasks
 	RemainingTime *field.UInt64    `json:"remainingTime,omitempty"` //only relevant to concrete tasks
 }

@@ -22,7 +22,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // pass in empty strings for no config file
@@ -47,8 +46,6 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	config.SetDefault("apiMDoRoute", "/api/mdo")
 	// api logout path
 	config.SetDefault("apiLogoutRoute", "/api/logout")
-	// api mget timeout
-	config.SetDefault("apiMGetTimeout", "2s")
 	// session cookie name
 	config.SetDefault("sessionCookieName", "t")
 	// session cookie store
@@ -239,6 +236,11 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	regionalV1PrivateClientSecret, e := base64.RawURLEncoding.DecodeString(config.GetString("regionalV1PrivateClientSecret"))
 	panic.IfNotNil(e)
 
+	var regionalV1PrivateClient private.V1Client
+	if newPrivateV1Client != nil {
+		regionalV1PrivateClient = newPrivateV1Client(env, scheme, nakedHost)
+	}
+
 	return &Resources{
 		ServerCreatedOn:               t.NowUnixMillis(),
 		BindAddress:                   bindAddress,
@@ -253,7 +255,6 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 		ApiDocsRoute:                  strings.ToLower(config.GetString("apiDocsRoute")),
 		ApiMDoRoute:                   strings.ToLower(config.GetString("apiMDoRoute")),
 		ApiLogoutRoute:                strings.ToLower(config.GetString("apiLogoutRoute")),
-		ApiMGetTimeout:                config.GetDuration("apiMGetTimeout"),
 		SessionCookieName:             config.GetString("sessionCookieName"),
 		SessionStore:                  sessionStore,
 		CachingEnabled:                config.GetBool("cachingEnabled"),
@@ -272,7 +273,7 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 		ScryptP:                       config.GetInt("scryptP"),
 		ScryptKeyLen:                  config.GetInt("scryptKeyLen"),
 		RegionalV1PrivateClientSecret: regionalV1PrivateClientSecret,
-		RegionalV1PrivateClient:       newPrivateV1Client(env, scheme, nakedHost),
+		RegionalV1PrivateClient:       regionalV1PrivateClient,
 		MailClient:                    mailClient,
 		AvatarClient:                  avatarClient,
 		LogError:                      logError,
@@ -316,8 +317,6 @@ type Resources struct {
 	ApiMDoRoute string
 	// api logout path
 	ApiLogoutRoute string
-	// api mget path
-	ApiMGetTimeout time.Duration
 	// session cookie name
 	SessionCookieName string
 	// session cookie store
