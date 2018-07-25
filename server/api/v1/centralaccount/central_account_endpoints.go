@@ -506,12 +506,21 @@ var setAccountName = &endpoint.Endpoint{
 		dbUpdateAccount(ctx, acc)
 
 		if ctx.Me().Equal(args.Account) { // if i did rename my personal account, i need to update all the stored names in all the accounts Im a member of
-			ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName) //first rename myself in my personal org
 			var after *id.Id
+			privateClientCallBatch := make([]func(), 0, 10)
+			privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+				return func(){
+					ctx.RegionalV1PrivateClient().SetMemberName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewName)
+				}
+			}(acc))
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
-					ctx.RegionalV1PrivateClient().SetMemberName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewName)
+					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+						return func(){
+							ctx.RegionalV1PrivateClient().SetMemberName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewName)
+						}
+					}(acc))
 				}
 				if more {
 					after = &accs[len(accs)-1].Id
@@ -519,6 +528,7 @@ var setAccountName = &endpoint.Endpoint{
 					break
 				}
 			}
+			panic.IfNotNil(panic.SafeGoGroup(privateClientCallBatch...))
 		}
 		return nil
 	},
@@ -563,12 +573,21 @@ var setAccountDisplayName = &endpoint.Endpoint{
 		dbUpdateAccount(ctx, acc)
 
 		if ctx.Me().Equal(args.Account) { // if i did set my personal account displayName, i need to update all the stored displayNames in all the accounts Im a member of
-			ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName) //first set my display name in my personal org
 			var after *id.Id
+			privateClientCallBatch := make([]func(), 0, 10)
+			privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+				return func(){
+					ctx.RegionalV1PrivateClient().SetMemberDisplayName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewDisplayName)
+				}
+			}(acc))
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
-					ctx.RegionalV1PrivateClient().SetMemberDisplayName(acc.Region, acc.Shard, acc.Id, ctx.Me(), args.NewDisplayName)
+					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+						return func(){
+							ctx.RegionalV1PrivateClient().SetMemberDisplayName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewDisplayName)
+						}
+					}(acc))
 				}
 				if more {
 					after = &accs[len(accs)-1].Id
@@ -576,6 +595,7 @@ var setAccountDisplayName = &endpoint.Endpoint{
 					break
 				}
 			}
+			panic.IfNotNil(panic.SafeGoGroup(privateClientCallBatch...))
 		}
 		return nil
 	},
@@ -643,18 +663,30 @@ var setAccountAvatar = &endpoint.Endpoint{
 		if hasAvatarStatusChanged {
 			account.HasAvatar = !account.HasAvatar
 			dbUpdateAccount(ctx, account)
-			ctx.RegionalV1PrivateClient().SetMemberHasAvatar(account.Region, account.Shard, account.Id, ctx.Me(), account.HasAvatar) //first set hasAvatar in my personal org
-			var after *id.Id
-			for {
-				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
-				for _, acc := range accs {
-					ctx.RegionalV1PrivateClient().SetMemberHasAvatar(acc.Region, acc.Shard, acc.Id, ctx.Me(), account.HasAvatar)
+			if account.Id.Equal(ctx.Me()) {
+				var after *id.Id
+				privateClientCallBatch := make([]func(), 0, 10)
+				privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+					return func() {
+						ctx.RegionalV1PrivateClient().SetMemberHasAvatar(a.Region, a.Shard, a.Id, ctx.Me(), account.HasAvatar)
+					}
+				}(account))
+				for {
+					accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
+					for _, acc := range accs {
+						privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+							return func() {
+								ctx.RegionalV1PrivateClient().SetMemberHasAvatar(a.Region, a.Shard, a.Id, ctx.Me(), account.HasAvatar)
+							}
+						}(acc))
+					}
+					if more {
+						after = &accs[len(accs)-1].Id
+					} else {
+						break
+					}
 				}
-				if more {
-					after = &accs[len(accs)-1].Id
-				} else {
-					break
-				}
+				panic.IfNotNil(panic.SafeGoGroup(privateClientCallBatch...))
 			}
 		}
 		return nil
@@ -775,23 +807,36 @@ var deleteAccount = &endpoint.Endpoint{
 			isAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsAccountOwner(acc.Region, acc.Shard, args.Account, ctx.Me())
 			panic.IfNotNil(e)
 			ctx.ReturnUnauthorizedNowIf(!isAccountOwner)
-		}
 
-		ctx.RegionalV1PrivateClient().DeleteAccount(acc.Region, acc.Shard, args.Account, ctx.Me())
-		dbDeleteAccountAndAllAssociatedMemberships(ctx, args.Account)
-
-		if ctx.Me().Equal(args.Account) {
+			ctx.RegionalV1PrivateClient().DeleteAccount(acc.Region, acc.Shard, args.Account, ctx.Me())
+			dbDeleteAccountAndAllAssociatedMemberships(ctx, args.Account)
+		} else {
 			var after *id.Id
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
+				privateClientCallBatch := make([]func(), 0, len(accs))
 				for _, acc := range accs {
-					isOnlyAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsOnlyAccountOwner(acc.Region, acc.Shard, acc.Id, ctx.Me())
-					panic.IfNotNil(e)
-					ctx.ReturnBadRequestNowIf(isOnlyAccountOwner, "only account owner on account %s, please delete the group account or add another account owner before deleting your personal account", acc.Id)
+					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+						return func() {
+							isOnlyAccountOwner, e := ctx.RegionalV1PrivateClient().MemberIsOnlyAccountOwner(a.Region, a.Shard, a.Id, ctx.Me())
+							panic.IfNotNil(e)
+							panic.If(isOnlyAccountOwner, "only account owner on account %s, please delete the group account or add another account owner before deleting your personal account", acc.Id)
+						}
+					}(acc))
 				}
+				errors := panic.SafeGoGroup(privateClientCallBatch...)
+				if errors != nil {
+
+				}
+				privateClientCallBatch = privateClientCallBatch[:0]
 				for _, acc := range accs {
-					ctx.RegionalV1PrivateClient().RemoveMembers(acc.Region, acc.Shard, acc.Id, ctx.Me(), []id.Id{ctx.Me()})
+					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+						return func() {
+							panic.IfNotNil(ctx.RegionalV1PrivateClient().DeleteAccount(a.Region, a.Shard, a.Id, ctx.Me()))
+						}
+					}(acc))
 				}
+				panic.IfNotNil(panic.SafeGoGroup(privateClientCallBatch...))
 				if more {
 					after = &accs[len(accs)-1].Id
 				} else {
