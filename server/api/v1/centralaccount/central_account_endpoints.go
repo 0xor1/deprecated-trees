@@ -76,7 +76,10 @@ var register = &endpoint.Endpoint{
 			r := recover()
 			if r != nil {
 				dbDeleteAccountAndAllAssociatedMemberships(ctx, acc.Id)
-				panic.IfNotNil(r)
+				if e, ok := r.(error); ok {
+					panic.IfNotNil(e)
+				}
+				panic.If(true, "%v", r)
 			}
 		}()
 		var e error
@@ -748,7 +751,10 @@ var createAccount = &endpoint.Endpoint{
 			r := recover()
 			if r != nil {
 				dbDeleteAccountAndAllAssociatedMemberships(ctx, account.Id)
-				panic.IfNotNil(r)
+				if e, ok := r.(error); ok {
+					panic.IfNotNil(e)
+				}
+				panic.If(true, "%v", r)
 			}
 		}()
 		shard, e := ctx.RegionalV1PrivateClient().CreateAccount(args.Region, account.Id, ctx.Me(), owner.Name, owner.DisplayName, owner.HasAvatar)
@@ -809,12 +815,16 @@ var deleteAccount = &endpoint.Endpoint{
 			ctx.ReturnUnauthorizedNowIf(!isAccountOwner)
 
 			ctx.RegionalV1PrivateClient().DeleteAccount(acc.Region, acc.Shard, args.Account, ctx.Me())
-			dbDeleteAccountAndAllAssociatedMemberships(ctx, args.Account)
 		} else {
 			var after *id.Id
+			privateClientCallBatch := make([]func(), 0, 10)
+			privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
+				return func() {
+					panic.IfNotNil(ctx.RegionalV1PrivateClient().DeleteAccount(a.Region, a.Shard, a.Id, ctx.Me()))
+				}
+			}(acc))
 			for {
 				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
-				privateClientCallBatch := make([]func(), 0, len(accs))
 				for _, acc := range accs {
 					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
 						return func() {
@@ -836,14 +846,15 @@ var deleteAccount = &endpoint.Endpoint{
 						}
 					}(acc))
 				}
-				panic.IfNotNil(panic.SafeGoGroup(privateClientCallBatch...))
 				if more {
 					after = &accs[len(accs)-1].Id
 				} else {
 					break
 				}
 			}
+			panic.IfNotNil(panic.SafeGoGroup(privateClientCallBatch...))
 		}
+		dbDeleteAccountAndAllAssociatedMemberships(ctx, args.Account)
 		return nil
 	},
 }

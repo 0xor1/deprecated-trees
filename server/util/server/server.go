@@ -109,7 +109,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if r != nil {
 			e, ok := r.(error)
 			err.HttpPanicf(ok && e == context.DeadlineExceeded, http.StatusServiceUnavailable, "request was taking too long to process, try again later")
-			panic.IfNotNil(r)
+			if ok {
+				panic.IfNotNil(e)
+			}
+			panic.If(true, "%v", r)
 		}
 	}()
 	//must make sure to close the request body
