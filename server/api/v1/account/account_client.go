@@ -17,7 +17,7 @@ type Client interface {
 	//must be account owner/admin
 	SetMemberRole(css *clientsession.Store, region cnst.Region, shard int, account, member id.Id, role cnst.AccountRole) error
 	//pointers are optional filters
-	GetMembers(css *clientsession.Store, region cnst.Region, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error)
+	GetMembers(css *clientsession.Store, region cnst.Region, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNamePrefix *string, after *id.Id, limit int) (*GetMembersResp, error)
 	//either one or both of OccurredAfter/Before must be nil
 	GetActivities(css *clientsession.Store, region cnst.Region, shard int, account id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
 	//for anyone
@@ -64,14 +64,14 @@ func (c *client) SetMemberRole(css *clientsession.Store, region cnst.Region, sha
 	return e
 }
 
-func (c *client) GetMembers(css *clientsession.Store, region cnst.Region, shard int, account id.Id, role *cnst.AccountRole, nameContains *string, after *id.Id, limit int) (*GetMembersResp, error) {
+func (c *client) GetMembers(css *clientsession.Store, region cnst.Region, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNamePrefix *string, after *id.Id, limit int) (*GetMembersResp, error) {
 	val, e := getMembers.DoRequest(css, c.host, region, &getMembersArgs{
-		Shard:        shard,
-		Account:      account,
-		Role:         role,
-		NameContains: nameContains,
-		After:        after,
-		Limit:        limit,
+		Shard:   shard,
+		Account: account,
+		Role:    role,
+		NameOrDisplayNamePrefix: nameOrDisplayNamePrefix,
+		After: after,
+		Limit: limit,
 	}, nil, &GetMembersResp{})
 	if val != nil {
 		return val.(*GetMembersResp), e

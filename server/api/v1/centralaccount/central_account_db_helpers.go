@@ -4,8 +4,12 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/ctx"
 	"bitbucket.org/0xor1/trees/server/util/err"
 	"bitbucket.org/0xor1/trees/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/validate"
 	"bytes"
 	"github.com/0xor1/panic"
+	"net/http"
+	"strings"
+	"unicode/utf8"
 )
 
 func dbAccountWithCiNameExists(ctx ctx.Ctx, name string) bool {
@@ -114,8 +118,11 @@ func dbGetAccounts(ctx ctx.Ctx, ids []id.Id) []*Account {
 	return res
 }
 
-func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Account {
-	searchTerm := nameOrDisplayNameStartsWith + "%"
+func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNamePrefix string) []*Account {
+	nameOrDisplayNamePrefix = strings.Trim(nameOrDisplayNamePrefix, " ")
+	validate.StringArg("nameOrDisplayNamePrefix", nameOrDisplayNamePrefix, ctx.DisplayNameMinRuneCount(), ctx.DisplayNameMaxRuneCount(), ctx.DisplayNameRegexMatchers())
+	ctx.ReturnNowIf(utf8.RuneCountInString(nameOrDisplayNamePrefix) < 3, http.StatusBadRequest, "nameOrDisplayNamePrefix must be >= 3 runes long and can not contain '%'")
+	searchTerm := nameOrDisplayNamePrefix + "%"
 	//rows, err := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar, a.isPersonal FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? ORDER BY name ASC LIMIT ?, ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE displayName LIKE ? ORDER BY name ASC LIMIT ?, ?)) AS a ORDER BY name ASC LIMIT ?, ?`, searchTerm, 0, 100, searchTerm, 0, 100, 0, 100)
 	//TODO need to profile these queries to check for best performance
 	rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal FROM accounts WHERE name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?, ?`, searchTerm, searchTerm, 0, 100)
@@ -133,10 +140,13 @@ func dbSearchAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Accoun
 	return res
 }
 
-func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNameStartsWith string) []*Account {
+func dbSearchPersonalAccounts(ctx ctx.Ctx, nameOrDisplayNamePrefix string) []*Account {
+	nameOrDisplayNamePrefix = strings.Trim(nameOrDisplayNamePrefix, " ")
+	validate.StringArg("nameOrDisplayNamePrefix", nameOrDisplayNamePrefix, ctx.DisplayNameMinRuneCount(), ctx.DisplayNameMaxRuneCount(), ctx.DisplayNameRegexMatchers())
+	ctx.ReturnNowIf(utf8.RuneCountInString(nameOrDisplayNamePrefix) < 3, http.StatusBadRequest, "nameOrDisplayNamePrefix must be >= 3 runes long and can not contain '%'")
 	//rows, e := ctx.AccountQuery(`SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND name LIKE ? OR displayName LIKE ? ORDER BY name ASC LIMIT ?`, searchTerm, searchTerm, 100)
 	//TODO need to profile these queries to check for best performance
-	searchTerm := nameOrDisplayNameStartsWith + "%"
+	searchTerm := nameOrDisplayNamePrefix + "%"
 	rows, e := ctx.AccountQuery(`SELECT DISTINCT a.id, a.name, a.displayName, a.createdOn, a.region, a.newRegion, a.shard, a.hasAvatar FROM ((SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND name LIKE ? ORDER BY name ASC LIMIT ?) UNION (SELECT id, name, displayName, createdOn, region, newRegion, shard, hasAvatar FROM accounts WHERE isPersonal=TRUE AND displayName LIKE ? ORDER BY name ASC LIMIT ?)) AS a ORDER BY name ASC LIMIT ?`, searchTerm, 100, searchTerm, 100, 100)
 	if rows != nil {
 		defer rows.Close()

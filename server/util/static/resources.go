@@ -65,6 +65,10 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	config.SetDefault("nameRegexMatchers", []interface{}{
 		`^[0-9a-zA-Z_]+$`,
 	})
+	// regexes that account displayNames must match to be valid during account creation or displayName setting
+	config.SetDefault("displayNameRegexMatchers", []interface{}{
+		`^[^%]+$`,
+	})
 	// regexes that account pwds must match to be valid during account creation or pwd setting
 	config.SetDefault("pwdRegexMatchers", []interface{}{
 		`[0-9]`,
@@ -76,6 +80,10 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	config.SetDefault("nameMinRuneCount", 3)
 	// maximum number of runes required for a valid account name
 	config.SetDefault("nameMaxRuneCount", 50)
+	// minimum number of runes required for a valid account displayName
+	config.SetDefault("displayNameMinRuneCount", 3)
+	// maximum number of runes required for a valid account displayName
+	config.SetDefault("displayNameMaxRuneCount", 100)
 	// minimum number of runes required for a valid account pwd
 	config.SetDefault("pwdMinRuneCount", 8)
 	// maximum number of runes required for a valid account pwd
@@ -103,16 +111,16 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	// api key for spark post client
 	config.SetDefault("sparkPostApiKey", "")
 	// account primary sql connection
-	config.SetDefault("accountDbPrimary", "t_c_accounts:T@sk-@cc-0unt5@tcp(localhost:3307)/accounts?parseTime=true&loc=UTC&multiStatements=true")
+	config.SetDefault("accountDbPrimary", "t_c_accounts:T@sk-@cc-0unt5@tcp(localhost:3306)/accounts?parseTime=true&loc=UTC&multiStatements=true")
 	// account slave sql connections
 	config.SetDefault("accountDbSlaves", []interface{}{})
 	// pwd primary sql connection
-	config.SetDefault("pwdDbPrimary", "t_c_pwds:T@sk-Pwd5@tcp(localhost:3307)/pwds?parseTime=true&loc=UTC&multiStatements=true")
+	config.SetDefault("pwdDbPrimary", "t_c_pwds:T@sk-Pwd5@tcp(localhost:3306)/pwds?parseTime=true&loc=UTC&multiStatements=true")
 	// account slave sql connections
 	config.SetDefault("pwdDbSlaves", []interface{}{})
 	// tree shard sql connections
 	config.SetDefault("treeShards", map[string]interface{}{
-		"0": []interface{}{"t_r_trees:T@sk-Tr335@tcp(localhost:3307)/trees?parseTime=true&loc=UTC&multiStatements=true"},
+		"0": []interface{}{"t_r_trees:T@sk-Tr335@tcp(localhost:3306)/trees?parseTime=true&loc=UTC&multiStatements=true"},
 	})
 	// redis pool for caching layer
 	config.SetDefault("dlmAndDataRedisPool", "localhost:6379")
@@ -204,6 +212,11 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 	for _, str := range config.GetStringSlice("nameRegexMatchers") {
 		nameRegexMatchers = append(nameRegexMatchers, regexp.MustCompile(str))
 	}
+
+	displayNameRegexMatchers := make([]*regexp.Regexp, 0, len(config.GetStringSlice("displayNameRegexMatchers")))
+	for _, str := range config.GetStringSlice("displayNameRegexMatchers") {
+		displayNameRegexMatchers = append(displayNameRegexMatchers, regexp.MustCompile(str))
+	}
 	pwdRegexMatchers := make([]*regexp.Regexp, 0, len(config.GetStringSlice("pwdRegexMatchers")))
 	for _, str := range config.GetStringSlice("pwdRegexMatchers") {
 		pwdRegexMatchers = append(pwdRegexMatchers, regexp.MustCompile(str))
@@ -260,9 +273,12 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 		CachingEnabled:                config.GetBool("cachingEnabled"),
 		MasterCacheKey:                config.GetString("masterCacheKey"),
 		NameRegexMatchers:             nameRegexMatchers,
+		DisplayNameRegexMatchers:      displayNameRegexMatchers,
 		PwdRegexMatchers:              pwdRegexMatchers,
 		NameMinRuneCount:              config.GetInt("nameMinRuneCount"),
 		NameMaxRuneCount:              config.GetInt("nameMaxRuneCount"),
+		DisplayNameMinRuneCount:       config.GetInt("displayNameMinRuneCount"),
+		DisplayNameMaxRuneCount:       config.GetInt("displayNameMaxRuneCount"),
 		PwdMinRuneCount:               config.GetInt("pwdMinRuneCount"),
 		PwdMaxRuneCount:               config.GetInt("pwdMaxRuneCount"),
 		MaxProcessEntityCount:         config.GetInt("maxProcessEntityCount"),
@@ -329,12 +345,18 @@ type Resources struct {
 	MasterCacheKey string
 	// regexes that account names must match to be valid during account creation or name setting
 	NameRegexMatchers []*regexp.Regexp
+	// regexes that account names must match to be valid during account creation or name setting
+	DisplayNameRegexMatchers []*regexp.Regexp
 	// regexes that account pwds must match to be valid during account creation or pwd setting
 	PwdRegexMatchers []*regexp.Regexp
 	// minimum number of runes required for a valid account name
 	NameMinRuneCount int
 	// maximum number of runes required for a valid account name
 	NameMaxRuneCount int
+	// minimum number of runes required for a valid account displayName
+	DisplayNameMinRuneCount int
+	// maximum number of runes required for a valid account displayName
+	DisplayNameMaxRuneCount int
 	// minimum number of runes required for a valid account pwd
 	PwdMinRuneCount int
 	// maximum number of runes required for a valid account pwd

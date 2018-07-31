@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/db"
 	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
+	"bitbucket.org/0xor1/trees/server/util/validate"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"
@@ -96,9 +97,12 @@ AND (
 ORDER BY a1.role ASC, a1.name ASC LIMIT :lim
 ***/
 
-func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *GetMembersResp {
+func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNamePrefix *string, after *id.Id, limit int) *GetMembersResp {
+	if nameOrDisplayNamePrefix != nil {
+		validate.StringArg("nameOrDisplayNamePrefix", *nameOrDisplayNamePrefix, ctx.DisplayNameMinRuneCount(), ctx.DisplayNameMaxRuneCount(), ctx.DisplayNameRegexMatchers())
+	}
 	res := GetMembersResp{}
-	cacheKey := cachekey.NewGet("account.dbGetMembers", shard, account, role, nameOrDisplayNameContains, after, limit).AccountMembersSet(account)
+	cacheKey := cachekey.NewGet("account.dbGetMembers", shard, account, role, nameOrDisplayNamePrefix, after, limit).AccountMembersSet(account)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
@@ -117,10 +121,10 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account id.Id, role *cnst.AccountRole,
 		query.WriteString(` AND a1.role=?`)
 		args = append(args, role)
 	}
-	if nameOrDisplayNameContains != nil {
+	if nameOrDisplayNamePrefix != nil {
 		query.WriteString(` AND (a1.name LIKE ? OR a1.displayName LIKE ?)`)
-		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
-		strVal = fmt.Sprintf("%%%s%%", strVal)
+		strVal := strings.Trim(*nameOrDisplayNamePrefix, " ")
+		strVal = fmt.Sprintf("%s%%", strVal)
 		args = append(args, strVal, strVal)
 	}
 	query.WriteString(` ORDER BY a1.role ASC, a1.name ASC LIMIT ?`)

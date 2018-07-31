@@ -22,8 +22,8 @@ type Client interface {
 	SetNewPwdFromPwdReset(newPwd, email, resetPwdCode string) error
 	GetAccount(name string) (*Account, error)
 	GetAccounts(accounts []id.Id) ([]*Account, error)
-	SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error)
-	SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error)
+	SearchAccounts(nameOrDisplayNamePrefix string) ([]*Account, error)
+	SearchPersonalAccounts(nameOrDisplayNamePrefix string) ([]*Account, error)
 	//requires active session to access
 	GetMe(css *clientsession.Store) (*Me, error)
 	SetMyPwd(css *clientsession.Store, oldPwd, newPwd string) error
@@ -135,9 +135,9 @@ func (c *client) GetAccounts(accounts []id.Id) ([]*Account, error) {
 	return nil, e
 }
 
-func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) {
+func (c *client) SearchAccounts(nameOrDisplayNamePrefix string) ([]*Account, error) {
 	val, e := searchAccounts.DoRequest(nil, c.host, cnst.CentralRegion, &searchAccountsArgs{
-		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
+		NameOrDisplayNamePrefix: nameOrDisplayNamePrefix,
 	}, nil, &[]*Account{})
 	if val != nil {
 		return *val.(*[]*Account), e
@@ -145,9 +145,9 @@ func (c *client) SearchAccounts(nameOrDisplayNameStartsWith string) ([]*Account,
 	return nil, e
 }
 
-func (c *client) SearchPersonalAccounts(nameOrDisplayNameStartsWith string) ([]*Account, error) {
+func (c *client) SearchPersonalAccounts(nameOrDisplayNamePrefix string) ([]*Account, error) {
 	val, e := searchPersonalAccounts.DoRequest(nil, c.host, cnst.CentralRegion, &searchPersonalAccountsArgs{
-		NameOrDisplayNameStartsWith: nameOrDisplayNameStartsWith,
+		NameOrDisplayNamePrefix: nameOrDisplayNamePrefix,
 	}, nil, &[]*Account{})
 	if val != nil {
 		return *val.(*[]*Account), e

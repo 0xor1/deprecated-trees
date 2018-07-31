@@ -41,9 +41,12 @@ type Ctx interface {
 	ClientScheme() string
 	ClientHost() string
 	NameRegexMatchers() []*regexp.Regexp
+	DisplayNameRegexMatchers() []*regexp.Regexp
 	PwdRegexMatchers() []*regexp.Regexp
 	NameMinRuneCount() int
 	NameMaxRuneCount() int
+	DisplayNameMinRuneCount() int
+	DisplayNameMaxRuneCount() int
 	PwdMinRuneCount() int
 	PwdMaxRuneCount() int
 	MaxProcessEntityCount() int

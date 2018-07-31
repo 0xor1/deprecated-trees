@@ -18,10 +18,12 @@ import (
 	"image/png"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
-	"unicode/utf8"
 )
+
+var spacesRegex = regexp.MustCompile(`\s+`)
 
 //endpoints
 
@@ -51,9 +53,13 @@ var register = &endpoint.Endpoint{
 		args.Language = strings.Trim(args.Language, " ") // may need more validation than this at some point to check it is a language we support and not a junk value, but it isnt critical right now
 		args.Theme.Validate()
 		if args.DisplayName != nil {
+			*args.DisplayName = spacesRegex.ReplaceAllString(*args.DisplayName, " ") //replace any multiple spaces with a single space
 			*args.DisplayName = strings.Trim(*args.DisplayName, " ")
 			if *args.DisplayName == "" {
 				args.DisplayName = nil
+			}
+			if args.DisplayName != nil {
+				validate.StringArg("displayName", *args.DisplayName, ctx.DisplayNameMinRuneCount(), ctx.DisplayNameMaxRuneCount(), ctx.DisplayNameRegexMatchers())
 			}
 		}
 
@@ -345,7 +351,7 @@ var getAccounts = &endpoint.Endpoint{
 }
 
 type searchAccountsArgs struct {
-	NameOrDisplayNameStartsWith string `json:"nameOrDisplayNameStartsWith"`
+	NameOrDisplayNamePrefix string `json:"nameOrDisplayNamePrefix"`
 }
 
 var searchAccounts = &endpoint.Endpoint{
@@ -357,14 +363,12 @@ var searchAccounts = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchAccountsArgs)
-		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
-		ctx.ReturnNowIf(utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%"), http.StatusBadRequest, "nameOrDisplayNameStartsWith must be >= 3 runes long and can not contain '%'")
-		return dbSearchAccounts(ctx, args.NameOrDisplayNameStartsWith)
+		return dbSearchAccounts(ctx, args.NameOrDisplayNamePrefix)
 	},
 }
 
 type searchPersonalAccountsArgs struct {
-	NameOrDisplayNameStartsWith string `json:"nameOrDisplayNameStartsWith"`
+	NameOrDisplayNamePrefix string `json:"nameOrDisplayNamePrefix"`
 }
 
 var searchPersonalAccounts = &endpoint.Endpoint{
@@ -376,9 +380,7 @@ var searchPersonalAccounts = &endpoint.Endpoint{
 	},
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*searchPersonalAccountsArgs)
-		args.NameOrDisplayNameStartsWith = strings.Trim(args.NameOrDisplayNameStartsWith, " ")
-		ctx.ReturnNowIf(utf8.RuneCountInString(args.NameOrDisplayNameStartsWith) < 3 || strings.Contains(args.NameOrDisplayNameStartsWith, "%"), http.StatusBadRequest, "")
-		return dbSearchPersonalAccounts(ctx, args.NameOrDisplayNameStartsWith)
+		return dbSearchPersonalAccounts(ctx, args.NameOrDisplayNamePrefix)
 	},
 }
 
@@ -512,7 +514,7 @@ var setAccountName = &endpoint.Endpoint{
 			var after *id.Id
 			privateClientCallBatch := make([]func(), 0, 10)
 			privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
-				return func(){
+				return func() {
 					ctx.RegionalV1PrivateClient().SetMemberName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewName)
 				}
 			}(acc))
@@ -520,7 +522,7 @@ var setAccountName = &endpoint.Endpoint{
 				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
 					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
-						return func(){
+						return func() {
 							ctx.RegionalV1PrivateClient().SetMemberName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewName)
 						}
 					}(acc))
@@ -551,9 +553,13 @@ var setAccountDisplayName = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*setAccountDisplayNameArgs)
 		if args.NewDisplayName != nil {
+			*args.NewDisplayName = spacesRegex.ReplaceAllString(*args.NewDisplayName, " ") //replace any multiple spaces with a single space
 			*args.NewDisplayName = strings.Trim(*args.NewDisplayName, " ")
 			if *args.NewDisplayName == "" {
 				args.NewDisplayName = nil
+			}
+			if args.NewDisplayName != nil {
+				validate.StringArg("displayName", *args.NewDisplayName, ctx.DisplayNameMinRuneCount(), ctx.DisplayNameMaxRuneCount(), ctx.DisplayNameRegexMatchers())
 			}
 		}
 
@@ -579,7 +585,7 @@ var setAccountDisplayName = &endpoint.Endpoint{
 			var after *id.Id
 			privateClientCallBatch := make([]func(), 0, 10)
 			privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
-				return func(){
+				return func() {
 					ctx.RegionalV1PrivateClient().SetMemberDisplayName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewDisplayName)
 				}
 			}(acc))
@@ -587,7 +593,7 @@ var setAccountDisplayName = &endpoint.Endpoint{
 				accs, more := dbGetGroupAccounts(ctx, ctx.Me(), after, 100)
 				for _, acc := range accs {
 					privateClientCallBatch = append(privateClientCallBatch, func(a *Account) func() {
-						return func(){
+						return func() {
 							ctx.RegionalV1PrivateClient().SetMemberDisplayName(a.Region, a.Shard, a.Id, ctx.Me(), args.NewDisplayName)
 						}
 					}(acc))

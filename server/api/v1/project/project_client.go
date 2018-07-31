@@ -27,6 +27,8 @@ type Client interface {
 	RemoveMembers(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, members []id.Id) error
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
 	GetMembers(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error)
+	//used when typing a chat message after entering @ symbol
+	GetAtMentions(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, nameOrDisplayNamePrefix string) ([]*member, error)
 	//for anyone
 	GetMe(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id) (*member, error)
 	//either one or both of OccurredAfter/Before must be nil
@@ -160,6 +162,19 @@ func (c *client) GetMembers(css *clientsession.Store, region cnst.Region, shard 
 	}, nil, &GetMembersResult{})
 	if val != nil {
 		return val.(*GetMembersResult), e
+	}
+	return nil, e
+}
+
+func (c *client) GetAtMentions(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, nameOrDisplayNamePrefix string) ([]*member, error) {
+	val, e := getMembers.DoRequest(css, c.host, region, &getAtMentionsArgs{
+		Shard:                   shard,
+		Account:                 account,
+		Project:                 project,
+		NameOrDisplayNamePrefix: nameOrDisplayNamePrefix,
+	}, nil, &[]*member{})
+	if val != nil {
+		return *val.(*[]*member), e
 	}
 	return nil, e
 }

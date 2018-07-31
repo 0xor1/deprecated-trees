@@ -10,6 +10,7 @@ import (
 	"bitbucket.org/0xor1/trees/server/util/field"
 	"bitbucket.org/0xor1/trees/server/util/id"
 	"bitbucket.org/0xor1/trees/server/util/sortdir"
+	"bitbucket.org/0xor1/trees/server/util/validate"
 	"bytes"
 	"fmt"
 	"github.com/0xor1/panic"
@@ -115,9 +116,12 @@ func dbSetMemberInactive(ctx ctx.Ctx, shard int, account, project id.Id, member 
 	ctx.TouchDlms(cachekey.NewSetDlms().ProjectMember(account, project, member).ProjectActivities(account, project))
 }
 
-func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) *GetMembersResult {
+func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameFilter *string, nameOrDisplayNameFilterIsPrefix bool, after *id.Id, limit int) *GetMembersResult {
+	if nameOrDisplayNameFilter != nil {
+		validate.StringArg("nameOrDisplayName", *nameOrDisplayNameFilter, ctx.DisplayNameMinRuneCount(), ctx.DisplayNameMaxRuneCount(), ctx.DisplayNameRegexMatchers())
+	}
 	res := GetMembersResult{}
-	cacheKey := cachekey.NewGet("project.dbGetMembers", shard, account, project, role, nameOrDisplayNameContains, after, limit).ProjectMembersSet(account, project)
+	cacheKey := cachekey.NewGet("project.dbGetMembers", shard, account, project, role, nameOrDisplayNameFilter, nameOrDisplayNameFilterIsPrefix, after, limit).ProjectMembersSet(account, project)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}
@@ -136,13 +140,22 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 		query.WriteString(` AND p1.role=?`)
 		args = append(args, role)
 	}
-	if nameOrDisplayNameContains != nil {
+	if nameOrDisplayNameFilter != nil {
 		query.WriteString(` AND (p1.name LIKE ? OR p1.displayName LIKE ?)`)
-		strVal := strings.Trim(*nameOrDisplayNameContains, " ")
-		strVal = fmt.Sprintf("%%%s%%", strVal)
+		strVal := strings.Trim(*nameOrDisplayNameFilter, " ")
+		if nameOrDisplayNameFilterIsPrefix {
+			strVal = fmt.Sprintf("%s%%", strVal)
+		} else {
+			strVal = fmt.Sprintf("%%%s%%", strVal)
+		}
 		args = append(args, strVal, strVal)
 	}
-	query.WriteString(` ORDER BY p1.role ASC, p1.name ASC LIMIT ?`)
+	if nameOrDisplayNameFilter == nil || !nameOrDisplayNameFilterIsPrefix {
+		query.WriteString(` ORDER BY p1.role ASC, p1.name ASC LIMIT ?`)
+	} else {
+		query.WriteString(` ORDER BY p1.name ASC LIMIT ?`)
+	}
+
 	args = append(args, limit+1)
 	rows, e := ctx.TreeQuery(shard, query.String(), args...)
 	if rows != nil {

@@ -194,6 +194,10 @@ func (c *_ctx) NameRegexMatchers() []*regexp.Regexp {
 	return c.SR.NameRegexMatchers
 }
 
+func (c *_ctx) DisplayNameRegexMatchers() []*regexp.Regexp {
+	return c.SR.DisplayNameRegexMatchers
+}
+
 func (c *_ctx) PwdRegexMatchers() []*regexp.Regexp {
 	return c.SR.PwdRegexMatchers
 }
@@ -204,6 +208,14 @@ func (c *_ctx) NameMinRuneCount() int {
 
 func (c *_ctx) NameMaxRuneCount() int {
 	return c.SR.NameMaxRuneCount
+}
+
+func (c *_ctx) DisplayNameMinRuneCount() int {
+	return c.SR.DisplayNameMinRuneCount
+}
+
+func (c *_ctx) DisplayNameMaxRuneCount() int {
+	return c.SR.DisplayNameMaxRuneCount
 }
 
 func (c *_ctx) PwdMinRuneCount() int {

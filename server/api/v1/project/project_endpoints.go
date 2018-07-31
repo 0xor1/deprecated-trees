@@ -294,7 +294,7 @@ type getMembersArgs struct {
 	Account                   id.Id             `json:"account"`
 	Project                   id.Id             `json:"project"`
 	Role                      *cnst.ProjectRole `json:"role,omitempty"`
-	NameOrDisplayNameContains *string           `json:"nameorDisplayNameContains,omitempty"`
+	NameOrDisplayNameContains *string           `json:"nameOrDisplayNameContains,omitempty"`
 	After                     *id.Id            `json:"after,omitempty"`
 	Limit                     int               `json:"limit"`
 }
@@ -314,7 +314,29 @@ var getMembers = &endpoint.Endpoint{
 	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
 		args := a.(*getMembersArgs)
 		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
-		return dbGetMembers(ctx, args.Shard, args.Account, args.Project, args.Role, args.NameOrDisplayNameContains, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+		return dbGetMembers(ctx, args.Shard, args.Account, args.Project, args.Role, args.NameOrDisplayNameContains, false, args.After, validate.Limit(args.Limit, ctx.MaxProcessEntityCount()))
+	},
+}
+
+type getAtMentionsArgs struct {
+	Shard                   int    `json:"shard"`
+	Account                 id.Id  `json:"account"`
+	Project                 id.Id  `json:"project"`
+	NameOrDisplayNamePrefix string `json:"nameOrDisplayNamePrefix,omitempty"`
+}
+
+var getAtMentions = &endpoint.Endpoint{
+	Path:                     "/api/v1/project/getAtMentions",
+	RequiresSession:          false,
+	ExampleResponseStructure: []*member{{}},
+	GetArgsStruct: func() interface{} {
+		return &getMembersArgs{}
+	},
+	CtxHandler: func(ctx ctx.Ctx, a interface{}) interface{} {
+		args := a.(*getAtMentionsArgs)
+		validate.MemberHasProjectReadAccess(db.GetAccountAndProjectRolesAndProjectIsPublic(ctx, args.Shard, args.Account, args.Project, ctx.TryMe()))
+		res := dbGetMembers(ctx, args.Shard, args.Account, args.Project, nil, &args.NameOrDisplayNamePrefix, true, nil, 10)
+		return res.Members
 	},
 }
 
