@@ -11,7 +11,7 @@ worked on in parallel.
 The client side is written as a Vuejs based progressive web app and the server side is written
 in Go.
 
-##Prerequisites
+## Prerequisites
 
 * Go must be installed and configured to compile the server
 * node/npm must be installed to build and run the client side dev mode
@@ -19,7 +19,7 @@ in Go.
   * redis - for caching
   * mariadb - for data storage
   
-##Setup
+## Setup
 
 redis and mariadb are setup in their default configs to use ports 6379 and 3306, the api server and
 client dev server are setup to use port 80, if you have binding conflicts feel free to re config them.
@@ -66,7 +66,7 @@ to the system.
 The dev environment setup is here `https://dev.project-trees.com`
 staging and production environments to come.
 
-#System Features
+# System Features
 
 * Auto api documentation - each endpoint automatically generates its own docs and they are published
 at [/api/docs](https://dev.project-trees.com)
