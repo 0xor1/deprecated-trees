@@ -69,7 +69,7 @@ staging and production environments to come.
 # System Features
 
 * Auto api documentation - each endpoint automatically generates its own docs and they are published
-at [/api/docs](https://dev.project-trees.com)
+at [/api/docs](https://dev.project-trees.com/api/docs)
 
 * Multi endpoint calls - due to the strict format of endpoints it is possible to make a generic means of
 calling multiple endpoints in a single request, this is done via the `/api/mdo` endpoint. It can be seen in
