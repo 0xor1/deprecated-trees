@@ -26,12 +26,12 @@
   revision = "b4037039643118e09f427efcf957e7df2715c195"
 
 [[projects]]
-  digest = "1:b520b55fc1146c5b0eea03b07233f7a3d4a9be985c037c91ea6b82ecb81bd521"
+  branch = "master"
+  digest = "1:f54219c362ccede7f581a063601542c82eabf2aeb24e5712c18a7b03af18f41d"
   name = "github.com/0xor1/json"
   packages = ["."]
   pruneopts = "UT"
-  revision = "aabad6e819789e569bd6aabf444c935aa9ba1e44"
-  version = "v0.5.0"
+  revision = "7ddd043e7350c7983e11844d2f13716d4f8d3cd6"
 
 [[projects]]
   branch = "master"
