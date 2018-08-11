@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/0xor1/panic"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	gorillacontext "github.com/gorilla/context"
 	"io"
 	"io/ioutil"

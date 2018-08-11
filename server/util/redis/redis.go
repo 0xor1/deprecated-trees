@@ -3,12 +3,12 @@ package redis
 import (
 	"errors"
 	"github.com/0xor1/iredis"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"time"
 )
 
 func CreatePool(address string) iredis.Pool {
-	return &redis.Pool{
+	return iredis.NewPool(&redis.Pool{
 		MaxIdle:     300,
 		IdleTimeout: time.Minute,
 		Dial: func() (redis.Conn, error) {
@@ -20,5 +20,5 @@ func CreatePool(address string) iredis.Pool {
 			}
 			return errors.New("Redis connection timed out")
 		},
-	}
+	})
 }

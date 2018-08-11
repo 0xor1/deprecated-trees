@@ -13,7 +13,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/0xor1/isql"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/sessions"
 	"math/rand"
 	"net"
