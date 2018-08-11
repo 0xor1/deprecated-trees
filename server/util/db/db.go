@@ -1,15 +1,15 @@
 package db
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/account"
-	"bitbucket.org/0xor1/trees/server/util/cachekey"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/ctx"
-	"bitbucket.org/0xor1/trees/server/util/err"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	t "bitbucket.org/0xor1/trees/server/util/time"
-	"bitbucket.org/0xor1/trees/server/util/timelog"
-	"bitbucket.org/0xor1/trees/server/util/validate"
+	"github.com/0xor1/trees/server/util/account"
+	"github.com/0xor1/trees/server/util/cachekey"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/ctx"
+	"github.com/0xor1/trees/server/util/err"
+	"github.com/0xor1/trees/server/util/id"
+	t "github.com/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/util/timelog"
+	"github.com/0xor1/trees/server/util/validate"
 	"github.com/0xor1/panic"
 	"time"
 )

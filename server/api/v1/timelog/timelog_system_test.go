@@ -1,13 +1,13 @@
 package timelog
 
 import (
-	"bitbucket.org/0xor1/trees/server/api/v1/account"
-	"bitbucket.org/0xor1/trees/server/api/v1/project"
-	"bitbucket.org/0xor1/trees/server/api/v1/task"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/field"
-	"bitbucket.org/0xor1/trees/server/util/systemtest"
-	ti "bitbucket.org/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/api/v1/account"
+	"github.com/0xor1/trees/server/api/v1/project"
+	"github.com/0xor1/trees/server/api/v1/task"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/field"
+	"github.com/0xor1/trees/server/util/systemtest"
+	ti "github.com/0xor1/trees/server/util/time"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"

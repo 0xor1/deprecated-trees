@@ -1,14 +1,14 @@
 package static
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/avatar"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/mail"
-	"bitbucket.org/0xor1/trees/server/util/private"
-	"bitbucket.org/0xor1/trees/server/util/queryinfo"
-	"bitbucket.org/0xor1/trees/server/util/redis"
-	t "bitbucket.org/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/util/avatar"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/mail"
+	"github.com/0xor1/trees/server/util/private"
+	"github.com/0xor1/trees/server/util/queryinfo"
+	"github.com/0xor1/trees/server/util/redis"
+	t "github.com/0xor1/trees/server/util/time"
 	"encoding/base64"
 	"encoding/gob"
 	"fmt"
@@ -224,12 +224,12 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 
 	var accountDb isql.ReplicaSet
 	if config.GetString("accountDbPrimary") != "" {
-		accountDb = isql.NewReplicaSet("mysql", config.GetString("accountDbPrimary"), config.GetStringSlice("accountDbSlaves"))
+		accountDb = isql.MustNewReplicaSet("mysql", config.GetString("accountDbPrimary"), config.GetStringSlice("accountDbSlaves")...)
 	}
 
 	var pwdDb isql.ReplicaSet
 	if config.GetString("pwdDbPrimary") != "" {
-		pwdDb = isql.NewReplicaSet("mysql", config.GetString("pwdDbPrimary"), config.GetStringSlice("pwdDbSlaves"))
+		pwdDb = isql.MustNewReplicaSet("mysql", config.GetString("pwdDbPrimary"), config.GetStringSlice("pwdDbSlaves")...)
 	}
 
 	treeShardDbs := map[int]isql.ReplicaSet{}
@@ -239,7 +239,7 @@ func Config(configFile string, newPrivateV1Client func(env cnst.Env, scheme, nak
 			shardId, e := strconv.ParseInt(k, 10, 32)
 			panic.IfNotNil(e)
 			v := config.GetStringSlice(fmt.Sprintf("treeShards.%s", k))
-			treeShardDbs[int(shardId)] = isql.NewReplicaSet("mysql", v[0], v[1:])
+			treeShardDbs[int(shardId)] = isql.MustNewReplicaSet("mysql", v[0], v[1:]...)
 		}
 	}
 

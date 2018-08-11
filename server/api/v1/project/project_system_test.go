@@ -1,11 +1,11 @@
 package project
 
 import (
-	"bitbucket.org/0xor1/trees/server/api/v1/account"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/field"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/systemtest"
+	"github.com/0xor1/trees/server/api/v1/account"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/field"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/systemtest"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

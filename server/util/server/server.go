@@ -1,14 +1,14 @@
 package server
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/crypt"
-	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/err"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/queryinfo"
-	"bitbucket.org/0xor1/trees/server/util/static"
-	t "bitbucket.org/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/crypt"
+	"github.com/0xor1/trees/server/util/endpoint"
+	"github.com/0xor1/trees/server/util/err"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/queryinfo"
+	"github.com/0xor1/trees/server/util/static"
+	t "github.com/0xor1/trees/server/util/time"
 	"bytes"
 	"context"
 	"encoding/base64"

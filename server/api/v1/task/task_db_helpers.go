@@ -1,10 +1,10 @@
 package task
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cachekey"
-	"bitbucket.org/0xor1/trees/server/util/ctx"
-	"bitbucket.org/0xor1/trees/server/util/db"
-	"bitbucket.org/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/cachekey"
+	"github.com/0xor1/trees/server/util/ctx"
+	"github.com/0xor1/trees/server/util/db"
+	"github.com/0xor1/trees/server/util/id"
 	"github.com/0xor1/panic"
 )
 

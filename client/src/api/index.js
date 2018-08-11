@@ -189,11 +189,11 @@ newApi = (opts) => {
         getAccounts: (accounts) => {
           return doReq(cnst.regions.central, '/api/v1/centralAccount/getAccounts', {accounts})
         },
-        searchAccounts: (nameOrDisplayNameStartsWith) => {
-          return doReq(cnst.regions.central, '/api/v1/centralAccount/searchAccounts', {nameOrDisplayNameStartsWith})
+        searchAccounts: (nameOrDisplayNamePrefix) => {
+          return doReq(cnst.regions.central, '/api/v1/centralAccount/searchAccounts', {nameOrDisplayNamePrefix})
         },
-        searchPersonalAccounts: (nameOrDisplayNameStartsWith) => {
-          return doReq(cnst.regions.central, '/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNameStartsWith})
+        searchPersonalAccounts: (nameOrDisplayNamePrefix) => {
+          return doReq(cnst.regions.central, '/api/v1/centralAccount/namesearchPersonalAccounts', {nameOrDisplayNamePrefix})
         },
         getMe: () => {
           if (memCache.me) {
@@ -258,8 +258,8 @@ newApi = (opts) => {
         setMemberRole: (region, shard, account, member, role) => {
           return doReq(region, '/api/v1/account/setMemberRole', {shard, account, member, role})
         },
-        getMembers: (region, shard, account, role, nameContains, after, limit) => {
-          return doReq(region, '/api/v1/account/getMembers', {shard, account, role, nameContains, after, limit})
+        getMembers: (region, shard, account, role, nameOrDisplayNamePrefix, after, limit) => {
+          return doReq(region, '/api/v1/account/getMembers', {shard, account, role, nameOrDisplayNamePrefix, after, limit})
         },
         getActivities: (region, shard, account, item, member, occurredAfter, occurredBefore, limit) => {
           return doReq(region, '/api/v1/account/getActivities', {shard, account, item, member, occurredAfter, occurredBefore, limit})
@@ -307,20 +307,8 @@ newApi = (opts) => {
         create: (region, shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, totalRemainingTime) => {
           return doReq(region, '/api/v1/task/create', {shard, account, project, parent, previousSibling, name, description, isAbstract, isParallel, member, totalRemainingTime})
         },
-        setName: (region, shard, account, project, task, name) => {
-          return doReq(region, '/api/v1/task/setName', {shard, account, project, task, name})
-        },
-        setDescription: (region, shard, account, project, task, description) => {
-          return doReq(region, '/api/v1/task/setDescription', {shard, account, project, task, description})
-        },
-        setIsParallel: (region, shard, account, project, task, isParallel) => {
-          return doReq(region, '/api/v1/task/setDescription', {shard, account, project, task, isParallel})
-        },
-        setMember: (region, shard, account, project, task, member) => {
-          return doReq(region, '/api/v1/task/setMember', {shard, account, project, task, member})
-        },
-        setRemainingTime: (region, shard, account, project, task, remainingTime) => {
-          return doReq(region, '/api/v1/task/setremainingTime', {shard, account, project, task, remainingTime})
+        edit: (region, shard, account, project, task, fields) => {
+          return doReq(region, '/api/v1/task/edit', {shard, account, project, task, fields})
         },
         move: (region, shard, account, project, task, parent, nextSibling) => {
           return doReq(region, '/api/v1/task/move', {shard, account, project, task, parent, nextSibling})
@@ -345,11 +333,8 @@ newApi = (opts) => {
         createAndSetRemainingTime: (region, shard, account, project, task, remainingTime, duration, note) => {
           return doReq(region, '/api/v1/timeLog/createAndSetRemainingTime', {shard, account, project, task, remainingTime, duration, note})
         },
-        setDuration: (region, shard, account, project, timeLog, duration) => {
-          return doReq(region, '/api/v1/timeLog/setDuration', {shard, account, project, timeLog, duration})
-        },
-        setNote: (region, shard, account, project, timeLog, note) => {
-          return doReq(region, '/api/v1/timeLog/setNote', {shard, account, project, timeLog, note})
+        edit: (region, shard, account, project, timeLog, fields) => {
+          return doReq(region, '/api/v1/timeLog/edit', {shard, account, project, timeLog, fields})
         },
         delete: (region, shard, account, project, timeLog) => {
           return doReq(region, '/api/v1/timeLog/delete', {shard, account, project, timeLog})

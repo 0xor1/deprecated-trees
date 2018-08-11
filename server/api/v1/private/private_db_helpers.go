@@ -1,12 +1,12 @@
 package private
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cachekey"
-	"bitbucket.org/0xor1/trees/server/util/ctx"
-	"bitbucket.org/0xor1/trees/server/util/err"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/private"
-	"bitbucket.org/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/util/cachekey"
+	"github.com/0xor1/trees/server/util/ctx"
+	"github.com/0xor1/trees/server/util/err"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/private"
+	"github.com/0xor1/trees/server/util/time"
 	"bytes"
 	"github.com/0xor1/panic"
 	"math/rand"

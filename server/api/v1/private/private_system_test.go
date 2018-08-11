@@ -1,11 +1,11 @@
 package private
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/private"
-	"bitbucket.org/0xor1/trees/server/util/server"
-	"bitbucket.org/0xor1/trees/server/util/static"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/private"
+	"github.com/0xor1/trees/server/util/server"
+	"github.com/0xor1/trees/server/util/static"
 	"github.com/stretchr/testify/assert"
 	"net/http/httptest"
 	"testing"

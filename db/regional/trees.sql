@@ -159,38 +159,28 @@ CREATE TABLE timeLogs(
 );
 
 DROP PROCEDURE IF EXISTS registerAccount;
-DELIMITER $$
 CREATE PROCEDURE registerAccount(_account BINARY(16), _me BINARY(16), _myName VARCHAR(50), _myDisplayName VARCHAR(100), _hasAvatar BOOL)
 BEGIN
   INSERT INTO accounts (id) VALUES (_account);
   INSERT INTO accountMembers (account, id, name, displayName, hasAvatar, isActive, role) VALUES (_account, _me, _myName, _myDisplayName, _hasAvatar, true, 0);
   INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _account, 'account', 'create', NULL, NULL);
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setMemberName;
-DELIMITER $$
 CREATE PROCEDURE setMemberName(_account BINARY(16), _member BINARY(16), _newName VARCHAR(50))
 BEGIN
 	UPDATE accountMembers SET name=_newName WHERE account = _account AND id = _member;
 	UPDATE projectMembers SET name=_newName WHERE account = _account AND id = _member;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setMemberDisplayName;
-DELIMITER $$
 CREATE PROCEDURE setMemberDisplayName(_account BINARY(16), _member BINARY(16), _newDisplayName VARCHAR(100))
 BEGIN
 	UPDATE accountMembers SET displayName=_newDisplayName WHERE account=_account AND id=_member;
 	UPDATE projectMembers SET displayName=_newDisplayName WHERE account=_account AND id=_member;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setAccountMemberInactive;
-DELIMITER $$
 CREATE PROCEDURE setAccountMemberInactive(_account BINARY(16), _member BINARY(16))
 BEGIN
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedTasks;
@@ -206,21 +196,15 @@ BEGIN
   SELECT project, id FROM tempUpdatedTasks;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedTasks;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS updateMembersAndSetActive;
-DELIMITER $$
 CREATE PROCEDURE updateMembersAndSetActive(_account BINARY(16), _member BINARY(16), _memberName VARCHAR(50), _displayName VARCHAR(100), _hasAvatar BOOL, _role TINYINT UNSIGNED)
   BEGIN
     UPDATE accountMembers SET isActive=TRUE, role=_role, name=_memberName, displayName=_displayName, hasAvatar=_hasAvatar WHERE account=_account AND id=_member;
     UPDATE projectMembers SET name=_memberName, displayName=_displayName WHERE account=_account AND id=_member;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS deleteAccount;
-DELIMITER $$
 CREATE PROCEDURE deleteAccount(_account BINARY(16))
   BEGIN
     DELETE FROM projectLocks WHERE account=_account;
@@ -233,11 +217,8 @@ CREATE PROCEDURE deleteAccount(_account BINARY(16))
     DELETE FROM tasks WHERE account=_account;
     DELETE FROM timeLogs WHERE account=_account;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS editAccount;
-DELIMITER $$
 CREATE PROCEDURE editAccount(_account BINARY(16), _me BINARY(16), _setPublicProjectsEnabled BOOL, _publicProjectsEnabled BOOL, _setHoursPerDay BOOL, _hoursPerDay TINYINT UNSIGNED, _setDaysPerWeek BOOL, _daysPerWeek TINYINT UNSIGNED)
   BEGIN
 	IF _setPublicProjectsEnabled THEN
@@ -260,11 +241,8 @@ CREATE PROCEDURE editAccount(_account BINARY(16), _me BINARY(16), _setPublicProj
 		INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000002'), _me, _account, 'account', 'setDaysPerWeek', NULL, CAST(_daysPerWeek as char character set utf8));
     END IF;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setAccountMemberRole;
-DELIMITER $$
 CREATE PROCEDURE setAccountMemberRole(_account BINARY(16), _me BINARY(16), _member BINARY(16), _role TINYINT UNSIGNED)
   BEGIN
     DECLARE memberExists BOOL DEFAULT FALSE;
@@ -278,11 +256,8 @@ CREATE PROCEDURE setAccountMemberRole(_account BINARY(16), _me BINARY(16), _memb
     COMMIT;
     SELECT memberExists;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createProject;
-DELIMITER $$
 CREATE PROCEDURE createProject(_account BINARY(16), _project BINARY(16), _me BINARY(16), _name VARCHAR(250), _description VARCHAR(1250), _hoursPerDay TINYINT UNSIGNED, _daysPerWeek TINYINT UNSIGNED, _createdOn DATETIME, _startOn DATETIME, _dueOn DATETIME, _isParallel BOOL, _isPublic BOOL)
   BEGIN
     INSERT INTO projectLocks (account, id) VALUES(_account, _project);
@@ -291,11 +266,8 @@ CREATE PROCEDURE createProject(_account BINARY(16), _project BINARY(16), _me BIN
     INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _project, 'project', 'create', _name, NULL);
     INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _project, 'project', 'create', NULL, NULL);
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS editProject;
-DELIMITER $$
 CREATE PROCEDURE editProject(_account BINARY(16), _project BINARY(16), _me BINARY(16), _setIsPublic BOOL, _isPublic BOOL, _setIsArchived BOOL, _isArchived BOOL, _setHoursPerDay BOOL, _hoursPerDay TINYINT UNSIGNED, _setDaysPerWeek BOOL, _daysPerWeek TINYINT UNSIGNED, _setStartOn BOOL, _startOn DATETIME, _setDueOn BOOL, _dueOn DATETIME)
   BEGIN
     DECLARE projName VARCHAR(250);
@@ -357,11 +329,8 @@ CREATE PROCEDURE editProject(_account BINARY(16), _project BINARY(16), _me BINAR
         _account, _project, ADDTIME(UTC_TIMESTAMP(6), '0:0:0.000005'), _me, _project, 'project', 'setDueOn', NULL, CAST(_dueOn as char character set utf8));
     END IF;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS deleteProject;
-DELIMITER $$
 CREATE PROCEDURE deleteProject(_account BINARY(16), _project BINARY(16), _me BINARY(16))
 BEGIN
   DECLARE projName VARCHAR(250);
@@ -375,11 +344,8 @@ BEGIN
   INSERT INTO accountActivities (account, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, UTC_TIMESTAMP(6), _me, _project, 'project', 'delete', projName, NULL);
   UPDATE accountActivities SET itemHasBeenDeleted=TRUE WHERE account=_account AND item=_project;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS addProjectMemberOrSetActive;
-DELIMITER $$
 CREATE PROCEDURE addProjectMemberOrSetActive(_account BINARY(16), _project BINARY(16), _me BINARY(16), _member BINARY(16), _role TINYINT UNSIGNED)
 BEGIN
 	DECLARE projMemberExists BOOL DEFAULT FALSE;
@@ -409,11 +375,8 @@ BEGIN
   END IF;
   SELECT changeMade;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setProjectMemberInactive;
-DELIMITER $$
 CREATE PROCEDURE setProjectMemberInactive(_account BINARY(16), _project BINARY(16), _me BINARY(16), _member BINARY(16))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
@@ -435,11 +398,8 @@ BEGIN
   COMMIT;
   SELECT changeMade;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setProjectMemberRole;
-DELIMITER $$
 CREATE PROCEDURE setProjectMemberRole(_account BINARY(16), _project BINARY(16), _me BINARY(16), _member BINARY(16), _role TINYINT UNSIGNED)
   BEGIN
     DECLARE memberExists BOOL DEFAULT FALSE;
@@ -453,11 +413,8 @@ CREATE PROCEDURE setProjectMemberRole(_account BINARY(16), _project BINARY(16), 
     COMMIT;
     SELECT memberExists;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createTask;
-DELIMITER $$
 CREATE PROCEDURE createTask(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _me BINARY(16), _previousSibling BINARY(16), _task BINARY(16), _isAbstract BOOL, _name VARCHAR(250), _description VARCHAR(1250), _createdOn DATETIME, _totalRemainingTime BIGINT UNSIGNED, _isParallel BOOL, _member BINARY(16))
 BEGIN
 	DECLARE projectExists BOOL DEFAULT FALSE;
@@ -528,11 +485,8 @@ BEGIN
   SELECT * FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskName;
-DELIMITER $$
 CREATE PROCEDURE setTaskName(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _name VARCHAR(250))
   BEGIN
     DECLARE oldName VARCHAR(250) DEFAULT '';
@@ -554,56 +508,47 @@ CREATE PROCEDURE setTaskName(_account BINARY(16), _project BINARY(16), _task BIN
     END IF;
     SELECT taskParent, taskParent UNION SELECT id, member FROM timeLogs WHERE account=_account AND project=_project AND task=_task;
   END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskDescription;
-DELIMITER $$
 CREATE PROCEDURE setTaskDescription(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _description VARCHAR(250))
-  BEGIN
-    UPDATE tasks SET description=_description WHERE account = _account AND project = _project AND id = _task;
-    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-      _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setDescription', NULL, _description);
-    SELECT parent FROM tasks WHERE account=_account AND project = _project AND id = _task;
-  END;
-$$
-DELIMITER ;
+BEGIN
+  UPDATE tasks SET description=_description WHERE account = _account AND project = _project AND id = _task;
+  INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+    _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setDescription', NULL, _description);
+  SELECT parent FROM tasks WHERE account=_account AND project = _project AND id = _task;
+END;
 
 DROP PROCEDURE IF EXISTS setTaskIsAbstract;
-DELIMITER $$
 CREATE PROCEDURE setTaskIsAbstract(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _isAbstract BOOL)
-  BEGIN
-    DECLARE projectExists BOOL DEFAULT FALSE;
-    DECLARE taskExists BOOL DEFAULT FALSE;
-    DECLARE taskParent BINARY(16) DEFAULT NULL;
-    DECLARE currentIsAbstract BOOL DEFAULT FALSE;
-    DECLARE currentTotalLoggedTime BIGINT UNSIGNED;
-    DECLARE currentChildCount BIGINT UNSIGNED;
-    START TRANSACTION;
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
-    IF projectExists THEN
-      SELECT COUNT(*)=1, isAbstract, parent, totalLoggedTime, childCount INTO taskExists, currentIsAbstract, taskParent, currentTotalLoggedTime, currentChildCount FROM tasks WHERE account = _account AND project = _project AND id=_task AND project <> _task;
-      IF taskExists AND _isAbstract <> currentIsAbstract AND currentTotalLoggedTime = 0 AND currentChildCount = 0 THEN #make sure we are making a change otherwise, no need to update anything
-        IF _isAbstract THEN
-          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-            _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsAbstract', NULL, 'true');
-        ELSE
-          INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
-            _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsAbstract', NULL, 'false');
-        END IF;
-        UPDATE tasks SET isAbstract=_isAbstract WHERE account = _account AND project = _project AND id = _task;
+BEGIN
+  DECLARE projectExists BOOL DEFAULT FALSE;
+  DECLARE taskExists BOOL DEFAULT FALSE;
+  DECLARE taskParent BINARY(16) DEFAULT NULL;
+  DECLARE currentIsAbstract BOOL DEFAULT FALSE;
+  DECLARE currentTotalLoggedTime BIGINT UNSIGNED;
+  DECLARE currentChildCount BIGINT UNSIGNED;
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE; #set project lock to ensure data integrity
+  IF projectExists THEN
+    SELECT COUNT(*)=1, isAbstract, parent, totalLoggedTime, childCount INTO taskExists, currentIsAbstract, taskParent, currentTotalLoggedTime, currentChildCount FROM tasks WHERE account = _account AND project = _project AND id=_task AND project <> _task;
+    IF taskExists AND _isAbstract <> currentIsAbstract AND currentTotalLoggedTime = 0 AND currentChildCount = 0 THEN #make sure we are making a change otherwise, no need to update anything
+      IF _isAbstract THEN
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsAbstract', NULL, 'true');
       ELSE
-        SET taskParent = NULL;
+        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (
+          _account, _project, UTC_TIMESTAMP(6), _me, _task, 'task', 'setIsAbstract', NULL, 'false');
       END IF;
+      UPDATE tasks SET isAbstract=_isAbstract WHERE account = _account AND project = _project AND id = _task;
+    ELSE
+      SET taskParent = NULL;
     END IF;
-    COMMIT;
-    SELECT taskParent;
-  END;
-$$
-DELIMITER ;
+  END IF;
+  COMMIT;
+  SELECT taskParent;
+END;
 
 DROP PROCEDURE IF EXISTS setTaskIsParallel;
-DELIMITER $$
 CREATE PROCEDURE setTaskIsParallel(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _isParallel BOOL)
 BEGIN
 	DECLARE projectExists BOOL DEFAULT FALSE;
@@ -643,11 +588,8 @@ BEGIN
   SELECT * FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS setTaskMember;
-DELIMITER $$
 CREATE PROCEDURE setTaskMember(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16), _member BINARY(16))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
@@ -702,12 +644,9 @@ BEGIN
   COMMIT;
   SELECT changeMade, taskParent, existingMember;
 END;
-$$
-DELIMITER ;
 
 ## Pass NULL in _timeRemaining to not set a new TotalTimeRemaining value, pass NULL or zero to _duration to not log time
 DROP PROCEDURE IF EXISTS setRemainingTimeAndOrLogTime;
-DELIMITER $$
 CREATE PROCEDURE setRemainingTimeAndOrLogTime(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me bINARY(16), _timeRemaining BIGINT UNSIGNED, _timeLog BINARY(16), _loggedOn DATETIME, _duration BIGINT UNSIGNED, _note VARCHAR(250))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
@@ -768,11 +707,8 @@ BEGIN
   SELECT id, existingMember, taskName FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS moveTask;
-DELIMITER $$
 CREATE PROCEDURE moveTask(_account BINARY(16), _project BINARY(16), _task BINARY(16), _newParent BINARY(16), _me BINARY(16), _newPreviousSibling BINARY(16))
 CONTAINS SQL moveTask:
 BEGIN
@@ -892,11 +828,8 @@ BEGIN
   SELECT * FROM tempUpdatedIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS deleteTask;
-DELIMITER $$
 CREATE PROCEDURE deleteTask(_account BINARY(16), _project BINARY(16), _task BINARY(16), _me BINARY(16))
 BEGIN
   DECLARE projectExists BOOL DEFAULT FALSE;
@@ -990,204 +923,184 @@ BEGIN
   DROP TEMPORARY TABLE IF EXISTS tempLatestIds;
   DROP TEMPORARY TABLE IF EXISTS tempUpdatedMembers;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS getTasks;
-DELIMITER $$
 CREATE PROCEDURE getTasks(_account BINARY(16), _project BINARY(16), _taskIdsStr VARCHAR(16000)) #16000 == 500 uuids
-  BEGIN
-    DECLARE projectExists BOOL DEFAULT FALSE;
-    DECLARE taskIdsStrLen INT DEFAULT LENGTH(_taskIdsStr);
-    DECLARE offset INT DEFAULT 0;
-    DROP TEMPORARY TABLE IF EXISTS tempIds;
-    CREATE TEMPORARY TABLE tempIds(
-      id BINARY(16) NOT NULL,
-      PRIMARY KEY (id)
-    );
-    START TRANSACTION;
+BEGIN
+  DECLARE projectExists BOOL DEFAULT FALSE;
+  DECLARE taskIdsStrLen INT DEFAULT LENGTH(_taskIdsStr);
+  DECLARE offset INT DEFAULT 0;
+  DROP TEMPORARY TABLE IF EXISTS tempIds;
+  CREATE TEMPORARY TABLE tempIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
+  START TRANSACTION;
 
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project;# LOCK IN SHARE MODE; I dont think this is required
-    IF projectExists AND taskIdsStrLen > 0 AND taskIdsStrLen % 32 = 0 THEN
-      WHILE offset < taskIdsStrLen DO
-        INSERT INTO tempIds VALUE (UNHEX(SUBSTRING(_taskIdsStr, offset + 1, 32)));
-        SET offset = offset + 32;
-      END WHILE;
-    END IF;
-    COMMIT;
-    SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = _account AND project = _project AND id IN (SELECT id FROM tempIds);
-    DROP TEMPORARY TABLE IF EXISTS tempIds;
-  END;
-$$
-DELIMITER ;
+  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project;# LOCK IN SHARE MODE; I dont think this is required
+  IF projectExists AND taskIdsStrLen > 0 AND taskIdsStrLen % 32 = 0 THEN
+    WHILE offset < taskIdsStrLen DO
+      INSERT INTO tempIds VALUE (UNHEX(SUBSTRING(_taskIdsStr, offset + 1, 32)));
+      SET offset = offset + 32;
+    END WHILE;
+  END IF;
+  COMMIT;
+  SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account = _account AND project = _project AND id IN (SELECT id FROM tempIds);
+  DROP TEMPORARY TABLE IF EXISTS tempIds;
+END;
 
 DROP PROCEDURE IF EXISTS getChildTasks;
-DELIMITER $$
 CREATE PROCEDURE getChildTasks(_account BINARY(16), _project BINARY(16), _parent BINARY(16), _fromSibling BINARY(16), _limit INT)
-  BEGIN
-    DECLARE projectExists BOOL DEFAULT FALSE;
-    DECLARE idVariable BINARY(16) DEFAULT NULL;
-    DECLARE idx INT DEFAULT 0;
-    DROP TEMPORARY TABLE IF EXISTS tempResult;
-    CREATE TEMPORARY TABLE tempResult(
-      selectOrder INT NOT NULL,
-      id BINARY(16) NOT NULL,
-      parent BINARY(16) NULL,
-      firstChild BINARY(16) NULL,
-      nextSibling BINARY(16) NULL,
-      isAbstract BOOL NOT NULL,
-      name VARCHAR(250) NOT NULL,
-      description VARCHAR(1250) NULL,
-      createdOn DATETIME NOT NULL,
-      totalRemainingTime BIGINT UNSIGNED NOT NULL,
-      totalLoggedTime BIGINT UNSIGNED NOT NULL,
-      minimumRemainingTime BIGINT UNSIGNED NOT NULL,
-      linkedFileCount INT UNSIGNED NOT NULL,
-      chatCount BIGINT UNSIGNED NOT NULL,
-      childCount BIGINT UNSIGNED NOT NULL,
-      descendantCount BIGINT UNSIGNED NOT NULL,
-      isParallel BOOL NOT NULL DEFAULT FALSE,
-      member BINARY(16) NULL,
-      PRIMARY KEY (selectOrder)
-    );
-    START TRANSACTION;
+BEGIN
+  DECLARE projectExists BOOL DEFAULT FALSE;
+  DECLARE idVariable BINARY(16) DEFAULT NULL;
+  DECLARE idx INT DEFAULT 0;
+  DROP TEMPORARY TABLE IF EXISTS tempResult;
+  CREATE TEMPORARY TABLE tempResult(
+    selectOrder INT NOT NULL,
+    id BINARY(16) NOT NULL,
+    parent BINARY(16) NULL,
+    firstChild BINARY(16) NULL,
+    nextSibling BINARY(16) NULL,
+    isAbstract BOOL NOT NULL,
+    name VARCHAR(250) NOT NULL,
+    description VARCHAR(1250) NULL,
+    createdOn DATETIME NOT NULL,
+    totalRemainingTime BIGINT UNSIGNED NOT NULL,
+    totalLoggedTime BIGINT UNSIGNED NOT NULL,
+    minimumRemainingTime BIGINT UNSIGNED NOT NULL,
+    linkedFileCount INT UNSIGNED NOT NULL,
+    chatCount BIGINT UNSIGNED NOT NULL,
+    childCount BIGINT UNSIGNED NOT NULL,
+    descendantCount BIGINT UNSIGNED NOT NULL,
+    isParallel BOOL NOT NULL DEFAULT FALSE,
+    member BINARY(16) NULL,
+    PRIMARY KEY (selectOrder)
+  );
+  START TRANSACTION;
 
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project; #LOCK IN SHARE MODE; I dont think this is required
-    IF projectExists THEN
-      IF _fromSibling IS NOT NULL THEN
-        SELECT nextSibling INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = _fromSibling AND parent = _parent;
-      ELSE
-        SELECT firstChild INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = _parent;
-      END IF;
-      WHILE idVariable IS NOT NULL AND idx < _limit DO
-        INSERT INTO tempResult SELECT idx, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
-                                                                                                                                                                                                                                                              _account AND project = _project AND id = idVariable;
-        SELECT nextSibling INTO idVariable FROM tempResult WHERE selectOrder = idx;
-        SET idx = idx + 1;
-      END WHILE;
+  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project; #LOCK IN SHARE MODE; I dont think this is required
+  IF projectExists THEN
+    IF _fromSibling IS NOT NULL THEN
+      SELECT nextSibling INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = _fromSibling AND parent = _parent;
+    ELSE
+      SELECT firstChild INTO idVariable FROM tasks WHERE account = _account AND project = _project AND id = _parent;
     END IF;
-    COMMIT;
-    SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tempResult ORDER BY selectOrder ASC;
-    DROP TEMPORARY TABLE IF EXISTS tempResult;
-  END;
-$$
-DELIMITER ;
+    WHILE idVariable IS NOT NULL AND idx < _limit DO
+      INSERT INTO tempResult SELECT idx, id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tasks WHERE account =
+                                                                                                                                                                                                                                                            _account AND project = _project AND id = idVariable;
+      SELECT nextSibling INTO idVariable FROM tempResult WHERE selectOrder = idx;
+      SET idx = idx + 1;
+    END WHILE;
+  END IF;
+  COMMIT;
+  SELECT id, parent, firstChild, nextSibling, isAbstract, name, description, createdOn, totalRemainingTime, totalLoggedTime, minimumRemainingTime, linkedFileCount, chatCount, childCount, descendantCount, isParallel, member FROM tempResult ORDER BY selectOrder ASC;
+  DROP TEMPORARY TABLE IF EXISTS tempResult;
+END;
 
 DROP PROCEDURE IF EXISTS getAncestorTasks;
-DELIMITER $$
 CREATE PROCEDURE getAncestorTasks(_account BINARY(16), _project BINARY(16), _task BINARY(16), _limit INT)
-  BEGIN
-    DECLARE projectExists BOOL DEFAULT FALSE;
-    DECLARE idx INT DEFAULT 0;
-    DROP TEMPORARY TABLE IF EXISTS tempResult;
-    CREATE TEMPORARY TABLE tempResult(
-      selectOrder INT NOT NULL,
-      id BINARY(16) NOT NULL,
-      name VARCHAR(250) NOT NULL,
-      parent BINARY(16) NULL,
-      PRIMARY KEY (selectOrder)
-    );
-    START TRANSACTION;
+BEGIN
+  DECLARE projectExists BOOL DEFAULT FALSE;
+  DECLARE idx INT DEFAULT 0;
+  DROP TEMPORARY TABLE IF EXISTS tempResult;
+  CREATE TEMPORARY TABLE tempResult(
+    selectOrder INT NOT NULL,
+    id BINARY(16) NOT NULL,
+    name VARCHAR(250) NOT NULL,
+    parent BINARY(16) NULL,
+    PRIMARY KEY (selectOrder)
+  );
+  START TRANSACTION;
 
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project;# LOCK IN SHARE MODE; I dont think this is required
-    IF projectExists THEN
-      SELECT parent INTO _task FROM tasks WHERE account = _account AND project = _project AND id = _task;
-      WHILE _task IS NOT NULL AND idx < _limit DO
-        INSERT INTO tempResult SELECT idx, id, name, parent FROM tasks WHERE account=_account AND project=_project AND id=_task;
-        SELECT parent INTO _task FROM tempResult WHERE selectOrder = idx;
-        SET idx = idx + 1;
-      END WHILE;
-    END IF;
-    COMMIT;
-    SELECT id, name FROM tempResult ORDER BY selectOrder DESC;
-    DROP TEMPORARY TABLE IF EXISTS tempResult;
-  END;
-$$
-DELIMITER ;
+  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project;# LOCK IN SHARE MODE; I dont think this is required
+  IF projectExists THEN
+    SELECT parent INTO _task FROM tasks WHERE account = _account AND project = _project AND id = _task;
+    WHILE _task IS NOT NULL AND idx < _limit DO
+      INSERT INTO tempResult SELECT idx, id, name, parent FROM tasks WHERE account=_account AND project=_project AND id=_task;
+      SELECT parent INTO _task FROM tempResult WHERE selectOrder = idx;
+      SET idx = idx + 1;
+    END WHILE;
+  END IF;
+  COMMIT;
+  SELECT id, name FROM tempResult ORDER BY selectOrder DESC;
+  DROP TEMPORARY TABLE IF EXISTS tempResult;
+END;
 
 DROP PROCEDURE IF EXISTS setTimeLogDuration;
-DELIMITER $$
 CREATE PROCEDURE setTimeLogDuration(_account BINARY(16), _project BINARY(16), _timeLog BINARY(16), _me BINARY(16), _duration BIGINT UNSIGNED)
-  BEGIN
-    DECLARE projectExists BOOL DEFAULT FALSE;
-    DECLARE taskId BINARY(16) DEFAULT NULL;
-    DECLARE currentDuration BIGINT UNSIGNED DEFAULT 0;
-    DECLARE currentNote VARCHAR(250) DEFAULT NULL;
-    DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-    CREATE TEMPORARY TABLE tempUpdatedIds(
-      id BINARY(16) NOT NULL,
-      PRIMARY KEY (id)
-    );
+BEGIN
+  DECLARE projectExists BOOL DEFAULT FALSE;
+  DECLARE taskId BINARY(16) DEFAULT NULL;
+  DECLARE currentDuration BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentNote VARCHAR(250) DEFAULT NULL;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
 
-    START TRANSACTION;
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
-    IF projectExists THEN
-      SELECT task, duration, note INTO taskId, currentDuration, currentNote FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
-      IF currentDuration <> _duration AND _duration <> 0 THEN
-        UPDATE timeLogs SET duration=_duration WHERE account=_account AND project=_project AND id=_timeLog;
-        UPDATE tasks SET totalLoggedTime=totalLoggedTime+_duration-currentDuration WHERE account=_account AND project=_project AND id=taskId;
-        INSERT INTO tempUpdatedIds VALUES (taskId);
-        INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'setDuration', currentNote, CONCAT('{"duration":', CAST(_duration as char character set utf8), '}'));
-        SELECT parent INTO taskId FROM tasks WHERE account=_account AND project=_project AND id=taskId;
-        CALL _setAncestralChainAggregateValuesFromTask(_account, _project, taskId);
-      END IF;
-    END IF;
-    COMMIT;
-    SELECT * FROM tempUpdatedIds;
-    DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-  END;
-$$
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS setTimeLogNote;
-DELIMITER $$
-CREATE PROCEDURE setTimeLogNote(_account BINARY(16), _project BINARY(16), _timeLog BINARY(16), _me BINARY(16), _note VARCHAR(250))
-  BEGIN
-    DECLARE timeLogExists BOOL DEFAULT FALSE;
-    DECLARE changeMade BOOL DEFAULT FALSE;
-    SELECT COUNT(*)=1 INTO timeLogExists FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
-    IF timeLogExists THEN
-      UPDATE timeLogs SET note=_note WHERE account=_account AND project=_project AND id=_timeLog;
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'setNote', _note, NULL);
-      SET changeMade=TRUE;
-    END IF;
-    SELECT changeMade;
-  END;
-$$
-DELIMITER ;
-
-DROP PROCEDURE IF EXISTS deleteTimeLog;
-DELIMITER $$
-CREATE PROCEDURE deleteTimeLog(_account BINARY(16), _project BINARY(16), _timeLog BINARY(16), _me BINARY(16))
-  BEGIN
-    DECLARE projectExists BOOL DEFAULT FALSE;
-    DECLARE taskId BINARY(16) DEFAULT NULL;
-    DECLARE currentDuration BIGINT UNSIGNED DEFAULT 0;
-    DECLARE currentNote VARCHAR(250) DEFAULT NULL;
-    DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-    CREATE TEMPORARY TABLE tempUpdatedIds(
-      id BINARY(16) NOT NULL,
-      PRIMARY KEY (id)
-    );
-
-    START TRANSACTION;
-    SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
-    IF projectExists THEN
-      SELECT task, duration, note INTO taskId, currentDuration, currentNote FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
-      DELETE FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
-      UPDATE tasks SET totalLoggedTime=totalLoggedTime-currentDuration WHERE account=_account AND project=_project AND id=taskId;
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
+  IF projectExists THEN
+    SELECT task, duration, note INTO taskId, currentDuration, currentNote FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
+    IF currentDuration <> _duration AND _duration <> 0 THEN
+      UPDATE timeLogs SET duration=_duration WHERE account=_account AND project=_project AND id=_timeLog;
+      UPDATE tasks SET totalLoggedTime=totalLoggedTime+_duration-currentDuration WHERE account=_account AND project=_project AND id=taskId;
       INSERT INTO tempUpdatedIds VALUES (taskId);
-      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'delete', currentNote, CONCAT('{"duration":', CAST(currentDuration as char character set utf8), '}'));
-      UPDATE projectActivities SET itemHasBeenDeleted=TRUE WHERE account=_account AND project=_project AND item=_timeLog;
+      INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'setDuration', currentNote, CONCAT('{"duration":', CAST(_duration as char character set utf8), '}'));
       SELECT parent INTO taskId FROM tasks WHERE account=_account AND project=_project AND id=taskId;
       CALL _setAncestralChainAggregateValuesFromTask(_account, _project, taskId);
     END IF;
-    COMMIT;
-    SELECT * FROM tempUpdatedIds;
-    DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
-  END;
-$$
-DELIMITER ;
+  END IF;
+  COMMIT;
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+END;
+
+DROP PROCEDURE IF EXISTS setTimeLogNote;
+CREATE PROCEDURE setTimeLogNote(_account BINARY(16), _project BINARY(16), _timeLog BINARY(16), _me BINARY(16), _note VARCHAR(250))
+BEGIN
+  DECLARE timeLogExists BOOL DEFAULT FALSE;
+  DECLARE changeMade BOOL DEFAULT FALSE;
+  SELECT COUNT(*)=1 INTO timeLogExists FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
+  IF timeLogExists THEN
+    UPDATE timeLogs SET note=_note WHERE account=_account AND project=_project AND id=_timeLog;
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'setNote', _note, NULL);
+    SET changeMade=TRUE;
+  END IF;
+  SELECT changeMade;
+END;
+
+DROP PROCEDURE IF EXISTS deleteTimeLog;
+CREATE PROCEDURE deleteTimeLog(_account BINARY(16), _project BINARY(16), _timeLog BINARY(16), _me BINARY(16))
+BEGIN
+  DECLARE projectExists BOOL DEFAULT FALSE;
+  DECLARE taskId BINARY(16) DEFAULT NULL;
+  DECLARE currentDuration BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentNote VARCHAR(250) DEFAULT NULL;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+  CREATE TEMPORARY TABLE tempUpdatedIds(
+    id BINARY(16) NOT NULL,
+    PRIMARY KEY (id)
+  );
+
+  START TRANSACTION;
+  SELECT COUNT(*)=1 INTO projectExists FROM projectLocks WHERE account = _account AND id = _project FOR UPDATE;
+  IF projectExists THEN
+    SELECT task, duration, note INTO taskId, currentDuration, currentNote FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
+    DELETE FROM timeLogs WHERE account=_account AND project=_project AND id=_timeLog;
+    UPDATE tasks SET totalLoggedTime=totalLoggedTime-currentDuration WHERE account=_account AND project=_project AND id=taskId;
+    INSERT INTO tempUpdatedIds VALUES (taskId);
+    INSERT INTO projectActivities (account, project, occurredOn, member, item, itemType, action, itemName, extraInfo) VALUES (_account, _project, UTC_TIMESTAMP(6), _me, _timeLog, 'timeLog', 'delete', currentNote, CONCAT('{"duration":', CAST(currentDuration as char character set utf8), '}'));
+    UPDATE projectActivities SET itemHasBeenDeleted=TRUE WHERE account=_account AND project=_project AND item=_timeLog;
+    SELECT parent INTO taskId FROM tasks WHERE account=_account AND project=_project AND id=taskId;
+    CALL _setAncestralChainAggregateValuesFromTask(_account, _project, taskId);
+  END IF;
+  COMMIT;
+  SELECT * FROM tempUpdatedIds;
+  DROP TEMPORARY TABLE IF EXISTS tempUpdatedIds;
+END;
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 #********************************MAGIC PROCEDURE WARNING*********************************#
@@ -1195,153 +1108,150 @@ DELIMITER ;
 # SET THEIR OWN TRANSACTIONS AND PROJECTID LOCKS AND HAVE VALIDATED ALL INPUT PARAMS.    #                                                                                                  #
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 DROP PROCEDURE IF EXISTS _setAncestralChainAggregateValuesFromTask;
-DELIMITER $$
 CREATE PROCEDURE _setAncestralChainAggregateValuesFromTask(_account BINARY(16), _project BINARY(16), _task BINARY(16))
-  BEGIN
-    DECLARE originalTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE originalTotalLoggedTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE originalChildCount BIGINT UNSIGNED DEFAULT 0;
-    DECLARE originalDescendantCount BIGINT UNSIGNED DEFAULT 0;
-    DECLARE currentIsParallel BOOL DEFAULT FALSE;
-    DECLARE nextTask BINARY(16) DEFAULT NULL;
-    DECLARE totalRemainingTimeChange BIGINT UNSIGNED DEFAULT 0;
-    DECLARE totalLoggedTimeChange BIGINT UNSIGNED DEFAULT 0;
-    DECLARE preChangeMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE postChangeMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
-    DECLARE newChildCount BIGINT UNSIGNED DEFAULT 0;
-    DECLARE descendantCountChange BIGINT UNSIGNED DEFAULT 0;
-    DECLARE totalRemainingTimeChangeIsPositive BOOL DEFAULT TRUE;
-    DECLARE totalLoggedTimeChangeIsPositive BOOL DEFAULT TRUE;
-    DECLARE descendantCountChangeIsPositive BOOL DEFAULT TRUE;
-    DECLARE minimumRemainingTimeIsChanging BOOL DEFAULT TRUE;
+BEGIN
+  DECLARE originalTotalRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE originalTotalLoggedTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE originalChildCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE originalDescendantCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE currentIsParallel BOOL DEFAULT FALSE;
+  DECLARE nextTask BINARY(16) DEFAULT NULL;
+  DECLARE totalRemainingTimeChange BIGINT UNSIGNED DEFAULT 0;
+  DECLARE totalLoggedTimeChange BIGINT UNSIGNED DEFAULT 0;
+  DECLARE preChangeMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE postChangeMinimumRemainingTime BIGINT UNSIGNED DEFAULT 0;
+  DECLARE newChildCount BIGINT UNSIGNED DEFAULT 0;
+  DECLARE descendantCountChange BIGINT UNSIGNED DEFAULT 0;
+  DECLARE totalRemainingTimeChangeIsPositive BOOL DEFAULT TRUE;
+  DECLARE totalLoggedTimeChangeIsPositive BOOL DEFAULT TRUE;
+  DECLARE descendantCountChangeIsPositive BOOL DEFAULT TRUE;
+  DECLARE minimumRemainingTimeIsChanging BOOL DEFAULT TRUE;
 
-    SELECT totalRemainingTime, totalLoggedTime, minimumRemainingTime, childCount, descendantCount, isParallel, parent INTO originalTotalRemainingTime, originalTotalLoggedTime, preChangeMinimumRemainingTime, originalChildCount, originalDescendantCount, currentIsParallel, nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
-    IF currentIsParallel THEN
-      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), MAX(minimumRemainingTime), COUNT(*), SUM(descendantCount) INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
-    ELSE                                                   #this is the only difference#
-      SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), SUM(minimumRemainingTime), COUNT(*), SUM(descendantCount) INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
-    END IF;
-    SET descendantCountChange = descendantCountChange + newChildCount;
-    #if we just deleted the only child node of an abstract task then all these values will be NULL so we need to manually set them to zero here
-    IF totalRemainingTimeChange IS NULL THEN
-      SELECT 0, 0, 0, 0, 0 INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange;
-    END IF;
+  SELECT totalRemainingTime, totalLoggedTime, minimumRemainingTime, childCount, descendantCount, isParallel, parent INTO originalTotalRemainingTime, originalTotalLoggedTime, preChangeMinimumRemainingTime, originalChildCount, originalDescendantCount, currentIsParallel, nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
+  IF currentIsParallel THEN
+    SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), MAX(minimumRemainingTime), COUNT(*), SUM(descendantCount) INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
+  ELSE                                                   #this is the only difference#
+    SELECT SUM(totalRemainingTime), SUM(totalLoggedTime), SUM(minimumRemainingTime), COUNT(*), SUM(descendantCount) INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange FROM tasks WHERE account = _account AND project = _project AND parent = _task;
+  END IF;
+  SET descendantCountChange = descendantCountChange + newChildCount;
+  #if we just deleted the only child node of an abstract task then all these values will be NULL so we need to manually set them to zero here
+  IF totalRemainingTimeChange IS NULL THEN
+    SELECT 0, 0, 0, 0, 0 INTO totalRemainingTimeChange, totalLoggedTimeChange, postChangeMinimumRemainingTime, newChildCount, descendantCountChange;
+  END IF;
 
-    #the first task updated is special, it could have had a new child added or removed from it, so the childCount can be updated, no other ancestor will have the childCount updated
-    UPDATE tasks SET totalRemainingTime = totalRemainingTimeChange, totalLoggedTime = totalLoggedTimeChange, minimumRemainingTime = postChangeMinimumRemainingTime, childCount = newChildCount, descendantCount = descendantCountChange WHERE account = _account AND project = _project AND id = _task;
-    INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
+  #the first task updated is special, it could have had a new child added or removed from it, so the childCount can be updated, no other ancestor will have the childCount updated
+  UPDATE tasks SET totalRemainingTime = totalRemainingTimeChange, totalLoggedTime = totalLoggedTimeChange, minimumRemainingTime = postChangeMinimumRemainingTime, childCount = newChildCount, descendantCount = descendantCountChange WHERE account = _account AND project = _project AND id = _task;
+  INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
 
-    IF totalRemainingTimeChange >= originalTotalRemainingTime THEN
-      SET totalRemainingTimeChange = totalRemainingTimeChange - originalTotalRemainingTime;
-    ELSE
-      SET totalRemainingTimeChange = originalTotalRemainingTime - totalRemainingTimeChange;
-      SET totalRemainingTimeChangeIsPositive = FALSE;
-    END IF;
+  IF totalRemainingTimeChange >= originalTotalRemainingTime THEN
+    SET totalRemainingTimeChange = totalRemainingTimeChange - originalTotalRemainingTime;
+  ELSE
+    SET totalRemainingTimeChange = originalTotalRemainingTime - totalRemainingTimeChange;
+    SET totalRemainingTimeChangeIsPositive = FALSE;
+  END IF;
 
-    IF totalLoggedTimeChange >= originalTotalLoggedTime THEN
-      SET totalLoggedTimeChange = totalLoggedTimeChange - originalTotalLoggedTime;
-    ELSE
-      SET totalLoggedTimeChange = originalTotalLoggedTime - totalLoggedTimeChange;
-      SET totalLoggedTimeChangeIsPositive = FALSE;
-    END IF;
+  IF totalLoggedTimeChange >= originalTotalLoggedTime THEN
+    SET totalLoggedTimeChange = totalLoggedTimeChange - originalTotalLoggedTime;
+  ELSE
+    SET totalLoggedTimeChange = originalTotalLoggedTime - totalLoggedTimeChange;
+    SET totalLoggedTimeChangeIsPositive = FALSE;
+  END IF;
 
-    IF descendantCountChange >= originalDescendantCount THEN
-      SET descendantCountChange = descendantCountChange - originalDescendantCount;
-    ELSE
-      SET descendantCountChange = originalDescendantCount - descendantCountChange;
-      SET descendantCountChangeIsPositive = FALSE;
-    END IF;
+  IF descendantCountChange >= originalDescendantCount THEN
+    SET descendantCountChange = descendantCountChange - originalDescendantCount;
+  ELSE
+    SET descendantCountChange = originalDescendantCount - descendantCountChange;
+    SET descendantCountChangeIsPositive = FALSE;
+  END IF;
 
-    SET _task= nextTask;
+  SET _task= nextTask;
 
-    WHILE _task IS NOT NULL AND (totalRemainingTimeChange > 0 OR totalLoggedTimeChange > 0 OR preChangeMinimumRemainingTime <> postChangeMinimumRemainingTime OR descendantCountChange > 0) DO
-      IF preChangeMinimumRemainingTime <> postChangeMinimumRemainingTime THEN #updating minimumRemainingTime and others
-        #get values needed to update current task
-        SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, nextTask FROM tasks WHERE account =
-                                                                                                                                       _account AND project = _project AND id = _task;
-        IF currentIsParallel AND currentMinimumRemainingTime < postChangeMinimumRemainingTime THEN
-          SET postChangeMinimumRemainingTime = postChangeMinimumRemainingTime; #pointless assignment but this if case is necessary
-        ELSEIF currentIsParallel AND currentMinimumRemainingTime = preChangeMinimumRemainingTime THEN
-          SELECT MAX(minimumRemainingTime) INTO postChangeMinimumRemainingTime FROM tasks WHERE account = _account AND project = _project AND parent = _task;
-        ELSEIF NOT currentIsParallel THEN
-          SET postChangeMinimumRemainingTime = currentMinimumRemainingTime + postChangeMinimumRemainingTime-preChangeMinimumRemainingTime;
-        ELSE #nochange to minimum time to make
-          SET postChangeMinimumRemainingTime=currentMinimumRemainingTime;
-          SET minimumRemainingTimeIsChanging=FALSE;
-        END IF;
-        SET preChangeMinimumRemainingTime=currentMinimumRemainingTime;
-      ELSE
-        SELECT parent INTO nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
+  WHILE _task IS NOT NULL AND (totalRemainingTimeChange > 0 OR totalLoggedTimeChange > 0 OR preChangeMinimumRemainingTime <> postChangeMinimumRemainingTime OR descendantCountChange > 0) DO
+    IF preChangeMinimumRemainingTime <> postChangeMinimumRemainingTime THEN #updating minimumRemainingTime and others
+      #get values needed to update current task
+      SELECT isParallel, minimumRemainingTime, parent INTO currentIsParallel, currentMinimumRemainingTime, nextTask FROM tasks WHERE account =
+                                                                                                                                     _account AND project = _project AND id = _task;
+      IF currentIsParallel AND currentMinimumRemainingTime < postChangeMinimumRemainingTime THEN
+        SET postChangeMinimumRemainingTime = postChangeMinimumRemainingTime; #pointless assignment but this if case is necessary
+      ELSEIF currentIsParallel AND currentMinimumRemainingTime = preChangeMinimumRemainingTime THEN
+        SELECT MAX(minimumRemainingTime) INTO postChangeMinimumRemainingTime FROM tasks WHERE account = _account AND project = _project AND parent = _task;
+      ELSEIF NOT currentIsParallel THEN
+        SET postChangeMinimumRemainingTime = currentMinimumRemainingTime + postChangeMinimumRemainingTime-preChangeMinimumRemainingTime;
+      ELSE #nochange to minimum time to make
+        SET postChangeMinimumRemainingTime=currentMinimumRemainingTime;
         SET minimumRemainingTimeIsChanging=FALSE;
       END IF;
-
-      #do the actual update, needs a bunch of bool logic to work out +/- sign usage, 16 cases for all combinations, but the task is updated in a single update statement :)
-      IF minimumRemainingTimeIsChanging THEN
-        IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                                                                                   _account AND project = _project AND id = _task;
-        END IF;
-      ELSE
-        IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
-          UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
-                                                                                                                                                                                                              _account AND project = _project AND id = _task;
-        END IF;
-      END IF;
-
-      INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
-
-      SET _task=nextTask;
-
-    END WHILE;
-    IF _task IS NOT NULL THEN
-      INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
+      SET preChangeMinimumRemainingTime=currentMinimumRemainingTime;
+    ELSE
+      SELECT parent INTO nextTask FROM tasks WHERE account = _account AND project = _project AND id = _task;
+      SET minimumRemainingTimeIsChanging=FALSE;
     END IF;
-  END;
-$$
-DELIMITER ;
+
+    #do the actual update, needs a bunch of bool logic to work out +/- sign usage, 16 cases for all combinations, but the task is updated in a single update statement :)
+    IF minimumRemainingTimeIsChanging THEN
+      IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, minimumRemainingTime=postChangeMinimumRemainingTime, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                                                                                 _account AND project = _project AND id = _task;
+      END IF;
+    ELSE
+      IF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime+totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime+totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount+descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      ELSEIF NOT totalRemainingTimeChangeIsPositive AND NOT totalLoggedTimeChangeIsPositive AND NOT descendantCountChangeIsPositive THEN
+        UPDATE tasks SET totalRemainingTime=totalRemainingTime-totalRemainingTimeChange, totalLoggedTime=totalLoggedTime-totalLoggedTimeChange, descendantCount=descendantCount-descendantCountChange WHERE account =
+                                                                                                                                                                                                            _account AND project = _project AND id = _task;
+      END IF;
+    END IF;
+
+    INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
+
+    SET _task=nextTask;
+
+  END WHILE;
+  IF _task IS NOT NULL THEN
+    INSERT INTO tempUpdatedIds VALUES (_task) ON DUPLICATE KEY UPDATE id=id;
+  END IF;
+END;
 
 DROP USER IF EXISTS 't_r_trees'@'%';
 CREATE USER 't_r_trees'@'%' IDENTIFIED BY 'T@sk-Tr335';

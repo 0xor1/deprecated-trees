@@ -1,7 +1,7 @@
 package field
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/id"
 	"time"
 )
 

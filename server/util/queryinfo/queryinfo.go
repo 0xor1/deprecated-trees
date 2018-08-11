@@ -1,6 +1,6 @@
 package queryinfo
 
-import "bitbucket.org/0xor1/trees/server/util/time"
+import "github.com/0xor1/trees/server/util/time"
 
 func New(query string, args interface{}, startUnixMillis int64) *QueryInfo {
 	return &QueryInfo{

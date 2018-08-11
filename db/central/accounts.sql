@@ -44,54 +44,39 @@ CREATE TABLE memberships(
 );
 
 DROP PROCEDURE IF EXISTS createPersonalAccount;
-DELIMITER $$
 CREATE PROCEDURE createPersonalAccount(_id BINARY(16), _name VARCHAR(50), _displayName VARCHAR(100), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _email VARCHAR(250), _language VARCHAR(50), _theme TINYINT UNSIGNED, _newEmail VARCHAR(250), _activationCode VARCHAR(100), _activatedOn DATETIME, _newEmailConfirmationCode VARCHAR(100), _resetPwdCode VARCHAR(100)) 
 BEGIN
 	INSERT INTO accounts (id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal) VALUES (_id, _name, _displayName, _createdOn, _region, _newRegion, _shard, _hasAvatar, true);
     INSERT INTO personalAccounts (id, email, language, theme, newEmail, activationCode, activatedOn, newEmailConfirmationCode, resetPwdCode) VALUES (_id, _email, _language, _theme, _newEmail, _activationCode, _activatedOn, _newEmailConfirmationCode, _resetPwdCode);
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS updatePersonalAccount;
-DELIMITER $$
 CREATE PROCEDURE updatePersonalAccount(_id BINARY(16), _name VARCHAR(50), _displayName VARCHAR(100), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _email VARCHAR(250), _language VARCHAR(50), _theme TINYINT UNSIGNED, _newEmail VARCHAR(250), _activationCode VARCHAR(100), _activatedOn DATETIME, _newEmailConfirmationCode VARCHAR(100), _resetPwdCode VARCHAR(100)) 
 BEGIN
 	UPDATE accounts SET name=_name, displayName=_displayName, createdOn=_createdOn, region=_region, newRegion=_newRegion, shard=_shard, hasAvatar=_hasAvatar WHERE id = _id;
     UPDATE personalAccounts SET email=_email, language=_language, theme=_theme, newEmail=_newEmail, activationCode=_activationCode, activatedOn=_activatedOn, newEmailConfirmationCode=_newEmailConfirmationCode, resetPwdCode=_resetPwdCode WHERE id = _id;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS updateAccountInfo;
-DELIMITER $$
 CREATE PROCEDURE updateAccountInfo(_id BINARY(16), _name VARCHAR(50), _displayName VARCHAR(100), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _isPersonal BOOL) 
 BEGIN
 	UPDATE accounts SET name=_name, displayName=_displayName, createdOn=_createdOn, region=_region, newRegion=_newRegion, shard=_shard, hasAvatar=_hasAvatar WHERE id = _id;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS deleteAccountAndAllAssociatedMemberships;
-DELIMITER $$
 CREATE PROCEDURE deleteAccountAndAllAssociatedMemberships(_id BINARY(16)) 
 BEGIN
 	DELETE FROM memberships WHERE account = _id OR member = _id;
     DELETE FROM personalAccounts WHERE id = _id;
     DELETE FROM accounts WHERE id = _id;
 END;
-$$
-DELIMITER ;
 
 DROP PROCEDURE IF EXISTS createGroupAccountAndMembership;
-DELIMITER $$
 CREATE PROCEDURE createGroupAccountAndMembership(_id BINARY(16), _name VARCHAR(50), _displayName VARCHAR(100), _createdOn DATETIME, _region CHAR(3), _newRegion CHAR(3), _shard MEDIUMINT, _hasAvatar BOOL, _member BINARY(16)) 
 BEGIN
 	INSERT INTO accounts (id, name, displayName, createdOn, region, newRegion, shard, hasAvatar, isPersonal) VALUES (_id, _name, _displayName, _createdOn, _region, _newRegion, _shard, _hasAvatar, false);
     INSERT INTO memberships (account, member) VALUES (_id, _member);
 END;
-$$
-DELIMITER ;
 
 DROP USER IF EXISTS 't_c_accounts'@'%';
 CREATE USER 't_c_accounts'@'%' IDENTIFIED BY 'T@sk-@cc-0unt5';

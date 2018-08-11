@@ -1,13 +1,13 @@
 package centralaccount
 
 import (
-	"bitbucket.org/0xor1/trees/server/api/v1/private"
-	"bitbucket.org/0xor1/trees/server/util/clientsession"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/server"
-	"bitbucket.org/0xor1/trees/server/util/static"
-	"bitbucket.org/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/api/v1/private"
+	"github.com/0xor1/trees/server/util/clientsession"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/server"
+	"github.com/0xor1/trees/server/util/static"
+	"github.com/0xor1/trees/server/util/time"
 	"context"
 	"encoding/base64"
 	"github.com/stretchr/testify/assert"

@@ -1,7 +1,7 @@
 package centralaccount
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/ctx"
+	"github.com/0xor1/trees/server/util/ctx"
 	"fmt"
 )
 

@@ -1,14 +1,14 @@
 package centralaccount
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/crypt"
-	"bitbucket.org/0xor1/trees/server/util/ctx"
-	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/private"
-	t "bitbucket.org/0xor1/trees/server/util/time"
-	"bitbucket.org/0xor1/trees/server/util/validate"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/crypt"
+	"github.com/0xor1/trees/server/util/ctx"
+	"github.com/0xor1/trees/server/util/endpoint"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/private"
+	t "github.com/0xor1/trees/server/util/time"
+	"github.com/0xor1/trees/server/util/validate"
 	"bytes"
 	"github.com/0xor1/panic"
 	"github.com/nfnt/resize"

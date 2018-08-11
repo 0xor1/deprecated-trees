@@ -1,15 +1,15 @@
 package account
 
 import (
-	"bitbucket.org/0xor1/trees/server/util/account"
-	"bitbucket.org/0xor1/trees/server/util/activity"
-	"bitbucket.org/0xor1/trees/server/util/cnst"
-	"bitbucket.org/0xor1/trees/server/util/ctx"
-	"bitbucket.org/0xor1/trees/server/util/db"
-	"bitbucket.org/0xor1/trees/server/util/endpoint"
-	"bitbucket.org/0xor1/trees/server/util/field"
-	"bitbucket.org/0xor1/trees/server/util/id"
-	"bitbucket.org/0xor1/trees/server/util/validate"
+	"github.com/0xor1/trees/server/util/account"
+	"github.com/0xor1/trees/server/util/activity"
+	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/ctx"
+	"github.com/0xor1/trees/server/util/db"
+	"github.com/0xor1/trees/server/util/endpoint"
+	"github.com/0xor1/trees/server/util/field"
+	"github.com/0xor1/trees/server/util/id"
+	"github.com/0xor1/trees/server/util/validate"
 	"time"
 )
 
