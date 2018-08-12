@@ -2,6 +2,7 @@
 node_modules/
 server/index.html
 coverage.out
+cover.out
 *.exe
 _test/
 avatar/

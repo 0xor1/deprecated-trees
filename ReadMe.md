@@ -133,5 +133,5 @@ for production mode where the central directory server and regional servers have
 the server side tests are system tests, they require that the redis and mariadb containers are running,
 simply run:
 ```shell
-go test ./...
+go test -coverprofile cover.out ./...
 ```
