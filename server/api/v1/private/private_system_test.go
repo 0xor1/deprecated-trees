@@ -2,6 +2,7 @@ package private
 
 import (
 	"github.com/0xor1/trees/server/util/cnst"
+	"github.com/0xor1/trees/server/util/crypt"
 	"github.com/0xor1/trees/server/util/id"
 	"github.com/0xor1/trees/server/util/private"
 	"github.com/0xor1/trees/server/util/server"
@@ -20,21 +21,23 @@ func Test_system(t *testing.T) {
 	client := SR.RegionalV1PrivateClient
 
 	aliId := id.New()
+	aliName := "A" + crypt.UrlSafeString(5)
 	orgId := id.New()
-	client.CreateAccount(region, orgId, aliId, "ali", nil, false)
+	client.CreateAccount(region, orgId, aliId, aliName, nil, false)
 	bob := private.AddMember{}
 	bob.Id = id.New()
-	bob.Name = "bob"
+	bob.Name = "B" + crypt.UrlSafeString(5)
 	bob.Role = cnst.AccountAdmin
 	cat := private.AddMember{}
 	cat.Id = id.New()
-	cat.Name = "cat"
+	cat.Name = "C" + crypt.UrlSafeString(5)
 	cat.Role = cnst.AccountMemberOfOnlySpecificProjects
 	client.AddMembers(region, 0, orgId, aliId, []*private.AddMember{&bob, &cat})
 	val, err := client.MemberIsOnlyAccountOwner(region, 0, orgId, aliId)
 	assert.Nil(t, err)
 	assert.True(t, val)
-	client.SetMemberName(region, 0, orgId, aliId, "aliNew")
+	aliName = "A" + crypt.UrlSafeString(5)
+	client.SetMemberName(region, 0, orgId, aliId, aliName)
 	client.SetMemberHasAvatar(region, 0, orgId, aliId, true)
 	val, err = client.MemberIsAccountOwner(region, 0, orgId, aliId)
 	assert.Nil(t, err)
