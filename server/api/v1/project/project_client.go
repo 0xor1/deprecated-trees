@@ -152,13 +152,13 @@ func (c *client) RemoveMembers(css *clientsession.Store, region cnst.Region, sha
 
 func (c *client) GetMembers(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error) {
 	val, e := getMembers.DoRequest(css, c.host, region, &getMembersArgs{
-		Shard:   shard,
-		Account: account,
-		Project: project,
-		Role:    role,
+		Shard:                     shard,
+		Account:                   account,
+		Project:                   project,
+		Role:                      role,
 		NameOrDisplayNameContains: nameOrDisplayNameContains,
-		After: after,
-		Limit: limit,
+		After:                     after,
+		Limit:                     limit,
 	}, nil, &GetMembersResult{})
 	if val != nil {
 		return val.(*GetMembersResult), e

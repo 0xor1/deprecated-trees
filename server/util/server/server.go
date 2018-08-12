@@ -1,6 +1,12 @@
 package server
 
 import (
+	"bytes"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/0xor1/panic"
 	"github.com/0xor1/trees/server/util/cnst"
 	"github.com/0xor1/trees/server/util/crypt"
 	"github.com/0xor1/trees/server/util/endpoint"
@@ -9,12 +15,6 @@ import (
 	"github.com/0xor1/trees/server/util/queryinfo"
 	"github.com/0xor1/trees/server/util/static"
 	t "github.com/0xor1/trees/server/util/time"
-	"bytes"
-	"context"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"github.com/0xor1/panic"
 	"github.com/gomodule/redigo/redis"
 	gorillacontext "github.com/gorilla/context"
 	"io"
@@ -76,15 +76,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	//setup _ctx
 	ctx := &_ctx{
 		requestStartUnixMillis: t.NowUnixMillis(),
-		resp:                  resp,
-		req:                   req,
-		retrievedDlms:         map[string]int64{},
-		dlmsToUpdate:          map[string]interface{}{},
-		cacheItemsToUpdate:    map[string]interface{}{},
-		queryInfosMtx:         &sync.RWMutex{},
-		queryInfos:            make([]*queryinfo.QueryInfo, 0, 10),
-		fixedTreeReadSlaveMtx: &sync.RWMutex{},
-		SR: s.SR,
+		resp:                   resp,
+		req:                    req,
+		retrievedDlms:          map[string]int64{},
+		dlmsToUpdate:           map[string]interface{}{},
+		cacheItemsToUpdate:     map[string]interface{}{},
+		queryInfosMtx:          &sync.RWMutex{},
+		queryInfos:             make([]*queryinfo.QueryInfo, 0, 10),
+		fixedTreeReadSlaveMtx:  &sync.RWMutex{},
+		SR:                     s.SR,
 	}
 	//always do case insensitive path routing
 	lowerPath := strings.ToLower(req.URL.Path)

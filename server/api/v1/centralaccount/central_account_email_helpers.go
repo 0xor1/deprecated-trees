@@ -1,8 +1,8 @@
 package centralaccount
 
 import (
-	"github.com/0xor1/trees/server/util/ctx"
 	"fmt"
+	"github.com/0xor1/trees/server/util/ctx"
 )
 
 func emailSendMultipleAccountPolicyNotice(ctx ctx.Ctx, address string) {

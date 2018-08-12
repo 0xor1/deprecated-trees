@@ -12,8 +12,8 @@ import (
 
 func Test_system(t *testing.T) {
 	systemtest.Run(t, func(base *systemtest.Base) {
-		accountClient := account.NewClient(base.TestServer.URL)
-		client := NewClient(base.TestServer.URL)
+		accountClient := account.NewClient(base.TestServerURL)
+		client := NewClient(base.TestServerURL)
 
 		accountClient.Edit(base.Ali.CSS, base.Region, 0, base.Org.Id, account.Fields{PublicProjectsEnabled: &field.Bool{true}})
 

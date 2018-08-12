@@ -10,7 +10,7 @@ import (
 
 func Test_System(t *testing.T) {
 	systemtest.Run(t, func(base *systemtest.Base) {
-		client := NewClient(base.TestServer.URL)
+		client := NewClient(base.TestServerURL)
 		acc, err := client.Get(base.Ali.CSS, base.Region, 0, base.Org.Id)
 		assert.Nil(t, err)
 		assert.False(t, acc.PublicProjectsEnabled)

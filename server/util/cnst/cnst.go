@@ -1,8 +1,8 @@
 package cnst
 
 import (
-	"github.com/0xor1/trees/server/util/err"
 	"github.com/0xor1/panic"
+	"github.com/0xor1/trees/server/util/err"
 	"net/http"
 	"strconv"
 	"strings"

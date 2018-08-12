@@ -1,8 +1,8 @@
 package cachekey
 
 import (
-	"github.com/0xor1/trees/server/util/id"
 	"github.com/0xor1/panic"
+	"github.com/0xor1/trees/server/util/id"
 	"sort"
 )
 

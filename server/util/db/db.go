@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/0xor1/panic"
 	"github.com/0xor1/trees/server/util/account"
 	"github.com/0xor1/trees/server/util/cachekey"
 	"github.com/0xor1/trees/server/util/cnst"
@@ -10,7 +11,6 @@ import (
 	t "github.com/0xor1/trees/server/util/time"
 	"github.com/0xor1/trees/server/util/timelog"
 	"github.com/0xor1/trees/server/util/validate"
-	"github.com/0xor1/panic"
 	"time"
 )
 

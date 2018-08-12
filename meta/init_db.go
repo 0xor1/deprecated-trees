@@ -1,9 +1,9 @@
 package main
 
 import (
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/0xor1/panic"
 	"database/sql"
+	"github.com/0xor1/panic"
+	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
 )
 

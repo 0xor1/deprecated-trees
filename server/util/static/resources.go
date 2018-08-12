@@ -1,6 +1,13 @@
 package static
 
 import (
+	"encoding/base64"
+	"encoding/gob"
+	"fmt"
+	"github.com/0xor1/config"
+	"github.com/0xor1/iredis"
+	"github.com/0xor1/isql"
+	"github.com/0xor1/panic"
 	"github.com/0xor1/trees/server/util/avatar"
 	"github.com/0xor1/trees/server/util/cnst"
 	"github.com/0xor1/trees/server/util/id"
@@ -9,13 +16,6 @@ import (
 	"github.com/0xor1/trees/server/util/queryinfo"
 	"github.com/0xor1/trees/server/util/redis"
 	t "github.com/0xor1/trees/server/util/time"
-	"encoding/base64"
-	"encoding/gob"
-	"fmt"
-	"github.com/0xor1/config"
-	"github.com/0xor1/iredis"
-	"github.com/0xor1/isql"
-	"github.com/0xor1/panic"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"regexp"

@@ -66,12 +66,12 @@ func (c *client) SetMemberRole(css *clientsession.Store, region cnst.Region, sha
 
 func (c *client) GetMembers(css *clientsession.Store, region cnst.Region, shard int, account id.Id, role *cnst.AccountRole, nameOrDisplayNamePrefix *string, after *id.Id, limit int) (*GetMembersResp, error) {
 	val, e := getMembers.DoRequest(css, c.host, region, &getMembersArgs{
-		Shard:   shard,
-		Account: account,
-		Role:    role,
+		Shard:                   shard,
+		Account:                 account,
+		Role:                    role,
 		NameOrDisplayNamePrefix: nameOrDisplayNamePrefix,
-		After: after,
-		Limit: limit,
+		After:                   after,
+		Limit:                   limit,
 	}, nil, &GetMembersResp{})
 	if val != nil {
 		return val.(*GetMembersResp), e

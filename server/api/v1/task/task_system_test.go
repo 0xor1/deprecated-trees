@@ -13,9 +13,9 @@ import (
 
 func Test_system(t *testing.T) {
 	systemtest.Run(t, func(base *systemtest.Base) {
-		accountClient := account.NewClient(base.TestServer.URL)
-		projectClient := project.NewClient(base.TestServer.URL)
-		client := NewClient(base.TestServer.URL)
+		accountClient := account.NewClient(base.TestServerURL)
+		projectClient := project.NewClient(base.TestServerURL)
+		client := NewClient(base.TestServerURL)
 
 		start := time.Now()
 		end := start.Add(5 * 24 * time.Hour)

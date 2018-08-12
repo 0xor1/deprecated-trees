@@ -127,3 +127,11 @@ developers to setup on their local development machines without having to config
 all third party services are run in docker containers with a docker-compose file for easy setup and tear down, and the
 api server can easily be configured to run as a single executable with all the endpoints available on it, or be split
 for production mode where the central directory server and regional servers have different sets of endpoints available.
+
+## Tests
+
+the server side tests are system tests, they require that the redis and mariadb containers are running,
+simply run:
+```shell
+go test ./...
+```

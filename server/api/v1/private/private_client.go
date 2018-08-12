@@ -1,10 +1,10 @@
 package private
 
 import (
+	"fmt"
 	"github.com/0xor1/trees/server/util/cnst"
 	"github.com/0xor1/trees/server/util/id"
 	"github.com/0xor1/trees/server/util/private"
-	"fmt"
 )
 
 func NewTestClient(testServerBaseUrl string) private.V1Client {

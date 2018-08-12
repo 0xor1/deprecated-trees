@@ -1,6 +1,9 @@
 package server
 
 import (
+	"database/sql"
+	"encoding/json"
+	"github.com/0xor1/isql"
 	"github.com/0xor1/trees/server/util/avatar"
 	"github.com/0xor1/trees/server/util/cachekey"
 	"github.com/0xor1/trees/server/util/err"
@@ -10,9 +13,6 @@ import (
 	"github.com/0xor1/trees/server/util/queryinfo"
 	"github.com/0xor1/trees/server/util/static"
 	"github.com/0xor1/trees/server/util/time"
-	"database/sql"
-	"encoding/json"
-	"github.com/0xor1/isql"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/sessions"
 	"math/rand"

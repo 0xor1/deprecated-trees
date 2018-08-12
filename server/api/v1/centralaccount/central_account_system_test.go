@@ -1,6 +1,8 @@
 package centralaccount
 
 import (
+	"context"
+	"encoding/base64"
 	"github.com/0xor1/trees/server/api/v1/private"
 	"github.com/0xor1/trees/server/util/clientsession"
 	"github.com/0xor1/trees/server/util/cnst"
@@ -8,8 +10,6 @@ import (
 	"github.com/0xor1/trees/server/util/server"
 	"github.com/0xor1/trees/server/util/static"
 	"github.com/0xor1/trees/server/util/time"
-	"context"
-	"encoding/base64"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http/httptest"

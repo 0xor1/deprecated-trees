@@ -1,9 +1,9 @@
 package validate
 
 import (
+	"github.com/0xor1/panic"
 	"github.com/0xor1/trees/server/util/cnst"
 	"github.com/0xor1/trees/server/util/err"
-	"github.com/0xor1/panic"
 	"net/http"
 	"regexp"
 	"unicode/utf8"

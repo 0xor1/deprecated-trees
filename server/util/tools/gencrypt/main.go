@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/0xor1/trees/server/util/crypt"
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"github.com/0xor1/trees/server/util/crypt"
 	"os"
 )
 

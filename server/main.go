@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/tls"
+	"fmt"
 	"github.com/0xor1/trees/server/api/v1/account"
 	"github.com/0xor1/trees/server/api/v1/centralaccount"
 	"github.com/0xor1/trees/server/api/v1/private"
@@ -11,8 +13,6 @@ import (
 	"github.com/0xor1/trees/server/util/endpoint"
 	"github.com/0xor1/trees/server/util/server"
 	"github.com/0xor1/trees/server/util/static"
-	"crypto/tls"
-	"fmt"
 	"golang.org/x/crypto/acme/autocert"
 	"net/http"
 	"time"
