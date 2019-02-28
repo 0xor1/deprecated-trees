@@ -154,12 +154,11 @@ func (ep *Endpoint) DoRequest(css *clientsession.Store, baseUrl string, region c
 			}
 		}
 	} else {
-		errMsg := ""
-		er := json.NewDecoder(resp.Body).Decode(&errMsg)
-		if er != nil {
-			return nil, er
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
 		}
-		return nil, fmt.Errorf(errMsg)
+		return nil, fmt.Errorf(string(bodyBytes))
 	}
 	return respVal, nil
 }

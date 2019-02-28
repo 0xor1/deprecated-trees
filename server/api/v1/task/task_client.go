@@ -12,8 +12,8 @@ type Client interface {
 	Move(css *clientsession.Store, region cnst.Region, shard int, account, project, task, parent id.Id, nextSibling *id.Id) error
 	Delete(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id) error
 	Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task id.Id) (*Task, error)
-	GetChildren(css *clientsession.Store, region cnst.Region, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) (*getChildrenResp, error)
-	GetAncestors(css *clientsession.Store, region cnst.Region, shard int, account, project, child id.Id, limit int) (*getAncestorsResp, error)
+	GetChildren(css *clientsession.Store, region cnst.Region, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) (*GetChildrenResp, error)
+	GetAncestors(css *clientsession.Store, region cnst.Region, shard int, account, project, child id.Id, limit int) (*GetAncestorsResp, error)
 }
 
 func NewClient(host string) Client {
@@ -92,7 +92,7 @@ func (c *client) Get(css *clientsession.Store, region cnst.Region, shard int, ac
 	return nil, e
 }
 
-func (c *client) GetChildren(css *clientsession.Store, region cnst.Region, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) (*getChildrenResp, error) {
+func (c *client) GetChildren(css *clientsession.Store, region cnst.Region, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) (*GetChildrenResp, error) {
 	val, e := getChildren.DoRequest(css, c.host, region, &getChildrenArgs{
 		Shard:       shard,
 		Account:     account,
@@ -100,23 +100,23 @@ func (c *client) GetChildren(css *clientsession.Store, region cnst.Region, shard
 		Parent:      parent,
 		FromSibling: fromSibling,
 		Limit:       limit,
-	}, nil, &getChildrenResp{})
+	}, nil, &GetChildrenResp{})
 	if val != nil {
-		return val.(*getChildrenResp), e
+		return val.(*GetChildrenResp), e
 	}
 	return nil, e
 }
 
-func (c *client) GetAncestors(css *clientsession.Store, region cnst.Region, shard int, account, project, child id.Id, limit int) (*getAncestorsResp, error) {
+func (c *client) GetAncestors(css *clientsession.Store, region cnst.Region, shard int, account, project, child id.Id, limit int) (*GetAncestorsResp, error) {
 	val, e := getAncestors.DoRequest(css, c.host, region, &getAncestorsArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
 		Child:   child,
 		Limit:   limit,
-	}, nil, &getAncestorsResp{})
+	}, nil, &GetAncestorsResp{})
 	if val != nil {
-		return val.(*getAncestorsResp), e
+		return val.(*GetAncestorsResp), e
 	}
 	return nil, e
 }

@@ -196,7 +196,7 @@ type getChildrenArgs struct {
 	Limit       int    `json:"limit"`
 }
 
-type getChildrenResp struct {
+type GetChildrenResp struct {
 	Children []*Task `json:"children"`
 	More     bool    `json:"more"`
 }
@@ -204,7 +204,7 @@ type getChildrenResp struct {
 var getChildren = &endpoint.Endpoint{
 	Path:                     "/api/v1/task/getChildren",
 	RequiresSession:          false,
-	ExampleResponseStructure: &getChildrenResp{Children: []*Task{{}}},
+	ExampleResponseStructure: &GetChildrenResp{Children: []*Task{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getChildrenArgs{}
 	},
@@ -224,7 +224,7 @@ type getAncestorsArgs struct {
 	Limit   int   `json:"limit"`
 }
 
-type getAncestorsResp struct {
+type GetAncestorsResp struct {
 	Ancestors []*Ancestor `json:"ancestors"`
 	More      bool        `json:"more"`
 }
@@ -232,7 +232,7 @@ type getAncestorsResp struct {
 var getAncestors = &endpoint.Endpoint{
 	Path:                     "/api/v1/task/getAncestors",
 	RequiresSession:          false,
-	ExampleResponseStructure: &getAncestorsResp{Ancestors: []*Ancestor{{}}},
+	ExampleResponseStructure: &GetAncestorsResp{Ancestors: []*Ancestor{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getAncestorsArgs{}
 	},

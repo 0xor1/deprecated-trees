@@ -36,9 +36,9 @@ func dbDelete(ctx ctx.Ctx, shard int, account, project, task, member, timeLog id
 	ctx.TouchDlms(cachekey.NewSetDlms().CombinedTaskAndTaskChildrenSets(account, project, db.TreeChangeHelper(ctx, shard, `CALL deleteTimeLog(?, ?, ?, ?)`, account, project, timeLog, ctx.Me())).TimeLog(account, project, timeLog, &task, &member).ProjectActivities(account, project))
 }
 
-func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) *getResp {
+func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) *GetResp {
 	if timeLog != nil {
-		return &getResp{TimeLogs: []*tlog.TimeLog{dbGetTimeLog(ctx, shard, account, project, *timeLog)}}
+		return &GetResp{TimeLogs: []*tlog.TimeLog{dbGetTimeLog(ctx, shard, account, project, *timeLog)}}
 	}
 	cacheKey := cachekey.NewGet("timelog.dbGetTimeLogs", shard, account, project, task, member, timeLog, sortAsc, after, limit)
 	if task != nil {
@@ -50,7 +50,7 @@ func dbGetTimeLogs(ctx ctx.Ctx, shard int, account, project id.Id, task, member,
 	if task == nil && member == nil {
 		cacheKey.ProjectTimeLogSet(account, project)
 	}
-	res := getResp{}
+	res := GetResp{}
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
 	}

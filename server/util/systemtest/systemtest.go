@@ -3,7 +3,7 @@ package systemtest
 import (
 	"context"
 	"fmt"
-	"github.com/0xor1/trees/server/api/v1/centralaccount"
+	"github.com/0xor1/trees/server/api/v1/central"
 	"github.com/0xor1/trees/server/api/v1/private"
 	"github.com/0xor1/trees/server/util/clientsession"
 	"github.com/0xor1/trees/server/util/cnst"
@@ -23,14 +23,14 @@ func Run(t *testing.T, systemTesting func(b *Base), endpointSets ...[]*endpoint.
 		SR:     static.Config("", nil),
 		Region: cnst.EUWRegion,
 	}
-	endpointSets = append(endpointSets, centralaccount.Endpoints, private.Endpoints)
+	endpointSets = append(endpointSets, central.Endpoints, private.Endpoints)
 	serv := server.New(b.SR, endpointSets...)
 	testServer := httptest.NewServer(serv)
 	defer testServer.Close()
 	b.TestServerURL = testServer.URL
 
 	b.SR.RegionalV1PrivateClient = private.NewTestClient(b.TestServerURL)
-	b.CentralClient = centralaccount.NewClient(b.TestServerURL)
+	b.CentralClient = central.NewClient(b.TestServerURL)
 
 	b.Ali.CSS = clientsession.New()
 	b.Bob.CSS = clientsession.New()
@@ -81,7 +81,7 @@ func Run(t *testing.T, systemTesting func(b *Base), endpointSets ...[]*endpoint.
 	orgName := "O" + crypt.UrlSafeString(5)
 	b.Org, err = b.CentralClient.CreateAccount(b.Ali.CSS, b.Region, orgName, nil)
 	assert.Nil(t, err)
-	b.CentralClient.AddMembers(b.Ali.CSS, b.Org.Id, []*centralaccount.AddMember{
+	b.CentralClient.AddMembers(b.Ali.CSS, b.Org.Id, []*central.AddMember{
 		{Id: b.Bob.Info.Me.Id, Role: cnst.AccountAdmin},
 		{Id: b.Cat.Info.Me.Id, Role: cnst.AccountMemberOfAllProjects},
 		{Id: b.Dan.Info.Me.Id, Role: cnst.AccountMemberOfOnlySpecificProjects},
@@ -109,8 +109,8 @@ type Base struct {
 	Bob           User
 	Cat           User
 	Dan           User
-	Org           *centralaccount.Account
-	CentralClient centralaccount.Client
+	Org           *central.Account
+	CentralClient central.Client
 	Region        cnst.Region
 	T             *testing.T
 	SR            *static.Resources
@@ -119,5 +119,5 @@ type Base struct {
 
 type User struct {
 	CSS  *clientsession.Store
-	Info *centralaccount.AuthenticateResult
+	Info *central.AuthenticateResult
 }

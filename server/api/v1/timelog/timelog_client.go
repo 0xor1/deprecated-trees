@@ -12,7 +12,7 @@ type Client interface {
 	CreateAndSetRemainingTime(css *clientsession.Store, region cnst.Region, shard int, account, project, task id.Id, remainingTime uint64, duration uint64, note *string) (*tlog.TimeLog, error) //only applys to task tasks
 	Edit(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id, fields Fields) error
 	Delete(css *clientsession.Store, region cnst.Region, shard int, account, project, timeLog id.Id) error
-	Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error)
+	Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*GetResp, error)
 }
 
 func NewClient(host string) Client {
@@ -77,7 +77,7 @@ func (c *client) Delete(css *clientsession.Store, region cnst.Region, shard int,
 	return e
 }
 
-func (c *client) Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*getResp, error) {
+func (c *client) Get(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, task, member, timeLog *id.Id, sortAsc bool, after *id.Id, limit int) (*GetResp, error) {
 	val, e := get.DoRequest(css, c.host, region, &getArgs{
 		Shard:   shard,
 		Account: account,
@@ -88,9 +88,9 @@ func (c *client) Get(css *clientsession.Store, region cnst.Region, shard int, ac
 		SortAsc: sortAsc,
 		After:   after,
 		Limit:   limit,
-	}, nil, &getResp{})
+	}, nil, &GetResp{})
 	if val != nil {
-		return val.(*getResp), e
+		return val.(*GetResp), e
 	}
 	return nil, e
 }

@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/0xor1/trees/server/api/v1/account"
-	"github.com/0xor1/trees/server/api/v1/centralaccount"
+	"github.com/0xor1/trees/server/api/v1/central"
 	"github.com/0xor1/trees/server/api/v1/private"
 	"github.com/0xor1/trees/server/api/v1/project"
 	"github.com/0xor1/trees/server/api/v1/task"
@@ -23,11 +23,11 @@ func main() {
 	endPointSets := make([][]*endpoint.Endpoint, 0, 100)
 	switch SR.Env {
 	case cnst.LclEnv, cnst.DevEnv: //onebox environment, all endpoints run in the same service
-		endPointSets = append(endPointSets, centralaccount.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, task.Endpoints, timelog.Endpoints)
+		endPointSets = append(endPointSets, central.Endpoints, private.Endpoints, account.Endpoints, project.Endpoints, task.Endpoints, timelog.Endpoints)
 	default:
 		switch SR.Region {
 		case cnst.CentralRegion: //central api box, only centralAccount endpoints
-			endPointSets = append(endPointSets, centralaccount.Endpoints)
+			endPointSets = append(endPointSets, central.Endpoints)
 		default: //regional api box, all regional endpoints required
 			endPointSets = append(endPointSets, private.Endpoints, account.Endpoints, project.Endpoints, task.Endpoints, timelog.Endpoints)
 		}

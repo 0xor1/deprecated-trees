@@ -300,14 +300,14 @@ type getMembersArgs struct {
 }
 
 type GetMembersResult struct {
-	Members []*member `json:"members"`
+	Members []*Member `json:"members"`
 	More    bool      `json:"more"`
 }
 
 var getMembers = &endpoint.Endpoint{
 	Path:                     "/api/v1/project/getMembers",
 	RequiresSession:          false,
-	ExampleResponseStructure: &GetMembersResult{Members: []*member{{}}},
+	ExampleResponseStructure: &GetMembersResult{Members: []*Member{{}}},
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
@@ -328,7 +328,7 @@ type getAtMentionsArgs struct {
 var getAtMentions = &endpoint.Endpoint{
 	Path:                     "/api/v1/project/getAtMentions",
 	RequiresSession:          false,
-	ExampleResponseStructure: []*member{{}},
+	ExampleResponseStructure: []*Member{{}},
 	GetArgsStruct: func() interface{} {
 		return &getMembersArgs{}
 	},
@@ -349,7 +349,7 @@ type getMeArgs struct {
 var getMe = &endpoint.Endpoint{
 	Path:                     "/api/v1/project/getMe",
 	RequiresSession:          true,
-	ExampleResponseStructure: &member{},
+	ExampleResponseStructure: &Member{},
 	GetArgsStruct: func() interface{} {
 		return &getMeArgs{}
 	},
@@ -399,7 +399,7 @@ var Endpoints = []*endpoint.Endpoint{
 	getActivities,
 }
 
-type member struct {
+type Member struct {
 	Id                 id.Id            `json:"id"`
 	TotalRemainingTime uint64           `json:"totalRemainingTime"`
 	TotalLoggedTime    uint64           `json:"totalLoggedTime"`

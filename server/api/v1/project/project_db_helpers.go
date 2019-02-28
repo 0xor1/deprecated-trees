@@ -162,9 +162,9 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 		defer rows.Close()
 	}
 	panic.IfNotNil(e)
-	memSet := make([]*member, 0, limit+1)
+	memSet := make([]*Member, 0, limit+1)
 	for rows.Next() {
-		mem := member{}
+		mem := Member{}
 		panic.IfNotNil(rows.Scan(&mem.Id, &mem.IsActive, &mem.TotalRemainingTime, &mem.TotalLoggedTime, &mem.Role))
 		memSet = append(memSet, &mem)
 	}
@@ -179,8 +179,8 @@ func dbGetMembers(ctx ctx.Ctx, shard int, account, project id.Id, role *cnst.Pro
 	return &res
 }
 
-func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *member {
-	res := member{}
+func dbGetMember(ctx ctx.Ctx, shard int, account, project, mem id.Id) *Member {
+	res := Member{}
 	cacheKey := cachekey.NewGet("project.dbGetMember", shard, account, project, mem).ProjectMember(account, project, mem)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res

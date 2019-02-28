@@ -1,4 +1,4 @@
-package centralaccount
+package central
 
 import (
 	"context"

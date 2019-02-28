@@ -28,9 +28,9 @@ type Client interface {
 	//pointers are optional filters, anyone who can see a project can see all the member info for that project
 	GetMembers(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, role *cnst.ProjectRole, nameOrDisplayNameContains *string, after *id.Id, limit int) (*GetMembersResult, error)
 	//used when typing a chat message after entering @ symbol
-	GetAtMentions(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, nameOrDisplayNamePrefix string) ([]*member, error)
+	GetAtMentions(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, nameOrDisplayNamePrefix string) ([]*Member, error)
 	//for anyone
-	GetMe(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id) (*member, error)
+	GetMe(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id) (*Member, error)
 	//either one or both of OccurredAfter/Before must be nil
 	GetActivities(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, item, member *id.Id, occurredAfter, occurredBefore *time.Time, limit int) ([]*activity.Activity, error)
 }
@@ -166,27 +166,27 @@ func (c *client) GetMembers(css *clientsession.Store, region cnst.Region, shard 
 	return nil, e
 }
 
-func (c *client) GetAtMentions(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, nameOrDisplayNamePrefix string) ([]*member, error) {
+func (c *client) GetAtMentions(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id, nameOrDisplayNamePrefix string) ([]*Member, error) {
 	val, e := getMembers.DoRequest(css, c.host, region, &getAtMentionsArgs{
 		Shard:                   shard,
 		Account:                 account,
 		Project:                 project,
 		NameOrDisplayNamePrefix: nameOrDisplayNamePrefix,
-	}, nil, &[]*member{})
+	}, nil, &[]*Member{})
 	if val != nil {
-		return *val.(*[]*member), e
+		return *val.(*[]*Member), e
 	}
 	return nil, e
 }
 
-func (c *client) GetMe(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id) (*member, error) {
+func (c *client) GetMe(css *clientsession.Store, region cnst.Region, shard int, account, project id.Id) (*Member, error) {
 	val, e := getMe.DoRequest(css, c.host, region, &getMeArgs{
 		Shard:   shard,
 		Account: account,
 		Project: project,
-	}, nil, &member{})
+	}, nil, &Member{})
 	if val != nil {
-		return val.(*member), e
+		return val.(*Member), e
 	}
 	return nil, e
 }

@@ -145,8 +145,8 @@ func dbGetTask(ctx ctx.Ctx, shard int, account, project id.Id, task id.Id) *Task
 	return &res
 }
 
-func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) *getChildrenResp {
-	res := getChildrenResp{}
+func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fromSibling *id.Id, limit int) *GetChildrenResp {
+	res := GetChildrenResp{}
 	cacheKey := cachekey.NewGet("project.dbGetChildTasks", shard, account, project, parent, fromSibling, limit).TaskChildrenSet(account, project, parent)
 	if ctx.GetCacheValue(&res, cacheKey) {
 		return &res
@@ -174,8 +174,8 @@ func dbGetChildTasks(ctx ctx.Ctx, shard int, account, project, parent id.Id, fro
 	return &res
 }
 
-func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) *getAncestorsResp {
-	res := getAncestorsResp{}
+func dbGetAncestorTasks(ctx ctx.Ctx, shard int, account, project, child id.Id, limit int) *GetAncestorsResp {
+	res := GetAncestorsResp{}
 	cacheKey := cachekey.NewGet("project.dbGetAncestorTasks", shard, account, project, child, limit).Task(account, project, child)
 	innerCacheKey := cachekey.NewGet("project.dbGetAncestorTasks-inner", shard, account, project, child, limit)
 	innerRes := true
