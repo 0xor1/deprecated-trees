@@ -63,9 +63,6 @@ click the register button and fill out the form, after submitting the form, look
 terminal where the api server is running for the activation link to go to to get access
 to the system.
 
-The dev environment setup is here https://dev.project-trees.com
-staging and production environments to come.
-
 # System Features
 
 * Auto api documentation - each endpoint automatically generates its own docs and they are published
